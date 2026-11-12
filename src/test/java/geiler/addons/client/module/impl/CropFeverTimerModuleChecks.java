@@ -21,10 +21,6 @@ public final class CropFeverTimerModuleChecks {
 			"CropFeverTimerModule.kt");
 		String state = read("src", "client", "kotlin", "geiler", "addons", "client", "farming",
 			"CropFeverTimerState.kt");
-		if (!Files.exists(Path.of("..", "archive", "26.1.2"))) {
-			System.out.println("Crop Fever baseline comparison skipped: no 26.1.2 source next to this checkout");
-			return;
-		}
 		String legacyModule = read("..", "26.1.2", "src", "client", "java", "geiler", "addons", "client",
 			"module", "impl", "CropFeverTimerModule.java");
 		String legacyState = read("..", "26.1.2", "src", "client", "java", "geiler", "addons", "client",

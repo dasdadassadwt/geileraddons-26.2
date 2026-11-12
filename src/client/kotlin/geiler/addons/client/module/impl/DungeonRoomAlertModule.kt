@@ -90,8 +90,7 @@ class DungeonRoomAlertModule private constructor(private val settings: Settings)
         val events = decision.events
         val outputs = StringBuilder()
         if (events.roomCleared) {
-            val showRoomClearTitle = settings.roomClearTitle.value() &&
-                !(events.secretsComplete && settings.secretsComplete.value() && settings.secretsTitle.value())
+            val showRoomClearTitle = settings.roomClearTitle.value()
             val output = if (settings.roomClear.value()) {
                 alert(
                     "room.clear",
@@ -121,6 +120,8 @@ class DungeonRoomAlertModule private constructor(private val settings: Settings)
                     settings.secretsSound.value(),
                     settings.secretsVolume.value(),
                     settings.secretsPitch.value(),
+                    // A map that jumps straight to all-secrets also clears the room: keep both lines visible.
+                    subtitle = events.roomCleared && settings.roomClear.value() && settings.roomClearTitle.value(),
                 )
             } else {
                 "alert-disabled"
@@ -168,13 +169,16 @@ class DungeonRoomAlertModule private constructor(private val settings: Settings)
         sound: String?,
         volume: Float,
         pitch: Float,
+        subtitle: Boolean = false,
     ): String {
         var titleResult = "hidden:#${String.format(Locale.ROOT, "%08X", color)}"
         if (showTitle) {
             val title = text?.takeIf { it.isNotBlank() } ?: fallbackTitle
-            TitleAlertStack.submit(source, title, settings.alertDuration.intValue(), color)
+            if (subtitle) TitleAlertStack.submitSubtitle(source, title, settings.alertDuration.intValue(), color)
+            else TitleAlertStack.submit(source, title, settings.alertDuration.intValue(), color)
             titleResult =
-                "shown:#${String.format(Locale.ROOT, "%08X", color)}:${bounded(title, MAX_DIAGNOSTIC_TEXT_CHARS)}"
+                (if (subtitle) "subtitle:" else "shown:") +
+                    "#${String.format(Locale.ROOT, "%08X", color)}:${bounded(title, MAX_DIAGNOSTIC_TEXT_CHARS)}"
         }
         val soundResult = if (soundEnabled) playSound(sound, volume, pitch) else "disabled"
         return "title=${titleResult},placement=fixed-latest-wins,sound=${soundResult},soundId=" +

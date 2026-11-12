@@ -8,16 +8,43 @@ import java.lang.ref.WeakReference
 import java.util.ArrayDeque
 import java.util.HashMap
 import java.util.HashSet
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 /** Carries a per-glyph gradient through Minecraft's deferred text render pipeline. */
 object PlayerNameGradientRenderState {
     private val staleColors = ReferenceQueue<TextColor>()
     private val gradients = HashMap<IdentityWeakReference, Gradient>()
+
+    /**
+     * Marker color value to gradient, read without a lock for every drawn glyph. Keyed by value rather than
+     * TextColor identity so a marker that another mod or a codec round trip rebuilt from its RGB still resolves
+     * (an unresolved marker is drawn as a flat red-looking 0xF000nn color).
+     */
+    private val byValue = ConcurrentHashMap<Int, Gradient>()
+    private val resolvedGlyphs = AtomicLong()
+    private val unresolvedGlyphs = AtomicLong()
+    private val replacedVertices = AtomicLong()
+    private const val MARKER_PREFIX = 0xF0
+    private val IDLE_CONTEXT = GlyphRenderContext(null, 0, 0L)
     private val activeMarkers = HashSet<Int>()
     private val activeGlyphs: ThreadLocal<ArrayDeque<GlyphRenderContext>> =
         ThreadLocal.withInitial { ArrayDeque() }
     private var nextMarker = 0xF00000
+    private val CLOCK_ORIGIN_NANOS = System.nanoTime()
 
+    /** Bounded LRU of live markers keyed by gradient parameters; evicted markers are reclaimed by weak reference. */
+    private val markerCache = object : java.util.LinkedHashMap<GradientKey, TextColor>(256, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<GradientKey, TextColor>?): Boolean =
+            size > MAX_CACHED_MARKERS
+    }
+    private const val MAX_CACHED_MARKERS = 2048
+
+    /**
+     * Returns a style whose color marker is shared by every glyph with identical gradient parameters. Animation
+     * is driven by one process-wide clock, so a frame does not need a fresh marker (and a fresh Style, text
+     * layout, and map entry) for every glyph of every name.
+     */
     @JvmStatic
     fun gradientStyle(
         source: Style,
@@ -26,35 +53,49 @@ object PlayerNameGradientRenderState {
         glyphCount: Int,
         cyclic: Boolean,
         cyclesPerSecond: Float,
-        initialPhase: Double,
-        createdNanos: Long,
+        @Suppress("UNUSED_PARAMETER") initialPhase: Double,
+        @Suppress("UNUSED_PARAMETER") createdNanos: Long,
     ): Style {
-        val marker = allocateMarker()
-        val gradient = Gradient(
-            source.getColor(),
-            source.getShadowColor(),
-            java.util.List.copyOf(colors),
-            glyphIndex,
-            glyphCount,
-            cyclic,
-            cyclesPerSecond,
-            initialPhase,
-            createdNanos,
+        val key = GradientKey(
+            source.getColor(), source.getShadowColor(), colors, glyphIndex, glyphCount, cyclic,
+            if (cyclic) cyclesPerSecond else 0.0f,
         )
         synchronized(gradients) {
+            markerCache[key]?.let { return source.withColor(it) }
             purgeStaleColors()
+            val marker = allocateMarkerLocked()
+            val gradient = Gradient(
+                source.getColor(),
+                source.getShadowColor(),
+                java.util.List.copyOf(colors),
+                glyphIndex,
+                glyphCount,
+                cyclic,
+                key.cyclesPerSecond,
+                0.0,
+                CLOCK_ORIGIN_NANOS,
+            )
             gradients[IdentityWeakReference(marker, staleColors, marker.value)] = gradient
+            byValue[marker.value] = gradient
+            markerCache[key] = marker
+            return source.withColor(marker)
         }
-        return source.withColor(marker)
     }
 
-    private fun allocateMarker(): TextColor {
-        synchronized(gradients) {
-            purgeStaleColors()
-            repeat(0x1000000) {
-                nextMarker = (nextMarker + 1) and 0xFFFFFF
-                if (activeMarkers.add(nextMarker)) return TextColor.fromRgb(nextMarker)
-            }
+    private data class GradientKey(
+        val sourceColor: TextColor?,
+        val sourceShadow: Int?,
+        val colors: List<Int>,
+        val glyphIndex: Int,
+        val glyphCount: Int,
+        val cyclic: Boolean,
+        val cyclesPerSecond: Float,
+    )
+
+    private fun allocateMarkerLocked(): TextColor {
+        repeat(0x1000000) {
+            nextMarker = (nextMarker + 1) and 0xFFFFFF
+            if (activeMarkers.add(nextMarker)) return TextColor.fromRgb(nextMarker)
         }
         throw IllegalStateException("Player name gradient marker space is exhausted")
     }
@@ -62,8 +103,14 @@ object PlayerNameGradientRenderState {
     @JvmStatic
     fun beginGlyph(style: Style, shadowColor: Int) {
         val gradient = find(style.getColor())
-        val shadowPassCount = if (gradient == null || shadowColor == 0) 0 else if (style.isBold()) 2 else 1
-        activeGlyphs.get().push(GlyphRenderContext(gradient, shadowPassCount, System.nanoTime()))
+        val stack = activeGlyphs.get()
+        if (gradient == null) {
+            stack.push(IDLE_CONTEXT)
+            return
+        }
+        resolvedGlyphs.incrementAndGet()
+        val shadowPassCount = if (shadowColor == 0) 0 else if (style.isBold()) 2 else 1
+        stack.push(GlyphRenderContext(gradient, shadowPassCount, System.nanoTime()))
     }
 
     @JvmStatic
@@ -71,9 +118,20 @@ object PlayerNameGradientRenderState {
         val stack = activeGlyphs.get()
         if (!stack.isEmpty()) {
             val context = stack.peek()
-            context.passIndex = context.nextPassIndex++
+            if (context.gradient != null) context.passIndex = context.nextPassIndex++
         }
     }
+
+    /**
+     * `[glyphs drawn with a gradient, glyphs that still carried an unregistered marker color, vertex colors replaced]`
+     * since the last call. Glyphs without replaced vertices mean the render hooks never reached a main pass.
+     */
+    @JvmStatic
+    fun drainCounts(): LongArray =
+        longArrayOf(resolvedGlyphs.getAndSet(0L), unresolvedGlyphs.getAndSet(0L), replacedVertices.getAndSet(0L))
+
+    @JvmStatic
+    fun unresolvedMarkerGlyphs(): Long = unresolvedGlyphs.get()
 
     @JvmStatic
     fun vertexColor(originalColor: Int, rightSide: Boolean): Int {
@@ -82,6 +140,7 @@ object PlayerNameGradientRenderState {
         val context = stack.peek()
         if (context.gradient == null || context.passIndex < context.primaryPassIndex) return originalColor
         val rgb = context.gradient.colorAt(rightSide, context.sampleNanos)
+        replacedVertices.incrementAndGet()
         return (originalColor and 0xFF000000.toInt()) or rgb
     }
 
@@ -112,16 +171,16 @@ object PlayerNameGradientRenderState {
 
     private fun find(color: TextColor?): Gradient? {
         if (color == null) return null
-        synchronized(gradients) {
-            purgeStaleColors()
-            return gradients[IdentityWeakReference(color, null, color.value)]
-        }
+        val gradient = byValue[color.value]
+        if (gradient == null && color.value ushr 16 == MARKER_PREFIX) unresolvedGlyphs.incrementAndGet()
+        return gradient
     }
 
     private fun purgeStaleColors() {
         while (true) {
             val stale = staleColors.poll() as IdentityWeakReference? ?: return
             gradients.remove(stale)
+            byValue.remove(stale.markerValue)
             activeMarkers.remove(stale.markerValue)
         }
     }

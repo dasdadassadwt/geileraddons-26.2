@@ -16,7 +16,7 @@ object ReleaseNotes {
     const val MAX_NOTES_LINES = 400
     const val MAX_LINE_CHARS = 200
 
-    private const val REPOSITORY_RELEASES = "https://github.com/dasdadassadwt/geileraddons-26.2/releases/"
+    private const val REPOSITORY_RELEASES = "${ProjectLinks.GITHUB_URL}/releases/"
     private const val MAX_URL_LENGTH = 256
     private const val EMPTY_NOTES = "This release has no notes."
     private const val TRUNCATED = "… release notes truncated"

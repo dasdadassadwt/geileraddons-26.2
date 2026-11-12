@@ -27,6 +27,30 @@ public final class DungeonCreeperBeamsOfflineChecks {
 		checkEndpointConfirmation(catalog);
 		checkResolvedRotationSurvivesProgress(catalog);
 		checkDisplayOnlyGuidance(catalog);
+		checkFrozenSolutionKeepsPairIndices(catalog);
+	}
+
+	/** A completed pair must be flagged done without renumbering (re-coloring) the other pairs. */
+	private static void checkFrozenSolutionKeepsPairIndices(DungeonCreeperBeamsCatalog.CatalogResult catalog) {
+		DungeonCreeperBeamsRules.Detection initial = detectAtRotation(catalog, 0);
+		List<DungeonCreeperBeamsRules.Pair> frozen = initial.pairs();
+		require(frozen.size() >= DungeonCreeperBeamsRules.REQUIRED_MIN_PAIRS, "fixture has a full frozen solution");
+		require(DungeonCreeperBeamsRules.stablePairProgress(frozen, initial).stream().noneMatch(done -> done),
+			"no pair is done before any progress");
+		List<DungeonCreeperBeamsRules.Pair> remaining = new ArrayList<>(frozen);
+		remaining.remove(0);
+		DungeonCreeperBeamsRules.Detection afterFirst = new DungeonCreeperBeamsRules.Detection(0, remaining, null);
+		List<Boolean> flags = DungeonCreeperBeamsRules.stablePairProgress(frozen, afterFirst);
+		require(flags.size() == frozen.size() && flags.get(0)
+			&& flags.subList(1, flags.size()).stream().noneMatch(done -> done),
+			"only the completed pair is done; every other pair keeps its index");
+		remaining.remove(0);
+		flags = DungeonCreeperBeamsRules.stablePairProgress(frozen,
+			new DungeonCreeperBeamsRules.Detection(0, remaining, null));
+		require(flags.get(0) && flags.get(1) && flags.subList(2, flags.size()).stream().noneMatch(done -> done),
+			"a second completed pair leaves later indices unchanged");
+		require(DungeonCreeperBeamsRules.stablePairProgress(frozen, null).stream().allMatch(done -> done),
+			"a missing detection marks everything done instead of shifting indices");
 	}
 
 	private static void checkDungeonSoundRulesAbi() {

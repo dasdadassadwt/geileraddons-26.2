@@ -4,6 +4,7 @@ import geiler.addons.client.collections.FolderTree
 import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.config.ModConfig
 import geiler.addons.client.gui.FolderManagerScreen
+import geiler.addons.client.gui.MacroShareScreen
 import geiler.addons.client.gui.ScratchMacroEditorScreen
 import geiler.addons.client.location.Island
 import geiler.addons.client.macro.MacroCondition
@@ -103,9 +104,9 @@ class MacrosModule private constructor(
             Runnable { INSTANCE.create() },
         )
         val copyShared = ModuleAction(
-            "Copy Shared Macros",
-            "Copies every macro whose Include In Share switch is on, with linked macros and functions.",
-            Runnable { INSTANCE.copyShared() },
+            "Share Macros",
+            "Opens a list of all macros; switch on the ones to share, then press Copy.",
+            Runnable { INSTANCE.openShare() },
         )
         val paste = ModuleAction(
             "Paste Macros",
@@ -225,6 +226,7 @@ class MacrosModule private constructor(
         MacroRunner.cancelMacro(macro, "macro deleted")
         macros.remove(macro)
         controls.remove(macro.id())
+        shareMarks.remove(macro.id())
         InventoryButtonsModule.INSTANCE.unassignMacro(macro.id())
         ModConfig.markDirty()
     }
@@ -301,7 +303,6 @@ class MacrosModule private constructor(
         val macroGroup = SettingGroup(
             "Macro ${macro.id()} • ${macro.name()}",
             currentControls.enabled,
-            currentControls.share,
             currentControls.name,
             currentControls.context,
             currentControls.islandRestricted,
@@ -324,17 +325,32 @@ class MacrosModule private constructor(
         minecraft.gui.setScreen(ScratchMacroEditorScreen(minecraft.gui.screen(), macro))
     }
 
-    /** Macros whose per-macro "Include In Share" switch is on. */
-    fun sharedMacros(): List<MacroDefinition> = macros.filter { controls[it.id()]?.share?.value() == true }
+    /** Ids switched on in the Share list; lives only for this session. */
+    private val shareMarks = HashSet<Int>()
 
-    private fun copyShared() {
+    fun isMarkedForShare(id: Int): Boolean = shareMarks.contains(id)
+
+    fun setMarkedForShare(id: Int, marked: Boolean) {
+        if (marked) shareMarks.add(id) else shareMarks.remove(id)
+    }
+
+    /** Macros switched on in the Share list. */
+    fun sharedMacros(): List<MacroDefinition> = macros.filter { shareMarks.contains(it.id()) }
+
+    private fun openShare() {
+        val minecraft = Minecraft.getInstance()
+        minecraft.gui.setScreen(MacroShareScreen(minecraft.gui.screen()))
+    }
+
+    /** Copies the switched-on macros and returns the line the Share screen shows. */
+    fun copyMarkedMacros(): String {
         val selected = sharedMacros()
-        if (selected.isEmpty()) return note("Turn on Include In Share for at least one macro first.")
-        try {
+        if (selected.isEmpty()) return "Switch on at least one macro first."
+        return try {
             Minecraft.getInstance().keyboardHandler.setClipboard(exportEncoded(selected))
-            note("Copied ${selected.size} macro(s) to the clipboard.")
+            "Copied ${selected.size} macro(s) to the clipboard."
         } catch (invalid: IllegalArgumentException) {
-            note(invalid.message ?: "The selected macros exceed the sharing limits.")
+            invalid.message ?: "The selected macros exceed the sharing limits."
         }
     }
 
@@ -591,7 +607,6 @@ class MacrosModule private constructor(
 
     private class Controls(macro: MacroDefinition) {
         val enabled = BooleanSetting("Macro Enabled", macro.enabled())
-        val share = BooleanSetting("Include In Share", false)
         val name = TextSetting("Macro Name", "Rename Macro", macro.name(), 48)
         val context = ChoiceSetting("Trigger Context", contextLabel(macro.triggerContext()), *CONTEXT_CHOICES)
         val islandRestricted = BooleanSetting("Island Filter", macro.islandRestricted())

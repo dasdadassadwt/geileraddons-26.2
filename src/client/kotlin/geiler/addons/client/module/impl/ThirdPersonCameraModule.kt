@@ -187,7 +187,7 @@ class ThirdPersonCameraModule private constructor(settings: Settings) : Module(
             KeyMapping(
                 "key.geileraddons.free_look",
                 InputConstants.Type.KEYSYM,
-                InputConstants.KEY_C,
+                InputConstants.UNKNOWN.value,
                 KeyMapping.Category.GAMEPLAY,
             ),
         )

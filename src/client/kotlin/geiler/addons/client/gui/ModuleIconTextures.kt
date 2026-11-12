@@ -59,6 +59,14 @@ object ModuleIconTextures {
         "Slot Locking" to icon("slot_locking"),
         "Player Names" to icon("player_names"),
         "Custom Scoreboard" to icon("custom_scoreboard"),
+        "Dungeon Boss ESP" to icon("dungeon_boss_esp"),
+        "Dungeon Class ESP" to icon("dungeon_class_esp"),
+        "Item Rarity Backgrounds" to icon("item_rarity_backgrounds"),
+        "No Cursor Reset" to icon("no_cursor_reset"),
+        "Aliases" to icon("aliases"),
+        "Instance Requeue" to icon("instance_requeue"),
+        "Trail" to icon("trail"),
+        "No Loading Screen" to icon("no_loading_screen"),
     )
 
     private val sourceSizes = mapOf(
@@ -116,6 +124,14 @@ object ModuleIconTextures {
         "Slot Locking" to 256,
         "Player Names" to 256,
         "Custom Scoreboard" to 256,
+        "Dungeon Boss ESP" to 256,
+        "Dungeon Class ESP" to 256,
+        "Item Rarity Backgrounds" to 256,
+        "No Cursor Reset" to 256,
+        "Aliases" to 256,
+        "Instance Requeue" to 256,
+        "Trail" to 256,
+        "No Loading Screen" to 256,
     )
 
     private val tintable = setOf(
@@ -126,6 +142,14 @@ object ModuleIconTextures {
         "Safari Floor Drops", "Slot IDs", "Snap Tap", "Sparkling Critter", "Spirit Leap Menu", "System Clock", "Theme",
         "Third Person Camera", "Tiki Helper", "Tree Broken Notifier", "Tree Tracker",
         "Terminal Stats", "Terminal Titles", "Dungeon Map", "Room Alerts", "Key Pickup", "Score Titles", "Blood Camp", "Livid Helper", "Invincibility Timers", "Secret Clicked", "Slayer Tracker", "Pest Tracker", "Crop Fever Timer", "Party Commands", "Lobby Sniper", "Slot Locking", "Player Names", "Custom Scoreboard",
+        "Dungeon Boss ESP",
+        "Dungeon Class ESP",
+        "Item Rarity Backgrounds",
+        "No Cursor Reset",
+        "Aliases",
+        "Instance Requeue",
+        "Trail",
+        "No Loading Screen",
     )
 
     @JvmStatic

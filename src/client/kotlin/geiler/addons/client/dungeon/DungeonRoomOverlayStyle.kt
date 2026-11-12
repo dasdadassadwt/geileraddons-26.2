@@ -25,6 +25,9 @@ class DungeonRoomOverlayStyle private constructor() {
             StyleCore.predictionsVisible(revealUnopenedRooms, disabled)
         @JvmStatic fun roomDecoration(showCheckmarks: Boolean, checkmark: String?, label: String?): RoomDecoration =
             StyleCore.roomDecoration(showCheckmarks, checkmark, label)
+        /** Yellow (miniboss) rooms have no secret count, so a cleared map tile is always shown as a green check. */
+        @JvmStatic fun minibossDoneCheckmark(type: DungeonMapGeometry.RoomType?, checkmark: String?): String? =
+            if (type == DungeonMapGeometry.RoomType.MINIBOSS && (checkmark == "WHITE" || checkmark == "GREEN")) "GREEN" else null
         @JvmStatic fun dynamicDoorRoomType(first: DungeonMapGeometry.RoomType?,
             second: DungeonMapGeometry.RoomType?): DungeonMapGeometry.RoomType =
             StyleCore.dynamicDoorRoomType(first, second)

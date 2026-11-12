@@ -32,9 +32,9 @@ public final class DungeonVisualBehaviorChecks {
 
 	private static void roomAlertControls() {
 		var titles = DungeonRoomAlertModule.INSTANCE.textSettings().stream()
-			.filter(setting -> setting.name().endsWith("Title Text")).toList();
-		check(titles.size() == 2 && titles.stream().anyMatch(setting -> "Room Cleared".equals(setting.value()))
-			&& titles.stream().anyMatch(setting -> "Secrets Cleared".equals(setting.value())),
+			.filter(setting -> "Title Text".equals(setting.displayName())).toList();
+		check(titles.size() == 2 && titles.stream().anyMatch(setting -> "Cleared".equals(setting.value()))
+			&& titles.stream().anyMatch(setting -> "Secrets Done".equals(setting.value())),
 			"room clear and secrets complete retain independent title text settings");
 		var durations = DungeonRoomAlertModule.INSTANCE.numberSettings().stream()
 			.filter(setting -> "Title Duration (ticks)".equals(setting.name())).toList();

@@ -10,9 +10,10 @@
 	"contact": {
 		"homepage": "https://github.com/dasdadassadwt/geileraddons-26.2",
 		"sources": "https://github.com/dasdadassadwt/geileraddons-26.2",
-		"issues": "https://github.com/dasdadassadwt/geileraddons-26.2/issues"
+		"issues": "https://github.com/dasdadassadwt/geileraddons-26.2/issues",
+		"discord": "https://discord.gg/VmHPgB5Jyc"
 	},
-	"license": "MIT",
+	"license": "CC0-1.0",
 	"icon": "assets/geileraddons/icon.png",
 	"environment": "client",
 	"entrypoints": {

@@ -36,73 +36,12 @@ public final class DungeonMobEspModuleKotlinChecks {
 
 	public static void run() {
 		checkJavaAbi();
-		checkSpecialMobModuleAbiAndSettings();
 		checkSpecialMobRules();
 		DungeonMobEspModule module = DungeonMobEspModule.INSTANCE;
 		checkIdentityAndGroups(module);
 		checkSettings(module);
 		checkLegacySettings(module);
 		checkKeybindMigration();
-	}
-
-	private static void checkSpecialMobModuleAbiAndSettings() {
-		check(Modifier.isPublic(DungeonSpecialMobEspModule.class.getModifiers())
-			&& Modifier.isFinal(DungeonSpecialMobEspModule.class.getModifiers()),
-			"the unregistered Kotlin special-mob module keeps a public final Java class");
-		try {
-			Field instance = DungeonSpecialMobEspModule.class.getField("INSTANCE");
-			check(Modifier.isPublic(instance.getModifiers()) && Modifier.isStatic(instance.getModifiers())
-				&& Modifier.isFinal(instance.getModifiers()) && instance.getType() == DungeonSpecialMobEspModule.class
-				&& instance.get(null) == DungeonSpecialMobEspModule.INSTANCE,
-				"Java callers retain the public static final DungeonSpecialMobEspModule.INSTANCE field");
-			checkInstanceMethod(DungeonSpecialMobEspModule.class, "isActive", boolean.class);
-			checkInstanceMethod(DungeonSpecialMobEspModule.class, "inactiveReason", String.class);
-			checkInstanceMethod(DungeonSpecialMobEspModule.class, "tick", void.class);
-			checkInstanceMethod(DungeonSpecialMobEspModule.class, "render", void.class, LevelRenderContext.class);
-		} catch (ReflectiveOperationException exception) {
-			throw new AssertionError("Kotlin special-mob module Java ABI is incomplete", exception);
-		}
-
-		DungeonSpecialMobEspModule module = DungeonSpecialMobEspModule.INSTANCE;
-		check(module.name().equals("Dungeon Special Mob ESP")
-			&& module.configName().equals("Dungeon Special Mob ESP")
-			&& module.description().equals("Highlights the F7 Wither Boss, known Mimic chests during Clear, and known party members by class.")
-			&& module.category() == Category.F7 && !module.defaultEnabled() && module.hasSettings(),
-			"special-mob module identity, category, disabled default, and config key remain stable");
-
-		List<SettingGroup> groups = module.groups();
-		check(groups.size() == 4, "the special-mob module retains its four settings groups");
-		checkGroup(groups.get(0), "F7 Wither Boss", "F7 Wither Boss ESP",
-			List.of("Highlight Range", "Special Mob Fill", "Special Mob Outline"));
-		checkGroup(groups.get(1), "Known Mimic Chest", "Known Mimic Chest ESP",
-			List.of("Highlight Range", "Mimic Chest Fill", "Mimic Chest Outline"));
-		checkGroup(groups.get(2), "Party classes", "Party Only Class Highlight",
-			List.of("Highlight Range", "Tank Color", "Healer Color", "Mage Color", "Berserk Color", "Archer Color",
-				"Party Fill"));
-		checkGroup(groups.get(3), "Visibility", null, List.of("Depth Check"));
-
-		check(settingNames(module.booleanSettings()).equals(List.of(
-			"F7 Wither Boss ESP", "Known Mimic Chest ESP", "Party Only Class Highlight", "Depth Check"))
-			&& module.booleanSettings().stream().map(BooleanSetting::rawValue).toList()
-				.equals(List.of(true, true, false, true)),
-			"special-mob boolean setting IDs, order, and defaults remain stable");
-		check(settingNames(module.numberSettings()).equals(List.of("Highlight Range")),
-			"special-mob number setting IDs and order remain stable");
-		NumberSetting range = module.numberSettings().getFirst();
-		check(Float.compare(range.min(), 8.0f) == 0 && Float.compare(range.max(), 128.0f) == 0
-			&& Float.compare(range.value(), 64.0f) == 0 && range.isInteger(),
-			"special-mob range bounds, default, and integer mode remain stable");
-
-		check(settingNames(module.colorSettings()).equals(List.of(
-			"Mimic Chest Fill", "Mimic Chest Outline", "Special Mob Fill", "Special Mob Outline", "Tank Color",
-			"Healer Color", "Mage Color", "Berserk Color", "Archer Color", "Party Fill"))
-			&& module.colorSettings().stream().map(setting -> setting.name() + "=" + setting.hex()).toList().equals(List.of(
-				"Mimic Chest Fill=D11D05A0", "Mimic Chest Outline=D11D05FF", "Special Mob Fill=FF502330",
-				"Special Mob Outline=FF5023FF", "Tank Color=" + classColor(DungeonClass.TANK),
-				"Healer Color=" + classColor(DungeonClass.HEALER), "Mage Color=" + classColor(DungeonClass.MAGE),
-				"Berserk Color=" + classColor(DungeonClass.BERSERK), "Archer Color=" + classColor(DungeonClass.ARCHER),
-				"Party Fill=00000018")),
-			"special-mob color setting IDs, order, and defaults remain stable");
 	}
 
 	private static void checkJavaAbi() {
@@ -433,13 +372,13 @@ public final class DungeonMobEspModuleKotlinChecks {
 
 	private static void checkIdentityAndGroups(DungeonMobEspModule module) {
 		check(module.name().equals("Dungeon Mob ESP") && module.configName().equals("Dungeon Mob ESP")
-			&& module.description().equals("Highlights selected dungeon mobs, minibosses, bosses, Mimics, and party classes.")
+			&& module.description().equals("Highlights starred dungeon mobs, minibosses, and Fels.")
 			&& module.category() == Category.F7 && !module.defaultEnabled() && module.hasSettings(),
 			"module identity, F7 category, disabled default, and stable config key are preserved");
 
 		List<SettingGroup> groups = module.groups();
-		check(groups.size() == 8 && groups.get(0).name() == null,
-			"the module keeps its shared settings row and seven named setting groups");
+		check(groups.size() == 5 && groups.get(0).name() == null,
+			"the module keeps its shared settings row and four named setting groups");
 		checkGroup(groups.get(0), null, null, List.of("Depth Check", "Debug Target Matching"));
 		checkGroup(groups.get(1), "Fels", "Fels Enabled", List.of(
 			"Fels Only Current Room", "Highlight Starred Fels", "Highlight Hidden Fel Skulls", "Fel Style",
@@ -457,13 +396,6 @@ public final class DungeonMobEspModuleKotlinChecks {
 			"Miniboss Ring Radius", "Miniboss Ring Speed", "Miniboss Ring Line Width"));
 		checkGroup(groups.get(4), "Automatic miniboss appearance capture", "Capture Miniboss Appearances",
 			List.of("Optional Manual Appearance Label", "Capture Crosshair Player Profile"));
-		checkGroup(groups.get(5), "Wither Bosses", "F7 Wither Boss ESP",
-			List.of("Highlight Range", "Special Mob Fill", "Special Mob Outline"));
-		checkGroup(groups.get(6), "Mimics", "Known Mimic Chest ESP",
-			List.of("Highlight Range", "Mimic Chest Fill", "Mimic Chest Outline"));
-		checkGroup(groups.get(7), "Party Classes", "Party Only Class Highlight",
-			List.of("Highlight Range", "Tank Color", "Healer Color", "Mage Color", "Berserk Color", "Archer Color",
-				"Party Class Fill"));
 		check(module.actions().size() == 1
 			&& module.actions().getFirst().label().equals("Capture Crosshair Player Profile"),
 			"the manual appearance capture action remains available in the module settings list");
@@ -485,11 +417,10 @@ public final class DungeonMobEspModuleKotlinChecks {
 			"Starred Group Enabled", "Starred Only Current Room", "Depth Check", "Minibosses Enabled",
 			"Miniboss Only Current Room", "Only Starred Minibosses", "Miniboss Tracer", "Capture Miniboss Appearances",
 			"Fels Enabled", "Fels Only Current Room", "Highlight Starred Fels", "Highlight Hidden Fel Skulls",
-			"Fel Skull Tracer", "Debug Target Matching", "F7 Wither Boss ESP", "Known Mimic Chest ESP",
-			"Party Only Class Highlight")),
+			"Fel Skull Tracer", "Debug Target Matching")),
 			"all persisted boolean setting IDs remain present in declaration order");
 		check(module.booleanSettings().stream().map(BooleanSetting::rawValue).toList().equals(List.of(
-			true, false, false, true, false, false, true, false, true, false, true, true, true, false, true, true, false)),
+			true, false, false, true, false, false, true, false, true, false, true, true, true, false)),
 			"all boolean setting defaults remain unchanged");
 
 		check(settingNames(module.numberSettings()).equals(List.of(
@@ -498,7 +429,7 @@ public final class DungeonMobEspModuleKotlinChecks {
 			"Miniboss Outline Width", "Miniboss Tracer Width", "Miniboss Ring Count", "Miniboss Ring Height",
 			"Miniboss Ring Radius", "Miniboss Ring Speed", "Miniboss Ring Line Width", "Fel Outline Width",
 			"Fel Ring Count", "Fel Ring Height", "Fel Ring Radius", "Fel Ring Speed", "Fel Ring Line Width",
-			"Fel Tracer Width", "Highlight Range")),
+			"Fel Tracer Width")),
 			"all persisted number setting IDs remain present in declaration order");
 		checkNumber(module, "Starred Range", 8, 128, 128, true);
 		checkNumber(module, "Starred Outline Width", 0.5f, 25, 5, false);
@@ -522,7 +453,6 @@ public final class DungeonMobEspModuleKotlinChecks {
 		checkNumber(module, "Fel Ring Speed", 0.1f, 5, 0.8f, false);
 		checkNumber(module, "Fel Ring Line Width", 0.5f, 5, 1.5f, false);
 		checkNumber(module, "Fel Tracer Width", 0.5f, 5, 1.5f, false);
-		checkNumber(module, "Highlight Range", 8, 128, 64, true);
 
 		check(settingNames(module.choiceSettings()).equals(List.of("Starred Style", "Miniboss Style", "Fel Style")),
 			"all three rendering-style setting IDs remain stable");
@@ -535,18 +465,12 @@ public final class DungeonMobEspModuleKotlinChecks {
 
 		check(settingNames(module.colorSettings()).equals(List.of(
 			"Starred Outline Color", "Starred Fill Color", "Miniboss Outline Color", "Miniboss Fill Color",
-			"Miniboss Tracer Color", "Fel Outline Color", "Fel Fill Color", "Fel Tracer Color", "Mimic Chest Fill",
-			"Mimic Chest Outline", "Special Mob Fill", "Special Mob Outline", "Tank Color", "Healer Color",
-			"Mage Color", "Berserk Color", "Archer Color", "Party Class Fill")),
+			"Miniboss Tracer Color", "Fel Outline Color", "Fel Fill Color", "Fel Tracer Color")),
 			"all color setting IDs remain present in declaration order");
 		check(colorHex(module).equals(List.of(
 			"Starred Outline Color=FFFFFFFF", "Starred Fill Color=000000FF", "Miniboss Outline Color=000000FF",
 			"Miniboss Fill Color=FFFFFFFF", "Miniboss Tracer Color=FFFFFFDC", "Fel Outline Color=FFFFFFFF",
-			"Fel Fill Color=FFFFFFFF", "Fel Tracer Color=FFFFFFDC", "Mimic Chest Fill=D11D05A0",
-			"Mimic Chest Outline=D11D05FF", "Special Mob Fill=FF502330", "Special Mob Outline=FF5023FF",
-			"Tank Color=" + classColor(DungeonClass.TANK), "Healer Color=" + classColor(DungeonClass.HEALER),
-			"Mage Color=" + classColor(DungeonClass.MAGE), "Berserk Color=" + classColor(DungeonClass.BERSERK),
-			"Archer Color=" + classColor(DungeonClass.ARCHER), "Party Class Fill=00000018")),
+			"Fel Fill Color=FFFFFFFF", "Fel Tracer Color=FFFFFFDC")),
 			"all color defaults and alpha values remain unchanged");
 
 		check(module.textSettings().size() == 1
@@ -705,11 +629,6 @@ public final class DungeonMobEspModuleKotlinChecks {
 
 	private static List<String> colorHex(DungeonMobEspModule module) {
 		return module.colorSettings().stream().map(setting -> setting.name() + "=" + setting.hex()).toList();
-	}
-
-	private static String classColor(DungeonClass dungeonClass) {
-		int color = DungeonSpecialMobRules.defaultClassColor(dungeonClass);
-		return String.format("%02X%02X%02XFF", color >>> 16 & 0xFF, color >>> 8 & 0xFF, color & 0xFF);
 	}
 
 	private static List<String> settingNames(List<? extends Setting> settings) {

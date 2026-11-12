@@ -7,7 +7,13 @@ data class ClickGuiTextSlice(val text: String, val start: Int, val end: Int)
 
 enum class ClickGuiTextEditKey { BACKSPACE, DELETE, LEFT, RIGHT, HOME, END }
 
-data class ClickGuiTextEditResult(val text: String, val cursor: Int, val selectAll: Boolean)
+/** [anchor] is the fixed end of a selection; a negative value, or one equal to [cursor], means nothing is selected. */
+data class ClickGuiTextEditResult @JvmOverloads constructor(
+    val text: String,
+    val cursor: Int,
+    val selectAll: Boolean,
+    val anchor: Int = -1,
+)
 
 /** Unicode-safe cursor and visible-text calculations shared by Click GUI fields. */
 object ClickGuiTextEditing {
@@ -67,6 +73,104 @@ object ClickGuiTextEditing {
             ClickGuiTextEditKey.END -> ClickGuiTextEditResult(value, value.length, false)
         }
     }
+
+    /** The selected character range, ordered and clamped to [text]. */
+    data class Selection(val start: Int, val end: Int) {
+        fun isEmpty(): Boolean = start == end
+    }
+
+    @JvmStatic
+    fun selection(text: String?, cursor: Int, anchor: Int): Selection {
+        val value = text.orEmpty()
+        if (anchor < 0) return Selection(0, 0)
+        val a = clampCursor(value, anchor)
+        val c = clampCursor(value, cursor)
+        return Selection(minOf(a, c), maxOf(a, c))
+    }
+
+    @JvmStatic
+    fun selectedText(text: String?, cursor: Int, anchor: Int): String {
+        val range = selection(text, cursor, anchor)
+        return if (range.isEmpty()) "" else text.orEmpty().substring(range.start, range.end)
+    }
+
+    @JvmStatic
+    fun selectAllState(text: String?): ClickGuiTextEditResult {
+        val value = text.orEmpty()
+        return ClickGuiTextEditResult(value, value.length, false, 0)
+    }
+
+    @JvmStatic
+    fun deleteSelection(text: String?, cursor: Int, anchor: Int): ClickGuiTextEditResult {
+        val value = text.orEmpty()
+        val range = selection(value, cursor, anchor)
+        if (range.isEmpty()) return ClickGuiTextEditResult(value, clampCursor(value, cursor), false, -1)
+        return ClickGuiTextEditResult(value.removeRange(range.start, range.end), range.start, false, -1)
+    }
+
+    /** Replaces the selection (or inserts at the caret), keeping the result within [maxLength] characters. */
+    @JvmStatic
+    fun insertReplacingSelection(
+        text: String?,
+        cursor: Int,
+        anchor: Int,
+        inserted: String?,
+        maxLength: Int,
+    ): ClickGuiTextEditResult {
+        val base = deleteSelection(text, cursor, anchor)
+        var insertion = inserted.orEmpty()
+        val room = max(0, maxLength - base.text.length)
+        if (insertion.length > room) {
+            insertion = insertion.substring(0, room)
+            if (insertion.isNotEmpty() && Character.isHighSurrogate(insertion.last())) insertion = insertion.dropLast(1)
+        }
+        val at = base.cursor
+        return ClickGuiTextEditResult(
+            base.text.substring(0, at) + insertion + base.text.substring(at), at + insertion.length, false, -1,
+        )
+    }
+
+    /** Applies a navigation or delete key; shift extends the selection from the previous caret. */
+    @JvmStatic
+    fun applyKeyWithSelection(
+        text: String?,
+        cursor: Int,
+        anchor: Int,
+        key: ClickGuiTextEditKey,
+        shift: Boolean,
+    ): ClickGuiTextEditResult {
+        val value = text.orEmpty()
+        val range = selection(value, cursor, anchor)
+        val bounded = clampCursor(value, cursor)
+        if (key == ClickGuiTextEditKey.BACKSPACE || key == ClickGuiTextEditKey.DELETE) {
+            if (!range.isEmpty()) return deleteSelection(value, cursor, anchor)
+            val edit = applyKey(value, bounded, false, key)
+            return ClickGuiTextEditResult(edit.text, edit.cursor, false, -1)
+        }
+        val moved = if (!shift && !range.isEmpty()) {
+            when (key) {
+                ClickGuiTextEditKey.LEFT -> range.start
+                ClickGuiTextEditKey.RIGHT -> range.end
+                ClickGuiTextEditKey.HOME -> 0
+                else -> value.length
+            }
+        } else applyKey(value, bounded, false, key).cursor
+        if (!shift) return ClickGuiTextEditResult(value, moved, false, -1)
+        val keptAnchor = if (anchor >= 0) clampCursor(value, anchor) else bounded
+        return ClickGuiTextEditResult(value, moved, false, if (keptAnchor == moved) -1 else keptAnchor)
+    }
+
+    /** One-line clipboard text: breaks and tabs become spaces, other control characters are dropped. */
+    @JvmStatic
+    fun sanitizePaste(raw: String?): String {
+        if (raw.isNullOrEmpty()) return ""
+        val spaced = raw.replace(Regex("\\r\\n|[\\r\\n\\t]"), " ")
+        return buildString(spaced.length) { for (ch in spaced) if (!Character.isISOControl(ch)) append(ch) }
+    }
+
+    /** A drag keeps the anchor it started with, otherwise it starts at the caret placed by the first click. */
+    @JvmStatic
+    fun dragAnchor(clickCursor: Int, existingAnchor: Int): Int = if (existingAnchor >= 0) existingAnchor else clickCursor
 
     @JvmStatic
     fun clampCursor(text: String?, cursor: Int): Int {

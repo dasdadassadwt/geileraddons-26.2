@@ -29,7 +29,7 @@ import java.util.regex.Pattern
  */
 object UpdateChecker {
     private const val RELEASES_URL = "https://api.github.com/repos/dasdadassadwt/geileraddons-26.2/releases/latest"
-    private const val RELEASES_PAGE = "https://github.com/dasdadassadwt/geileraddons-26.2/releases/latest"
+    private const val RELEASES_PAGE = "${ProjectLinks.GITHUB_URL}/releases/latest"
     private val timeout = Duration.ofSeconds(10)
     private const val MAX_RESPONSE_BYTES = 256 * 1024
 
@@ -96,7 +96,7 @@ object UpdateChecker {
     fun newerVersion(): String? = newerVersion
 
     @JvmStatic
-    fun repositoryPage(): String = "https://github.com/dasdadassadwt/geileraddons-26.2"
+    fun repositoryPage(): String = ProjectLinks.GITHUB_URL
 
     @JvmStatic
     fun releasesPage(): String = RELEASES_PAGE

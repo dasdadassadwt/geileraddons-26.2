@@ -213,6 +213,12 @@ object DungeonCreeperBeamsRulesLogic {
         return JavaList.copyOf(pairs)
     }
 
+    @JvmStatic
+    fun stablePairProgress(frozen: List<BeamPair>, detection: Detection?): List<Boolean> {
+        val active = if (detection != null && detection.known()) HashSet(detection.pairs()) else emptySet<BeamPair>()
+        return frozen.map { it !in active }
+    }
+
     /** Exact world-coordinate membership; unknown detections never confirm a click target. */
     @JvmStatic
     fun containsEndpoint(detection: Detection?, position: WorldPosition?): Boolean {

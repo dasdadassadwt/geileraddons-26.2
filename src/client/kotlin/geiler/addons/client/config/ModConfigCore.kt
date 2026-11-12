@@ -22,6 +22,9 @@ import geiler.addons.client.module.ModuleManager
 import geiler.addons.client.module.impl.AutoExperimentsModule
 import geiler.addons.client.module.impl.BlockEspEntry
 import geiler.addons.client.module.impl.BlockEspModule
+import geiler.addons.client.module.impl.DungeonBossEspModule
+import geiler.addons.client.module.impl.DungeonClassEspModule
+import geiler.addons.client.module.impl.DungeonEspSplitMigration
 import geiler.addons.client.module.impl.DungeonMobEspKeybindMigration
 import geiler.addons.client.module.impl.DungeonMobEspModule
 import geiler.addons.client.module.impl.DungeonRoomOverlayModule
@@ -189,6 +192,7 @@ object ModConfigCore {
             val oldGroupEnabled = data.enabled["Starred Mob ESP"] == true || data.enabled["Miniboss ESP"] == true
             if (specialMobEspEnabled == true || oldGroupEnabled) DungeonMobEspModule.INSTANCE.setEnabled(true)
         }
+        migrateDungeonEspSplit(data)
         val legacyFillOpacity = data.numbers["Garden Plot Borders.Fill Opacity"]
         if (legacyFillOpacity != null) {
             val alpha = Math.round(Math.max(0.0f, Math.min(100.0f, legacyFillOpacity)) * 2.55f)
@@ -286,6 +290,27 @@ object ModConfigCore {
         legacyModuleName: String?,
         newModuleName: String?,
     ): Boolean = ConfigSettingKeys.migrateLegacyModuleEnabledState(enabled, legacyModuleName, newModuleName)
+
+    /** Dungeon Boss ESP and Dungeon Class ESP were part of Dungeon Mob ESP; carry their saved values over once. */
+    private fun migrateDungeonEspSplit(data: ModConfig.Data) {
+        val numbers = legacyMapView(data.numbers)
+        val toggles = legacyMapView(data.toggles)
+        val colors = legacyMapView(data.colors)
+        val boss = DungeonBossEspModule.INSTANCE
+        val classEsp = DungeonClassEspModule.INSTANCE
+        boss.restoreLegacySettings(numbers, toggles, colors)
+        classEsp.restoreLegacySettings(numbers, toggles, colors)
+        val oldEnabled = data.enabled[DungeonMobEspModule.INSTANCE.configName()]
+        if (!data.enabled.containsKey(boss.configName())) {
+            DungeonEspSplitMigration.bossEnabled(
+                oldEnabled, toggles["Dungeon Mob ESP.F7 Wither Boss ESP"], toggles["Dungeon Mob ESP.Known Mimic Chest ESP"],
+            )?.let { boss.setEnabled(it) }
+        }
+        if (!data.enabled.containsKey(classEsp.configName())) {
+            DungeonEspSplitMigration.classEnabled(oldEnabled, toggles["Dungeon Mob ESP.Party Only Class Highlight"])
+                ?.let { classEsp.setEnabled(it) }
+        }
+    }
 
     private fun migrateLegacyDungeonSplitTiming(data: ModConfig.Data): Boolean =
         ModConfigMigrations.migrateLegacyDungeonSplitTiming(data.toggles, data.choices)

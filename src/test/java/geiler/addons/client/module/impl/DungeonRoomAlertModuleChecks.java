@@ -41,10 +41,10 @@ public final class DungeonRoomAlertModuleChecks {
 			"both alert groups and their title and sound options default on");
 
 		List<String> textIds = module.textSettings().stream().map(TextSetting::name).toList();
-		equals(List.of("Title Text", "Room Cleared Sound ID", "Secrets Title Text", "Secrets Complete Sound ID"),
+		equals(List.of("Room Cleared Title Text", "Room Cleared Sound ID", "Secrets Title Text", "Secrets Complete Sound ID"),
 			textIds, "text setting IDs remain compatible");
 		List<TextSetting> texts = module.textSettings();
-		equals(List.of("Room Cleared", "entity.player.levelup", "Secrets Cleared", "block.note_block.pling"),
+		equals(List.of("Cleared", "entity.player.levelup", "Secrets Done", "block.note_block.pling"),
 			texts.stream().map(TextSetting::value).toList(), "title and sound defaults remain distinct");
 		equals(List.of(64, 96, 64, 96), texts.stream().map(TextSetting::maxLength).toList(),
 			"title and sound text bounds remain unchanged");

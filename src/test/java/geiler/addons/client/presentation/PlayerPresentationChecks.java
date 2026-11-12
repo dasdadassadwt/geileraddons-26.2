@@ -35,6 +35,7 @@ public final class PlayerPresentationChecks {
 	public static void main(String[] args) throws Exception {
 		checkProfileAbi();
 		PlayerNameGradientMathChecks.main(new String[0]);
+		PlayerNameGradientRenderStateChecks.run();
 		PlayerPresentationProfileSourceChecks.run();
 		checkTooltipComponentMapper();
 		PlayerPresentationProfiles profile = PlayerPresentationProfiles.parse("""

@@ -115,6 +115,10 @@ public final class OfflineChecks {
 		FabricCheckEnvironment.initializeConfigDirectory();
 		step("FlatLegacyConfigMigrationChecks.run", () -> FlatLegacyConfigMigrationChecks.run());
 		step("DungeonClassChecks.run", () -> DungeonClassChecks.run());
+		step("DungeonEspSplitChecks.run", () -> DungeonEspSplitChecks.run());
+		step("SlotItemOverlayChecks.run", () -> SlotItemOverlayChecks.run());
+		step("ChatTrailRequeueChecks.run", () -> ChatTrailRequeueChecks.run());
+		step("WindowIconLinkChecks.run", () -> WindowIconLinkChecks.run());
 		step("GeilerAddonsRenderTypesAbiChecks.run", () -> GeilerAddonsRenderTypesAbiChecks.run());
 		step("PestPersistenceChecks.run", () -> PestPersistenceChecks.run());
 		step("GeilerAddonsLogRecoveryChecks.run", () -> GeilerAddonsLogRecoveryChecks.run());
@@ -240,6 +244,7 @@ public final class OfflineChecks {
 		step("ClickGuiMotionChecks.run", () -> ClickGuiMotionChecks.run());
 		step("ThemeContrastChecks.run", () -> ThemeContrastChecks.run());
 		step("ClickGuiScrollChecks.run", () -> ClickGuiScrollChecks.run());
+		step("ClickGuiTextSelectionChecks.run", () -> geiler.addons.client.gui.ClickGuiTextSelectionChecks.run());
 		step("ConfigProfileChecks.run", () -> ConfigProfileChecks.run());
 		step("TreeTrackerChecks.main", () -> TreeTrackerChecks.main(args));
 		step("InventoryButtonsModuleKotlinChecks.run", () -> InventoryButtonsModuleKotlinChecks.run());
@@ -257,6 +262,7 @@ public final class OfflineChecks {
 		step("KeyMappingMirrorChecks.run", () -> geiler.addons.client.module.KeyMappingMirrorChecks.run());
 		step("ClickGuiGroupFlatteningChecks.run", () -> geiler.addons.client.gui.ClickGuiGroupFlatteningChecks.run());
 		step("ChatStringSemanticsChecks.run", () -> geiler.addons.client.chat.ChatStringSemanticsChecks.run());
+		step("ClickGuiInputChecks.run", () -> geiler.addons.client.gui.ClickGuiInputChecks.run());
 		if (!FAILURES.isEmpty()) {
 			System.err.println(FAILURES.size() + " offline check(s) failed:");
 			FAILURES.forEach((name, error) -> {

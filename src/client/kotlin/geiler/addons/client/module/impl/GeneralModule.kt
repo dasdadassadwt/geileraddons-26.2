@@ -3,10 +3,14 @@ package geiler.addons.client.module.impl
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.Module
+import geiler.addons.client.module.ModuleAction
 import geiler.addons.client.module.NumberSetting
 import geiler.addons.client.module.SettingGroup
 import geiler.addons.client.module.TextSetting
+import geiler.addons.client.update.ProjectLinks
 import geiler.addons.client.utility.TimerCompletionPresentation
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.screens.ConfirmLinkScreen
 
 /** Mod-wide switches that belong to no single overlay. */
 class GeneralModule private constructor(settings: Settings) : Module(
@@ -25,6 +29,8 @@ class GeneralModule private constructor(settings: Settings) : Module(
     settings.timerCompletionSound,
     settings.timerCompletionText,
     settings.timerTitleDurationTicks,
+    settings.customWindowIcon,
+    settings.openDiscord,
 ) {
     /** Chat feedback for /ga ep and /ga sb; the withdrawal itself is unaffected. */
     fun supplyMessagesEnabled(): Boolean = supplyMessagesSetting.value()
@@ -46,6 +52,7 @@ class GeneralModule private constructor(settings: Settings) : Module(
     private val timerCompletionSoundSetting = settings.timerCompletionSound
     private val timerCompletionTextSetting = settings.timerCompletionText
     private val timerTitleDurationTicksSetting = settings.timerTitleDurationTicks
+    private val customWindowIconSetting = settings.customWindowIcon
 
     init {
         group(
@@ -63,6 +70,8 @@ class GeneralModule private constructor(settings: Settings) : Module(
                 settings.timerCompletionText,
                 settings.timerTitleDurationTicks,
             ),
+            SettingGroup("Window", settings.customWindowIcon),
+            SettingGroup("Community", settings.openDiscord),
         )
     }
 
@@ -93,6 +102,12 @@ class GeneralModule private constructor(settings: Settings) : Module(
             BooleanSetting("Sound Alert", TimerCompletionPresentation.DEFAULT_SOUND_ENABLED)
         val timerCompletionText =
             TextSetting("Completion Text", TimerCompletionPresentation.DEFAULT_MESSAGE, 128)
+        val customWindowIcon = BooleanSetting("Custom Window Icon", false)
+        val openDiscord = ModuleAction(
+            "Open Discord",
+            "Open the official GeilerAddons Discord server.",
+            Runnable { Minecraft.getInstance().gui.screen()?.let { ConfirmLinkScreen.confirmLinkNow(it, ProjectLinks.DISCORD_URL) } },
+        )
         val timerTitleDurationTicks = NumberSetting(
             "Title Duration (ticks)",
             1f,
@@ -123,6 +138,9 @@ class GeneralModule private constructor(settings: Settings) : Module(
     fun timerCompletionText(): TextSetting = timerCompletionTextSetting
 
     fun timerTitleDurationTicks(): NumberSetting = timerTitleDurationTicksSetting
+
+    /** Swaps the game window and taskbar icon for the GeilerAddons logo. */
+    fun customWindowIcon(): BooleanSetting = customWindowIconSetting
 
     override fun showsToggleControl(): Boolean = false
 

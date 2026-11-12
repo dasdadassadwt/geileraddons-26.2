@@ -47,6 +47,15 @@ import geiler.addons.client.module.impl.DungeonHelperModule
 import geiler.addons.client.module.impl.DungeonInvincibilityTimerModule
 import geiler.addons.client.module.impl.DungeonKeyPickupModule
 import geiler.addons.client.module.impl.DungeonLividSolverModule
+import geiler.addons.client.module.impl.DungeonBossEspModule
+import geiler.addons.client.module.impl.AliasesModule
+import geiler.addons.client.window.WindowIconController
+import geiler.addons.client.module.impl.DungeonClassEspModule
+import geiler.addons.client.module.impl.InstanceRequeueModule
+import geiler.addons.client.module.impl.TrailModule
+import geiler.addons.client.module.impl.ItemRarityBackgroundsModule
+import geiler.addons.client.module.impl.NoCursorResetModule
+import geiler.addons.client.module.impl.NoLoadingScreenModule
 import geiler.addons.client.module.impl.DungeonMobEspModule
 import geiler.addons.client.module.impl.DungeonOdinAssistModule
 import geiler.addons.client.module.impl.DungeonPuzzleSolversModule
@@ -160,8 +169,10 @@ class GeilerAddonsClient : ClientModInitializer {
         HypixelModApi.init()
 
         ClientSendMessageEvents.ALLOW_CHAT.register { message ->
-            !PartyCommandsModule.INSTANCE.isEnabled() || !PartyCommandsModule.handleLocalChatCommand(message)
+            (!PartyCommandsModule.INSTANCE.isEnabled() || !PartyCommandsModule.handleLocalChatCommand(message)) &&
+                !AliasesModule.INSTANCE.intercept(message, false)
         }
+        ClientSendMessageEvents.ALLOW_COMMAND.register { command -> !AliasesModule.INSTANCE.intercept(command, true) }
         ClientSendMessageEvents.COMMAND.register(ChatCommandReplyBackend::onOutgoingCommand)
         ClientReceiveMessageEvents.ALLOW_GAME.register { message, overlay ->
             val content = ChatText.plain(message.string).trim()
@@ -197,6 +208,7 @@ class GeilerAddonsClient : ClientModInitializer {
             if (!partyAnnouncement.isNullOrBlank() && player != null) {
                 player.connection.sendCommand(partyAnnouncement)
             }
+            InstanceRequeueModule.INSTANCE.onChatMessage(content)
             I4HelperModule.INSTANCE.onChatMessage(content)
             TikiHelperModule.INSTANCE.onChatMessage(content)
             TreeTrackerModule.INSTANCE.onChatMessage(content)
@@ -216,6 +228,8 @@ class GeilerAddonsClient : ClientModInitializer {
             ChatModule.INSTANCE.tick(clientTick)
             ThirdPersonCameraModule.INSTANCE.tick(clientTick)
             val dungeonMobEspEnabled = DungeonMobEspModule.INSTANCE.isEnabled()
+                || DungeonBossEspModule.INSTANCE.isEnabled()
+                || DungeonClassEspModule.INSTANCE.isEnabled()
             val puzzleGeometryConsumerEnabled = DungeonPuzzleSolversModule.INSTANCE.hasEnabledSolvers()
             val secretConsumerEnabled = SecretWaypointsModule.INSTANCE.isEnabled()
                 || SecretClickedModule.INSTANCE.isEnabled()
@@ -284,6 +298,15 @@ class GeilerAddonsClient : ClientModInitializer {
             ScoreboardBackend.tick(client)
             MobHighlightModule.INSTANCE.tick()
             DungeonMobEspModule.INSTANCE.tick()
+            DungeonBossEspModule.INSTANCE.tick()
+            DungeonClassEspModule.INSTANCE.tick()
+            ItemRarityBackgroundsModule.INSTANCE.tick()
+            NoCursorResetModule.INSTANCE.tick()
+            WindowIconController.sync(GeneralModule.INSTANCE.customWindowIcon().value())
+            AliasesModule.INSTANCE.tick()
+            InstanceRequeueModule.INSTANCE.tick()
+            TrailModule.INSTANCE.tick()
+            NoLoadingScreenModule.INSTANCE.tick()
             BlockEspModule.INSTANCE.tick()
             InventoryButtonsModule.INSTANCE.tick()
             // Release a chat line held while deciding whether it opened a gift block.
@@ -341,6 +364,9 @@ class GeilerAddonsClient : ClientModInitializer {
                 renderLividHighlight(context)
                 MobHighlightModule.INSTANCE.render(context)
                 DungeonMobEspModule.INSTANCE.render(context)
+                DungeonBossEspModule.INSTANCE.render(context)
+                DungeonClassEspModule.INSTANCE.render(context)
+                TrailModule.INSTANCE.render(context)
                 BlockEspModule.INSTANCE.render(context)
             } finally {
                 scope.close()
@@ -361,6 +387,9 @@ class GeilerAddonsClient : ClientModInitializer {
         }
         HudElementRegistry.addLast(GeilerAddons.id("dungeon_mob_esp")) { graphics, _ ->
             DungeonMobEspModule.INSTANCE.renderHud(graphics)
+        }
+        HudElementRegistry.addLast(GeilerAddons.id("dungeon_class_esp_titles")) { graphics, _ ->
+            DungeonClassEspModule.INSTANCE.renderHud(graphics)
         }
         HudElementRegistry.addLast(GeilerAddons.id("block_esp_labels")) { graphics, _ ->
             BlockEspModule.INSTANCE.renderHud(graphics)
@@ -445,6 +474,14 @@ class GeilerAddonsClient : ClientModInitializer {
             registerModule(VisualModule.INSTANCE)
             registerModule(MobHighlightModule.INSTANCE)
             registerModule(DungeonMobEspModule.INSTANCE)
+            registerModule(DungeonBossEspModule.INSTANCE)
+            registerModule(DungeonClassEspModule.INSTANCE)
+            registerModule(ItemRarityBackgroundsModule.INSTANCE)
+            registerModule(NoCursorResetModule.INSTANCE)
+            registerModule(AliasesModule.INSTANCE)
+            registerModule(InstanceRequeueModule.INSTANCE)
+            registerModule(TrailModule.INSTANCE)
+            registerModule(NoLoadingScreenModule.INSTANCE)
             registerModule(BlockEspModule.INSTANCE)
             registerModule(InventoryButtonsModule.INSTANCE)
             registerModule(SnapTapModule.INSTANCE)

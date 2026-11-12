@@ -93,6 +93,8 @@ class DungeonOdinPuzzleObserverCore {
     private var creeperBeamsRoomIdentity: String? = null
     private var creeperBeamsLevelIdentity: Any? = null
     private var creeperBeamsResolvedRotation: Int? = null
+    /** First full solution of the room; later scans only mark pairs done so indices and colors never shift. */
+    private var creeperBeamsFrozenPairs: List<DungeonCreeperBeamsRules.Pair>? = null
     private var boulderRoomIdentity: String? = null
     private var boulderLevelIdentity: Any? = null
     private var boulderDetection: DungeonBoulderRules.Detection? = null
@@ -651,11 +653,12 @@ class DungeonOdinPuzzleObserverCore {
         val snapshot = cachedCreeperBeams
         if (snapshot == null || creeperBeamsLevelIdentity !== client.level || creeperBeamsResolvedRotation == null ||
             creeperBeamsRoomIdentity(room) != creeperBeamsRoomIdentity) return emptyList()
-        val pairs = snapshot.detection.pairs()
+        val pairs = creeperBeamsFrozenPairs ?: return emptyList()
+        val done = DungeonCreeperBeamsRules.stablePairProgress(pairs, snapshot.detection)
         val result = ArrayList<DungeonOdinPuzzleObserver.CreeperPairVisual>(pairs.size)
         for (index in pairs.indices) {
             val pair = pairs[index]
-            result.add(DungeonOdinPuzzleObserver.CreeperPairVisual(worldBlock(pair.first), worldBlock(pair.second), false, index))
+            result.add(DungeonOdinPuzzleObserver.CreeperPairVisual(worldBlock(pair.first), worldBlock(pair.second), done[index], index))
         }
         return java.util.List.copyOf(result)
     }
@@ -1661,6 +1664,7 @@ class DungeonOdinPuzzleObserverCore {
             creeperBeamsRoomIdentity = currentRoomIdentity
             creeperBeamsLevelIdentity = client.level
             creeperBeamsResolvedRotation = null
+            creeperBeamsFrozenPairs = null
             lastCreeperBeamsScanTick = Long.MIN_VALUE
             cachedCreeperBeams = null
         }
@@ -1668,6 +1672,8 @@ class DungeonOdinPuzzleObserverCore {
             (cachedCreeperBeams!!.detection.known().not() && clientTick - lastCreeperBeamsScanTick >= ROOM_SCAN_PERIOD_TICKS)) {
             cachedCreeperBeams = scanCreeperBeams(client, room)
             creeperBeamsResolvedRotation = if (cachedCreeperBeams!!.detection.known()) cachedCreeperBeams!!.detection.rotation() else null
+            if (creeperBeamsFrozenPairs == null && cachedCreeperBeams!!.detection.known())
+                creeperBeamsFrozenPairs = cachedCreeperBeams!!.detection.pairs()
             lastCreeperBeamsScanTick = clientTick
         }
         val detection = cachedCreeperBeams?.detection
@@ -1677,8 +1683,9 @@ class DungeonOdinPuzzleObserverCore {
                 "The bundled endpoint catalog could not be loaded." else "The room orientation is not resolved yet."
             return manual("Creeper Beams", reason, "Endpoint pairs stay hidden until room orientation is known.")
         }
+        val stable = DungeonCreeperBeamsRules.Detection(detection.rotation(), creeperBeamsFrozenPairs ?: detection.pairs(), null)
         return DungeonOdinPuzzleObserver.Guidance(
-            "Creeper Beams", DungeonCreeperBeamsRules.guidanceLines(detection, room.cell.baseX, room.cell.baseZ),
+            "Creeper Beams", DungeonCreeperBeamsRules.guidanceLines(stable, room.cell.baseX, room.cell.baseZ),
         )
     }
 
@@ -1878,6 +1885,7 @@ class DungeonOdinPuzzleObserverCore {
         creeperBeamsRoomIdentity = null
         creeperBeamsLevelIdentity = null
         creeperBeamsResolvedRotation = null
+        creeperBeamsFrozenPairs = null
         cachedCreeperBeams = null
     }
 
@@ -1932,6 +1940,7 @@ class DungeonOdinPuzzleObserverCore {
         creeperBeamsRoomIdentity = null
         creeperBeamsLevelIdentity = null
         creeperBeamsResolvedRotation = null
+        creeperBeamsFrozenPairs = null
         boulderRoomIdentity = null
         boulderLevelIdentity = null
         boulderDetection = null

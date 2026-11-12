@@ -9,7 +9,7 @@ class ConfigTransferService private constructor() {
     enum class ResetArea(private val description: String) {
         MODULES("Module settings, enable switches, keybinds, Click GUI and theme"),
         MACROS("Macros, reusable functions, variables and folders"),
-        MOB_ESP("Dungeon Mob ESP settings, Mob Highlight rules and Block ESP entries"),
+        MOB_ESP("Dungeon Mob, Boss and Class ESP settings, Mob Highlight rules and Block ESP entries"),
         DUNGEON_GUIDES("Dungeon Guide routes, route settings and custom segments"),
         INVENTORY_BUTTONS("Inventory Button layout and custom PNG icons"),
         TIKI_DATA("Tiki coordinates and learned block fingerprints"),

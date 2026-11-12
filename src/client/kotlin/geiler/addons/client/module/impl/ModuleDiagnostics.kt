@@ -17,7 +17,7 @@ fun interface DiagnosticActivation {
  * The shared bounded-diagnostics state every feature needs: a tick counter, a per-tick event budget,
  * a suppressed-event counter, a status heartbeat, and the enable/disable bookends. Modules keep only
  * their own status text. Log prefixes (`EVENT`, `STATUS`, `EVENTS_SUPPRESSED`, `FEATURE ENABLED/DISABLED`)
- * stay stable so log evidence stays comparable.
+ * stay stable for `docs/debugging.md` evidence.
  */
 class ModuleDiagnostics @JvmOverloads constructor(
     private val category: Category,

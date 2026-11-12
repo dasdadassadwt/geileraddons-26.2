@@ -61,6 +61,11 @@ class DungeonCreeperBeamsRules private constructor() {
             rotation: Int,
         ): List<Pair> = DungeonCreeperBeamsRulesLogic.catalogPairsForRotation(roomBaseX, roomBaseZ, catalog, rotation)
 
+        /** Per frozen pair: true once it left the active detection, so surviving pairs keep their index and color. */
+        @JvmStatic
+        fun stablePairProgress(frozen: List<Pair>, detection: Detection?): List<Boolean> =
+            DungeonCreeperBeamsRulesLogic.stablePairProgress(frozen, detection)
+
         @JvmStatic
         fun containsEndpoint(detection: Detection?, position: WorldPosition?): Boolean =
             DungeonCreeperBeamsRulesLogic.containsEndpoint(detection, position)

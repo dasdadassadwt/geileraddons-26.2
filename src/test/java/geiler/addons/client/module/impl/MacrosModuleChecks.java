@@ -62,16 +62,16 @@ public final class MacrosModuleChecks {
 			&& labels(actions).equals(List.of(
 				"Replay Last Blocked Macro",
 				"Create Macro",
-				"Copy Shared Macros",
+				"Share Macros",
 				"Paste Macros",
 				"Manage Folders")),
-			"sharing is two inline actions (copy the macros marked Include In Share, paste from the clipboard); no pop-out window");
+			"sharing is a Share action that opens the macro list, plus a paste action");
 		check(module.sharedMacros().isEmpty(), "no macro is marked for sharing by default");
 		check(module.settingTooltip(toggles.get(0)).contains("Master toggle"),
 			"a module owns its setting tooltips instead of the Click GUI matching module names");
 		check("Starts the chat-triggered macro stack that was most recently refused."
 				.equals(actions.get(0).description())
-			&& "Copies every macro whose Include In Share switch is on, with linked macros and functions."
+			&& "Opens a list of all macros; switch on the ones to share, then press Copy."
 				.equals(actions.get(2).description()),
 			"the replay and transfer actions retain their help text");
 	}
@@ -130,7 +130,7 @@ public final class MacrosModuleChecks {
 		SettingGroup macroGroup = library.children().get(0);
 		check("Macro 17 • Saved Route".equals(macroGroup.name())
 			&& "macro-entry:17".equals(macroGroup.stateKey())
-			&& macroGroup.settings().size() == 8,
+			&& macroGroup.settings().size() == 7,
 			"each restored macro keeps its dynamic heading, stable fold key, settings, and actions");
 
 		BooleanSetting enabled = (BooleanSetting) findSetting(macroGroup, "Macro Enabled");

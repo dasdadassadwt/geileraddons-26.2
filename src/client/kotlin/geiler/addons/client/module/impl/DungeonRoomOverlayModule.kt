@@ -1491,9 +1491,11 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
             if (visibleFootprint.isEmpty()) visibleFootprint = listOf(cell)
             val minX = visibleFootprint.minOfOrNull { it.x() } ?: cell.x()
             val minZ = visibleFootprint.minOfOrNull { it.z() } ?: cell.z()
-            val checkmark = checkmarkFor(cell, room)
+            val doneMiniboss = DungeonRoomOverlayStyle.minibossDoneCheckmark(cell.type(), room?.checkmark())
+            val checkmark = doneMiniboss ?: checkmarkFor(cell, room)
             val roomText = roomLabel(cell, room)
-            val decoration = DungeonRoomOverlayStyle.roomDecoration(settings.showCheckmarks.value(), checkmark, roomText)
+            val decoration = DungeonRoomOverlayStyle.roomDecoration(
+                settings.showCheckmarks.value() || doneMiniboss != null, checkmark, roomText)
             val maxX = visibleFootprint.maxOfOrNull { it.x() } ?: minX
             val maximumWidth = roomLabelMaximumWidth(minX, maxX, layout.cellSize, layout.cellGap, textScale)
             val label = decoration.label.orEmpty()
@@ -2378,15 +2380,8 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
             ).toInt())
         }
 
-        private fun classColorArgb(dungeonClass: String?): Int =
-            when (geiler.addons.client.dungeon.odin.SpiritLeapRoster.classColorCode(dungeonClass)) {
-                '6' -> 0xFFFFAA00.toInt()
-                '4' -> 0xFFAA0000.toInt()
-                'd' -> 0xFFFF55FF.toInt()
-                'b' -> 0xFF55FFFF.toInt()
-                '2' -> 0xFF00AA00.toInt()
-                else -> 0xFFFFFFFF.toInt()
-            }
+        /** Uses the palette configured in Spirit Leap Menu so every class color in the mod follows one setting. */
+        private fun classColorArgb(dungeonClass: String?): Int = SpiritLeapMenuModule.classColorArgb(dungeonClass)
 
         private fun doorKind(type: DungeonDoorTracker.Type?): DungeonRoomOverlayGeometry.DoorKind =
             when (type) {

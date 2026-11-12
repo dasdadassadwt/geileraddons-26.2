@@ -41,6 +41,11 @@ public final class InvincibilityTimerModuleChecks {
 		require(module.contains("override fun onEnable() {\n        diagnostics.enable(")
 			&& module.contains("override fun onDisable() {\n        diagnostics.disable()"),
 			"automatic diagnostics must follow the module enable/disable lifecycle");
+		require(module.contains("if (centered && reading.activeTicks > 0)"),
+			"the centered title shows only active invincibility; cooldowns stay on the HUD");
+		require(module.contains("Items.PLAYER_HEAD") && module.contains("READY_COLOR")
+				&& module.contains("COOLDOWN_HUD_COLOR") && module.contains("ACTIVE_HUD_COLOR"),
+			"the HUD draws a head icon per proc with gold active, red cooldown, and green ready text");
 		require(dungeonRuntime.contains("DungeonInvincibilityTimerModule.INSTANCE.publishReadings(emptyList())"),
 			"enabled timer diagnostics must keep receiving snapshots while outside a dungeon");
 	}
@@ -86,7 +91,7 @@ public final class InvincibilityTimerModuleChecks {
 				&& module.id().equals("dungeon_invincibility_timer")
 				&& module.displayName().equals("Invincibility Timers")
 				&& !module.defaultEnabled(), "module and HUD retain their names, category, ID, and off default");
-			require(List.of("Bonzo Mask", "Spirit Mask", "Phoenix", "Play Proc Sound", "Show Cooldowns").equals(
+			require(List.of("Bonzo Mask", "Spirit Mask", "Phoenix", "Play Proc Sound", "Show Cooldowns", "Show On Item").equals(
 				module.booleanSettings().stream().map(Setting::name).toList()),
 				"Java-visible boolean settings keep their IDs and declaration order");
 			require(List.of("Display").equals(module.choiceSettings().stream().map(Setting::name).toList())
@@ -111,7 +116,7 @@ public final class InvincibilityTimerModuleChecks {
 			SettingGroup tracked = groups.get(0);
 			SettingGroup presentation = groups.get(1);
 			SettingGroup sound = groups.get(2);
-			require(groups.size() == 3
+			require(groups.size() == 4 && "Item Overlay".equals(groups.get(3).name())
 				&& List.of(tracked.name(), presentation.name(), sound.name())
 					.equals(List.of("Tracked Procs", "Display", "Sound"))
 				&& tracked.toggle() == DungeonInvincibilityTimerModule.bonzo

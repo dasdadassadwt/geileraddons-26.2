@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.PoseStack
 import geiler.addons.GeilerAddons
 import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.dungeon.DungeonClass
+import geiler.addons.client.dungeon.odin.OdinDungeonPlayerRoster
 import geiler.addons.client.dungeon.DungeonContextTracker
 import geiler.addons.client.dungeon.DungeonFloor
 import geiler.addons.client.dungeon.DungeonMapRoomDetector
@@ -67,7 +68,7 @@ class DungeonMobEspModule private constructor(
     private val settings: Settings,
 ) : Module(
     "Dungeon Mob ESP",
-    "Highlights selected dungeon mobs, minibosses, bosses, Mimics, and party classes.",
+    "Highlights starred dungeon mobs, minibosses, and Fels.",
     Category.F7,
     false,
     settings.starredEnabled,
@@ -119,20 +120,6 @@ class DungeonMobEspModule private constructor(
     settings.felTracerColor,
     settings.felTracerWidth,
     settings.debug,
-    settings.specialWithers,
-    settings.specialMimic,
-    settings.mimicFill,
-    settings.mimicOutline,
-    settings.partyClasses,
-    settings.specialRange,
-    settings.specialMobFill,
-    settings.specialMobOutline,
-    settings.tank,
-    settings.healer,
-    settings.mage,
-    settings.berserk,
-    settings.archer,
-    settings.partyFill,
 ) {
     companion object {
         @JvmField
@@ -149,14 +136,11 @@ class DungeonMobEspModule private constructor(
     @Volatile private var shadowAssassinMatches: List<LivingEntity> = emptyList()
     @Volatile private var stationaryFelSkulls: List<LivingEntity> = emptyList()
     @Volatile private var movingFelMatches: List<LivingEntity> = emptyList()
-    @Volatile private var specialTargets: List<SpecialTarget> = emptyList()
-    @Volatile private var mimicChests: List<BlockPos> = emptyList()
     @Volatile private var rememberedTargets: List<DungeonMobTargetMemory.Target> = emptyList()
     private val knownFelBodies = HashMap<UUID, KnownFelBody>()
     private val targetMemory = DungeonMobTargetMemory()
     private val minibossProfileTracker = DungeonMinibossProfileTracker()
     private val devonianMobTracker = DungeonDevonianMobTracker()
-    private val mimicRoomScanner = OdinDungeonMapCoreScanner()
     private val appearanceCapture = MinibossAppearanceCapture()
     private var appearanceCatalog = MinibossAppearanceCatalog.empty()
     private var appearanceCatalogLoaded = false
@@ -205,19 +189,6 @@ class DungeonMobEspModule private constructor(
                 "Automatic miniboss appearance capture", settings.appearanceCapture,
                 settings.manualAppearanceLabel, settings.captureCrosshairAppearance,
             ),
-            SettingGroup.switched(
-                "Wither Bosses", settings.specialWithers, settings.specialRange,
-                settings.specialMobFill, settings.specialMobOutline,
-            ),
-            SettingGroup.switched(
-                "Mimics", settings.specialMimic, settings.specialRange,
-                settings.mimicFill, settings.mimicOutline,
-            ),
-            SettingGroup.switched(
-                "Party Classes", settings.partyClasses, settings.specialRange,
-                settings.tank, settings.healer, settings.mage, settings.berserk,
-                settings.archer, settings.partyFill,
-            ),
         )
     }
 
@@ -251,16 +222,7 @@ class DungeonMobEspModule private constructor(
     }
 
     override fun isActive(): Boolean {
-        if (!isEnabled() || !DungeonContextTracker.inDungeon()) return false
-        val floor = DungeonContextTracker.currentFloor()
-        val bossObserved = !DungeonContextTracker.isMobEspPhase()
-        return DungeonContextTracker.isMobEspPhase() ||
-            DungeonSpecialMobRules.shouldScanF7WitherBoss(
-                settings.specialWithers.value(), true,
-                floor != null && floor.number() == 7, floor != null && floor.master(), bossObserved,
-            ) ||
-            settings.partyClasses.value() && DungeonContextTracker.isMobEspPhase() ||
-            settings.specialMimic.value() && DungeonContextTracker.isClearPhase()
+        return isEnabled() && DungeonContextTracker.inDungeon() && DungeonContextTracker.isMobEspPhase()
     }
 
     override fun inactiveReason(): String? =
@@ -289,8 +251,6 @@ class DungeonMobEspModule private constructor(
             shadowAssassinMatches = emptyList()
             stationaryFelSkulls = emptyList()
             movingFelMatches = emptyList()
-            specialTargets = emptyList()
-            mimicChests = emptyList()
             rememberedTargets = emptyList()
             knownFelBodies.clear()
             targetMemory.clear()
@@ -301,7 +261,6 @@ class DungeonMobEspModule private constructor(
                 minibossProfileTracker.clear()
                 devonianMobTracker.clear()
             }
-            if (level == null) mimicRoomScanner.reset()
             lastLevel = level
             reportDebug(
                 "inactive; enabled=" + isEnabled() + ", dungeon=" + DungeonContextTracker.inDungeon() +
@@ -318,9 +277,6 @@ class DungeonMobEspModule private constructor(
             shadowAssassinMatches = emptyList()
             stationaryFelSkulls = emptyList()
             movingFelMatches = emptyList()
-            specialTargets = emptyList()
-            mimicChests = emptyList()
-            mimicRoomScanner.reset()
             knownFelBodies.clear()
             targetMemory.clear()
             rememberedTargets = emptyList()
@@ -340,13 +296,10 @@ class DungeonMobEspModule private constructor(
             shadowAssassinMatches = emptyList()
             stationaryFelSkulls = emptyList()
             movingFelMatches = emptyList()
-            specialTargets = emptyList()
-            mimicChests = emptyList()
             reportDebug("inactive; enabled=" + isEnabled() + ", player=" + (player != null))
             return
         }
         devonianMobTracker.reconcileLoadedNameplates(level)
-        updateSpecialTargets(client)
         if (!DungeonContextTracker.isMobEspPhase()) {
             starredMatches = emptyList()
             minibossMatches = emptyList()
@@ -762,83 +715,6 @@ class DungeonMobEspModule private constructor(
                 "; " + entityCensus,
         )
     }
-
-    /** Updates the former special-mob groups under this module's single master toggle. */
-    private fun updateSpecialTargets(client: Minecraft) {
-        val level = client.level ?: return
-        val player = client.player ?: return
-        val next = ArrayList<SpecialTarget>()
-        val floor = DungeonContextTracker.currentFloor()
-        val inDungeon = DungeonContextTracker.inDungeon()
-        val bossPhaseObserved = inDungeon && !DungeonContextTracker.isMobEspPhase()
-        val scanF7WitherBoss = DungeonSpecialMobRules.shouldScanF7WitherBoss(
-            settings.specialWithers.value(),
-            inDungeon,
-            floor != null && floor.number() == 7,
-            floor != null && floor.master(),
-            bossPhaseObserved,
-        )
-        if (scanF7WitherBoss && floor != null) {
-            val range = settings.specialRange.intValue()
-            for (entity in ClientEntitySnapshot.nearby(level, player, range.toDouble())) {
-                if (entity !is LivingEntity || entity.isRemoved() || !entity.isAlive() ||
-                    entity.distanceToSqr(player) > range.toDouble() * range ||
-                    !DungeonSpecialMobRules.isEarlyF7WitherBoss(
-                        floor.number() == 7, floor.master(), bossPhaseObserved,
-                        entity.getType() == EntityTypes.WITHER,
-                    )
-                ) continue
-                next.add(SpecialTarget(entity, settings.specialMobFill.argb(), settings.specialMobOutline.argb()))
-            }
-            val scan = DungeonMobEspSupport.scan(
-                client, range, false, DungeonSpecialMobRules::isF7WitherBossName, false, false, null,
-                { entity ->
-                    DungeonSpecialMobRules.isF7WitherBoss(
-                        floor.number() == 7, floor.master(),
-                        entity.getType() == EntityTypes.WITHER, DungeonMobEspSupport.plainName(entity),
-                    )
-                },
-            )
-            for (entity in scan.matches()) {
-                if (next.none { target -> target.entity() === entity }) {
-                    next.add(SpecialTarget(entity, settings.specialMobFill.argb(), settings.specialMobOutline.argb()))
-                }
-            }
-        }
-        if (settings.partyClasses.value() && DungeonContextTracker.isMobEspPhase() &&
-            PartyListBackend.hasFreshSnapshot()
-        ) {
-            val classes = HashMap<String, DungeonClass>()
-            for (member in PartyListBackend.snapshot().members()) {
-                if (member == null) continue
-                val memberName = member.name()
-                val dungeonClass = member.dungeonClass()
-                if (memberName != null && dungeonClass != null) {
-                    classes[memberName.lowercase(Locale.ROOT)] = dungeonClass
-                }
-            }
-            for (entity in ClientEntitySnapshot.nearby(level, player, settings.specialRange.intValue().toDouble())) {
-                if (entity !is Player || entity === player || entity.isRemoved() || !entity.isAlive()) continue
-                val dungeonClass = classes[entity.getName().getString().lowercase(Locale.ROOT)] ?: continue
-                next.add(SpecialTarget(entity, settings.partyFill.argb(), classColor(dungeonClass).argb()))
-            }
-        }
-        specialTargets = next.toList()
-        mimicChests = if (settings.specialMimic.value() && DungeonContextTracker.isClearPhase()) {
-            DungeonMimicChestDetector.detect(client, mimicRoomScanner)
-        } else {
-            emptyList()
-        }
-    }
-
-    private fun classColor(dungeonClass: DungeonClass): ColorSetting =
-        when (dungeonClass) {
-            DungeonClass.TANK -> settings.tank
-            DungeonClass.HEALER -> settings.healer
-            DungeonClass.MAGE -> settings.mage
-            DungeonClass.BERSERK -> settings.berserk
-            DungeonClass.ARCHER -> settings.archer
-        }
 
     /** Called by the client packet mixin after Vanilla handles each player-info update. */
     fun onPlayerInfoUpdate(packet: ClientboundPlayerInfoUpdatePacket?) {
@@ -1363,8 +1239,7 @@ class DungeonMobEspModule private constructor(
     fun render(context: LevelRenderContext) {
         if (!isActive()) return
         if (starredMatches.isEmpty() && minibossMatches.isEmpty() && movingFelMatches.isEmpty() &&
-            stationaryFelSkulls.isEmpty() && rememberedTargets.isEmpty() &&
-            specialTargets.isEmpty() && mimicChests.isEmpty()
+            stationaryFelSkulls.isEmpty() && rememberedTargets.isEmpty()
         ) {
             reportTracerDiagnostic(
                 TracerRenderDiagnostics(
@@ -1477,43 +1352,6 @@ class DungeonMobEspModule private constructor(
             }
             if (drewFelGhost) GeilerAddonsRenderTypes.endBatches(buffers)
         }
-        var drewSpecial = false
-        for (target in specialTargets) {
-            val entity = target.entity()
-            if (entity.isRemoved() || !entity.isAlive() || entity is ArmorStand ||
-                player.distanceToSqr(entity) >
-                settings.specialRange.intValue().toDouble() * settings.specialRange.intValue()
-            ) continue
-            val bounds = entity.getBoundingBox()
-            EspRenderer.renderBox(
-                pose, buffers, bounds.minX - camera.x, bounds.minY - camera.y, bounds.minZ - camera.z,
-                bounds.getXsize(), bounds.getYsize(), bounds.getZsize(),
-                target.fillColor(), target.outlineColor(), 2.0f, settings.depthCheck.value(),
-            )
-            drewSpecial = true
-        }
-        if (settings.specialMimic.value() && DungeonContextTracker.isClearPhase()) {
-            val maxDistanceSquared =
-                settings.specialRange.intValue().toDouble() * settings.specialRange.intValue()
-            for (chest in mimicChests) {
-                if (player.distanceToSqr(
-                        chest.getX() + 0.5, chest.getY() + 0.5, chest.getZ() + 0.5,
-                    ) > maxDistanceSquared
-                ) continue
-                val bounds = AABB(
-                    chest.getX().toDouble(), chest.getY().toDouble(), chest.getZ().toDouble(),
-                    chest.getX() + 1.0, chest.getY() + 1.0, chest.getZ() + 1.0,
-                )
-                EspRenderer.renderBox(
-                    pose, buffers, bounds.minX - camera.x, bounds.minY - camera.y, bounds.minZ - camera.z,
-                    bounds.getXsize(), bounds.getYsize(), bounds.getZsize(),
-                    settings.mimicFill.argb(), settings.mimicOutline.argb(), 2.0f,
-                    settings.depthCheck.value(),
-                )
-                drewSpecial = true
-            }
-        }
-        if (drewSpecial) GeilerAddonsRenderTypes.endBatches(buffers)
     }
 
     private fun renderRememberedGroup(
@@ -2004,16 +1842,6 @@ class DungeonMobEspModule private constructor(
         if (rgba != null && rgba.size == 4) setting.set(rgba[0], rgba[1], rgba[2], rgba[3])
     }
 
-    private data class SpecialTarget(
-        private val targetEntity: LivingEntity,
-        private val targetFillColor: Int,
-        private val targetOutlineColor: Int,
-    ) {
-        fun entity(): LivingEntity = targetEntity
-        fun fillColor(): Int = targetFillColor
-        fun outlineColor(): Int = targetOutlineColor
-    }
-
     private class Settings {
         val starredEnabled = BooleanSetting("Starred Group Enabled", true)
         val starredOnlyRoom = BooleanSetting("Starred Only Current Room", false)
@@ -2070,25 +1898,6 @@ class DungeonMobEspModule private constructor(
         val felSkullTracer = BooleanSetting("Fel Skull Tracer", true)
         val felTracerColor = ColorSetting("Fel Tracer Color", 255, 255, 255, 220)
         val felTracerWidth = NumberSetting("Fel Tracer Width", 0.5f, 5.0f, 1.5f)
-        val specialWithers = BooleanSetting("F7 Wither Boss ESP", true)
-        val specialMimic = BooleanSetting("Known Mimic Chest ESP", true)
-        val mimicFill = ColorSetting("Mimic Chest Fill", 209, 29, 5, 160)
-        val mimicOutline = ColorSetting("Mimic Chest Outline", 209, 29, 5, 255)
-        val partyClasses = BooleanSetting("Party Only Class Highlight", false)
-        val specialRange = NumberSetting("Highlight Range", 8f, 128f, 64f, true)
-        val specialMobFill = ColorSetting("Special Mob Fill", 255, 80, 35, 48)
-        val specialMobOutline = ColorSetting("Special Mob Outline", 255, 80, 35, 255)
-        val tank = specialClassColor("Tank Color", DungeonClass.TANK)
-        val healer = specialClassColor("Healer Color", DungeonClass.HEALER)
-        val mage = specialClassColor("Mage Color", DungeonClass.MAGE)
-        val berserk = specialClassColor("Berserk Color", DungeonClass.BERSERK)
-        val archer = specialClassColor("Archer Color", DungeonClass.ARCHER)
-        val partyFill = ColorSetting("Party Class Fill", 0, 0, 0, 24)
-
-        private fun specialClassColor(name: String, dungeonClass: DungeonClass): ColorSetting {
-            val color = DungeonSpecialMobRules.defaultClassColor(dungeonClass)
-            return ColorSetting(name, color ushr 16 and 0xFF, color ushr 8 and 0xFF, color and 0xFF, 255)
-        }
     }
 
     /** Remembers a previously identified Fel body only while its actual client entity stays verifiable. */

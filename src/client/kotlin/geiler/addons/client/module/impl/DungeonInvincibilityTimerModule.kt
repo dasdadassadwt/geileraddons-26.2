@@ -2,6 +2,7 @@ package geiler.addons.client.module.impl
 
 import geiler.addons.client.dungeon.odin.DungeonMaskProcTimers
 import geiler.addons.client.hud.TitleAlertStack
+import geiler.addons.client.inventory.ItemBackgrounds
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.ChoiceSetting
@@ -10,8 +11,19 @@ import geiler.addons.client.module.NumberSetting
 import geiler.addons.client.module.Setting
 import geiler.addons.client.module.SettingGroup
 import geiler.addons.client.module.TextSetting
+import com.google.common.collect.ImmutableMultimap
+import com.mojang.authlib.GameProfile
+import com.mojang.authlib.properties.Property
+import com.mojang.authlib.properties.PropertyMap
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
+import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.core.component.DataComponents
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Items
+import net.minecraft.world.item.component.ResolvableProfile
+import java.util.Base64
+import java.util.UUID
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
@@ -36,10 +48,16 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
     soundId,
     soundVolume,
     soundPitch,
+    showOnItem,
 ), ModulePreview {
     @Volatile
     private var readings: List<DungeonMaskProcTimers.Reading> = emptyList()
     private val lastCenteredText = EnumMap<DungeonMaskProcTimers.Proc, String>(DungeonMaskProcTimers.Proc::class.java)
+    private val cooldownTotals = EnumMap<DungeonMaskProcTimers.Proc, Int>(DungeonMaskProcTimers.Proc::class.java)
+
+    /** Icon rows drawn by the HUD; rebuilt with every published snapshot. */
+    @Volatile
+    private var rows: List<TimerRow> = emptyList()
 
     private val diagnostics = ModuleDiagnostics(
         Category.F7, { name() }, MAX_DIAGNOSTIC_EVENTS_PER_TICK, 100L, MAX_DIAGNOSTIC_PAYLOAD_LENGTH,
@@ -50,6 +68,7 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
             SettingGroup.switched("Tracked Procs", bonzo, spirit, phoenix),
             SettingGroup("Display", display, showCooldowns, titleDurationTicks),
             SettingGroup.switched("Sound", playProcSound, soundId, soundVolume, soundPitch),
+            SettingGroup("Item Overlay", showOnItem),
         )
     }
 
@@ -66,6 +85,11 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
     /** Receives the adapter's immutable timer snapshot once per client tick. */
     fun publishReadings(next: List<DungeonMaskProcTimers.Reading>?) {
         readings = if (next.isNullOrEmpty()) emptyList() else java.util.List.copyOf(next)
+        for (reading in readings) {
+            // The first reading after a proc is the full cooldown, so it is the fill's 100% mark.
+            if (reading.cooldownTicks <= 0) cooldownTotals.remove(reading.proc)
+            else if (reading.cooldownTicks > (cooldownTotals[reading.proc] ?: 0)) cooldownTotals[reading.proc] = reading.cooldownTicks
+        }
         if (isEnabled()) {
             diagnostics.advance()
             diagnostics.status { suppressed ->
@@ -145,8 +169,18 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
         refreshOutput()
     }
 
+    /** Draws the cooldown fill over a Bonzo or Spirit mask item; x and y are the item's top-left corner. */
+    fun drawItemFill(graphics: GuiGraphicsExtractor, stack: ItemStack, x: Int, y: Int) {
+        if (!isEnabled() || !showOnItem.value() || stack.isEmpty || readings.isEmpty()) return
+        val proc = procForItemId(ItemBackgrounds.info(stack).skyblockId) ?: return
+        val reading = readings.firstOrNull { it.proc == proc } ?: return
+        val height = fillHeight(reading.cooldownTicks, cooldownTotals[proc] ?: 0, ICON_SIZE)
+        if (height > 0) graphics.fill(x, y + ICON_SIZE - height, x + ICON_SIZE, y + ICON_SIZE, ITEM_FILL_COLOR)
+    }
+
     fun clearSnapshots() {
         readings = emptyList()
+        cooldownTotals.clear()
         lastCenteredText.clear()
         clearOutput()
     }
@@ -171,7 +205,9 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
         }
 
         val hudLines = ArrayList<String>(DungeonMaskProcTimers.Proc.values().size)
+        val iconRows = ArrayList<TimerRow>(DungeonMaskProcTimers.Proc.values().size)
         val centered = display.value() == "CENTERED" || display.value() == "BOTH"
+        val hud = display.value() == "HUD" || display.value() == "BOTH"
         for (proc in DungeonMaskProcTimers.Proc.values()) {
             val reading = reading(proc)
             if (reading == null || !procEnabled(proc)) {
@@ -189,14 +225,15 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
 
             val subtitle = "${procLabel(proc)} · $countdown"
             hudLines.add(subtitle)
-            if (centered) {
+            iconRows.add(timerRow(proc, reading))
+            // Cooldowns are HUD-only; the centered title shows an active invincibility window and nothing else.
+            if (centered && reading.activeTicks > 0) {
                 if (subtitle != lastCenteredText[proc]) {
-                    val color = if (reading.activeTicks > 0) ACTIVE_COLOR else COOLDOWN_COLOR
                     val durationTicks = titleDurationTicks.intValue()
-                    TitleAlertStack.submitSubtitle(titleSource(proc), subtitle, durationTicks, color)
+                    TitleAlertStack.submitSubtitle(titleSource(proc), subtitle, durationTicks, ACTIVE_COLOR)
                     diagnostics.event(
                         "SUBTITLE result=submitted,source=${titleSource(proc)},durationTicks=$durationTicks" +
-                            ",text=${boundedDiagnosticText(subtitle)},color=${String.format(Locale.ROOT, "%08X", color)}",
+                            ",text=${boundedDiagnosticText(subtitle)},color=${String.format(Locale.ROOT, "%08X", ACTIVE_COLOR)}",
                     )
                     lastCenteredText[proc] = subtitle
                 }
@@ -206,11 +243,57 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
             }
         }
 
-        if (display.value() == "HUD" || display.value() == "BOTH") publishHudLines(hudLines)
-        else clearHudLines()
+        if (hud && hudLines.isNotEmpty()) {
+            // Once any proc is in use, tracked procs that are ready show a check mark beside their icon.
+            for (proc in DungeonMaskProcTimers.Proc.values()) {
+                if (procEnabled(proc) && iconRows.none { it.proc == proc }) iconRows.add(TimerRow(proc, "✔", READY_COLOR))
+            }
+            iconRows.sortBy { it.proc.ordinal }
+            rows = iconRows
+            publishHudLines(hudLines)
+        } else {
+            rows = emptyList()
+            clearHudLines()
+        }
+    }
+
+    private fun timerRow(proc: DungeonMaskProcTimers.Proc, reading: DungeonMaskProcTimers.Reading): TimerRow =
+        if (reading.activeTicks > 0) TimerRow(proc, formatSeconds(reading.activeTicks), ACTIVE_HUD_COLOR)
+        else TimerRow(proc, "${(reading.cooldownTicks + 19) / 20}s", COOLDOWN_HUD_COLOR)
+
+    private fun sampleRows(): List<TimerRow> = listOf(
+        TimerRow(DungeonMaskProcTimers.Proc.SPIRIT, "3.0s", ACTIVE_HUD_COLOR),
+        TimerRow(DungeonMaskProcTimers.Proc.BONZO, "142s", COOLDOWN_HUD_COLOR),
+        TimerRow(DungeonMaskProcTimers.Proc.PHOENIX, "✔", READY_COLOR),
+    )
+
+    private fun displayRows(): List<TimerRow> = rows.ifEmpty { sampleRows() }
+
+    override fun width(font: Font?): Int =
+        ICON_SIZE + ICON_GAP + (displayRows().maxOfOrNull { font!!.width(it.text) } ?: 1)
+
+    override fun height(font: Font?): Int = maxOf(1, displayRows().size * ROW_HEIGHT)
+
+    override fun render(graphics: GuiGraphicsExtractor, font: Font, x: Int, y: Int) =
+        drawRows(graphics, font, x, y, rows)
+
+    override fun renderPreview(graphics: GuiGraphicsExtractor, font: Font, x: Int, y: Int) =
+        drawRows(graphics, font, x, y, displayRows())
+
+    /** One head icon per proc with its remaining time (gold active, red cooldown) or a green check when ready. */
+    private fun drawRows(graphics: GuiGraphicsExtractor, font: Font, x: Int, y: Int, toDraw: List<TimerRow>) {
+        for ((index, row) in toDraw.withIndex()) {
+            val rowY = y + index * ROW_HEIGHT
+            graphics.item(skull(row.proc), x, rowY)
+            graphics.text(
+                font, Component.literal(row.text), x + ICON_SIZE + ICON_GAP,
+                rowY + (ICON_SIZE - font.lineHeight) / 2 + 1, row.colorArgb,
+            )
+        }
     }
 
     private fun clearOutput() {
+        rows = emptyList()
         clearHudLines()
         for (proc in DungeonMaskProcTimers.Proc.values()) {
             TitleAlertStack.clearSource(titleSource(proc))
@@ -270,9 +353,17 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
         else safeValue.take(MAX_DIAGNOSTIC_TEXT_LENGTH - 3) + "..."
     }
 
+    private data class TimerRow(val proc: DungeonMaskProcTimers.Proc, val text: String, val colorArgb: Int)
+
     companion object {
         private const val ACTIVE_COLOR = 0xFF55FF55.toInt()
-        private const val COOLDOWN_COLOR = 0xFFFFAA00.toInt()
+        private const val ITEM_FILL_COLOR = 0x8055FF55.toInt()
+        private const val ACTIVE_HUD_COLOR = 0xFFFFAA00.toInt()
+        private const val COOLDOWN_HUD_COLOR = 0xFFFF5555.toInt()
+        private const val READY_COLOR = 0xFF55FF55.toInt()
+        private const val ICON_SIZE = 16
+        private const val ICON_GAP = 3
+        private const val ROW_HEIGHT = 17
         private const val MAX_DIAGNOSTIC_EVENTS_PER_TICK = 8
         private const val MAX_DIAGNOSTIC_PAYLOAD_LENGTH = 480
         private const val MAX_DIAGNOSTIC_TEXT_LENGTH = 96
@@ -304,9 +395,25 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
         private val soundId = TextSetting("Sound ID", "Sound ID", "block.note_block.pling", 96)
         private val soundVolume = NumberSetting("Sound Volume", 0f, 1f, 0.8f)
         private val soundPitch = NumberSetting("Sound Pitch", 0.5f, 2f, 1f)
+        private val showOnItem = BooleanSetting("Show On Item", false)
 
         @JvmField
         val INSTANCE = DungeonInvincibilityTimerModule()
+
+        /** Height of the green cooldown fill on a 16px slot: full at the proc, shrinking to nothing when ready. */
+        @JvmStatic
+        fun fillHeight(remainingTicks: Int, totalTicks: Int, size: Int): Int {
+            if (remainingTicks <= 0 || totalTicks <= 0) return 0
+            return ((size * minOf(remainingTicks, totalTicks) + totalTicks - 1) / totalTicks).coerceIn(1, size)
+        }
+
+        /** The mask proc an item belongs to, by its SkyBlock id; only the Bonzo and Spirit masks. */
+        @JvmStatic
+        fun procForItemId(id: String): DungeonMaskProcTimers.Proc? = when (id) {
+            "BONZO_MASK", "STARRED_BONZO_MASK" -> DungeonMaskProcTimers.Proc.BONZO
+            "SPIRIT_MASK", "STARRED_SPIRIT_MASK" -> DungeonMaskProcTimers.Proc.SPIRIT
+            else -> null
+        }
 
         /** Kept static for the existing Java regression harness. */
         @JvmStatic
@@ -330,6 +437,23 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
             !soundIdValid -> "invalid_sound"
             !soundRegistered -> "unregistered_sound"
             else -> "played"
+        }
+
+        /** Skyblock mask and pet heads, as player heads with a fixed skin texture. */
+        private val skulls = EnumMap<DungeonMaskProcTimers.Proc, ItemStack>(DungeonMaskProcTimers.Proc::class.java)
+
+        private fun skull(proc: DungeonMaskProcTimers.Proc): ItemStack = skulls.getOrPut(proc) {
+            val hash = when (proc) {
+                DungeonMaskProcTimers.Proc.SPIRIT -> "9bbe721d7ad8ab965f08cbec0b834f779b5197f79da4aea3d13d253ece9dec2"
+                DungeonMaskProcTimers.Proc.BONZO -> "12716ecbf5b8da00b05f316ec6af61e8bd02805b21eb8e440151468dc656549c"
+                DungeonMaskProcTimers.Proc.PHOENIX -> "66b1b59bc890c9c97527787dde20600c8b86f6b9912d51a6bfcdb0e4c2aa3c97"
+            }
+            val json = "{\"textures\":{\"SKIN\":{\"url\":\"http://textures.minecraft.net/texture/$hash\"}}}"
+            val property = Property("textures", Base64.getEncoder().encodeToString(json.toByteArray()))
+            val properties = PropertyMap(ImmutableMultimap.builder<String, Property>().put("textures", property).build())
+            val stack = ItemStack(Items.PLAYER_HEAD)
+            stack.set(DataComponents.PROFILE, ResolvableProfile.createResolved(GameProfile(UUID.randomUUID(), "_", properties)))
+            stack
         }
 
         private fun titleSource(proc: DungeonMaskProcTimers.Proc): String =

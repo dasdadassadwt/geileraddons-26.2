@@ -143,10 +143,6 @@ public final class ItemAnimationScaleChecks {
 		// The frozen 26.1.2 baseline now lives under ../archive/.
 		if (!Files.exists(baselinePath)) baselinePath = Path.of("..", "archive").resolve(Path.of("26.1.2", "src", "client", "java", "geiler", "addons",
 			"client", "module", "impl", "ItemAnimationsModule.java"));
-		if (!Files.exists(baselinePath)) {
-			System.out.println("Item Animations baseline comparison skipped: no 26.1.2 source next to this checkout");
-			return;
-		}
 		String baseline = Files.readString(baselinePath);
 		String targetMethod = methodBody(source, "fun swingProgress(partialTick: Float, vanillaProgress: Float): Float");
 		String baselineMethod = methodBody(baseline, "public float swingProgress(float partialTick, float vanillaProgress)");

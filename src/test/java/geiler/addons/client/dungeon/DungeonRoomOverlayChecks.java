@@ -702,7 +702,23 @@ public final class DungeonRoomOverlayChecks {
 		}
 	}
 
+	private static void minibossRoomsShowGreenCheckWhenDone() {
+		DungeonMapGeometry.RoomType mini = DungeonMapGeometry.RoomType.MINIBOSS;
+		equals("GREEN", DungeonRoomOverlayStyle.minibossDoneCheckmark(mini, "WHITE"),
+			"a cleared yellow room shows a green checkmark");
+		equals("GREEN", DungeonRoomOverlayStyle.minibossDoneCheckmark(mini, "GREEN"),
+			"a green yellow room stays green");
+		equals(null, DungeonRoomOverlayStyle.minibossDoneCheckmark(mini, "NONE"),
+			"an uncleared yellow room shows nothing extra");
+		equals(null, DungeonRoomOverlayStyle.minibossDoneCheckmark(mini, null), "no map evidence shows nothing");
+		equals(null, DungeonRoomOverlayStyle.minibossDoneCheckmark(DungeonMapGeometry.RoomType.ROOM, "WHITE"),
+			"other room types keep their existing behavior");
+		equals(null, DungeonRoomOverlayStyle.minibossDoneCheckmark(DungeonMapGeometry.RoomType.PUZZLE, "GREEN"),
+			"only yellow rooms get the forced checkmark");
+	}
+
 	private static void roomLabelsKeepProgressWhenCheckmarksAreEnabled() {
+		minibossRoomsShowGreenCheckWhenDone();
 		BooleanSetting showCheckmarks = DungeonRoomOverlayModule.INSTANCE.booleanSettings().stream()
 			.filter(setting -> "Show Checkmarks".equals(setting.name())).findFirst().orElseThrow();
 		boolean original = showCheckmarks.value();

@@ -96,7 +96,7 @@ object DungeonContextTracker {
         }
 
         // Outside a confirmed dungeon, a cheap map-marker/color probe may authorize one bounded
-        // geometry check per second, but only while Dungeon Mob ESP or Dungeon Special Mob ESP needs
+        // geometry check per second, but only while Dungeon Mob ESP, Dungeon Boss ESP or Dungeon Class ESP needs
         // entry detection. The geometry check validates a dungeon map entry; it performs no source-room
         // or chunk reads.
         if (!wasInDungeon && mapEntryCandidate && mapEntryScanEnabled && currentClient.player != null &&

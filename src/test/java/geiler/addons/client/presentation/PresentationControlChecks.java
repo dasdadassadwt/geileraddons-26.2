@@ -153,12 +153,12 @@ public final class PresentationControlChecks {
 		check(camera.textSettings().size() == 1, "camera keeps one persisted free-look keybind setting");
 		TextSetting freeLookKeybind = camera.textSettings().get(0);
 		check("Free Look Keybind".equals(freeLookKeybind.name())
-			&& "key.keyboard.c".equals(freeLookKeybind.value()) && freeLookKeybind.maxLength() == 48
+			&& "key.keyboard.unknown".equals(freeLookKeybind.value()) && freeLookKeybind.maxLength() == 48
 			&& freeLookKeybind.keybindCapture(),
 			"free-look keybind config ID and default remain stable");
 		check("key.geileraddons.free_look".equals(ThirdPersonCameraModule.freeLookKey().getName())
-			&& "key.keyboard.c".equals(ThirdPersonCameraModule.freeLookKey().getDefaultKey().getName()),
-			"registered free-look control keeps its C default and translation key");
+			&& "key.keyboard.unknown".equals(ThirdPersonCameraModule.freeLookKey().getDefaultKey().getName()),
+			"registered free-look control is unbound by default and keeps its translation key");
 		check(camera.isSettingVisible(camera.frontFacingSetting())
 			&& "Allow Front Camera".equals(camera.frontFacingSetting().displayName()),
 			"front-facing setting is visible with a clear label and keeps its persisted ID");

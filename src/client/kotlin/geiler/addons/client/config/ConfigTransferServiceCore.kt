@@ -12,6 +12,8 @@ import geiler.addons.client.inventory.PlayerInventoryControls
 import geiler.addons.client.macro.MacroRunner
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.impl.BlockEspModule
+import geiler.addons.client.module.impl.DungeonBossEspModule
+import geiler.addons.client.module.impl.DungeonClassEspModule
 import geiler.addons.client.module.impl.DungeonMobEspModule
 import geiler.addons.client.module.impl.InventoryButtonsModule
 import geiler.addons.client.module.impl.MacrosModule
@@ -434,6 +436,8 @@ object ConfigTransferServiceCore {
     private fun applyReset(selection: ConfigTransferService.ResetSelection) {
         val mobModuleNames = setOf(
             DungeonMobEspModule.INSTANCE.configName(),
+            DungeonBossEspModule.INSTANCE.configName(),
+            DungeonClassEspModule.INSTANCE.configName(),
             MobHighlightModule.INSTANCE.configName(),
             BlockEspModule.INSTANCE.configName(),
         )

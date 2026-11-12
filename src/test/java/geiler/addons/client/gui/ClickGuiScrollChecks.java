@@ -88,14 +88,22 @@ public final class ClickGuiScrollChecks {
 			Map.entry("Glass Doors", "geileraddons:textures/module_icons/glass_doors.png"),
 			Map.entry("Puzzle Solvers", "geileraddons:textures/module_icons/puzzle_solvers.png"),
 			Map.entry("Run Splits", "geileraddons:textures/module_icons/run_splits.png"),
-			Map.entry("Snap Tap", "geileraddons:textures/module_icons/snap_tap.png")
+			Map.entry("Snap Tap", "geileraddons:textures/module_icons/snap_tap.png"),
+			Map.entry("Dungeon Boss ESP", "geileraddons:textures/module_icons/dungeon_boss_esp.png"),
+			Map.entry("Dungeon Class ESP", "geileraddons:textures/module_icons/dungeon_class_esp.png"),
+			Map.entry("Item Rarity Backgrounds", "geileraddons:textures/module_icons/item_rarity_backgrounds.png"),
+			Map.entry("No Cursor Reset", "geileraddons:textures/module_icons/no_cursor_reset.png"),
+			Map.entry("Aliases", "geileraddons:textures/module_icons/aliases.png"),
+			Map.entry("Instance Requeue", "geileraddons:textures/module_icons/instance_requeue.png"),
+			Map.entry("Trail", "geileraddons:textures/module_icons/trail.png"),
+			Map.entry("No Loading Screen", "geileraddons:textures/module_icons/no_loading_screen.png")
 		);
 		Set<String> fullSizeIcons = Set.of(
 			"Debug", "General", "Slot IDs", "i4 helper", "Experimentation Solver", "Auto Experiments",
 			"Auto Kick", "Theme", "Party Finder Stats", "Dungeon Guide", "Box Doors", "Tiki Helper",
 			"Safari Floor Drops", "Hideyho Finder", "Sparkling Critter", "Pest Highlighter", "Infested plot",
 			"Tree Tracker", "Tree Broken Notifier", "Macros", "Mob Highlight", "Dungeon Mob ESP", "Block ESP",
-			"Inventory Buttons"
+			"Inventory Buttons", "Dungeon Boss ESP", "Dungeon Class ESP", "Item Rarity Backgrounds", "No Cursor Reset", "Aliases", "Instance Requeue", "Trail", "No Loading Screen"
 		);
 		for (Map.Entry<String, String> expected : expectedIcons.entrySet()) {
 			Identifier actual = ModuleIconTextures.forModule(expected.getKey());

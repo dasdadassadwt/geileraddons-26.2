@@ -12,6 +12,7 @@ import geiler.addons.client.module.NumberSetting
 import geiler.addons.client.module.Setting
 import geiler.addons.client.module.SettingGroup
 import geiler.addons.client.module.TextSetting
+import geiler.addons.client.presentation.PlayerNameGradientRenderState
 import geiler.addons.client.presentation.PlayerNameTextTransform
 import geiler.addons.client.presentation.PlayerPresentationProfileStore
 import geiler.addons.client.presentation.PlayerPresentationProfiles
@@ -182,6 +183,13 @@ class PlayerNamesModule private constructor(settings: Settings) : Module(
                 "STATUS replaceNames=${replaceNames.value()},applyStyles=${applyNameStyles.value()}" +
                     ",profileEntries=${profiles.entries().size},transformCache=${transformedComponents.size}",
             )
+            val glyphs = PlayerNameGradientRenderState.drainCounts()
+            if (glyphs[0] > 0L || glyphs[1] > 0L) {
+                GeilerAddonsLog.write(
+                    Category.VISUAL, name(), tick,
+                    "GRADIENT glyphs=${glyphs[0]},unresolvedMarkers=${glyphs[1]},replacedVertexColors=${glyphs[2]}",
+                )
+            }
             for (index in TRANSFORM_PATHS.indices) {
                 val calls = transformCalls[index]
                 if (calls > 0L) {

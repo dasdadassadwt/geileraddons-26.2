@@ -21,6 +21,7 @@ import geiler.addons.client.module.SettingGroup
 import geiler.addons.client.module.TextSetting
 import geiler.addons.client.module.impl.GeneralModule
 import geiler.addons.client.module.impl.VisualModule
+import geiler.addons.client.update.ProjectLinks
 import geiler.addons.client.update.UpdateChecker
 import com.mojang.blaze3d.platform.InputConstants
 import net.fabricmc.loader.api.FabricLoader
@@ -85,6 +86,13 @@ import geiler.addons.client.gui.GuiTheme.roundedRectBordered
 import geiler.addons.client.gui.GuiTheme.roundedRectOutline
 import geiler.addons.client.gui.GuiTheme.toggleSwitch
 import geiler.addons.client.gui.GuiTheme.withOpacity
+import geiler.addons.client.gui.ClickGuiTextEditing.applyKeyWithSelection
+import geiler.addons.client.gui.ClickGuiTextEditing.deleteSelection
+import geiler.addons.client.gui.ClickGuiTextEditing.insertReplacingSelection
+import geiler.addons.client.gui.ClickGuiTextEditing.sanitizePaste
+import geiler.addons.client.gui.ClickGuiTextEditing.selectAllState
+import geiler.addons.client.gui.ClickGuiTextEditing.selectedText
+import geiler.addons.client.gui.ClickGuiTextEditing.selection
 
 /** The module and settings screen, rendered through Minecraft's client-thread extractor. */
 class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
@@ -95,15 +103,18 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
     private var draggingNumberSetting: NumberSetting? = null
     private var focusedTextSetting: TextSetting? = null
     private var textCursor = 0
-    private var textSelectAll = false
+    private var textAnchor = -1
     private var focusedNumberSetting: NumberSetting? = null
     private var numberInput = ""
     private var numberCursor = 0
-    private var numberSelectAll = false
+    private var numberAnchor = -1
     /** The colour whose hex field has focus, and what has been typed into it so far. */
     private var focusedHexSetting: ColorSetting? = null
     private var hexInput = ""
     private var hexCursor = 0
+    private var hexAnchor = -1
+    /** The field whose selection follows the mouse while the left button is held. */
+    private var selectingField: SelectingField? = null
     private var settingsScroll = ClickGuiState.settingsScroll()
     private var gridScroll = ClickGuiState.gridScroll(selectedCategory)
     private var categoryScroll = ClickGuiState.categoryScroll()
@@ -125,7 +136,7 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
     private var searchQuery = ""
     private var searchCursor = 0
     private var searchFocused = false
-    private var searchSelectAll = false
+    private var searchAnchor = -1
 
     /** The release-notes panel: open state, its scroll, and the wrapped lines last drawn in it. */
     private var changelogOpen = false
@@ -680,16 +691,22 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
                 else visibleSlice(font, searchQuery, searchCursor, searchTextWidth)
             val searchTextY = search.y + (search.h - Math.round(TEXT_HEIGHT * HEADER_TEXT_SCALE)) / 2
             graphics.enableScissor(searchTextX, search.y + 2, searchTextX + searchTextPixels, search.y + search.h - 2)
-            if (searchFocused && searchSelectAll && searchQuery.isNotEmpty() && querySlice.text.isNotEmpty()) {
-                val selectionWidth = minOf(searchTextPixels, Math.round(font.width(querySlice.text) * HEADER_TEXT_SCALE))
+            val searchSelection = selection(searchQuery, searchCursor, searchAnchor)
+            if (searchFocused && !searchSelection.isEmpty() && querySlice.text.isNotEmpty()) {
+                val from = clampCursor(querySlice.text, searchSelection.start - querySlice.start)
+                val to = clampCursor(querySlice.text, searchSelection.end - querySlice.start)
+                val fromX = searchTextX + Math.round(font.width(querySlice.text.substring(0, from)) * HEADER_TEXT_SCALE)
+                val toX = minOf(
+                    searchTextX + searchTextPixels,
+                    searchTextX + Math.round(font.width(querySlice.text.substring(0, to)) * HEADER_TEXT_SCALE),
+                )
                 graphics.fill(
-                    searchTextX, searchTextY - 1, searchTextX + selectionWidth,
+                    fromX, searchTextY - 1, toX,
                     searchTextY + Math.round(TEXT_HEIGHT * HEADER_TEXT_SCALE) + 1, CATEGORY_SELECTED,
                 )
-                queryColor = TEXT_ON_ACCENT
             }
             drawScaledText(graphics, font, querySlice.text, searchTextX, searchTextY, queryColor, HEADER_TEXT_SCALE)
-            if (searchFocused && (System.currentTimeMillis() / CARET_BLINK_MILLIS) % 2 == 0L && !searchSelectAll) {
+            if (searchFocused && (System.currentTimeMillis() / CARET_BLINK_MILLIS) % 2 == 0L) {
                 val cursorInSlice = clampCursor(querySlice.text, searchCursor - querySlice.start)
                 val caretX = searchTextX + Math.round(
                     font.width(querySlice.text.substring(0, cursorInSlice)) * HEADER_TEXT_SCALE,
@@ -770,6 +787,7 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         val now = System.nanoTime()
         val motion = motion()
         updateAnimationState(now, motion)
+        pollSliderDrag(mouseX, mouseY)
         val settingsModule = openSettingsModule
         if (settingsModule != null && !ModuleManager.contains(selectedCategory, settingsModule)) {
             openSettingsModule = null
@@ -1749,6 +1767,7 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         val slice = visibleSlice(font, value, if (focused) hexCursor else value.length, maxOf(1, field.w - 8))
         val shown = slice.text
         val textY = field.y + (field.h - TEXT_HEIGHT) / 2
+        if (focused) drawFieldSelection(graphics, font, slice, value, hexCursor, hexAnchor, field.x + 4, textY)
         graphics.text(font, shown, field.x + 4, textY, TEXT_PRIMARY)
         if (focused && (System.currentTimeMillis() / CARET_BLINK_MILLIS) % 2 == 0L) {
             val cursorInSlice = clampCursor(shown, hexCursor - slice.start)
@@ -1786,6 +1805,7 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         val slice = visibleSlice(font, value, if (focused) numberCursor else value.length, maxOf(1, field.w - 8))
         val shown = slice.text
         val textY = field.y + (field.h - TEXT_HEIGHT) / 2
+        if (focused) drawFieldSelection(graphics, font, slice, value, numberCursor, numberAnchor, field.x + 4, textY)
         graphics.text(font, shown, field.x + 4, textY, TEXT_PRIMARY)
         if (focused && (System.currentTimeMillis() / CARET_BLINK_MILLIS) % 2 == 0L) {
             val cursorInSlice = clampCursor(shown, numberCursor - slice.start)
@@ -1833,12 +1853,29 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         val slice = visibleSlice(font, value, if (focused) textCursor else value.length, inner)
         val text = slice.text
         val textY = field.y + (field.h - TEXT_HEIGHT) / 2
+        if (focused) drawFieldSelection(graphics, font, slice, value, textCursor, textAnchor, field.x + 4, textY)
         graphics.text(font, text, field.x + 4, textY, TEXT_PRIMARY)
         if (focused && (System.currentTimeMillis() / CARET_BLINK_MILLIS) % 2 == 0L) {
             val cursorInSlice = clampCursor(text, textCursor - slice.start)
             val caretX = field.x + 4 + font.width(text.substring(0, cursorInSlice))
             graphics.fill(caretX, textY - 1, caretX + 1, textY + TEXT_HEIGHT + 1, TEXT_PRIMARY)
         }
+    }
+
+    /** Paints the selected part of the visible slice behind the text. */
+    private fun drawFieldSelection(
+        graphics: GuiGraphicsExtractor, font: Font, slice: TextSlice, value: String,
+        cursor: Int, anchor: Int, textX: Int, textY: Int,
+    ) {
+        val range = selection(value, cursor, anchor)
+        if (range.isEmpty() || slice.text.isEmpty()) return
+        val from = clampCursor(slice.text, range.start - slice.start)
+        val to = clampCursor(slice.text, range.end - slice.start)
+        if (to <= from) return
+        graphics.fill(
+            textX + font.width(slice.text.substring(0, from)), textY - 1,
+            textX + font.width(slice.text.substring(0, to)), textY + TEXT_HEIGHT + 1, SLIDER_FILL,
+        )
     }
 
     private fun keybindDisplayName(serialized: String?): String {
@@ -2020,12 +2057,19 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         val search = searchRect(panelX, panelY)
         if (left && search.contains(mouseX, mouseY)) {
             searchFocused = true
-            searchSelectAll = false
             searchCursor = cursorAtMouse(
                 Minecraft.getInstance().font, searchQuery, mouseX.toDouble(),
                 search.x + searchTextInsetForHeight(search.h), searchTextViewportWidth(search.w, search.h),
                 searchCursor, HEADER_TEXT_SCALE,
             )
+            if (doubleClick) {
+                val all = selectAllState(searchQuery)
+                searchCursor = all.cursor
+                searchAnchor = all.anchor
+            } else {
+                searchAnchor = searchCursor
+                selectingField = SelectingField.SEARCH
+            }
             return true
         }
         if (left && UpdateChecker.newerVersion() != null) {
@@ -2084,7 +2128,7 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
 
         val modules = visibleModules(selectedCategory)
         if (settingsModule != null && ModuleManager.contains(selectedCategory, settingsModule)) {
-            return settingsClicked(settingsModule, mouseX, mouseY, rightX, panelY, left, right)
+            return settingsClicked(settingsModule, mouseX, mouseY, rightX, panelY, left, right, doubleClick)
         }
 
         for (card in cardRects(selectedCategory, modules, rightX, panelY,
@@ -2127,7 +2171,8 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         return super.mouseClicked(event, doubleClick)
     }
 
-    private fun settingsClicked(module: Module, mouseX: Int, mouseY: Int, x: Int, panelY: Int, left: Boolean, right: Boolean): Boolean {
+    private fun settingsClicked(module: Module, mouseX: Int, mouseY: Int, x: Int, panelY: Int, left: Boolean, right: Boolean,
+        doubleClick: Boolean = false): Boolean {
         val viewport = settingsViewport(x, panelY)
         if ((!left && !right) || !viewport.contains(mouseX, mouseY)) return true
         for (row in settingsRows(module, x, panelY)) {
@@ -2180,6 +2225,8 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
                             hexInput = row.setting.hex()
                             hexCursor = cursorAtMouse(Minecraft.getInstance().font, hexInput, mouseX.toDouble(),
                                 picker.hex.x + 4, picker.hex.w - 8, hexCursor)
+                            hexAnchor = if (doubleClick) 0 else hexCursor
+                            if (doubleClick) hexCursor = hexInput.length
                             return true
                         }
                     }
@@ -2196,16 +2243,24 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
                     val field = row.field
                     if (field != null && field.contains(mouseX, mouseY)) {
                         markInteraction(row.setting); playClick()
-                        focusedNumberSetting = row.setting
-                        numberInput = row.setting.display()
-                        numberCursor = numberInput.length
-                        numberSelectAll = true
+                        if (focusedNumberSetting === row.setting && !doubleClick) {
+                            numberCursor = cursorAtMouse(Minecraft.getInstance().font, numberInput, mouseX.toDouble(),
+                                field.x + 4, field.w - 8, numberCursor)
+                            numberAnchor = numberCursor
+                            selectingField = SelectingField.NUMBER
+                        } else {
+                            focusedNumberSetting = row.setting
+                            numberInput = row.setting.display()
+                            numberCursor = numberInput.length
+                            numberAnchor = 0
+                        }
                         return true
                     }
                     val slider = row.slider
                     if (slider != null && slider.contains(mouseX, mouseY)) {
                         markInteraction(row.setting); playClick()
                         draggingNumberSetting = row.setting
+                        logGuiDiagnostic("EVENT action=slider_drag,phase=start,slider=${row.setting.name()}")
                         applyNumberSlider(row.setting, slider, mouseX)
                         return true
                     }
@@ -2231,17 +2286,26 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
                     focusedTextSetting = row.setting
                     if (row.setting.keybindCapture()) {
                         textCursor = 0
-                        textSelectAll = false
+                        textAnchor = -1
                         return true
                     }
                     textCursor = cursorAtMouse(Minecraft.getInstance().font, row.setting.value(), mouseX.toDouble(),
                         field.x + 4, field.w - 8, row.setting.value().length)
-                    textSelectAll = false
+                    if (doubleClick) {
+                        val all = selectAllState(row.setting.value())
+                        textCursor = all.cursor
+                        textAnchor = all.anchor
+                    } else {
+                        textAnchor = textCursor
+                        selectingField = SelectingField.TEXT
+                    }
                     return true
                 }
                 is ActionRow -> if (row.bounds.contains(mouseX, mouseY)) {
                     markInteraction(row.action); playClick()
+                    persistView()
                     row.action.onClick.run()
+                    followSavedView()
                     invalidateSettingsLayout()
                     return true
                 }
@@ -2251,8 +2315,41 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         return true
     }
 
+    /** Moves the caret of the field being selected with the mouse; the anchor stays where the click began. */
+    private fun dragSelection(mouseX: Int): Boolean {
+        val target = selectingField ?: return false
+        val font = Minecraft.getInstance().font
+        when (target) {
+            SelectingField.SEARCH -> {
+                val search = searchRect(panelX(), panelY())
+                searchCursor = cursorAtMouse(
+                    font, searchQuery, mouseX.toDouble(), search.x + searchTextInsetForHeight(search.h),
+                    searchTextViewportWidth(search.w, search.h), searchCursor, HEADER_TEXT_SCALE,
+                )
+                return true
+            }
+            SelectingField.TEXT, SelectingField.NUMBER -> {
+                val module = openSettingsModule ?: return false
+                for (row in settingsRows(module, panelX() + categoryWidth(), panelY())) {
+                    if (target == SelectingField.TEXT && row is TextRow && row.setting === focusedTextSetting) {
+                        val field = row.field ?: return false
+                        textCursor = cursorAtMouse(font, row.setting.value(), mouseX.toDouble(), field.x + 4, field.w - 8, textCursor)
+                        return true
+                    }
+                    if (target == SelectingField.NUMBER && row is NumberRow && row.setting === focusedNumberSetting) {
+                        val field = row.field ?: return false
+                        numberCursor = cursorAtMouse(font, numberInput, mouseX.toDouble(), field.x + 4, field.w - 8, numberCursor)
+                        return true
+                    }
+                }
+            }
+        }
+        return false
+    }
+
     override fun mouseDragged(event: MouseButtonEvent, dragX: Double, dragY: Double): Boolean {
         if (!inputSettled()) return true
+        if (event.button() == 0 && dragSelection(event.x().toInt())) return true
         val module = openSettingsModule ?: return super.mouseDragged(event, dragX, dragY)
         val rightX = panelX() + categoryWidth()
         val mouseX = event.x().toInt()
@@ -2276,6 +2373,7 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
     }
 
     override fun mouseReleased(event: MouseButtonEvent): Boolean {
+        selectingField = null
         if (!inputSettled()) {
             draggingPicker = null
             draggingNumberSetting = null
@@ -2295,17 +2393,10 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         val codepoint = event.codepoint()
         if (searchFocused) {
             if (Character.isISOControl(codepoint)) return true
-            if (searchSelectAll) {
-                setSearchQuery("")
-                searchCursor = 0
-                searchSelectAll = false
-            }
-            val inserted = Character.toString(codepoint)
-            if (searchQuery.length + inserted.length <= SEARCH_MAX_LENGTH) {
-                val edit = ClickGuiTextEditing.insertAtCursor(searchQuery, searchCursor, false, inserted)
-                setSearchQuery(edit.text)
-                searchCursor = edit.cursor
-            }
+            val edit = insertReplacingSelection(searchQuery, searchCursor, searchAnchor, Character.toString(codepoint), SEARCH_MAX_LENGTH)
+            if (edit.text != searchQuery) setSearchQuery(edit.text)
+            searchCursor = edit.cursor
+            searchAnchor = edit.anchor
             return true
         }
         if (Character.isISOControl(codepoint)) {
@@ -2315,44 +2406,85 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         if (textSetting != null && textSetting.keybindCapture()) return true
         val hexSetting = focusedHexSetting
         if (hexSetting != null) {
-            if (Character.digit(codepoint, 16) >= 0 && hexInput.length < 8) {
-                val inserted = Character.toString(codepoint).uppercase(Locale.ROOT)
-                val edit = ClickGuiTextEditing.insertAtCursor(hexInput, hexCursor, false, inserted)
-                hexInput = edit.text
-                hexCursor = edit.cursor
-                hexSetting.setHex(hexInput)
-                ModConfig.markDirty()
-            }
+            if (Character.digit(codepoint, 16) >= 0) applyHexEdit(hexSetting, Character.toString(codepoint))
             return true
         }
         if (textSetting != null) {
-            val inserted = Character.toString(codepoint)
-            val edit = ClickGuiTextEditing.insertAtCursor(textSetting.value(), textCursor, textSelectAll, inserted)
-            textSetting.setValue(edit.text)
-            invalidateSettingsLayout()
-            textCursor = minOf(textSetting.value().length, edit.cursor)
-            textSelectAll = edit.selectAll
-            ModConfig.markDirty()
+            applyTextEdit(textSetting, Character.toString(codepoint))
             return true
         }
         val numberSetting = focusedNumberSetting
         if (numberSetting != null) {
-            if (numberSelectAll) {
-                numberInput = ""
-                numberCursor = 0
-                numberSelectAll = false
-            }
-            val allowed = Character.isDigit(codepoint) || codepoint == '-'.code || codepoint == '+'.code ||
-                (!numberSetting.isInteger() && (codepoint == '.'.code || codepoint == ','.code))
-            if (allowed && numberInput.length < 16) {
-                val inserted = if (codepoint == ','.code) "." else Character.toString(codepoint)
-                val edit = ClickGuiTextEditing.insertAtCursor(numberInput, numberCursor, false, inserted)
-                numberInput = edit.text
-                numberCursor = edit.cursor
-            }
+            applyNumberEdit(numberSetting, Character.toString(codepoint))
             return true
         }
         return super.charTyped(event)
+    }
+
+    private fun applyTextEdit(setting: TextSetting, inserted: String) {
+        val edit = insertReplacingSelection(setting.value(), textCursor, textAnchor, inserted, setting.maxLength())
+        if (edit.text != setting.value()) {
+            setting.setValue(edit.text)
+            invalidateSettingsLayout()
+            ModConfig.markDirty()
+        }
+        textCursor = minOf(setting.value().length, edit.cursor)
+        textAnchor = -1
+    }
+
+    private fun applyHexEdit(setting: ColorSetting, inserted: String) {
+        val digits = inserted.filter { Character.digit(it, 16) >= 0 }.uppercase(Locale.ROOT)
+        if (digits.isEmpty()) return
+        val edit = insertReplacingSelection(hexInput, hexCursor, hexAnchor, digits, 8)
+        hexInput = edit.text
+        hexCursor = edit.cursor
+        hexAnchor = -1
+        setting.setHex(hexInput)
+        ModConfig.markDirty()
+    }
+
+    private fun applyNumberEdit(setting: NumberSetting, inserted: String) {
+        val allowed = inserted.map { if (it == ',') '.' else it }.filter {
+            it.isDigit() || it == '-' || it == '+' || (!setting.isInteger() && it == '.')
+        }.joinToString("")
+        if (allowed.isEmpty()) return
+        val edit = insertReplacingSelection(numberInput, numberCursor, numberAnchor, allowed, 16)
+        numberInput = edit.text
+        numberCursor = edit.cursor
+        numberAnchor = -1
+    }
+
+    /**
+     * Shared single-line shortcuts: select all, copy, cut, paste, and (shift-)navigation. Returns the new field
+     * state, or null when the key is not an editing key so the caller can handle it.
+     */
+    private fun editKey(event: KeyEvent, text: String, cursor: Int, anchor: Int, maxLength: Int): ClickGuiTextEditResult? {
+        val minecraft = Minecraft.getInstance()
+        if (minecraft.hasControlDown()) {
+            when (event.key()) {
+                GLFW.GLFW_KEY_A -> return selectAllState(text)
+                GLFW.GLFW_KEY_C -> {
+                    val picked = selectedText(text, cursor, anchor)
+                    if (picked.isNotEmpty()) minecraft.keyboardHandler.setClipboard(picked)
+                    return ClickGuiTextEditResult(text, cursor, false, anchor)
+                }
+                GLFW.GLFW_KEY_X -> {
+                    val picked = selectedText(text, cursor, anchor)
+                    if (picked.isEmpty()) return ClickGuiTextEditResult(text, cursor, false, anchor)
+                    minecraft.keyboardHandler.setClipboard(picked)
+                    return deleteSelection(text, cursor, anchor)
+                }
+                GLFW.GLFW_KEY_V -> return insertReplacingSelection(
+                    text, cursor, anchor, sanitizePaste(minecraft.keyboardHandler.getClipboard()), maxLength,
+                )
+            }
+        }
+        if (event.key() in EDIT_KEYS) {
+            return applyKeyWithSelection(
+                text, cursor, anchor, textEditKey(event.key()), (event.modifiers() and GLFW.GLFW_MOD_SHIFT) != 0,
+            )
+        }
+        return null
     }
 
     override fun keyPressed(event: KeyEvent): Boolean {
@@ -2361,19 +2493,16 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
             return true
         }
         if (searchFocused) {
-            if ((event.modifiers() and GLFW.GLFW_MOD_CONTROL) != 0 && event.key() == GLFW.GLFW_KEY_A) {
-                searchSelectAll = true
+            val edit = editKey(event, searchQuery, searchCursor, searchAnchor, SEARCH_MAX_LENGTH)
+            if (edit != null) {
+                if (edit.text != searchQuery) setSearchQuery(edit.text)
+                searchCursor = edit.cursor
+                searchAnchor = edit.anchor
                 return true
             }
             when (event.key()) {
-                in EDIT_KEYS -> {
-                    val edit = ClickGuiTextEditing.applyKey(searchQuery, searchCursor, searchSelectAll, textEditKey(event.key()))
-                    if (edit.text != searchQuery || (searchSelectAll && isDeleteKey(event.key()))) setSearchQuery(edit.text)
-                    searchCursor = edit.cursor
-                    searchSelectAll = edit.selectAll
-                }
                 GLFW.GLFW_KEY_ESCAPE -> {
-                    if (searchQuery.isNotEmpty()) { setSearchQuery(""); searchCursor = 0 } else blurTextField()
+                    if (searchQuery.isNotEmpty()) { setSearchQuery(""); searchCursor = 0; searchAnchor = -1 } else blurTextField()
                 }
                 GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> blurTextField()
                 else -> return true
@@ -2385,7 +2514,7 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
             if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
                 focusedTextSetting = null
                 textCursor = 0
-                textSelectAll = false
+                textAnchor = -1
                 return true
             }
             val key = if (event.key() == GLFW.GLFW_KEY_BACKSPACE || event.key() == GLFW.GLFW_KEY_DELETE)
@@ -2394,7 +2523,7 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
                 textSetting.setValue(key.name)
                 focusedTextSetting = null
                 textCursor = 0
-                textSelectAll = false
+                textAnchor = -1
                 invalidateSettingsLayout()
                 ModConfig.markDirty()
             }
@@ -2402,16 +2531,19 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         }
         val hexSetting = focusedHexSetting
         if (hexSetting != null) {
-            when (event.key()) {
-                in EDIT_KEYS -> {
-                    val edit = ClickGuiTextEditing.applyKey(hexInput, hexCursor, false, textEditKey(event.key()))
-                    hexCursor = edit.cursor
-                    if (edit.text != hexInput) {
-                        hexInput = edit.text
-                        hexSetting.setHex(hexInput)
-                        ModConfig.markDirty()
-                    }
+            val edit = editKey(event, hexInput, hexCursor, hexAnchor, 8)
+            if (edit != null) {
+                val digits = edit.text.filter { Character.digit(it, 16) >= 0 }.uppercase(Locale.ROOT)
+                hexCursor = minOf(edit.cursor, digits.length)
+                hexAnchor = if (digits == edit.text) edit.anchor else -1
+                if (digits != hexInput) {
+                    hexInput = digits
+                    hexSetting.setHex(hexInput)
+                    ModConfig.markDirty()
                 }
+                return true
+            }
+            when (event.key()) {
                 GLFW.GLFW_KEY_ESCAPE, GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> blurTextField()
                 else -> return super.keyPressed(event)
             }
@@ -2419,36 +2551,41 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         }
         val numberSetting = focusedNumberSetting
         if (numberSetting != null) {
+            val edit = editKey(event, numberInput, numberCursor, numberAnchor, 16)
+            if (edit != null) {
+                val allowed = edit.text.map { if (it == ',') '.' else it }.filter {
+                    it.isDigit() || it == '-' || it == '+' || (!numberSetting.isInteger() && it == '.')
+                }.joinToString("")
+                numberInput = allowed
+                numberCursor = minOf(edit.cursor, allowed.length)
+                numberAnchor = if (allowed == edit.text) edit.anchor else -1
+                return true
+            }
             when (event.key()) {
-                in EDIT_KEYS -> {
-                    val edit = ClickGuiTextEditing.applyKey(numberInput, numberCursor, numberSelectAll, textEditKey(event.key()))
-                    numberInput = edit.text; numberCursor = edit.cursor; numberSelectAll = edit.selectAll
-                }
                 GLFW.GLFW_KEY_ESCAPE -> {
                     focusedNumberSetting = null
                     numberInput = ""
-                    numberSelectAll = false
+                    numberAnchor = -1
                 }
                 GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> blurTextField()
-                GLFW.GLFW_KEY_A -> if ((event.modifiers() and GLFW.GLFW_MOD_CONTROL) != 0) numberSelectAll = true
                 else -> return true
             }
             return true
         }
         if (textSetting != null) {
-            when (event.key()) {
-                in EDIT_KEYS -> {
-                    val value = textSetting.value()
-                    val edit = ClickGuiTextEditing.applyKey(value, textCursor, textSelectAll, textEditKey(event.key()))
-                    if (edit.text != value || (textSelectAll && isDeleteKey(event.key()))) {
-                        textSetting.setValue(edit.text)
-                        invalidateSettingsLayout()
-                        ModConfig.markDirty()
-                    }
-                    textCursor = edit.cursor
-                    textSelectAll = edit.selectAll
+            val value = textSetting.value()
+            val edit = editKey(event, value, textCursor, textAnchor, textSetting.maxLength())
+            if (edit != null) {
+                if (edit.text != value) {
+                    textSetting.setValue(edit.text)
+                    invalidateSettingsLayout()
+                    ModConfig.markDirty()
                 }
-                GLFW.GLFW_KEY_A -> if ((event.modifiers() and GLFW.GLFW_MOD_CONTROL) != 0) textSelectAll = true
+                textCursor = minOf(textSetting.value().length, edit.cursor)
+                textAnchor = if (textSetting.value() == edit.text) edit.anchor else -1
+                return true
+            }
+            when (event.key()) {
                 GLFW.GLFW_KEY_ESCAPE, GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> blurTextField()
                 else -> return super.keyPressed(event)
             }
@@ -2478,16 +2615,18 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         commitNumberInput()
         focusedTextSetting = null
         textCursor = 0
-        textSelectAll = false
+        textAnchor = -1
         focusedNumberSetting = null
         numberInput = ""
         numberCursor = 0
-        numberSelectAll = false
+        numberAnchor = -1
         focusedHexSetting = null
         hexCursor = 0
+        hexAnchor = -1
         searchFocused = false
         searchCursor = clampCursor(searchQuery, searchCursor)
-        searchSelectAll = false
+        searchAnchor = -1
+        selectingField = null
         hexInput = ""
         ModConfig.markDirty()
     }
@@ -2576,6 +2715,50 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         if (focusedHexSetting === setting) hexInput = setting.hex()
     }
 
+    /**
+     * Follows the cursor every frame while the left button stays down on a slider or picker, so a drag works even
+     * when the screen receives no drag event; the release is detected here as well.
+     */
+    private fun pollSliderDrag(mouseX: Int, mouseY: Int) {
+        val slider = draggingNumberSetting
+        val picker = draggingPicker
+        if (slider == null && picker == null) return
+        // GLFW, not the MouseHandler flag: vanilla only updates that flag while no screen is open.
+        if (GLFW.glfwGetMouseButton(minecraft.window.handle(), GLFW.GLFW_MOUSE_BUTTON_LEFT) != GLFW.GLFW_PRESS) {
+            logGuiDiagnostic("EVENT action=slider_drag,phase=end,slider=${slider?.name() ?: "picker"}")
+            draggingNumberSetting = null
+            draggingPicker = null
+            persistView()
+            ModConfig.markDirty()
+            return
+        }
+        if (!inputSettled()) return
+        val module = openSettingsModule ?: return
+        for (row in settingsRows(module, panelX() + categoryWidth(), panelY())) {
+            if (slider != null && row is NumberRow && row.setting === slider) {
+                row.slider?.let { applyNumberSlider(slider, it, mouseX) }
+                return
+            }
+            if (picker != null && row is ColorRow && row.setting === expandedColorSetting) {
+                row.picker?.let { applyPicker(row.setting, it, mouseX, mouseY) }
+                return
+            }
+        }
+    }
+
+    /** A module action (for example "Edit Class Colors") may point the saved view at another module; open it. The view was saved just before the action ran, so any difference came from the action. */
+    private fun followSavedView() {
+        val category = ClickGuiState.category() ?: return
+        val module = ClickGuiState.openModule()
+        if (category == selectedCategory && module === openSettingsModule) return
+        setSearchQuery("")
+        requestNavigation(
+            ViewState(category, module, ClickGuiState.gridScroll(category), 0, null),
+            Integer.compare(indexOf(category), indexOf(selectedCategory)),
+        )
+        logGuiDiagnostic("EVENT action=follow_view,category=${category.name},module=${module?.name()}")
+    }
+
     private fun applyNumberSlider(setting: NumberSetting, slider: Rect, mouseX: Int) {
         val fraction = (mouseX - slider.x) / slider.w.toFloat()
         val previous = setting.value()
@@ -2643,6 +2826,8 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
     }
 
     private data class TextSlice(val text: String, val start: Int, val end: Int)
+
+    private enum class SelectingField { SEARCH, TEXT, NUMBER }
     private data class ViewState(
         val category: Category,
         val module: Module?,
@@ -2757,7 +2942,7 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         private const val KEYBIND_HEIGHT = 15
         private const val SET_BIND_WIDTH = 46
         private const val CARET_BLINK_MILLIS = 500L
-        private const val REPOSITORY_URL = "https://github.com/dasdadassadwt/geileraddons-26.2"
+        private const val REPOSITORY_URL = ProjectLinks.GITHUB_URL
 
         @Suppress("UNCHECKED_CAST")
         @JvmStatic fun categoryEntries(categories: List<Category>, expandedCategories: Set<Category>): List<CategoryEntry> =

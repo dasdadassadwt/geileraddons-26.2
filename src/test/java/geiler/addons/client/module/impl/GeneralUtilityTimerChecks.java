@@ -53,7 +53,7 @@ public final class GeneralUtilityTimerChecks {
 		assertNames(module.booleanSettings(), List.of(
 			"Chat Triggers In Text Screens", "Check for Updates", "Island Detection API",
 			"Show Availability Notices", "Supply Command Messages", "Show Timer HUD", "Completion Alert", "Chat Alert",
-			"Title Alert", "Sound Alert"), "boolean setting IDs");
+			"Title Alert", "Sound Alert", "Custom Window Icon"), "boolean setting IDs");
 		check(!module.chatTriggersInTextScreens().value() && module.checkForUpdates().value()
 			&& module.islandDetectionApi().value() && module.availabilityNotices().value()
 			&& module.showTimerHud().value() && module.timerCompletionAlert().value()
@@ -72,7 +72,7 @@ public final class GeneralUtilityTimerChecks {
 
 		List<String> groupNames = new ArrayList<>();
 		for (SettingGroup group : module.groups()) groupNames.add(group.name());
-		check(groupNames.equals(List.of("Macros", "Island Detection", "Updates", "Click GUI", "Timer Settings")),
+		check(groupNames.equals(List.of("Macros", "Island Detection", "Updates", "Click GUI", "Timer Settings", "Window", "Community")),
 			"General keeps its ordered setting groups: " + groupNames);
 		SettingGroup timerSettings = module.groups().get(4);
 		assertNames(timerSettings.settings(), List.of("Show Timer HUD", "Completion Alert", "Chat Alert",
