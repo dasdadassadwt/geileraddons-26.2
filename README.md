@@ -53,101 +53,9 @@ The jar is written to `build/libs/`. `./gradlew offlineChecks` runs the offline 
 ## Modules
 
 <details>
-<summary><b>General</b> — the mod-wide switches: macro chat, island detection, updates</summary>
+<summary><b>Dungeons</b> — Catacombs solvers, maps, alerts, route guides and run tools</summary>
 
 <br>
-
-**General** in **Miscellaneous** holds the settings that belong to the mod as a whole rather than to
-one overlay. Cheat-style options are controlled directly where they are used; there is no separate
-master toggle that overrides their individual settings.
-
-**Chat Triggers In Text Screens** (off by default) lets chat-triggered macro stacks run while a chat
-box, editor or menu has the keyboard. Leave it off and chat can never make a macro type into what you
-are writing.
-
-**Show Availability Notices** controls the inactive-reason text shown on module cards and their
-tooltips. Turn it off to keep the grid quieter; module names, descriptions, and settings remain
-visible.
-
-**Macros → Replay Last Blocked Macro** is an explicit settings button. It starts the chat-triggered
-stack that was most recently refused — the usual case being a message that arrived while chat was
-open — and explains itself when there is nothing to replay. Individual chat stacks can also have
-their own replay hotkey.
-
-**Check for Updates** lives here now instead of in the config file. The old top-level
-`checkForUpdates` key still seeds it once on the first launch after the move, so nobody loses their
-choice.
-
-</details>
-
-<details>
-<summary><b>Chat Channels and Party Commands</b> — clickable channel buttons and reply tools</summary>
-
-<br>
-
-**Chat** extends Minecraft's normal chat instead of drawing a second window. **Extra Width**,
-**Extra Focused Height**, and **Extra Unfocused Height** add GUI-scaled pixels to the current vanilla
-chat dimensions; all start at `0`, and the effective size is clamped to the scaled screen viewport.
-Chat keeps its vanilla position, rendering, input, and scrolling. Right-click a visible message to
-copy its complete text; **Copy Message on Right-click** is enabled by default.
-
-**Chat Channels** adds translucent **All**, **Party**, **Guild**, **Co-op**, **Private**, and **System**
-buttons directly above the vanilla chat input. Selecting a tab is local and sends no server command.
-With a tab selected, ordinary text is sent immediately with the matching prefix: `/ac`, `/pc`, `/gc`,
-`/cc`, or `/r` for All, Party, Guild, Co-op, or Private. Slash commands pass through unchanged.
-The selected tab filters Minecraft's normal chat history: **All** shows every message, while
-**System** shows Vanilla/System lines, including Officer messages that also remain in All. Tab
-selection has no cooldown, and the selected button resets to All after restart. While either module
-is active, the client keeps a bounded in-memory channel index; vanilla chat remains the only displayed
-history.
-
-**Party Commands** is a separate module for configured incoming replies, local actions, and party
-transfer helpers. Its settings include the command prefix, reply delay, allowed incoming channels,
-and a Manage Replies editor for bounded command entries and folders.
-
-Incoming chat replies support `<prefix>help`/`<prefix>h`, `<prefix>coords`/`<prefix>co`,
-`<prefix>odin`/`<prefix>od`, `<prefix>cf`, `<prefix>8ball`, `<prefix>dice`, `<prefix>ping`,
-`<prefix>tps`, `<prefix>fps`, `<prefix>time`, and `<prefix>holding`, plus Party-only
-`<prefix>pt [username]`/`<prefix>ptme [username]`/`<prefix>transfer [username]`. The reply master
-switch defaults on, and any valid player in Party chat can request a reply by default. Party is the
-only incoming request channel enabled on a fresh configuration; Guild, Co-op, Private, and
-**Custom Channels** have independent switches under **Incoming Reply Channels**. Custom Channels
-controls replies arriving through user-created Chat Channels rules; it does not control custom reply
-entries. For an incoming transfer without
-a target, the requesting party member is the target. You can type
-`<prefix>pt {args}` locally (for example, `!pt username` with the default prefix) to transfer
-directly when you are party leader and the fresh roster confirms the exact target. A different party
-member's incoming transfer request is ignored unless the allowlist is enabled and contains that exact
-sender; an enabled blocklist entry still wins. The reply delay defaults to four client ticks. The master
-switch and incoming channel controls are in **Party Commands** settings.
-
-`!coords`/`!co` reports local integer block coordinates. `!tps` estimates tick rate from increasing
-`gameTime` values in received time packets and monotonic client receive times. It reports the latest
-fresh interval and trailing 10-second and 1-minute windows only when observed intervals continuously
-cover the whole window; partial edge intervals use their measured average rate. Since these packets
-are not guaranteed to arrive periodically, `N/A` includes a reason when samples are stale or coverage
-is incomplete. This remains a bounded client estimate, not an authoritative server TPS metric.
-
-The Reply Commands editor supports up to 16 named commands organized in folders. Each entry can be
-a **Text Reply**, which responds to matching incoming chat, or a **Local Action**, which runs only
-when you type the command yourself. Local Action templates accept `{args}` and a single slashless
-command template; they are never executed from another player's message. Folder and entry enable
-switches and global sender allow/block lists (32 usernames per list) control the reply system. Each
-list has its own enable switch: an enabled allowlist restricts ordinary replies to its entries, while
-an enabled blocklist excludes its entries and takes precedence. A disabled list is ignored even when
-it has saved names. An enabled empty allowlist denies ordinary incoming replies; with the allowlist
-disabled, any otherwise valid sender in an enabled channel may request them. Remote party transfers always require an
-enabled allowlist containing the exact requester. Replies use the request's Party, Guild, Co-op, or
-Private route (`/pc`, `/gc`, `/cc`, or
-`/r`). Help lists every enabled command across lines capped at 170 characters; continuation lines
-begin `Commands (continued):`. Sender filters apply to ordinary reply commands too. A delayed `/r` reply is dropped if an incoming private message or a recognized
-local `/msg`-style command changes the tracked counterpart. Unrecognized whisper aliases or hidden
-server-side changes to `/r` state cannot be detected by the client. Outgoing channel messages use the
-normal chat submission path, and slash commands remain vanilla commands. Reply entries and filters
-Reply entries and sender filters are stored in the feature-local chat settings file and are excluded
-from shared config profiles.
-
-</details>
 
 <details>
 <summary><b>Party Finder Stats</b> — shows dungeon stats for joining players</summary>
@@ -474,47 +382,6 @@ ignore the player yourself if that is what you want.
 </details>
 
 <details>
-<summary><b>Experimentation Solver</b> — reads Experimentation Table boards</summary>
-
-<br>
-
-The Experimentation Solver recognizes **Chronomatron**, **Ultrasequencer**, and **Superpairs**. It
-shows the sequence or discovered card information in a configurable overlay and can prevent clicks
-that do not match the current sequence step. Preview depth, colours, dimensions, and the selected
-sound, pitch, and volume are configurable. **Hide Text Above Board** hides the vanilla text above
-the experiment; **Show Superpairs Clicks Remaining** displays the observed remaining-click count
-when available. **Max Click Alert** (on by default) plays the selected sound once when an experiment
-reaches its maximum-click milestone. **Complete Sounds** also enables that same milestone sound.
-There is no chat alert. Its input assistance is separate from
-**Auto Experiments**; Superpairs is manual-only.
-
-</details>
-
-<details>
-<summary><b>Auto Experiments</b> — replays supported experiment sequences</summary>
-
-<br>
-
-Auto Experiments can replay **Chronomatron** and **Ultrasequencer**. Choose the games to automate and
-set the first-click and between-click delays. **Superpairs is not automated.** Chronomatron continues
-to use the shared experiment session. Experimentation Solver and Auto share one experiment-board
-owner and session, so enabling both does not create duplicate board observations. Ultrasequencer Auto
-consumes the shared solver's complete immutable sequence view and keeps a separate timed execution
-cursor; it does not parse a second board sequence or treat vanilla click dispatch as server
-acknowledgment. Each
-click is guarded against the current screen, menu, session, and slot. Manual input, an incomplete or
-changed solution, or a refused/uncertain dispatch pauses the executor without retrying a click. Its
-diagnostics record solver progress, Auto cursor/delay state, ownership, pause reason, and dispatch
-result; these do not establish live server acceptance. The shared solver logic/model and Chronomatron
-path were not changed by this Auto integration; Chronomatron remains on its existing scheduler. While the
-matching Ultrasequencer is open, Experimentation Solver also shows Auto's cursor for the exact active
-screen, menu, session, and solution; this is display-only and does not affect manual click protection.
-Experimentation Solver's **Max Click Alert** plays the selected sound once at the maximum-click
-milestone. The alert defaults on, and **Complete Sounds** also enables the same milestone sound.
-
-</details>
-
-<details>
 <summary><b>Dungeon Guide</b> — run player-authored Catacombs route guides</summary>
 
 <br>
@@ -681,97 +548,6 @@ Colours and marker sizes are all adjustable.
 </details>
 
 <details>
-<summary><b>Tiki Helper</b> — Sneaky Tiki hunting in Torrhus</summary>
-
-<br>
-
-Sneaky Tikis are three stacked heads that have to be rotated into alignment by clicking them. This module handles finding them and telling you exactly what to click.
-
-**Waypoints** — boxes every saved tiki spot, green if one is standing there and red if not. Markers stay put after the spot leaves render distance, so you keep your bearings while running a route. An optional tracer line points at the nearest solvable tiki.
-
-**Solver** — floats a number over the head that needs clicking. `+3` means left-click it three times, `-2` means right-click it twice. It updates the instant a click registers, and handles the case where one head is hidden behind another block — you still get the direction, marked `+?`, because the count genuinely can't be known. The rest of the solve shows too, greyed out ahead of time, so you can see every remaining click instead of just the next one.
-
-**Debug Logging** — off by default. Writes every rotation, click and sound to a file. This is how the solver's rule was worked out, and it's there for anyone who wants to check that rule against a live server.
-
-The module switches itself on only in Torrhus, and sits idle everywhere else in SkyBlock — so it costs you nothing while you're doing something else. The card in the menu tells you where you currently are when it's idle.
-
-</details>
-
-<details>
-<summary><b>Safari Floor Drops</b> — highlights drops in the Critter Safari</summary>
-
-<br>
-
-Boxes floor drops as they appear, so you spot them without sweeping the floor with your eyes.
-
-There's no list of spots behind this. A drop is caught **when it spawns**, from the particle the server sends at it, and confirmed by the model it's made of — so it works on spots nobody has mapped, and a drop someone else already took stops being marked instead of leading you to nothing. Boxes clear themselves a few seconds after the drop goes, and immediately once you act on the block.
-
-**Depth Check** decides whether walls hide the box. On means it behaves like anything else in the world; off means you see it through terrain.
-
-The module only runs on the Safari and sits idle everywhere else, so it costs you nothing while you're doing something else.
-
-</details>
-
-<details>
-<summary><b>Hideyho Finder</b> — boxes the Hideyho wherever it is</summary>
-
-<br>
-
-Sweeps the Haunted biome once a second for the Hideyho itself and boxes it through walls until it's gone.
-
-**It only runs in Haunted**, that being the only part of the Safari a Hideyho spawns in, so it costs you nothing while you're working the other three. The card tells you when it's idle for that reason. Which biome you're in comes from the biome the server reports rather than from a map of coordinates, so there's nothing to go stale when Hypixel moves a wall.
-
-**It looks for the critter, not for the places it hides.** A list of hiding spots goes stale the moment Hypixel adds one, can only ever check spots whose chunks happen to be loaded, and misses a Hideyho standing a few blocks off a listed spot — so there isn't one. Nothing needs triggering and no chat line needs catching: if it's in range, it's boxed.
-
-It's recognised by its skin, with its name as a backup so a reskin doesn't quietly switch the module off.
-
-**Debug Mode** boxes every fake player in range in a faded colour — that's how you tell "it wasn't there" apart from "it was there and wasn't recognised".
-
-Scan rate and colour are both yours to set.
-
-</details>
-
-<details>
-<summary><b>Sparkling Critter</b> — finds the rare variants, and can call them out</summary>
-
-<br>
-
-Sweeps the Safari for sparkling critters and boxes them through walls, with the species written above each one.
-
-**It reads name tags.** Hypixel names the label above a rare one `Sparkling Rockmite` rather than `Rockmite`, and a name tag renders through terrain in vanilla anyway — so this points out something that was already on your screen, it just stops you having to notice it. A label is matched whole, so a dropped item called a "Sparkling Tepid Shard" is not mistaken for a Tepid.
-
-Boxes follow the critter rather than its name tag: Hypixel floats that on a separate marker with no hitbox at all, and the mod resolves it back to the mob underneath — never to a player standing nearby.
-
-**Telling your party.** Off by default. When it's on, the first time a sparkling comes within your **Range to Send** it posts `Sparkling Rockmite found at x:131 y:54 z:12` to party chat. Each critter is called out once, and one that was too far away when you first saw it still gets called out when you get closer.
-
-**Debug** prints that line to your own chat instead of sending it, and never sends anything while it's on — so you can watch exactly what it would say without messaging anybody.
-
-Colour, text size, an optional tracer line and the sweep rate are all yours to set.
-
-</details>
-
-<details>
-<summary><b>Mob Highlight</b> — box any mob you name</summary>
-
-<br>
-
-Make as many highlights as you want, each with its own colours and its own text to match.
-
-- **Match by name or by type.** Name matches what the mob calls itself, so `crypt ghoul` finds it whatever level tag Hypixel hangs off it. Type matches what kind of thing it is, so `zombie` catches every zombie regardless of name.
-- **Colour codes and levels don't get in the way.** Matching runs on the readable text, ignoring case, so you type what you see rather than what the server sent.
-- **Two colours per highlight** — outline and fill, set separately — plus its own depth check and its own scan rate.
-- **The name you give it is drawn on the box**, in the real game font, so several highlights running at once stay tellable apart.
-- **Its own switch, on its own heading.** Turn a highlight off without deleting it or opening it up.
-- **Pick the islands it runs on.** Each highlight has its own **Islands** list, folded up inside it, covering every island the mod can recognise. **They all start off**, so you say where a highlight belongs rather than switching off the two dozen places you didn't mean. Where the island can't be named at all — single player, another server, or the moment before the handshake lands — the highlight stays idle until the official API supplies a recognised island. It never guesses from terrain or scoreboard text. Highlights made before this existed keep their old all-island selections until you narrow them.
-
-Highlights are built in the settings panel itself: **Create Mob Highlight** adds an empty one, and each becomes its own foldable section you fill in. No separate screen to keep in step.
-
-Use **Manage Folders** to organize highlights into nested groups. Folders are independent from the
-Macros and Block ESP trees; renaming or moving one never changes another feature's folders.
-
-</details>
-
-<details>
 <summary><b>Dungeon Mob ESP</b> — highlight starred mobs and minibosses</summary>
 
 <br>
@@ -896,27 +672,137 @@ entity's anchor chunk unloads, its last bounds are retained for up to ten second
 
 </details>
 
+</details>
+
 <details>
-<summary><b>Block ESP</b> — highlight registered block types</summary>
+<summary><b>Enchanting</b> — Experimentation Table helpers</summary>
 
 <br>
 
-Create up to 32 entries, each selecting exactly one registered block. The entry's **Block: ...**
-action shows the selected registry ID and opens a picker that filters both readable names and
-technical IDs, so you do not have to remember unusual block names. Each entry has independent **Box**,
-**Fill**, and **Outline** switches, depth check, label, tracer, island list, and
-**Connect Touching Blocks** option. Connected blocks of the same type share one exposed voxel
-shape, label, and tracer; face-adjacent blocks connect, while edge and corner contact does not.
+<details>
+<summary><b>Experimentation Solver</b> — reads Experimentation Table boards</summary>
 
-New entries start with every island off. Scans are centered on you and use the full effective render
-distance by default. Turn on **Use Custom Range** to give one entry its own radius (32 blocks by
-default); it is still limited by render distance. There is no match-count cap. Scanning advances in
-bounded, distance-ordered batches over loaded chunks only, skipping sections whose block palette
-cannot contain the selected type—no chunks are loaded and no network requests are made. The last
-complete highlight stays visible while a refresh runs, avoiding the clear-and-pop flicker of a full
-rescan. **Manage Folders** organizes entries in its own nested tree.
+<br>
+
+The Experimentation Solver recognizes **Chronomatron**, **Ultrasequencer**, and **Superpairs**. It
+shows the sequence or discovered card information in a configurable overlay and can prevent clicks
+that do not match the current sequence step. Preview depth, colours, dimensions, and the selected
+sound, pitch, and volume are configurable. **Hide Text Above Board** hides the vanilla text above
+the experiment; **Show Superpairs Clicks Remaining** displays the observed remaining-click count
+when available. **Max Click Alert** (on by default) plays the selected sound once when an experiment
+reaches its maximum-click milestone. **Complete Sounds** also enables that same milestone sound.
+There is no chat alert. Its input assistance is separate from
+**Auto Experiments**; Superpairs is manual-only.
 
 </details>
+
+<details>
+<summary><b>Auto Experiments</b> — replays supported experiment sequences</summary>
+
+<br>
+
+Auto Experiments can replay **Chronomatron** and **Ultrasequencer**. Choose the games to automate and
+set the first-click and between-click delays. **Superpairs is not automated.** Chronomatron continues
+to use the shared experiment session. Experimentation Solver and Auto share one experiment-board
+owner and session, so enabling both does not create duplicate board observations. Ultrasequencer Auto
+consumes the shared solver's complete immutable sequence view and keeps a separate timed execution
+cursor; it does not parse a second board sequence or treat vanilla click dispatch as server
+acknowledgment. Each
+click is guarded against the current screen, menu, session, and slot. Manual input, an incomplete or
+changed solution, or a refused/uncertain dispatch pauses the executor without retrying a click. Its
+diagnostics record solver progress, Auto cursor/delay state, ownership, pause reason, and dispatch
+result; these do not establish live server acceptance. The shared solver logic/model and Chronomatron
+path were not changed by this Auto integration; Chronomatron remains on its existing scheduler. While the
+matching Ultrasequencer is open, Experimentation Solver also shows Auto's cursor for the exact active
+screen, menu, session, and solution; this is display-only and does not affect manual click protection.
+Experimentation Solver's **Max Click Alert** plays the selected sound once at the maximum-click
+milestone. The alert defaults on, and **Complete Sounds** also enables the same milestone sound.
+
+</details>
+
+</details>
+
+<details>
+<summary><b>Hunting</b> — Critter, Tiki and Hideyho finders</summary>
+
+<br>
+
+<details>
+<summary><b>Tiki Helper</b> — Sneaky Tiki hunting in Torrhus</summary>
+
+<br>
+
+Sneaky Tikis are three stacked heads that have to be rotated into alignment by clicking them. This module handles finding them and telling you exactly what to click.
+
+**Waypoints** — boxes every saved tiki spot, green if one is standing there and red if not. Markers stay put after the spot leaves render distance, so you keep your bearings while running a route. An optional tracer line points at the nearest solvable tiki.
+
+**Solver** — floats a number over the head that needs clicking. `+3` means left-click it three times, `-2` means right-click it twice. It updates the instant a click registers, and handles the case where one head is hidden behind another block — you still get the direction, marked `+?`, because the count genuinely can't be known. The rest of the solve shows too, greyed out ahead of time, so you can see every remaining click instead of just the next one.
+
+**Debug Logging** — off by default. Writes every rotation, click and sound to a file. This is how the solver's rule was worked out, and it's there for anyone who wants to check that rule against a live server.
+
+The module switches itself on only in Torrhus, and sits idle everywhere else in SkyBlock — so it costs you nothing while you're doing something else. The card in the menu tells you where you currently are when it's idle.
+
+</details>
+
+<details>
+<summary><b>Safari Floor Drops</b> — highlights drops in the Critter Safari</summary>
+
+<br>
+
+Boxes floor drops as they appear, so you spot them without sweeping the floor with your eyes.
+
+There's no list of spots behind this. A drop is caught **when it spawns**, from the particle the server sends at it, and confirmed by the model it's made of — so it works on spots nobody has mapped, and a drop someone else already took stops being marked instead of leading you to nothing. Boxes clear themselves a few seconds after the drop goes, and immediately once you act on the block.
+
+**Depth Check** decides whether walls hide the box. On means it behaves like anything else in the world; off means you see it through terrain.
+
+The module only runs on the Safari and sits idle everywhere else, so it costs you nothing while you're doing something else.
+
+</details>
+
+<details>
+<summary><b>Hideyho Finder</b> — boxes the Hideyho wherever it is</summary>
+
+<br>
+
+Sweeps the Haunted biome once a second for the Hideyho itself and boxes it through walls until it's gone.
+
+**It only runs in Haunted**, that being the only part of the Safari a Hideyho spawns in, so it costs you nothing while you're working the other three. The card tells you when it's idle for that reason. Which biome you're in comes from the biome the server reports rather than from a map of coordinates, so there's nothing to go stale when Hypixel moves a wall.
+
+**It looks for the critter, not for the places it hides.** A list of hiding spots goes stale the moment Hypixel adds one, can only ever check spots whose chunks happen to be loaded, and misses a Hideyho standing a few blocks off a listed spot — so there isn't one. Nothing needs triggering and no chat line needs catching: if it's in range, it's boxed.
+
+It's recognised by its skin, with its name as a backup so a reskin doesn't quietly switch the module off.
+
+**Debug Mode** boxes every fake player in range in a faded colour — that's how you tell "it wasn't there" apart from "it was there and wasn't recognised".
+
+Scan rate and colour are both yours to set.
+
+</details>
+
+<details>
+<summary><b>Sparkling Critter</b> — finds the rare variants, and can call them out</summary>
+
+<br>
+
+Sweeps the Safari for sparkling critters and boxes them through walls, with the species written above each one.
+
+**It reads name tags.** Hypixel names the label above a rare one `Sparkling Rockmite` rather than `Rockmite`, and a name tag renders through terrain in vanilla anyway — so this points out something that was already on your screen, it just stops you having to notice it. A label is matched whole, so a dropped item called a "Sparkling Tepid Shard" is not mistaken for a Tepid.
+
+Boxes follow the critter rather than its name tag: Hypixel floats that on a separate marker with no hitbox at all, and the mod resolves it back to the mob underneath — never to a player standing nearby.
+
+**Telling your party.** Off by default. When it's on, the first time a sparkling comes within your **Range to Send** it posts `Sparkling Rockmite found at x:131 y:54 z:12` to party chat. Each critter is called out once, and one that was too far away when you first saw it still gets called out when you get closer.
+
+**Debug** prints that line to your own chat instead of sending it, and never sends anything while it's on — so you can watch exactly what it would say without messaging anybody.
+
+Colour, text size, an optional tracer line and the sweep rate are all yours to set.
+
+</details>
+
+</details>
+
+<details>
+<summary><b>Farming and Slayer</b> — Garden pests, plots, trackers and timers</summary>
+
+<br>
 
 <details>
 <summary><b>Pest Highlighter</b> — highlights every Garden pest</summary>
@@ -978,6 +864,354 @@ Bounded diagnostics run automatically while **Infested plot** is enabled.
 Hypixel Mod API, which is **Miscellaneous → General → Island Detection API**. The mod never guesses
 your island from the scoreboard or the terrain, so if that switch is off the module says so in chat
 rather than doing nothing in silence.
+
+</details>
+
+<details>
+<summary><b>Garden and Slayer trackers</b> — cooldowns, rates, timers, and alerts</summary>
+
+<br>
+
+Fresh configs leave Crop Fever Timer off; saved enable choices are preserved.
+It starts a 60-second countdown from the observed Crop Fever message and clears it on the cure message.
+Its settings preview uses the same scale, text color, background, and opacity as the live HUD. Pest
+Tracker reads the Pests widget cooldown and spawn chat, shows time since the last spawn and session or total pests
+per hour, and estimates spawn intervals. Its held-item filter defaults to farming tools only. The
+optional custom cooldown defaults off at 135 seconds (75 seconds with Finnegan); configurable
+warnings can lead cooldown by five seconds. AFK exclusion uses crop-action gaps, defaulting to 30
+seconds rather than treating a normal pest interval as idle. Spawn alerts, cooldown warnings, and
+ready alerts default off; each enabled alert can use chat (default), title, and/or sound. The
+`PEST_SPAWNED` macro event follows each parsed spawn message. `PEST_COOLDOWN_READY` fires once after
+the widget shows COUNTDOWN then READY; when custom timing is enabled, it also waits for a parsed
+spawn's custom deadline.
+Chat-observed infested plots drive **Warp to Latest Infested Plot**. Set its keybind in the module
+settings; the warp prefers another known infested plot when the player is already on one, and repeats
+the current plot only when it is the sole target.
+
+Slayer Tracker shows session or total bosses per hour and offers spawn-time, kill-time, or both HUD
+rows. Boss and nearby-miniboss alert switches default off. Boss alerts can filter by each recognized
+nearby Slayer boss type; the unclassified fallback stays enabled by default, while conflicting
+observed boss types suppress the alert. Alert text supports `{boss}` and `{miniboss}` placeholders,
+with configurable chat/title/sound outputs and title duration. Chat is enabled by default when an
+alert master is on; title and sound default off. The Garden and Slayer paths depend on live widget,
+chat, scoreboard, entity, and island observations; they have not been verified in-game.
+
+</details>
+
+</details>
+
+<details>
+<summary><b>Foraging</b> — Tree gifts and felled-tree titles</summary>
+
+<br>
+
+<details>
+<summary><b>Tree Tracker</b> — gift counting for Helix, Fig and Mangrove</summary>
+
+<br>
+
+Reads the gift message out of chat and keeps score, so you can tell whether a spot is actually worth farming.
+
+**The panel** shows gifts per hour, the running count, and how long you've been at it — for whichever tree gifted last, so it follows you around without any switching. It appears when a gift lands and takes itself off screen once you stop, so it isn't sitting there while you're doing something else.
+
+**It knows when you stopped.** After a set idle time the clock freezes and the panel hides. The next gift picks up where it left off — same session, nothing lost. Time spent walking somewhere else doesn't count against your rate. The timeout is yours to set.
+
+**Session and all-time.** A session runs until you reset it or restart the game; either way its gifts roll into the all-time totals rather than disappearing. Flip the panel between the two.
+
+Drag the panel wherever you like with **Move Elements** in the menu.
+
+</details>
+
+<details>
+<summary><b>Tree Broken Notifier</b> — a title when a tree comes down</summary>
+
+<br>
+
+Flashes a title across the screen when you fell a tree or one gives you a gift — so you can keep your eyes on the trees instead of on chat.
+
+**Two separate titles.** Gifts get one, **TIMBER!** and **PETALFALL!** get another, each with its own wording, sound and pitch, so you can tell them apart without reading. They really are separate events — a felling can happen without a gift and can fire more than once for one tree — and each has its own switch if you only want one of them. A gift block that names its tree on several lines still only shows one title.
+
+Alerts appear in Minecraft's fixed subtitle position, alongside standard titles. Duration and volume are shared; text size is controlled by Minecraft. Write `{tree}` anywhere in either message and it becomes Helix, Fig or Mangrove.
+
+**Hide the chat spam.** Each side can suppress its own message: the whole gift block — bars, header, rewards line and all — or the TIMBER!/PETALFALL! line. Hidden gifts are still counted; hiding only affects what you see. Off by default.
+
+</details>
+
+</details>
+
+<details>
+<summary><b>Visual</b> — Highlights, scoreboard, camera, animations and player names</summary>
+
+<br>
+
+<details>
+<summary><b>Mob Highlight</b> — box any mob you name</summary>
+
+<br>
+
+Make as many highlights as you want, each with its own colours and its own text to match.
+
+- **Match by name or by type.** Name matches what the mob calls itself, so `crypt ghoul` finds it whatever level tag Hypixel hangs off it. Type matches what kind of thing it is, so `zombie` catches every zombie regardless of name.
+- **Colour codes and levels don't get in the way.** Matching runs on the readable text, ignoring case, so you type what you see rather than what the server sent.
+- **Two colours per highlight** — outline and fill, set separately — plus its own depth check and its own scan rate.
+- **The name you give it is drawn on the box**, in the real game font, so several highlights running at once stay tellable apart.
+- **Its own switch, on its own heading.** Turn a highlight off without deleting it or opening it up.
+- **Pick the islands it runs on.** Each highlight has its own **Islands** list, folded up inside it, covering every island the mod can recognise. **They all start off**, so you say where a highlight belongs rather than switching off the two dozen places you didn't mean. Where the island can't be named at all — single player, another server, or the moment before the handshake lands — the highlight stays idle until the official API supplies a recognised island. It never guesses from terrain or scoreboard text. Highlights made before this existed keep their old all-island selections until you narrow them.
+
+Highlights are built in the settings panel itself: **Create Mob Highlight** adds an empty one, and each becomes its own foldable section you fill in. No separate screen to keep in step.
+
+Use **Manage Folders** to organize highlights into nested groups. Folders are independent from the
+Macros and Block ESP trees; renaming or moving one never changes another feature's folders.
+
+</details>
+
+<details>
+<summary><b>Block ESP</b> — highlight registered block types</summary>
+
+<br>
+
+Create up to 32 entries, each selecting exactly one registered block. The entry's **Block: ...**
+action shows the selected registry ID and opens a picker that filters both readable names and
+technical IDs, so you do not have to remember unusual block names. Each entry has independent **Box**,
+**Fill**, and **Outline** switches, depth check, label, tracer, island list, and
+**Connect Touching Blocks** option. Connected blocks of the same type share one exposed voxel
+shape, label, and tracer; face-adjacent blocks connect, while edge and corner contact does not.
+
+New entries start with every island off. Scans are centered on you and use the full effective render
+distance by default. Turn on **Use Custom Range** to give one entry its own radius (32 blocks by
+default); it is still limited by render distance. There is no match-count cap. Scanning advances in
+bounded, distance-ordered batches over loaded chunks only, skipping sections whose block palette
+cannot contain the selected type—no chunks are loaded and no network requests are made. The last
+complete highlight stays visible while a refresh runs, avoiding the clear-and-pop flicker of a full
+rescan. **Manage Folders** organizes entries in its own nested tree.
+
+</details>
+
+<details>
+<summary><b>Inventory Buttons</b> — run macros or send text from the player inventory</summary>
+
+<br>
+
+Open **Visual → Inventory Buttons → Edit Layout** while in a world. The faint 18×18 grid follows
+the vanilla inventory slot lattice and only exposes fully visible cells outside the inventory and
+any open recipe book. Click an empty cell to choose an existing macro or create one; after editing a
+new macro, its button returns to that original cell. Select a button to edit its appearance, custom
+hover tooltip, and macro. Drag it or use **Move** and click a destination; **Delete** or
+Delete/Backspace removes it. Saved placements are not silently rearranged if a GUI size changes:
+invalid cells are marked in red, and **Reflow** explicitly moves them to the nearest free exterior
+cells while reporting any that could not fit.
+
+Buttons can use a registered item/block icon, short text, or a PNG selected from
+`.minecraft/config/geileraddons/inventory-button-icons/`. The editor shows a live icon preview and
+the hover tooltip; at runtime the tooltip also shows the macro name and any eligibility reason.
+Choose **Text action** when a button should not start a macro. Enter `/gfs ender_pearl 16` to send
+that command, or enter text without `/` to send an ordinary chat message. Text actions save with the
+button placement and remain independent from the macro catalog.
+Only the standard player inventory is supported. When not editing, an unassigned placement is
+hidden. If its macro is deleted, the placement remains so it can be rebound.
+
+Buttons store the macro's stable numeric ID and use the macro's enable switch, trigger context,
+island filter, and the Macro System master switch. Ineligible buttons stay visible but disabled,
+show the reason on hover, and consume clicks so an inventory slot underneath cannot be activated.
+Their layout is local and is not included in shared macro packages.
+
+</details>
+
+<details>
+<summary><b>Custom Scoreboard, Animations, Particles, and Camera</b> — client-side visual controls</summary>
+
+<br>
+
+Custom Scoreboard replaces the vanilla sidebar locally with an editable list of
+native scoreboard rows and custom text lines. Add, edit, remove, enable, and reorder rows in its
+editor. The default uses a black rounded-glass background and a smooth bundled font; font and
+background options are available. Move and scale the HUD element with **Move Elements**.
+
+Font import supports local `.ttf` and `.otf` files up to 20 MiB. Portable config profiles include the
+selected layout but not user-imported font files. **Animations** adjusts first-person item position
+with X/Y/Z sliders, yaw/pitch/roll rotation sliders, actual item-size scale, and swing controls.
+**Particles** clears existing particles and suppresses new ones while enabled. **Third Person Camera**
+adjusts rear third-person distance, collision clipping, and whether your name appears. While enabled,
+F5 cycles between rear third-person and first-person; front-facing view is unavailable. Its optional
+**Free Look** key is held to look around temporarily, and releasing it restores the normal camera view.
+
+</details>
+
+<details>
+<summary><b>Player Names and Player Size</b> — local self settings and hosted player profiles</summary>
+
+<br>
+
+**Player Names** applies hosted aliases and static or animated colors to names that
+appear in the hosted profile. The local **Your Name** settings can edit your own alias, solid color, or
+gradient. **Player Size** has a local own-size control and can apply optional hosted size profiles to
+other players. Local size changes apply only to your own model; remote size profiles are the only
+source for other players. All model size changes are client-side and do not
+change hitboxes or server state.
+
+Player Names transforms matched username tokens at Minecraft's shared font text-preparation, width,
+substring, split, and wrapping paths, in addition to its targeted chat, tab, name-tag, scoreboard,
+tooltip, and roster hooks.
+This covers ordinary vanilla and plugin text drawn through Minecraft's `Font`, including Auction House
+item names and seller lore, incoming `@username` mentions, scoreboard rows, and names shown while
+typing in editable fields. Matching is case-insensitive against each profile's source username and
+uses full username-token boundaries, so `From Alice:` and `@Alice,` can match Alice without matching
+`Alice2` or a longer word. Matches may span component styles or formatted-character runs; styles,
+clicks, and hover metadata are retained. String font inputs recognize legacy `§` formatting codes
+while matching names. Formatted component translations and supported hover text are handled; a name
+available only through an unresolved server-side score, selector, or NBT lookup cannot be identified
+or rewritten. A mod that draws text through a renderer outside Minecraft's Font paths may also need a
+specific hook.
+
+Displayed text in a chat input can show an alias while the stored input stays unchanged; chat messages,
+commands, account identity, and network traffic use the original values. Animated gradients flow
+continuously through the glyphs at the configured speed (0.25 cycles per second by default), and chat
+keeps its wrapping stable while colors animate. **Replace Names** and **Apply Name Styles** control name
+behavior independently. Player Size has its own module toggle.
+These are source-level coverage claims; live Hypixel screens have not been visually verified.
+The owner-editable active source is `src/client/resources/data/player-presentations.json` on this
+repository's `main` branch; the loader requests the corresponding
+[raw GitHub file](https://raw.githubusercontent.com/dasdadassadwt/geileraddons-26.2/main/src/client/resources/data/player-presentations.json).
+The hosted profile and bundled active profile currently contain `{"schemaVersion":1,"players":[]}`.
+The separate `src/client/resources/data/player-presentations.example.json` is an inert format example
+and is not loaded by the runtime. Add entries to the active `players` list with a required Minecraft account
+`name` (the source username key) and any of the optional fields below. `alias` is the replacement
+display name. `color`
+uses `#RRGGBB`; choose either `color` or `gradient`, which accepts two to eight color stops. Add
+`animation` to a gradient to scroll it across the name; omitting `animation` leaves the gradient
+static. `speed` is cycles per second and defaults to 0.25. `alias`, styling, and `size` are
+independent. Size values are limited to `0.1`–`4.0` and only
+change the locally rendered avatar model, not its hitbox or server state.
+The profile loader caps responses at 256 KiB and parses the document incrementally before building
+the Gson tree. It rejects duplicate object members, nesting deeper than 8 levels, more than 32,768
+JSON tokens, or more than 16,384 value nodes. This also bounds arbitrary nested legacy `effect`
+metadata before it is retained. For example:
+
+```json
+{
+  "schemaVersion": 1,
+  "players": [
+    { "name": "ExamplePlayer", "alias": "Example", "size": 1.25, "color": "#55FFFF" },
+    {
+      "name": "AnotherPlayer",
+      "gradient": ["#55FFFF", "#FF55C8", "#FFFF55"],
+      "animation": { "mode": "scroll", "speed": 0.25 }
+    }
+  ]
+}
+```
+
+No player names are supplied yet; a valid local cache or the bundled empty profile remains
+available if download or parsing fails. When Player Names is enabled, the loader
+reads local data and fetches asynchronously, caps profiles at 256 KiB,
+and retains the last valid copy on failure. Successful downloads are cached locally and refreshed
+every six hours; failures retry after fifteen minutes. The schema's optional `effect` field is
+legacy opaque metadata and has no potion or gameplay behavior; use `color`, `gradient`, and
+`animation` for name appearance.
+
+</details>
+
+</details>
+
+<details>
+<summary><b>Miscellaneous</b> — Mod-wide settings, chat, macros, inventory and utilities</summary>
+
+<br>
+
+<details>
+<summary><b>General</b> — the mod-wide switches: macro chat, island detection, updates</summary>
+
+<br>
+
+**General** in **Miscellaneous** holds the settings that belong to the mod as a whole rather than to
+one overlay. Cheat-style options are controlled directly where they are used; there is no separate
+master toggle that overrides their individual settings.
+
+**Chat Triggers In Text Screens** (off by default) lets chat-triggered macro stacks run while a chat
+box, editor or menu has the keyboard. Leave it off and chat can never make a macro type into what you
+are writing.
+
+**Show Availability Notices** controls the inactive-reason text shown on module cards and their
+tooltips. Turn it off to keep the grid quieter; module names, descriptions, and settings remain
+visible.
+
+**Macros → Replay Last Blocked Macro** is an explicit settings button. It starts the chat-triggered
+stack that was most recently refused — the usual case being a message that arrived while chat was
+open — and explains itself when there is nothing to replay. Individual chat stacks can also have
+their own replay hotkey.
+
+**Check for Updates** lives here now instead of in the config file. The old top-level
+`checkForUpdates` key still seeds it once on the first launch after the move, so nobody loses their
+choice.
+
+</details>
+
+<details>
+<summary><b>Chat Channels and Party Commands</b> — clickable channel buttons and reply tools</summary>
+
+<br>
+
+**Chat** extends Minecraft's normal chat instead of drawing a second window. **Extra Width**,
+**Extra Focused Height**, and **Extra Unfocused Height** add GUI-scaled pixels to the current vanilla
+chat dimensions; all start at `0`, and the effective size is clamped to the scaled screen viewport.
+Chat keeps its vanilla position, rendering, input, and scrolling. Right-click a visible message to
+copy its complete text; **Copy Message on Right-click** is enabled by default.
+
+**Chat Channels** adds translucent **All**, **Party**, **Guild**, **Co-op**, **Private**, and **System**
+buttons directly above the vanilla chat input. Selecting a tab is local and sends no server command.
+With a tab selected, ordinary text is sent immediately with the matching prefix: `/ac`, `/pc`, `/gc`,
+`/cc`, or `/r` for All, Party, Guild, Co-op, or Private. Slash commands pass through unchanged.
+The selected tab filters Minecraft's normal chat history: **All** shows every message, while
+**System** shows Vanilla/System lines, including Officer messages that also remain in All. Tab
+selection has no cooldown, and the selected button resets to All after restart. While either module
+is active, the client keeps a bounded in-memory channel index; vanilla chat remains the only displayed
+history.
+
+**Party Commands** is a separate module for configured incoming replies, local actions, and party
+transfer helpers. Its settings include the command prefix, reply delay, allowed incoming channels,
+and a Manage Replies editor for bounded command entries and folders.
+
+Incoming chat replies support `<prefix>help`/`<prefix>h`, `<prefix>coords`/`<prefix>co`,
+`<prefix>odin`/`<prefix>od`, `<prefix>cf`, `<prefix>8ball`, `<prefix>dice`, `<prefix>ping`,
+`<prefix>tps`, `<prefix>fps`, `<prefix>time`, and `<prefix>holding`, plus Party-only
+`<prefix>pt [username]`/`<prefix>ptme [username]`/`<prefix>transfer [username]`. The reply master
+switch defaults on, and any valid player in Party chat can request a reply by default. Party is the
+only incoming request channel enabled on a fresh configuration; Guild, Co-op, Private, and
+**Custom Channels** have independent switches under **Incoming Reply Channels**. Custom Channels
+controls replies arriving through user-created Chat Channels rules; it does not control custom reply
+entries. For an incoming transfer without
+a target, the requesting party member is the target. You can type
+`<prefix>pt {args}` locally (for example, `!pt username` with the default prefix) to transfer
+directly when you are party leader and the fresh roster confirms the exact target. A different party
+member's incoming transfer request is ignored unless the allowlist is enabled and contains that exact
+sender; an enabled blocklist entry still wins. The reply delay defaults to four client ticks. The master
+switch and incoming channel controls are in **Party Commands** settings.
+
+`!coords`/`!co` reports local integer block coordinates. `!tps` estimates tick rate from increasing
+`gameTime` values in received time packets and monotonic client receive times. It reports the latest
+fresh interval and trailing 10-second and 1-minute windows only when observed intervals continuously
+cover the whole window; partial edge intervals use their measured average rate. Since these packets
+are not guaranteed to arrive periodically, `N/A` includes a reason when samples are stale or coverage
+is incomplete. This remains a bounded client estimate, not an authoritative server TPS metric.
+
+The Reply Commands editor supports up to 16 named commands organized in folders. Each entry can be
+a **Text Reply**, which responds to matching incoming chat, or a **Local Action**, which runs only
+when you type the command yourself. Local Action templates accept `{args}` and a single slashless
+command template; they are never executed from another player's message. Folder and entry enable
+switches and global sender allow/block lists (32 usernames per list) control the reply system. Each
+list has its own enable switch: an enabled allowlist restricts ordinary replies to its entries, while
+an enabled blocklist excludes its entries and takes precedence. A disabled list is ignored even when
+it has saved names. An enabled empty allowlist denies ordinary incoming replies; with the allowlist
+disabled, any otherwise valid sender in an enabled channel may request them. Remote party transfers always require an
+enabled allowlist containing the exact requester. Replies use the request's Party, Guild, Co-op, or
+Private route (`/pc`, `/gc`, `/cc`, or
+`/r`). Help lists every enabled command across lines capped at 170 characters; continuation lines
+begin `Commands (continued):`. Sender filters apply to ordinary reply commands too. A delayed `/r` reply is dropped if an incoming private message or a recognized
+local `/msg`-style command changes the tracked counterpart. Unrecognized whisper aliases or hidden
+server-side changes to `/r` state cannot be detected by the client. Outgoing channel messages use the
+normal chat submission path, and slash commands remain vanilla commands. Reply entries and filters
+Reply entries and sender filters are stored in the feature-local chat settings file and are excluded
+from shared config profiles.
 
 </details>
 
@@ -1085,64 +1319,53 @@ promotes its entries and child folders to its parent instead of deleting them.
 </details>
 
 <details>
-<summary><b>Inventory Buttons</b> — run macros or send text from the player inventory</summary>
+<summary><b>Slot Locking</b> — lock hovered slots and bind inventory slots to the hotbar</summary>
 
 <br>
 
-Open **Visual → Inventory Buttons → Edit Layout** while in a world. The faint 18×18 grid follows
-the vanilla inventory slot lattice and only exposes fully visible cells outside the inventory and
-any open recipe book. Click an empty cell to choose an existing macro or create one; after editing a
-new macro, its button returns to that original cell. Select a button to edit its appearance, custom
-hover tooltip, and macro. Drag it or use **Move** and click a destination; **Delete** or
-Delete/Backspace removes it. Saved placements are not silently rearranged if a GUI size changes:
-invalid cells are marked in red, and **Reflow** explicitly moves them to the nearest free exterior
-cells while reporting any that could not fit.
-
-Buttons can use a registered item/block icon, short text, or a PNG selected from
-`.minecraft/config/geileraddons/inventory-button-icons/`. The editor shows a live icon preview and
-the hover tooltip; at runtime the tooltip also shows the macro name and any eligibility reason.
-Choose **Text action** when a button should not start a macro. Enter `/gfs ender_pearl 16` to send
-that command, or enter text without `/` to send an ordinary chat message. Text actions save with the
-button placement and remain independent from the macro catalog.
-Only the standard player inventory is supported. When not editing, an unassigned placement is
-hidden. If its macro is deleted, the placement remains so it can be rebound.
-
-Buttons store the macro's stable numeric ID and use the macro's enable switch, trigger context,
-island filter, and the Macro System master switch. Ineligible buttons stay visible but disabled,
-show the reason on hover, and consume clicks so an inventory slot underneath cannot be activated.
-Their layout is local and is not included in shared macro packages.
+Hover a player inventory slot and press the configured **Lock Key** to toggle its
+lock. A locked slot cannot be moved, swapped, or dropped. To bind a slot, hover an inventory slot,
+hold the configured **Bind Key** (G by default), move to a hotbar slot, then release. The editor draws
+the link between the two slots. Shift-clicking either linked slot swaps it using that hotbar slot's
+number key; locked endpoints remain protected. Link colors, line style, slot protection, and saved
+profiles are configurable.
 
 </details>
 
 <details>
-<summary><b>Tree Tracker</b> — gift counting for Helix, Fig and Mangrove</summary>
+<summary><b>Snap Tap</b> — last-pressed movement key wins</summary>
 
 <br>
 
-Reads the gift message out of chat and keeps score, so you can tell whether a spot is actually worth farming.
-
-**The panel** shows gifts per hour, the running count, and how long you've been at it — for whichever tree gifted last, so it follows you around without any switching. It appears when a gift lands and takes itself off screen once you stop, so it isn't sitting there while you're doing something else.
-
-**It knows when you stopped.** After a set idle time the clock freezes and the panel hides. The next gift picks up where it left off — same session, nothing lost. Time spent walking somewhere else doesn't count against your rate. The timeout is yours to set.
-
-**Session and all-time.** A session runs until you reset it or restart the game; either way its gifts roll into the all-time totals rather than disappearing. Flip the panel between the two.
-
-Drag the panel wherever you like with **Move Elements** in the menu.
+Miscellaneous → Utilities. While enabled, holding two opposite movement keys (A/D or
+W/S) moves you in the direction of the key pressed most recently instead of cancelling out; releasing
+that key resumes the one still held. It is one on/off switch for both pairs, off by default, with no
+hotkey. Jump, sneak, and sprint keys are not changed. This is client-side input handling only, but many
+servers treat last-input-priority movement as an unfair advantage, so check the server rules before
+enabling it. Diagnostics are automatic while enabled in `Miscellaneous/Snap_Tap.log`.
 
 </details>
 
 <details>
-<summary><b>Tree Broken Notifier</b> — a title when a tree comes down</summary>
+<summary><b>Local utilities</b> — supply requests, timer, clock, and lobby watch</summary>
 
 <br>
 
-Flashes a title across the screen when you fell a tree or one gives you a gift — so you can keep your eyes on the trees instead of on chat.
-
-**Two separate titles.** Gifts get one, **TIMBER!** and **PETALFALL!** get another, each with its own wording, sound and pitch, so you can tell them apart without reading. They really are separate events — a felling can happen without a gift and can fire more than once for one tree — and each has its own switch if you only want one of them. A gift block that names its tree on several lines still only shows one title.
-
-Alerts appear in Minecraft's fixed subtitle position, alongside standard titles. Duration and volume are shared; text size is controlled by Minecraft. Write `{tree}` anywhere in either message and it becomes Helix, Fig or Mangrove.
-
-**Hide the chat spam.** Each side can suppress its own message: the whole gift block — bars, header, rewards line and all — or the TIMBER!/PETALFALL! line. Hidden gifts are still counted; hiding only affects what you see. Off by default.
+`/ga ep [amount]` and `/ga sb [amount]` detect the first carried stack whose root
+custom-data ID is `ENDER_PEARL` or `SUPERBOOM_TNT`, then request only the amount needed to reach the
+target. The defaults are 16 pearls and 64 Superboom TNT; an optional positive integer changes the
+target. For example, `/ga ep` with 15 pearls requests one, and `/ga sb` with 32 Superboom TNT
+requests 32. At or above the target, neither command sends a request. `/ga timer` and `/ga timer get` show countdown status;
+`/ga timer set`, `pause`, `resume`, and `reset` control it. Its **Timer Settings** are under General,
+not a separate module.
+Completion sends
+`[Timer] Countdown complete.` in client chat and plays a sound by default; its text, chat/title/sound
+outputs, and title duration are configurable. System Clock uses the operating system's local timezone
+and defaults to white `HH:mm:ss` text with no background. Its settings are shown directly without an
+extra dropdown; choose 12/24-hour time, show or hide seconds, and configure text and background.
+**Lobby Sniper** lets you add multiple player names, enable or disable each entry, and choose a custom
+title. It matches names case-insensitively against the current lobby roster and alerts once per
+presence interval.
 
 </details>
 
@@ -1211,180 +1434,6 @@ folders to its parent; folder names can repeat because UI state uses stable IDs.
 are a spatial layout, not a multi-entry folder list.
 
 </details>
-
-<details>
-<summary><b>Garden and Slayer trackers</b> — cooldowns, rates, timers, and alerts</summary>
-
-<br>
-
-Fresh configs leave Crop Fever Timer off; saved enable choices are preserved.
-It starts a 60-second countdown from the observed Crop Fever message and clears it on the cure message.
-Its settings preview uses the same scale, text color, background, and opacity as the live HUD. Pest
-Tracker reads the Pests widget cooldown and spawn chat, shows time since the last spawn and session or total pests
-per hour, and estimates spawn intervals. Its held-item filter defaults to farming tools only. The
-optional custom cooldown defaults off at 135 seconds (75 seconds with Finnegan); configurable
-warnings can lead cooldown by five seconds. AFK exclusion uses crop-action gaps, defaulting to 30
-seconds rather than treating a normal pest interval as idle. Spawn alerts, cooldown warnings, and
-ready alerts default off; each enabled alert can use chat (default), title, and/or sound. The
-`PEST_SPAWNED` macro event follows each parsed spawn message. `PEST_COOLDOWN_READY` fires once after
-the widget shows COUNTDOWN then READY; when custom timing is enabled, it also waits for a parsed
-spawn's custom deadline.
-Chat-observed infested plots drive **Warp to Latest Infested Plot**. Set its keybind in the module
-settings; the warp prefers another known infested plot when the player is already on one, and repeats
-the current plot only when it is the sole target.
-
-Slayer Tracker shows session or total bosses per hour and offers spawn-time, kill-time, or both HUD
-rows. Boss and nearby-miniboss alert switches default off. Boss alerts can filter by each recognized
-nearby Slayer boss type; the unclassified fallback stays enabled by default, while conflicting
-observed boss types suppress the alert. Alert text supports `{boss}` and `{miniboss}` placeholders,
-with configurable chat/title/sound outputs and title duration. Chat is enabled by default when an
-alert master is on; title and sound default off. The Garden and Slayer paths depend on live widget,
-chat, scoreboard, entity, and island observations; they have not been verified in-game.
-
-</details>
-
-<details>
-<summary><b>Slot Locking</b> — lock hovered slots and bind inventory slots to the hotbar</summary>
-
-<br>
-
-Hover a player inventory slot and press the configured **Lock Key** to toggle its
-lock. A locked slot cannot be moved, swapped, or dropped. To bind a slot, hover an inventory slot,
-hold the configured **Bind Key** (G by default), move to a hotbar slot, then release. The editor draws
-the link between the two slots. Shift-clicking either linked slot swaps it using that hotbar slot's
-number key; locked endpoints remain protected. Link colors, line style, slot protection, and saved
-profiles are configurable.
-
-</details>
-
-<details>
-<summary><b>Snap Tap</b> — last-pressed movement key wins</summary>
-
-<br>
-
-Miscellaneous → Utilities. While enabled, holding two opposite movement keys (A/D or
-W/S) moves you in the direction of the key pressed most recently instead of cancelling out; releasing
-that key resumes the one still held. It is one on/off switch for both pairs, off by default, with no
-hotkey. Jump, sneak, and sprint keys are not changed. This is client-side input handling only, but many
-servers treat last-input-priority movement as an unfair advantage, so check the server rules before
-enabling it. Diagnostics are automatic while enabled in `Miscellaneous/Snap_Tap.log`.
-
-</details>
-
-<details>
-<summary><b>Custom Scoreboard, Animations, Particles, and Camera</b> — client-side visual controls</summary>
-
-<br>
-
-Custom Scoreboard replaces the vanilla sidebar locally with an editable list of
-native scoreboard rows and custom text lines. Add, edit, remove, enable, and reorder rows in its
-editor. The default uses a black rounded-glass background and a smooth bundled font; font and
-background options are available. Move and scale the HUD element with **Move Elements**.
-
-Font import supports local `.ttf` and `.otf` files up to 20 MiB. Portable config profiles include the
-selected layout but not user-imported font files. **Animations** adjusts first-person item position
-with X/Y/Z sliders, yaw/pitch/roll rotation sliders, actual item-size scale, and swing controls.
-**Particles** clears existing particles and suppresses new ones while enabled. **Third Person Camera**
-adjusts rear third-person distance, collision clipping, and whether your name appears. While enabled,
-F5 cycles between rear third-person and first-person; front-facing view is unavailable. Its optional
-**Free Look** key is held to look around temporarily, and releasing it restores the normal camera view.
-
-</details>
-
-<details>
-<summary><b>Player Names and Player Size</b> — local self settings and hosted player profiles</summary>
-
-<br>
-
-**Player Names** applies hosted aliases and static or animated colors to names that
-appear in the hosted profile. The local **Your Name** settings can edit your own alias, solid color, or
-gradient. **Player Size** has a local own-size control and can apply optional hosted size profiles to
-other players. Local size changes apply only to your own model; remote size profiles are the only
-source for other players. All model size changes are client-side and do not
-change hitboxes or server state.
-
-Player Names transforms matched username tokens at Minecraft's shared font text-preparation, width,
-substring, split, and wrapping paths, in addition to its targeted chat, tab, name-tag, scoreboard,
-tooltip, and roster hooks.
-This covers ordinary vanilla and plugin text drawn through Minecraft's `Font`, including Auction House
-item names and seller lore, incoming `@username` mentions, scoreboard rows, and names shown while
-typing in editable fields. Matching is case-insensitive against each profile's source username and
-uses full username-token boundaries, so `From Alice:` and `@Alice,` can match Alice without matching
-`Alice2` or a longer word. Matches may span component styles or formatted-character runs; styles,
-clicks, and hover metadata are retained. String font inputs recognize legacy `§` formatting codes
-while matching names. Formatted component translations and supported hover text are handled; a name
-available only through an unresolved server-side score, selector, or NBT lookup cannot be identified
-or rewritten. A mod that draws text through a renderer outside Minecraft's Font paths may also need a
-specific hook.
-
-Displayed text in a chat input can show an alias while the stored input stays unchanged; chat messages,
-commands, account identity, and network traffic use the original values. Animated gradients flow
-continuously through the glyphs at the configured speed (0.25 cycles per second by default), and chat
-keeps its wrapping stable while colors animate. **Replace Names** and **Apply Name Styles** control name
-behavior independently. Player Size has its own module toggle.
-These are source-level coverage claims; live Hypixel screens have not been visually verified.
-The owner-editable active source is `src/client/resources/data/player-presentations.json` on this
-repository's `main` branch; the loader requests the corresponding
-[raw GitHub file](https://raw.githubusercontent.com/dasdadassadwt/geileraddons-26.2/main/src/client/resources/data/player-presentations.json).
-The hosted profile and bundled active profile currently contain `{"schemaVersion":1,"players":[]}`.
-The separate `src/client/resources/data/player-presentations.example.json` is an inert format example
-and is not loaded by the runtime. Add entries to the active `players` list with a required Minecraft account
-`name` (the source username key) and any of the optional fields below. `alias` is the replacement
-display name. `color`
-uses `#RRGGBB`; choose either `color` or `gradient`, which accepts two to eight color stops. Add
-`animation` to a gradient to scroll it across the name; omitting `animation` leaves the gradient
-static. `speed` is cycles per second and defaults to 0.25. `alias`, styling, and `size` are
-independent. Size values are limited to `0.1`–`4.0` and only
-change the locally rendered avatar model, not its hitbox or server state.
-The profile loader caps responses at 256 KiB and parses the document incrementally before building
-the Gson tree. It rejects duplicate object members, nesting deeper than 8 levels, more than 32,768
-JSON tokens, or more than 16,384 value nodes. This also bounds arbitrary nested legacy `effect`
-metadata before it is retained. For example:
-
-```json
-{
-  "schemaVersion": 1,
-  "players": [
-    { "name": "ExamplePlayer", "alias": "Example", "size": 1.25, "color": "#55FFFF" },
-    {
-      "name": "AnotherPlayer",
-      "gradient": ["#55FFFF", "#FF55C8", "#FFFF55"],
-      "animation": { "mode": "scroll", "speed": 0.25 }
-    }
-  ]
-}
-```
-
-No player names are supplied yet; a valid local cache or the bundled empty profile remains
-available if download or parsing fails. When Player Names is enabled, the loader
-reads local data and fetches asynchronously, caps profiles at 256 KiB,
-and retains the last valid copy on failure. Successful downloads are cached locally and refreshed
-every six hours; failures retry after fifteen minutes. The schema's optional `effect` field is
-legacy opaque metadata and has no potion or gameplay behavior; use `color`, `gradient`, and
-`animation` for name appearance.
-
-</details>
-
-<details>
-<summary><b>Local utilities</b> — supply requests, timer, clock, and lobby watch</summary>
-
-<br>
-
-`/ga ep [amount]` and `/ga sb [amount]` detect the first carried stack whose root
-custom-data ID is `ENDER_PEARL` or `SUPERBOOM_TNT`, then request only the amount needed to reach the
-target. The defaults are 16 pearls and 64 Superboom TNT; an optional positive integer changes the
-target. For example, `/ga ep` with 15 pearls requests one, and `/ga sb` with 32 Superboom TNT
-requests 32. At or above the target, neither command sends a request. `/ga timer` and `/ga timer get` show countdown status;
-`/ga timer set`, `pause`, `resume`, and `reset` control it. Its **Timer Settings** are under General,
-not a separate module.
-Completion sends
-`[Timer] Countdown complete.` in client chat and plays a sound by default; its text, chat/title/sound
-outputs, and title duration are configurable. System Clock uses the operating system's local timezone
-and defaults to white `HH:mm:ss` text with no background. Its settings are shown directly without an
-extra dropdown; choose 12/24-hour time, show or hide seconds, and configure text and background.
-**Lobby Sniper** lets you add multiple player names, enable or disable each entry, and choose a custom
-title. It matches names case-insensitively against the current lobby roster and alerts once per
-presence interval.
 
 </details>
 
