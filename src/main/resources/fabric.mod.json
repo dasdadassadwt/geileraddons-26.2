@@ -1,0 +1,48 @@
+{
+	"schemaVersion": 1,
+	"id": "geileraddons",
+	"version": "${version}",
+	"name": "GeilerAddons",
+	"description": "Client-side Hypixel SkyBlock tools for Garden and Catacombs tracking, puzzle guidance, chat, macros, inventory controls, and customizable HUDs.",
+	"authors": [
+		"dasdadassadwt"
+	],
+	"contact": {
+		"homepage": "https://github.com/dasdadassadwt/geileraddons-26.2",
+		"sources": "https://github.com/dasdadassadwt/geileraddons-26.2",
+		"issues": "https://github.com/dasdadassadwt/geileraddons-26.2/issues"
+	},
+	"license": "MIT",
+	"icon": "assets/geileraddons/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"main": [
+			{
+				"adapter": "kotlin",
+				"value": "geiler.addons.GeilerAddons"
+			}
+		],
+		"client": [
+			"geiler.addons.client.GeilerAddonsClient"
+		]
+	},
+	"mixins": [
+		"geileraddons.mixins.json",
+		{
+			"config": "geileraddons.client.mixins.json",
+			"environment": "client"
+		},
+		{
+			"config": "geileraddons.gui.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*",
+		"fabric-language-kotlin": ">=1.14.2+kotlin.2.4.21",
+		"hypixel-mod-api": ">=1.0"
+	}
+}

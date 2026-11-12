@@ -1,0 +1,3624 @@
+{
+  "version": 1,
+  "sourceProject": "Synnerz/devonian",
+  "license": "GPL-3.0",
+  "sourceRevision": "6e98846e02c4e1b676ab5c17424913b708ca07ac",
+  "waypoints": [
+    {
+      "id": "devonian:waterfall:chest:0",
+      "roomName": "Waterfall",
+      "category": "chest",
+      "x": 34,
+      "y": 84,
+      "z": 23
+    },
+    {
+      "id": "devonian:waterfall:chest:1",
+      "roomName": "Waterfall",
+      "category": "chest",
+      "x": 121,
+      "y": 81,
+      "z": 15
+    },
+    {
+      "id": "devonian:waterfall:chest:2",
+      "roomName": "Waterfall",
+      "category": "chest",
+      "x": 82,
+      "y": 78,
+      "z": 3
+    },
+    {
+      "id": "devonian:waterfall:chest:3",
+      "roomName": "Waterfall",
+      "category": "chest",
+      "x": 42,
+      "y": 82,
+      "z": 21
+    },
+    {
+      "id": "devonian:waterfall:chest:4",
+      "roomName": "Waterfall",
+      "category": "chest",
+      "x": 53,
+      "y": 44,
+      "z": 27
+    },
+    {
+      "id": "devonian:waterfall:item:0",
+      "roomName": "Waterfall",
+      "category": "item",
+      "x": 8,
+      "y": 44,
+      "z": 28
+    },
+    {
+      "id": "devonian:waterfall:bat:0",
+      "roomName": "Waterfall",
+      "category": "bat",
+      "x": 70,
+      "y": 61,
+      "z": 3
+    },
+    {
+      "id": "devonian:waterfall:bat:1",
+      "roomName": "Waterfall",
+      "category": "bat",
+      "x": 88,
+      "y": 46,
+      "z": 27
+    },
+    {
+      "id": "devonian:raccoon:chest:0",
+      "roomName": "Raccoon",
+      "category": "chest",
+      "x": 6,
+      "y": 77,
+      "z": 24
+    },
+    {
+      "id": "devonian:raccoon:chest:1",
+      "roomName": "Raccoon",
+      "category": "chest",
+      "x": 27,
+      "y": 69,
+      "z": 24
+    },
+    {
+      "id": "devonian:raccoon:chest:2",
+      "roomName": "Raccoon",
+      "category": "chest",
+      "x": 21,
+      "y": 69,
+      "z": 24
+    },
+    {
+      "id": "devonian:raccoon:chest:3",
+      "roomName": "Raccoon",
+      "category": "chest",
+      "x": 26,
+      "y": 84,
+      "z": 8
+    },
+    {
+      "id": "devonian:spider:chest:0",
+      "roomName": "Spider",
+      "category": "chest",
+      "x": 28,
+      "y": 50,
+      "z": 4
+    },
+    {
+      "id": "devonian:spider:chest:1",
+      "roomName": "Spider",
+      "category": "chest",
+      "x": 22,
+      "y": 28,
+      "z": 40
+    },
+    {
+      "id": "devonian:spider:chest:2",
+      "roomName": "Spider",
+      "category": "chest",
+      "x": 49,
+      "y": 84,
+      "z": 36
+    },
+    {
+      "id": "devonian:spider:chest:3",
+      "roomName": "Spider",
+      "category": "chest",
+      "x": 10,
+      "y": 83,
+      "z": 56
+    },
+    {
+      "id": "devonian:spider:chest:4",
+      "roomName": "Spider",
+      "category": "chest",
+      "x": 15,
+      "y": 92,
+      "z": 31
+    },
+    {
+      "id": "devonian:spider:chest:5",
+      "roomName": "Spider",
+      "category": "chest",
+      "x": 27,
+      "y": 84,
+      "z": 32
+    },
+    {
+      "id": "devonian:spider:item:0",
+      "roomName": "Spider",
+      "category": "item",
+      "x": 26,
+      "y": 91,
+      "z": 39
+    },
+    {
+      "id": "devonian:spider:item:1",
+      "roomName": "Spider",
+      "category": "item",
+      "x": 24,
+      "y": 92,
+      "z": 34
+    },
+    {
+      "id": "devonian:spider:bat:0",
+      "roomName": "Spider",
+      "category": "bat",
+      "x": 55,
+      "y": 86,
+      "z": 35
+    },
+    {
+      "id": "devonian:spider:lever:0",
+      "roomName": "Spider",
+      "category": "lever",
+      "x": 27,
+      "y": 93,
+      "z": 32
+    },
+    {
+      "id": "devonian:gold:essence:0",
+      "roomName": "Gold",
+      "category": "essence",
+      "x": 14,
+      "y": 69,
+      "z": 13
+    },
+    {
+      "id": "devonian:mossy:chest:0",
+      "roomName": "Mossy",
+      "category": "chest",
+      "x": 2,
+      "y": 69,
+      "z": 4
+    },
+    {
+      "id": "devonian:mossy:chest:1",
+      "roomName": "Mossy",
+      "category": "chest",
+      "x": 63,
+      "y": 95,
+      "z": 15
+    },
+    {
+      "id": "devonian:mossy:chest:2",
+      "roomName": "Mossy",
+      "category": "chest",
+      "x": 47,
+      "y": 89,
+      "z": 4
+    },
+    {
+      "id": "devonian:mossy:bat:0",
+      "roomName": "Mossy",
+      "category": "bat",
+      "x": 72,
+      "y": 87,
+      "z": 11
+    },
+    {
+      "id": "devonian:mossy:lever:0",
+      "roomName": "Mossy",
+      "category": "lever",
+      "x": 63,
+      "y": 70,
+      "z": 29
+    },
+    {
+      "id": "devonian:banners:chest:0",
+      "roomName": "Banners",
+      "category": "chest",
+      "x": 27,
+      "y": 72,
+      "z": 15
+    },
+    {
+      "id": "devonian:catwalk:chest:0",
+      "roomName": "Catwalk",
+      "category": "chest",
+      "x": 24,
+      "y": 63,
+      "z": 27
+    },
+    {
+      "id": "devonian:catwalk:chest:1",
+      "roomName": "Catwalk",
+      "category": "chest",
+      "x": 24,
+      "y": 50,
+      "z": 15
+    },
+    {
+      "id": "devonian:catwalk:chest:2",
+      "roomName": "Catwalk",
+      "category": "chest",
+      "x": 89,
+      "y": 49,
+      "z": 18
+    },
+    {
+      "id": "devonian:catwalk:chest:3",
+      "roomName": "Catwalk",
+      "category": "chest",
+      "x": 84,
+      "y": 63,
+      "z": 14
+    },
+    {
+      "id": "devonian:catwalk:item:0",
+      "roomName": "Catwalk",
+      "category": "item",
+      "x": 80,
+      "y": 50,
+      "z": 6
+    },
+    {
+      "id": "devonian:catwalk:essence:0",
+      "roomName": "Catwalk",
+      "category": "essence",
+      "x": 80,
+      "y": 50,
+      "z": 8
+    },
+    {
+      "id": "devonian:duncan:item:0",
+      "roomName": "Duncan",
+      "category": "item",
+      "x": 13,
+      "y": 89,
+      "z": 8
+    },
+    {
+      "id": "devonian:red-green:chest:0",
+      "roomName": "Red Green",
+      "category": "chest",
+      "x": 29,
+      "y": 75,
+      "z": 15
+    },
+    {
+      "id": "devonian:red-green:item:0",
+      "roomName": "Red Green",
+      "category": "item",
+      "x": 13,
+      "y": 77,
+      "z": 28
+    },
+    {
+      "id": "devonian:red-green:item:1",
+      "roomName": "Red Green",
+      "category": "item",
+      "x": 1,
+      "y": 61,
+      "z": 15
+    },
+    {
+      "id": "devonian:red-green:lever:0",
+      "roomName": "Red Green",
+      "category": "lever",
+      "x": 29,
+      "y": 61,
+      "z": 15
+    },
+    {
+      "id": "devonian:new-trap:chest:0",
+      "roomName": "New Trap",
+      "category": "chest",
+      "x": 26,
+      "y": 90,
+      "z": 14
+    },
+    {
+      "id": "devonian:new-trap:chest:1",
+      "roomName": "New Trap",
+      "category": "chest",
+      "x": 5,
+      "y": 67,
+      "z": 12
+    },
+    {
+      "id": "devonian:new-trap:bat:0",
+      "roomName": "New Trap",
+      "category": "bat",
+      "x": 21,
+      "y": 92,
+      "z": 21
+    },
+    {
+      "id": "devonian:new-trap:lever:0",
+      "roomName": "New Trap",
+      "category": "lever",
+      "x": 22,
+      "y": 66,
+      "z": 20
+    },
+    {
+      "id": "devonian:wizard:chest:0",
+      "roomName": "Wizard",
+      "category": "chest",
+      "x": 17,
+      "y": 92,
+      "z": 26
+    },
+    {
+      "id": "devonian:wizard:chest:1",
+      "roomName": "Wizard",
+      "category": "chest",
+      "x": 90,
+      "y": 89,
+      "z": 24
+    },
+    {
+      "id": "devonian:wizard:item:0",
+      "roomName": "Wizard",
+      "category": "item",
+      "x": 3,
+      "y": 76,
+      "z": 21
+    },
+    {
+      "id": "devonian:wizard:bat:0",
+      "roomName": "Wizard",
+      "category": "bat",
+      "x": 25,
+      "y": 53,
+      "z": 12
+    },
+    {
+      "id": "devonian:dino-site:chest:0",
+      "roomName": "Dino Site",
+      "category": "chest",
+      "x": 54,
+      "y": 52,
+      "z": 51
+    },
+    {
+      "id": "devonian:dino-site:chest:1",
+      "roomName": "Dino Site",
+      "category": "chest",
+      "x": 24,
+      "y": 92,
+      "z": 29
+    },
+    {
+      "id": "devonian:dino-site:item:0",
+      "roomName": "Dino Site",
+      "category": "item",
+      "x": 47,
+      "y": 57,
+      "z": 36
+    },
+    {
+      "id": "devonian:dino-site:bat:0",
+      "roomName": "Dino Site",
+      "category": "bat",
+      "x": 9,
+      "y": 48,
+      "z": 34
+    },
+    {
+      "id": "devonian:spikes:chest:0",
+      "roomName": "Spikes",
+      "category": "chest",
+      "x": 4,
+      "y": 91,
+      "z": 11
+    },
+    {
+      "id": "devonian:spikes:essence:0",
+      "roomName": "Spikes",
+      "category": "essence",
+      "x": 1,
+      "y": 53,
+      "z": 8
+    },
+    {
+      "id": "devonian:spikes:bat:0",
+      "roomName": "Spikes",
+      "category": "bat",
+      "x": 2,
+      "y": 54,
+      "z": 7
+    },
+    {
+      "id": "devonian:redstone-warrior:chest:0",
+      "roomName": "Redstone Warrior",
+      "category": "chest",
+      "x": 24,
+      "y": 58,
+      "z": 15
+    },
+    {
+      "id": "devonian:redstone-warrior:chest:1",
+      "roomName": "Redstone Warrior",
+      "category": "chest",
+      "x": 30,
+      "y": 83,
+      "z": 27
+    },
+    {
+      "id": "devonian:redstone-warrior:item:0",
+      "roomName": "Redstone Warrior",
+      "category": "item",
+      "x": 58,
+      "y": 78,
+      "z": 29
+    },
+    {
+      "id": "devonian:redstone-warrior:lever:0",
+      "roomName": "Redstone Warrior",
+      "category": "lever",
+      "x": 4,
+      "y": 62,
+      "z": 15
+    },
+    {
+      "id": "devonian:pit:chest:0",
+      "roomName": "Pit",
+      "category": "chest",
+      "x": 113,
+      "y": 92,
+      "z": 28
+    },
+    {
+      "id": "devonian:pit:chest:1",
+      "roomName": "Pit",
+      "category": "chest",
+      "x": 7,
+      "y": 65,
+      "z": 7
+    },
+    {
+      "id": "devonian:pit:chest:2",
+      "roomName": "Pit",
+      "category": "chest",
+      "x": 20,
+      "y": 91,
+      "z": 9
+    },
+    {
+      "id": "devonian:pit:item:0",
+      "roomName": "Pit",
+      "category": "item",
+      "x": 3,
+      "y": 76,
+      "z": 26
+    },
+    {
+      "id": "devonian:pit:bat:0",
+      "roomName": "Pit",
+      "category": "bat",
+      "x": 9,
+      "y": 78,
+      "z": 27
+    },
+    {
+      "id": "devonian:flags:chest:0",
+      "roomName": "Flags",
+      "category": "chest",
+      "x": 37,
+      "y": 67,
+      "z": 58
+    },
+    {
+      "id": "devonian:flags:chest:1",
+      "roomName": "Flags",
+      "category": "chest",
+      "x": 11,
+      "y": 97,
+      "z": 7
+    },
+    {
+      "id": "devonian:flags:chest:2",
+      "roomName": "Flags",
+      "category": "chest",
+      "x": 14,
+      "y": 108,
+      "z": 27
+    },
+    {
+      "id": "devonian:flags:chest:3",
+      "roomName": "Flags",
+      "category": "chest",
+      "x": 14,
+      "y": 108,
+      "z": 41
+    },
+    {
+      "id": "devonian:flags:chest:4",
+      "roomName": "Flags",
+      "category": "chest",
+      "x": 59,
+      "y": 87,
+      "z": 41
+    },
+    {
+      "id": "devonian:flags:item:0",
+      "roomName": "Flags",
+      "category": "item",
+      "x": 53,
+      "y": 69,
+      "z": 23
+    },
+    {
+      "id": "devonian:flags:bat:0",
+      "roomName": "Flags",
+      "category": "bat",
+      "x": 52,
+      "y": 77,
+      "z": 38
+    },
+    {
+      "id": "devonian:tic-tac-toe:chest:0",
+      "roomName": "Tic Tac Toe",
+      "category": "chest",
+      "x": 9,
+      "y": 69,
+      "z": 25
+    },
+    {
+      "id": "devonian:tic-tac-toe:lever:0",
+      "roomName": "Tic Tac Toe",
+      "category": "lever",
+      "x": 13,
+      "y": 73,
+      "z": 25
+    },
+    {
+      "id": "devonian:cages:chest:0",
+      "roomName": "Cages",
+      "category": "chest",
+      "x": 7,
+      "y": 58,
+      "z": 11
+    },
+    {
+      "id": "devonian:cages:item:0",
+      "roomName": "Cages",
+      "category": "item",
+      "x": 28,
+      "y": 98,
+      "z": 5
+    },
+    {
+      "id": "devonian:cages:lever:0",
+      "roomName": "Cages",
+      "category": "lever",
+      "x": 6,
+      "y": 85,
+      "z": 2
+    },
+    {
+      "id": "devonian:big-red-flag:item:0",
+      "roomName": "Big Red Flag",
+      "category": "item",
+      "x": 26,
+      "y": 75,
+      "z": 25
+    },
+    {
+      "id": "devonian:big-red-flag:item:1",
+      "roomName": "Big Red Flag",
+      "category": "item",
+      "x": 20,
+      "y": 75,
+      "z": 23
+    },
+    {
+      "id": "devonian:balcony:chest:0",
+      "roomName": "Balcony",
+      "category": "chest",
+      "x": 27,
+      "y": 69,
+      "z": 15
+    },
+    {
+      "id": "devonian:balcony:chest:1",
+      "roomName": "Balcony",
+      "category": "chest",
+      "x": 20,
+      "y": 42,
+      "z": 28
+    },
+    {
+      "id": "devonian:balcony:item:0",
+      "roomName": "Balcony",
+      "category": "item",
+      "x": 14,
+      "y": 51,
+      "z": 7
+    },
+    {
+      "id": "devonian:balcony:bat:0",
+      "roomName": "Balcony",
+      "category": "bat",
+      "x": 4,
+      "y": 60,
+      "z": 25
+    },
+    {
+      "id": "devonian:dueces:chest:0",
+      "roomName": "Dueces",
+      "category": "chest",
+      "x": 2,
+      "y": 78,
+      "z": 15
+    },
+    {
+      "id": "devonian:dueces:item:0",
+      "roomName": "Dueces",
+      "category": "item",
+      "x": 10,
+      "y": 70,
+      "z": 6
+    },
+    {
+      "id": "devonian:dueces:bat:0",
+      "roomName": "Dueces",
+      "category": "bat",
+      "x": 8,
+      "y": 74,
+      "z": 7
+    },
+    {
+      "id": "devonian:stairs:chest:0",
+      "roomName": "Stairs",
+      "category": "chest",
+      "x": 44,
+      "y": 88,
+      "z": 28
+    },
+    {
+      "id": "devonian:stairs:chest:1",
+      "roomName": "Stairs",
+      "category": "chest",
+      "x": 31,
+      "y": 88,
+      "z": 22
+    },
+    {
+      "id": "devonian:stairs:chest:2",
+      "roomName": "Stairs",
+      "category": "chest",
+      "x": 8,
+      "y": 70,
+      "z": 9
+    },
+    {
+      "id": "devonian:stairs:item:0",
+      "roomName": "Stairs",
+      "category": "item",
+      "x": 37,
+      "y": 86,
+      "z": 36
+    },
+    {
+      "id": "devonian:dome:chest:0",
+      "roomName": "Dome",
+      "category": "chest",
+      "x": 26,
+      "y": 78,
+      "z": 27
+    },
+    {
+      "id": "devonian:dome:bat:0",
+      "roomName": "Dome",
+      "category": "bat",
+      "x": 25,
+      "y": 73,
+      "z": 25
+    },
+    {
+      "id": "devonian:dome:lever:0",
+      "roomName": "Dome",
+      "category": "lever",
+      "x": 24,
+      "y": 75,
+      "z": 21
+    },
+    {
+      "id": "devonian:small-waterfall:essence:0",
+      "roomName": "Small Waterfall",
+      "category": "essence",
+      "x": 6,
+      "y": 77,
+      "z": 26
+    },
+    {
+      "id": "devonian:small-waterfall:bat:0",
+      "roomName": "Small Waterfall",
+      "category": "bat",
+      "x": 3,
+      "y": 82,
+      "z": 22
+    },
+    {
+      "id": "devonian:cage:chest:0",
+      "roomName": "Cage",
+      "category": "chest",
+      "x": 12,
+      "y": 72,
+      "z": 20
+    },
+    {
+      "id": "devonian:steps:bat:0",
+      "roomName": "Steps",
+      "category": "bat",
+      "x": 14,
+      "y": 75,
+      "z": 7
+    },
+    {
+      "id": "devonian:atlas:chest:0",
+      "roomName": "Atlas",
+      "category": "chest",
+      "x": 36,
+      "y": 57,
+      "z": 15
+    },
+    {
+      "id": "devonian:atlas:chest:1",
+      "roomName": "Atlas",
+      "category": "chest",
+      "x": 31,
+      "y": 78,
+      "z": 52
+    },
+    {
+      "id": "devonian:atlas:chest:2",
+      "roomName": "Atlas",
+      "category": "chest",
+      "x": 11,
+      "y": 82,
+      "z": 31
+    },
+    {
+      "id": "devonian:atlas:item:0",
+      "roomName": "Atlas",
+      "category": "item",
+      "x": 55,
+      "y": 76,
+      "z": 28
+    },
+    {
+      "id": "devonian:atlas:essence:0",
+      "roomName": "Atlas",
+      "category": "essence",
+      "x": 38,
+      "y": 78,
+      "z": 4
+    },
+    {
+      "id": "devonian:atlas:bat:0",
+      "roomName": "Atlas",
+      "category": "bat",
+      "x": 5,
+      "y": 72,
+      "z": 57
+    },
+    {
+      "id": "devonian:atlas:lever:0",
+      "roomName": "Atlas",
+      "category": "lever",
+      "x": 60,
+      "y": 90,
+      "z": 33
+    },
+    {
+      "id": "devonian:lava-ravine:chest:0",
+      "roomName": "Lava Ravine",
+      "category": "chest",
+      "x": 29,
+      "y": 88,
+      "z": 9
+    },
+    {
+      "id": "devonian:lava-ravine:chest:1",
+      "roomName": "Lava Ravine",
+      "category": "chest",
+      "x": 29,
+      "y": 88,
+      "z": 7
+    },
+    {
+      "id": "devonian:lava-ravine:chest:2",
+      "roomName": "Lava Ravine",
+      "category": "chest",
+      "x": 58,
+      "y": 86,
+      "z": 47
+    },
+    {
+      "id": "devonian:lava-ravine:chest:3",
+      "roomName": "Lava Ravine",
+      "category": "chest",
+      "x": 23,
+      "y": 67,
+      "z": 57
+    },
+    {
+      "id": "devonian:lava-ravine:item:0",
+      "roomName": "Lava Ravine",
+      "category": "item",
+      "x": 16,
+      "y": 51,
+      "z": 32
+    },
+    {
+      "id": "devonian:lava-ravine:bat:0",
+      "roomName": "Lava Ravine",
+      "category": "bat",
+      "x": 12,
+      "y": 64,
+      "z": 33
+    },
+    {
+      "id": "devonian:lava-ravine:lever:0",
+      "roomName": "Lava Ravine",
+      "category": "lever",
+      "x": 8,
+      "y": 84,
+      "z": 42
+    },
+    {
+      "id": "devonian:deathmite:chest:0",
+      "roomName": "Deathmite",
+      "category": "chest",
+      "x": 12,
+      "y": 69,
+      "z": 15
+    },
+    {
+      "id": "devonian:deathmite:chest:1",
+      "roomName": "Deathmite",
+      "category": "chest",
+      "x": 83,
+      "y": 92,
+      "z": 27
+    },
+    {
+      "id": "devonian:deathmite:chest:2",
+      "roomName": "Deathmite",
+      "category": "chest",
+      "x": 67,
+      "y": 82,
+      "z": 15
+    },
+    {
+      "id": "devonian:deathmite:chest:3",
+      "roomName": "Deathmite",
+      "category": "chest",
+      "x": 69,
+      "y": 60,
+      "z": 10
+    },
+    {
+      "id": "devonian:deathmite:item:0",
+      "roomName": "Deathmite",
+      "category": "item",
+      "x": 88,
+      "y": 69,
+      "z": 6
+    },
+    {
+      "id": "devonian:deathmite:bat:0",
+      "roomName": "Deathmite",
+      "category": "bat",
+      "x": 83,
+      "y": 98,
+      "z": 26
+    },
+    {
+      "id": "devonian:deathmite:lever:0",
+      "roomName": "Deathmite",
+      "category": "lever",
+      "x": 53,
+      "y": 70,
+      "z": 15
+    },
+    {
+      "id": "devonian:blue-skulls:item:0",
+      "roomName": "Blue Skulls",
+      "category": "item",
+      "x": 27,
+      "y": 77,
+      "z": 29
+    },
+    {
+      "id": "devonian:purple-flags:chest:0",
+      "roomName": "Purple Flags",
+      "category": "chest",
+      "x": 32,
+      "y": 67,
+      "z": 7
+    },
+    {
+      "id": "devonian:purple-flags:chest:1",
+      "roomName": "Purple Flags",
+      "category": "chest",
+      "x": 39,
+      "y": 49,
+      "z": 29
+    },
+    {
+      "id": "devonian:purple-flags:chest:2",
+      "roomName": "Purple Flags",
+      "category": "chest",
+      "x": 59,
+      "y": 49,
+      "z": 24
+    },
+    {
+      "id": "devonian:purple-flags:item:0",
+      "roomName": "Purple Flags",
+      "category": "item",
+      "x": 27,
+      "y": 49,
+      "z": 28
+    },
+    {
+      "id": "devonian:purple-flags:essence:0",
+      "roomName": "Purple Flags",
+      "category": "essence",
+      "x": 6,
+      "y": 57,
+      "z": 28
+    },
+    {
+      "id": "devonian:purple-flags:lever:0",
+      "roomName": "Purple Flags",
+      "category": "lever",
+      "x": 35,
+      "y": 55,
+      "z": 29
+    },
+    {
+      "id": "devonian:long-hall:chest:0",
+      "roomName": "Long Hall",
+      "category": "chest",
+      "x": 18,
+      "y": 62,
+      "z": 23
+    },
+    {
+      "id": "devonian:long-hall:chest:1",
+      "roomName": "Long Hall",
+      "category": "chest",
+      "x": 28,
+      "y": 82,
+      "z": 15
+    },
+    {
+      "id": "devonian:long-hall:chest:2",
+      "roomName": "Long Hall",
+      "category": "chest",
+      "x": 28,
+      "y": 81,
+      "z": 25
+    },
+    {
+      "id": "devonian:long-hall:lever:0",
+      "roomName": "Long Hall",
+      "category": "lever",
+      "x": 10,
+      "y": 70,
+      "z": 3
+    },
+    {
+      "id": "devonian:red-blue:chest:0",
+      "roomName": "Red Blue",
+      "category": "chest",
+      "x": 57,
+      "y": 70,
+      "z": 5
+    },
+    {
+      "id": "devonian:red-blue:chest:1",
+      "roomName": "Red Blue",
+      "category": "chest",
+      "x": 39,
+      "y": 90,
+      "z": 26
+    },
+    {
+      "id": "devonian:red-blue:item:0",
+      "roomName": "Red Blue",
+      "category": "item",
+      "x": 60,
+      "y": 86,
+      "z": 22
+    },
+    {
+      "id": "devonian:red-blue:essence:0",
+      "roomName": "Red Blue",
+      "category": "essence",
+      "x": 79,
+      "y": 83,
+      "z": 15
+    },
+    {
+      "id": "devonian:red-blue:lever:0",
+      "roomName": "Red Blue",
+      "category": "lever",
+      "x": 54,
+      "y": 69,
+      "z": 5
+    },
+    {
+      "id": "devonian:overgrown-chains:chest:0",
+      "roomName": "Overgrown Chains",
+      "category": "chest",
+      "x": 26,
+      "y": 86,
+      "z": 20
+    },
+    {
+      "id": "devonian:overgrown-chains:item:0",
+      "roomName": "Overgrown Chains",
+      "category": "item",
+      "x": 3,
+      "y": 81,
+      "z": 3
+    },
+    {
+      "id": "devonian:old-trap:chest:0",
+      "roomName": "Old Trap",
+      "category": "chest",
+      "x": 26,
+      "y": 83,
+      "z": 4
+    },
+    {
+      "id": "devonian:old-trap:chest:1",
+      "roomName": "Old Trap",
+      "category": "chest",
+      "x": 23,
+      "y": 90,
+      "z": 17
+    },
+    {
+      "id": "devonian:old-trap:chest:2",
+      "roomName": "Old Trap",
+      "category": "chest",
+      "x": 4,
+      "y": 71,
+      "z": 9
+    },
+    {
+      "id": "devonian:old-trap:bat:0",
+      "roomName": "Old Trap",
+      "category": "bat",
+      "x": 22,
+      "y": 90,
+      "z": 9
+    },
+    {
+      "id": "devonian:old-trap:lever:0",
+      "roomName": "Old Trap",
+      "category": "lever",
+      "x": 28,
+      "y": 83,
+      "z": 3
+    },
+    {
+      "id": "devonian:water:chest:0",
+      "roomName": "Water",
+      "category": "chest",
+      "x": 2,
+      "y": 69,
+      "z": 5
+    },
+    {
+      "id": "devonian:water:bat:0",
+      "roomName": "Water",
+      "category": "bat",
+      "x": 17,
+      "y": 67,
+      "z": 4
+    },
+    {
+      "id": "devonian:rails:chest:0",
+      "roomName": "Rails",
+      "category": "chest",
+      "x": 8,
+      "y": 49,
+      "z": 60
+    },
+    {
+      "id": "devonian:rails:chest:1",
+      "roomName": "Rails",
+      "category": "chest",
+      "x": 30,
+      "y": 64,
+      "z": 29
+    },
+    {
+      "id": "devonian:rails:chest:2",
+      "roomName": "Rails",
+      "category": "chest",
+      "x": 30,
+      "y": 72,
+      "z": 34
+    },
+    {
+      "id": "devonian:rails:chest:3",
+      "roomName": "Rails",
+      "category": "chest",
+      "x": 56,
+      "y": 66,
+      "z": 6
+    },
+    {
+      "id": "devonian:rails:item:0",
+      "roomName": "Rails",
+      "category": "item",
+      "x": 27,
+      "y": 70,
+      "z": 29
+    },
+    {
+      "id": "devonian:rails:essence:0",
+      "roomName": "Rails",
+      "category": "essence",
+      "x": 25,
+      "y": 70,
+      "z": 28
+    },
+    {
+      "id": "devonian:rails:essence:1",
+      "roomName": "Rails",
+      "category": "essence",
+      "x": 6,
+      "y": 49,
+      "z": 10
+    },
+    {
+      "id": "devonian:rails:essence:2",
+      "roomName": "Rails",
+      "category": "essence",
+      "x": 3,
+      "y": 49,
+      "z": 10
+    },
+    {
+      "id": "devonian:rails:bat:0",
+      "roomName": "Rails",
+      "category": "bat",
+      "x": 56,
+      "y": 51,
+      "z": 11
+    },
+    {
+      "id": "devonian:rails:lever:0",
+      "roomName": "Rails",
+      "category": "lever",
+      "x": 39,
+      "y": 71,
+      "z": 45
+    },
+    {
+      "id": "devonian:mushroom:chest:0",
+      "roomName": "Mushroom",
+      "category": "chest",
+      "x": 16,
+      "y": 80,
+      "z": 17
+    },
+    {
+      "id": "devonian:bridges:chest:0",
+      "roomName": "Bridges",
+      "category": "chest",
+      "x": 41,
+      "y": 52,
+      "z": 21
+    },
+    {
+      "id": "devonian:bridges:chest:1",
+      "roomName": "Bridges",
+      "category": "chest",
+      "x": 3,
+      "y": 82,
+      "z": 15
+    },
+    {
+      "id": "devonian:bridges:item:0",
+      "roomName": "Bridges",
+      "category": "item",
+      "x": 55,
+      "y": 81,
+      "z": 17
+    },
+    {
+      "id": "devonian:bridges:essence:0",
+      "roomName": "Bridges",
+      "category": "essence",
+      "x": 53,
+      "y": 53,
+      "z": 13
+    },
+    {
+      "id": "devonian:bridges:essence:1",
+      "roomName": "Bridges",
+      "category": "essence",
+      "x": 53,
+      "y": 52,
+      "z": 17
+    },
+    {
+      "id": "devonian:bridges:bat:0",
+      "roomName": "Bridges",
+      "category": "bat",
+      "x": 48,
+      "y": 97,
+      "z": 2
+    },
+    {
+      "id": "devonian:bridges:lever:0",
+      "roomName": "Bridges",
+      "category": "lever",
+      "x": 54,
+      "y": 59,
+      "z": 28
+    },
+    {
+      "id": "devonian:museum:chest:0",
+      "roomName": "Museum",
+      "category": "chest",
+      "x": 31,
+      "y": 70,
+      "z": 60
+    },
+    {
+      "id": "devonian:museum:chest:1",
+      "roomName": "Museum",
+      "category": "chest",
+      "x": 34,
+      "y": 83,
+      "z": 11
+    },
+    {
+      "id": "devonian:museum:chest:2",
+      "roomName": "Museum",
+      "category": "chest",
+      "x": 31,
+      "y": 70,
+      "z": 9
+    },
+    {
+      "id": "devonian:museum:chest:3",
+      "roomName": "Museum",
+      "category": "chest",
+      "x": 48,
+      "y": 62,
+      "z": 6
+    },
+    {
+      "id": "devonian:museum:essence:0",
+      "roomName": "Museum",
+      "category": "essence",
+      "x": 42,
+      "y": 93,
+      "z": 53
+    },
+    {
+      "id": "devonian:museum:lever:0",
+      "roomName": "Museum",
+      "category": "lever",
+      "x": 26,
+      "y": 84,
+      "z": 9
+    },
+    {
+      "id": "devonian:quad-lava:chest:0",
+      "roomName": "Quad Lava",
+      "category": "chest",
+      "x": 5,
+      "y": 70,
+      "z": 25
+    },
+    {
+      "id": "devonian:quad-lava:chest:1",
+      "roomName": "Quad Lava",
+      "category": "chest",
+      "x": 19,
+      "y": 60,
+      "z": 10
+    },
+    {
+      "id": "devonian:small-stairs:chest:0",
+      "roomName": "Small Stairs",
+      "category": "chest",
+      "x": 3,
+      "y": 82,
+      "z": 6
+    },
+    {
+      "id": "devonian:small-stairs:item:0",
+      "roomName": "Small Stairs",
+      "category": "item",
+      "x": 24,
+      "y": 63,
+      "z": 3
+    },
+    {
+      "id": "devonian:jumping-skulls:chest:0",
+      "roomName": "Jumping Skulls",
+      "category": "chest",
+      "x": 26,
+      "y": 62,
+      "z": 23
+    },
+    {
+      "id": "devonian:diagonal:chest:0",
+      "roomName": "Diagonal",
+      "category": "chest",
+      "x": 90,
+      "y": 77,
+      "z": 14
+    },
+    {
+      "id": "devonian:diagonal:chest:1",
+      "roomName": "Diagonal",
+      "category": "chest",
+      "x": 69,
+      "y": 60,
+      "z": 29
+    },
+    {
+      "id": "devonian:diagonal:chest:2",
+      "roomName": "Diagonal",
+      "category": "chest",
+      "x": 11,
+      "y": 60,
+      "z": 9
+    },
+    {
+      "id": "devonian:diagonal:bat:0",
+      "roomName": "Diagonal",
+      "category": "bat",
+      "x": 32,
+      "y": 72,
+      "z": 5
+    },
+    {
+      "id": "devonian:mural:chest:0",
+      "roomName": "Mural",
+      "category": "chest",
+      "x": 26,
+      "y": 83,
+      "z": 7
+    },
+    {
+      "id": "devonian:market:chest:0",
+      "roomName": "Market",
+      "category": "chest",
+      "x": 16,
+      "y": 86,
+      "z": 56
+    },
+    {
+      "id": "devonian:market:chest:1",
+      "roomName": "Market",
+      "category": "chest",
+      "x": 32,
+      "y": 61,
+      "z": 48
+    },
+    {
+      "id": "devonian:market:chest:2",
+      "roomName": "Market",
+      "category": "chest",
+      "x": 46,
+      "y": 79,
+      "z": 48
+    },
+    {
+      "id": "devonian:market:essence:0",
+      "roomName": "Market",
+      "category": "essence",
+      "x": 7,
+      "y": 59,
+      "z": 44
+    },
+    {
+      "id": "devonian:market:bat:0",
+      "roomName": "Market",
+      "category": "bat",
+      "x": 12,
+      "y": 62,
+      "z": 47
+    },
+    {
+      "id": "devonian:hallway:chest:0",
+      "roomName": "Hallway",
+      "category": "chest",
+      "x": 28,
+      "y": 69,
+      "z": 3
+    },
+    {
+      "id": "devonian:hallway:chest:1",
+      "roomName": "Hallway",
+      "category": "chest",
+      "x": 54,
+      "y": 69,
+      "z": 5
+    },
+    {
+      "id": "devonian:hallway:chest:2",
+      "roomName": "Hallway",
+      "category": "chest",
+      "x": 85,
+      "y": 85,
+      "z": 6
+    },
+    {
+      "id": "devonian:hallway:lever:0",
+      "roomName": "Hallway",
+      "category": "lever",
+      "x": 92,
+      "y": 76,
+      "z": 20
+    },
+    {
+      "id": "devonian:beams:chest:0",
+      "roomName": "Beams",
+      "category": "chest",
+      "x": 7,
+      "y": 81,
+      "z": 2
+    },
+    {
+      "id": "devonian:beams:item:0",
+      "roomName": "Beams",
+      "category": "item",
+      "x": 8,
+      "y": 92,
+      "z": 24
+    },
+    {
+      "id": "devonian:dip:chest:0",
+      "roomName": "Dip",
+      "category": "chest",
+      "x": 18,
+      "y": 78,
+      "z": 16
+    },
+    {
+      "id": "devonian:dip:chest:1",
+      "roomName": "Dip",
+      "category": "chest",
+      "x": 2,
+      "y": 78,
+      "z": 24
+    },
+    {
+      "id": "devonian:dip:lever:0",
+      "roomName": "Dip",
+      "category": "lever",
+      "x": 19,
+      "y": 79,
+      "z": 26
+    },
+    {
+      "id": "devonian:basement:essence:0",
+      "roomName": "Basement",
+      "category": "essence",
+      "x": 5,
+      "y": 66,
+      "z": 25
+    },
+    {
+      "id": "devonian:quartz-knight:chest:0",
+      "roomName": "Quartz Knight",
+      "category": "chest",
+      "x": 6,
+      "y": 63,
+      "z": 27
+    },
+    {
+      "id": "devonian:quartz-knight:chest:1",
+      "roomName": "Quartz Knight",
+      "category": "chest",
+      "x": 21,
+      "y": 89,
+      "z": 24
+    },
+    {
+      "id": "devonian:quartz-knight:chest:2",
+      "roomName": "Quartz Knight",
+      "category": "chest",
+      "x": 111,
+      "y": 88,
+      "z": 2
+    },
+    {
+      "id": "devonian:quartz-knight:chest:3",
+      "roomName": "Quartz Knight",
+      "category": "chest",
+      "x": 18,
+      "y": 90,
+      "z": 24
+    },
+    {
+      "id": "devonian:quartz-knight:item:0",
+      "roomName": "Quartz Knight",
+      "category": "item",
+      "x": 66,
+      "y": 84,
+      "z": 5
+    },
+    {
+      "id": "devonian:quartz-knight:item:1",
+      "roomName": "Quartz Knight",
+      "category": "item",
+      "x": 95,
+      "y": 79,
+      "z": 26
+    },
+    {
+      "id": "devonian:quartz-knight:bat:0",
+      "roomName": "Quartz Knight",
+      "category": "bat",
+      "x": 29,
+      "y": 61,
+      "z": 17
+    },
+    {
+      "id": "devonian:pressure-plates:chest:0",
+      "roomName": "Pressure Plates",
+      "category": "chest",
+      "x": 20,
+      "y": 70,
+      "z": 15
+    },
+    {
+      "id": "devonian:pressure-plates:chest:1",
+      "roomName": "Pressure Plates",
+      "category": "chest",
+      "x": 23,
+      "y": 59,
+      "z": 7
+    },
+    {
+      "id": "devonian:pressure-plates:chest:2",
+      "roomName": "Pressure Plates",
+      "category": "chest",
+      "x": 59,
+      "y": 94,
+      "z": 15
+    },
+    {
+      "id": "devonian:pressure-plates:chest:3",
+      "roomName": "Pressure Plates",
+      "category": "chest",
+      "x": 60,
+      "y": 94,
+      "z": 7
+    },
+    {
+      "id": "devonian:pressure-plates:item:0",
+      "roomName": "Pressure Plates",
+      "category": "item",
+      "x": 4,
+      "y": 70,
+      "z": 23
+    },
+    {
+      "id": "devonian:pressure-plates:item:1",
+      "roomName": "Pressure Plates",
+      "category": "item",
+      "x": 57,
+      "y": 69,
+      "z": 7
+    },
+    {
+      "id": "devonian:pressure-plates:lever:0",
+      "roomName": "Pressure Plates",
+      "category": "lever",
+      "x": 21,
+      "y": 83,
+      "z": 15
+    },
+    {
+      "id": "devonian:cell:item:0",
+      "roomName": "Cell",
+      "category": "item",
+      "x": 10,
+      "y": 69,
+      "z": 22
+    },
+    {
+      "id": "devonian:mirror:chest:0",
+      "roomName": "Mirror",
+      "category": "chest",
+      "x": 3,
+      "y": 55,
+      "z": 17
+    },
+    {
+      "id": "devonian:lots-of-floors:chest:0",
+      "roomName": "Lots Of Floors",
+      "category": "chest",
+      "x": 25,
+      "y": 84,
+      "z": 7
+    },
+    {
+      "id": "devonian:lots-of-floors:chest:1",
+      "roomName": "Lots Of Floors",
+      "category": "chest",
+      "x": 5,
+      "y": 69,
+      "z": 28
+    },
+    {
+      "id": "devonian:lots-of-floors:chest:2",
+      "roomName": "Lots Of Floors",
+      "category": "chest",
+      "x": 1,
+      "y": 76,
+      "z": 5
+    },
+    {
+      "id": "devonian:mines:chest:0",
+      "roomName": "Mines",
+      "category": "chest",
+      "x": 9,
+      "y": 82,
+      "z": 21
+    },
+    {
+      "id": "devonian:mines:chest:1",
+      "roomName": "Mines",
+      "category": "chest",
+      "x": 41,
+      "y": 80,
+      "z": 12
+    },
+    {
+      "id": "devonian:mines:chest:2",
+      "roomName": "Mines",
+      "category": "chest",
+      "x": 9,
+      "y": 108,
+      "z": 17
+    },
+    {
+      "id": "devonian:mines:chest:3",
+      "roomName": "Mines",
+      "category": "chest",
+      "x": 9,
+      "y": 109,
+      "z": 30
+    },
+    {
+      "id": "devonian:mines:chest:4",
+      "roomName": "Mines",
+      "category": "chest",
+      "x": 31,
+      "y": 99,
+      "z": 58
+    },
+    {
+      "id": "devonian:mines:chest:5",
+      "roomName": "Mines",
+      "category": "chest",
+      "x": 56,
+      "y": 78,
+      "z": 58
+    },
+    {
+      "id": "devonian:mines:chest:6",
+      "roomName": "Mines",
+      "category": "chest",
+      "x": 60,
+      "y": 43,
+      "z": 50
+    },
+    {
+      "id": "devonian:mines:item:0",
+      "roomName": "Mines",
+      "category": "item",
+      "x": 1,
+      "y": 89,
+      "z": 57
+    },
+    {
+      "id": "devonian:mines:item:1",
+      "roomName": "Mines",
+      "category": "item",
+      "x": 53,
+      "y": 48,
+      "z": 8
+    },
+    {
+      "id": "devonian:mines:item:2",
+      "roomName": "Mines",
+      "category": "item",
+      "x": 4,
+      "y": 54,
+      "z": 56
+    },
+    {
+      "id": "devonian:mines:lever:0",
+      "roomName": "Mines",
+      "category": "lever",
+      "x": 52,
+      "y": 79,
+      "z": 9
+    },
+    {
+      "id": "devonian:mines:lever:1",
+      "roomName": "Mines",
+      "category": "lever",
+      "x": 14,
+      "y": 80,
+      "z": 3
+    },
+    {
+      "id": "devonian:mines:lever:2",
+      "roomName": "Mines",
+      "category": "lever",
+      "x": 34,
+      "y": 79,
+      "z": 59
+    },
+    {
+      "id": "devonian:sloth:item:0",
+      "roomName": "Sloth",
+      "category": "item",
+      "x": 8,
+      "y": 69,
+      "z": 22
+    },
+    {
+      "id": "devonian:withermancer:chest:0",
+      "roomName": "Withermancer",
+      "category": "chest",
+      "x": 59,
+      "y": 55,
+      "z": 45
+    },
+    {
+      "id": "devonian:withermancer:chest:1",
+      "roomName": "Withermancer",
+      "category": "chest",
+      "x": 15,
+      "y": 104,
+      "z": 20
+    },
+    {
+      "id": "devonian:withermancer:chest:2",
+      "roomName": "Withermancer",
+      "category": "chest",
+      "x": 29,
+      "y": 111,
+      "z": 15
+    },
+    {
+      "id": "devonian:withermancer:essence:0",
+      "roomName": "Withermancer",
+      "category": "essence",
+      "x": 1,
+      "y": 111,
+      "z": 15
+    },
+    {
+      "id": "devonian:withermancer:lever:0",
+      "roomName": "Withermancer",
+      "category": "lever",
+      "x": 24,
+      "y": 61,
+      "z": 3
+    },
+    {
+      "id": "devonian:cathedral:chest:0",
+      "roomName": "Cathedral",
+      "category": "chest",
+      "x": 19,
+      "y": 60,
+      "z": 7
+    },
+    {
+      "id": "devonian:cathedral:chest:1",
+      "roomName": "Cathedral",
+      "category": "chest",
+      "x": 28,
+      "y": 82,
+      "z": 3
+    },
+    {
+      "id": "devonian:cathedral:chest:2",
+      "roomName": "Cathedral",
+      "category": "chest",
+      "x": 38,
+      "y": 59,
+      "z": 36
+    },
+    {
+      "id": "devonian:cathedral:item:0",
+      "roomName": "Cathedral",
+      "category": "item",
+      "x": 49,
+      "y": 59,
+      "z": 23
+    },
+    {
+      "id": "devonian:cathedral:item:1",
+      "roomName": "Cathedral",
+      "category": "item",
+      "x": 33,
+      "y": 93,
+      "z": 47
+    },
+    {
+      "id": "devonian:cathedral:item:2",
+      "roomName": "Cathedral",
+      "category": "item",
+      "x": 20,
+      "y": 90,
+      "z": 44
+    },
+    {
+      "id": "devonian:cathedral:bat:0",
+      "roomName": "Cathedral",
+      "category": "bat",
+      "x": 59,
+      "y": 86,
+      "z": 3
+    },
+    {
+      "id": "devonian:cathedral:bat:1",
+      "roomName": "Cathedral",
+      "category": "bat",
+      "x": 37,
+      "y": 74,
+      "z": 15
+    },
+    {
+      "id": "devonian:gravel:chest:0",
+      "roomName": "Gravel",
+      "category": "chest",
+      "x": 35,
+      "y": 69,
+      "z": 11
+    },
+    {
+      "id": "devonian:gravel:item:0",
+      "roomName": "Gravel",
+      "category": "item",
+      "x": 87,
+      "y": 69,
+      "z": 8
+    },
+    {
+      "id": "devonian:gravel:item:1",
+      "roomName": "Gravel",
+      "category": "item",
+      "x": 67,
+      "y": 87,
+      "z": 12
+    },
+    {
+      "id": "devonian:gravel:essence:0",
+      "roomName": "Gravel",
+      "category": "essence",
+      "x": 92,
+      "y": 69,
+      "z": 3
+    },
+    {
+      "id": "devonian:gravel:essence:1",
+      "roomName": "Gravel",
+      "category": "essence",
+      "x": 66,
+      "y": 87,
+      "z": 14
+    },
+    {
+      "id": "devonian:gravel:bat:0",
+      "roomName": "Gravel",
+      "category": "bat",
+      "x": 37,
+      "y": 91,
+      "z": 14
+    },
+    {
+      "id": "devonian:gravel:lever:0",
+      "roomName": "Gravel",
+      "category": "lever",
+      "x": 63,
+      "y": 69,
+      "z": 26
+    },
+    {
+      "id": "devonian:crypt:chest:0",
+      "roomName": "Crypt",
+      "category": "chest",
+      "x": 13,
+      "y": 60,
+      "z": 15
+    },
+    {
+      "id": "devonian:crypt:chest:1",
+      "roomName": "Crypt",
+      "category": "chest",
+      "x": 44,
+      "y": 86,
+      "z": 26
+    },
+    {
+      "id": "devonian:crypt:chest:2",
+      "roomName": "Crypt",
+      "category": "chest",
+      "x": 2,
+      "y": 81,
+      "z": 16
+    },
+    {
+      "id": "devonian:crypt:chest:3",
+      "roomName": "Crypt",
+      "category": "chest",
+      "x": 19,
+      "y": 89,
+      "z": 2
+    },
+    {
+      "id": "devonian:crypt:item:0",
+      "roomName": "Crypt",
+      "category": "item",
+      "x": 46,
+      "y": 88,
+      "z": 16
+    },
+    {
+      "id": "devonian:slabs:chest:0",
+      "roomName": "Slabs",
+      "category": "chest",
+      "x": 22,
+      "y": 85,
+      "z": 3
+    },
+    {
+      "id": "devonian:slabs:chest:1",
+      "roomName": "Slabs",
+      "category": "chest",
+      "x": 23,
+      "y": 85,
+      "z": 3
+    },
+    {
+      "id": "devonian:temple:chest:0",
+      "roomName": "Temple",
+      "category": "chest",
+      "x": 16,
+      "y": 54,
+      "z": 15
+    },
+    {
+      "id": "devonian:temple:item:0",
+      "roomName": "Temple",
+      "category": "item",
+      "x": 20,
+      "y": 78,
+      "z": 28
+    },
+    {
+      "id": "devonian:temple:bat:0",
+      "roomName": "Temple",
+      "category": "bat",
+      "x": 2,
+      "y": 65,
+      "z": 25
+    },
+    {
+      "id": "devonian:double-diamond:chest:0",
+      "roomName": "Double Diamond",
+      "category": "chest",
+      "x": 11,
+      "y": 82,
+      "z": 19
+    },
+    {
+      "id": "devonian:double-diamond:item:0",
+      "roomName": "Double Diamond",
+      "category": "item",
+      "x": 24,
+      "y": 65,
+      "z": 22
+    },
+    {
+      "id": "devonian:double-diamond:essence:0",
+      "roomName": "Double Diamond",
+      "category": "essence",
+      "x": 6,
+      "y": 69,
+      "z": 6
+    },
+    {
+      "id": "devonian:double-diamond:lever:0",
+      "roomName": "Double Diamond",
+      "category": "lever",
+      "x": 24,
+      "y": 88,
+      "z": 26
+    },
+    {
+      "id": "devonian:archway:chest:0",
+      "roomName": "Archway",
+      "category": "chest",
+      "x": 1,
+      "y": 70,
+      "z": 2
+    },
+    {
+      "id": "devonian:archway:item:0",
+      "roomName": "Archway",
+      "category": "item",
+      "x": 10,
+      "y": 85,
+      "z": 27
+    },
+    {
+      "id": "devonian:archway:item:1",
+      "roomName": "Archway",
+      "category": "item",
+      "x": 54,
+      "y": 89,
+      "z": 12
+    },
+    {
+      "id": "devonian:chains:chest:0",
+      "roomName": "Chains",
+      "category": "chest",
+      "x": 27,
+      "y": 69,
+      "z": 10
+    },
+    {
+      "id": "devonian:chains:chest:1",
+      "roomName": "Chains",
+      "category": "chest",
+      "x": 17,
+      "y": 86,
+      "z": 14
+    },
+    {
+      "id": "devonian:skull:chest:0",
+      "roomName": "Skull",
+      "category": "chest",
+      "x": 2,
+      "y": 88,
+      "z": 15
+    },
+    {
+      "id": "devonian:skull:chest:1",
+      "roomName": "Skull",
+      "category": "chest",
+      "x": 52,
+      "y": 91,
+      "z": 7
+    },
+    {
+      "id": "devonian:scaffolding:chest:0",
+      "roomName": "Scaffolding",
+      "category": "chest",
+      "x": 5,
+      "y": 82,
+      "z": 28
+    },
+    {
+      "id": "devonian:scaffolding:item:0",
+      "roomName": "Scaffolding",
+      "category": "item",
+      "x": 18,
+      "y": 82,
+      "z": 8
+    },
+    {
+      "id": "devonian:cobble-wall-pillar:chest:0",
+      "roomName": "Cobble Wall Pillar",
+      "category": "chest",
+      "x": 28,
+      "y": 60,
+      "z": 12
+    },
+    {
+      "id": "devonian:cobble-wall-pillar:chest:1",
+      "roomName": "Cobble Wall Pillar",
+      "category": "chest",
+      "x": 12,
+      "y": 61,
+      "z": 17
+    },
+    {
+      "id": "devonian:cobble-wall-pillar:lever:0",
+      "roomName": "Cobble Wall Pillar",
+      "category": "lever",
+      "x": 20,
+      "y": 69,
+      "z": 23
+    },
+    {
+      "id": "devonian:buttons:chest:0",
+      "roomName": "Buttons",
+      "category": "chest",
+      "x": 57,
+      "y": 69,
+      "z": 60
+    },
+    {
+      "id": "devonian:buttons:chest:1",
+      "roomName": "Buttons",
+      "category": "chest",
+      "x": 31,
+      "y": 73,
+      "z": 13
+    },
+    {
+      "id": "devonian:buttons:chest:2",
+      "roomName": "Buttons",
+      "category": "chest",
+      "x": 2,
+      "y": 81,
+      "z": 50
+    },
+    {
+      "id": "devonian:buttons:chest:3",
+      "roomName": "Buttons",
+      "category": "chest",
+      "x": 53,
+      "y": 55,
+      "z": 31
+    },
+    {
+      "id": "devonian:buttons:chest:4",
+      "roomName": "Buttons",
+      "category": "chest",
+      "x": 56,
+      "y": 81,
+      "z": 2
+    },
+    {
+      "id": "devonian:buttons:lever:0",
+      "roomName": "Buttons",
+      "category": "lever",
+      "x": 42,
+      "y": 81,
+      "z": 57
+    },
+    {
+      "id": "devonian:buttons:lever:1",
+      "roomName": "Buttons",
+      "category": "lever",
+      "x": 58,
+      "y": 70,
+      "z": 36
+    },
+    {
+      "id": "devonian:overgrown:chest:0",
+      "roomName": "Overgrown",
+      "category": "chest",
+      "x": 6,
+      "y": 79,
+      "z": 15
+    },
+    {
+      "id": "devonian:overgrown:item:0",
+      "roomName": "Overgrown",
+      "category": "item",
+      "x": 4,
+      "y": 70,
+      "z": 2
+    },
+    {
+      "id": "devonian:overgrown:essence:0",
+      "roomName": "Overgrown",
+      "category": "essence",
+      "x": 5,
+      "y": 87,
+      "z": 19
+    },
+    {
+      "id": "devonian:overgrown:lever:0",
+      "roomName": "Overgrown",
+      "category": "lever",
+      "x": 27,
+      "y": 81,
+      "z": 15
+    },
+    {
+      "id": "devonian:knight:chest:0",
+      "roomName": "Knight",
+      "category": "chest",
+      "x": 24,
+      "y": 69,
+      "z": 29
+    },
+    {
+      "id": "devonian:knight:chest:1",
+      "roomName": "Knight",
+      "category": "chest",
+      "x": 25,
+      "y": 69,
+      "z": 29
+    },
+    {
+      "id": "devonian:knight:bat:0",
+      "roomName": "Knight",
+      "category": "bat",
+      "x": 6,
+      "y": 76,
+      "z": 23
+    },
+    {
+      "id": "devonian:knight:lever:0",
+      "roomName": "Knight",
+      "category": "lever",
+      "x": 3,
+      "y": 70,
+      "z": 9
+    },
+    {
+      "id": "devonian:grand-library:chest:0",
+      "roomName": "Grand Library",
+      "category": "chest",
+      "x": 23,
+      "y": 93,
+      "z": 2
+    },
+    {
+      "id": "devonian:grand-library:chest:1",
+      "roomName": "Grand Library",
+      "category": "chest",
+      "x": 31,
+      "y": 58,
+      "z": 15
+    },
+    {
+      "id": "devonian:grand-library:item:0",
+      "roomName": "Grand Library",
+      "category": "item",
+      "x": 28,
+      "y": 57,
+      "z": 18
+    },
+    {
+      "id": "devonian:grand-library:essence:0",
+      "roomName": "Grand Library",
+      "category": "essence",
+      "x": 6,
+      "y": 80,
+      "z": 3
+    },
+    {
+      "id": "devonian:well:chest:0",
+      "roomName": "Well",
+      "category": "chest",
+      "x": 11,
+      "y": 88,
+      "z": 50
+    },
+    {
+      "id": "devonian:well:chest:1",
+      "roomName": "Well",
+      "category": "chest",
+      "x": 18,
+      "y": 91,
+      "z": 25
+    },
+    {
+      "id": "devonian:well:chest:2",
+      "roomName": "Well",
+      "category": "chest",
+      "x": 60,
+      "y": 89,
+      "z": 47
+    },
+    {
+      "id": "devonian:well:item:0",
+      "roomName": "Well",
+      "category": "item",
+      "x": 14,
+      "y": 57,
+      "z": 15
+    },
+    {
+      "id": "devonian:well:item:1",
+      "roomName": "Well",
+      "category": "item",
+      "x": 59,
+      "y": 91,
+      "z": 35
+    },
+    {
+      "id": "devonian:well:essence:0",
+      "roomName": "Well",
+      "category": "essence",
+      "x": 2,
+      "y": 95,
+      "z": 59
+    },
+    {
+      "id": "devonian:well:essence:1",
+      "roomName": "Well",
+      "category": "essence",
+      "x": 7,
+      "y": 95,
+      "z": 56
+    },
+    {
+      "id": "devonian:andesite:item:0",
+      "roomName": "Andesite",
+      "category": "item",
+      "x": 1,
+      "y": 69,
+      "z": 28
+    },
+    {
+      "id": "devonian:andesite:essence:0",
+      "roomName": "Andesite",
+      "category": "essence",
+      "x": 6,
+      "y": 69,
+      "z": 22
+    },
+    {
+      "id": "devonian:locked-away:chest:0",
+      "roomName": "Locked Away",
+      "category": "chest",
+      "x": 26,
+      "y": 75,
+      "z": 29
+    },
+    {
+      "id": "devonian:sarcophagus:chest:0",
+      "roomName": "Sarcophagus",
+      "category": "chest",
+      "x": 15,
+      "y": 69,
+      "z": 4
+    },
+    {
+      "id": "devonian:sarcophagus:essence:0",
+      "roomName": "Sarcophagus",
+      "category": "essence",
+      "x": 18,
+      "y": 68,
+      "z": 27
+    },
+    {
+      "id": "devonian:sarcophagus:bat:0",
+      "roomName": "Sarcophagus",
+      "category": "bat",
+      "x": 21,
+      "y": 70,
+      "z": 26
+    },
+    {
+      "id": "devonian:arrow-trap:chest:0",
+      "roomName": "Arrow Trap",
+      "category": "chest",
+      "x": 14,
+      "y": 69,
+      "z": 4
+    },
+    {
+      "id": "devonian:arrow-trap:lever:0",
+      "roomName": "Arrow Trap",
+      "category": "lever",
+      "x": 15,
+      "y": 70,
+      "z": 23
+    },
+    {
+      "id": "devonian:melon:chest:0",
+      "roomName": "Melon",
+      "category": "chest",
+      "x": 59,
+      "y": 69,
+      "z": 58
+    },
+    {
+      "id": "devonian:melon:chest:1",
+      "roomName": "Melon",
+      "category": "chest",
+      "x": 41,
+      "y": 85,
+      "z": 56
+    },
+    {
+      "id": "devonian:melon:chest:2",
+      "roomName": "Melon",
+      "category": "chest",
+      "x": 33,
+      "y": 80,
+      "z": 53
+    },
+    {
+      "id": "devonian:melon:chest:3",
+      "roomName": "Melon",
+      "category": "chest",
+      "x": 15,
+      "y": 69,
+      "z": 35
+    },
+    {
+      "id": "devonian:melon:chest:4",
+      "roomName": "Melon",
+      "category": "chest",
+      "x": 26,
+      "y": 79,
+      "z": 1
+    },
+    {
+      "id": "devonian:melon:chest:5",
+      "roomName": "Melon",
+      "category": "chest",
+      "x": 5,
+      "y": 82,
+      "z": 4
+    },
+    {
+      "id": "devonian:melon:bat:0",
+      "roomName": "Melon",
+      "category": "bat",
+      "x": 7,
+      "y": 76,
+      "z": 27
+    },
+    {
+      "id": "devonian:end:chest:0",
+      "roomName": "End",
+      "category": "chest",
+      "x": 15,
+      "y": 69,
+      "z": 6
+    },
+    {
+      "id": "devonian:end:essence:0",
+      "roomName": "End",
+      "category": "essence",
+      "x": 6,
+      "y": 63,
+      "z": 2
+    },
+    {
+      "id": "devonian:end:lever:0",
+      "roomName": "End",
+      "category": "lever",
+      "x": 7,
+      "y": 84,
+      "z": 5
+    },
+    {
+      "id": "devonian:perch:chest:0",
+      "roomName": "Perch",
+      "category": "chest",
+      "x": 15,
+      "y": 74,
+      "z": 1
+    },
+    {
+      "id": "devonian:perch:item:0",
+      "roomName": "Perch",
+      "category": "item",
+      "x": 20,
+      "y": 76,
+      "z": 20
+    },
+    {
+      "id": "devonian:multicolored:chest:0",
+      "roomName": "Multicolored",
+      "category": "chest",
+      "x": 25,
+      "y": 70,
+      "z": 4
+    },
+    {
+      "id": "devonian:painting:item:0",
+      "roomName": "Painting",
+      "category": "item",
+      "x": 24,
+      "y": 69,
+      "z": 21
+    },
+    {
+      "id": "devonian:painting:essence:0",
+      "roomName": "Painting",
+      "category": "essence",
+      "x": 6,
+      "y": 80,
+      "z": 21
+    },
+    {
+      "id": "devonian:layers:chest:0",
+      "roomName": "Layers",
+      "category": "chest",
+      "x": 5,
+      "y": 69,
+      "z": 2
+    },
+    {
+      "id": "devonian:layers:chest:1",
+      "roomName": "Layers",
+      "category": "chest",
+      "x": 13,
+      "y": 69,
+      "z": 26
+    },
+    {
+      "id": "devonian:layers:chest:2",
+      "roomName": "Layers",
+      "category": "chest",
+      "x": 47,
+      "y": 69,
+      "z": 47
+    },
+    {
+      "id": "devonian:layers:chest:3",
+      "roomName": "Layers",
+      "category": "chest",
+      "x": 54,
+      "y": 78,
+      "z": 56
+    },
+    {
+      "id": "devonian:layers:item:0",
+      "roomName": "Layers",
+      "category": "item",
+      "x": 25,
+      "y": 70,
+      "z": 28
+    },
+    {
+      "id": "devonian:layers:item:1",
+      "roomName": "Layers",
+      "category": "item",
+      "x": 35,
+      "y": 59,
+      "z": 51
+    },
+    {
+      "id": "devonian:layers:item:2",
+      "roomName": "Layers",
+      "category": "item",
+      "x": 47,
+      "y": 79,
+      "z": 34
+    },
+    {
+      "id": "devonian:layers:item:3",
+      "roomName": "Layers",
+      "category": "item",
+      "x": 7,
+      "y": 96,
+      "z": 56
+    },
+    {
+      "id": "devonian:layers:lever:0",
+      "roomName": "Layers",
+      "category": "lever",
+      "x": 5,
+      "y": 76,
+      "z": 2
+    },
+    {
+      "id": "devonian:layers:lever:1",
+      "roomName": "Layers",
+      "category": "lever",
+      "x": 8,
+      "y": 91,
+      "z": 32
+    },
+    {
+      "id": "devonian:supertall:chest:0",
+      "roomName": "Supertall",
+      "category": "chest",
+      "x": 36,
+      "y": 142,
+      "z": 51
+    },
+    {
+      "id": "devonian:supertall:chest:1",
+      "roomName": "Supertall",
+      "category": "chest",
+      "x": 31,
+      "y": 142,
+      "z": 56
+    },
+    {
+      "id": "devonian:supertall:chest:2",
+      "roomName": "Supertall",
+      "category": "chest",
+      "x": 26,
+      "y": 142,
+      "z": 51
+    },
+    {
+      "id": "devonian:supertall:item:0",
+      "roomName": "Supertall",
+      "category": "item",
+      "x": 31,
+      "y": 102,
+      "z": 53
+    },
+    {
+      "id": "devonian:supertall:bat:0",
+      "roomName": "Supertall",
+      "category": "bat",
+      "x": 2,
+      "y": 72,
+      "z": 2
+    },
+    {
+      "id": "devonian:supertall:bat:1",
+      "roomName": "Supertall",
+      "category": "bat",
+      "x": 53,
+      "y": 112,
+      "z": 8
+    },
+    {
+      "id": "devonian:supertall:lever:0",
+      "roomName": "Supertall",
+      "category": "lever",
+      "x": 9,
+      "y": 98,
+      "z": 24
+    },
+    {
+      "id": "devonian:supertall:lever:1",
+      "roomName": "Supertall",
+      "category": "lever",
+      "x": 12,
+      "y": 131,
+      "z": 7
+    },
+    {
+      "id": "devonian:logs:chest:0",
+      "roomName": "Logs",
+      "category": "chest",
+      "x": 1,
+      "y": 70,
+      "z": 23
+    },
+    {
+      "id": "devonian:logs:chest:1",
+      "roomName": "Logs",
+      "category": "chest",
+      "x": 1,
+      "y": 70,
+      "z": 24
+    },
+    {
+      "id": "devonian:logs:chest:2",
+      "roomName": "Logs",
+      "category": "chest",
+      "x": 9,
+      "y": 78,
+      "z": 23
+    },
+    {
+      "id": "devonian:logs:chest:3",
+      "roomName": "Logs",
+      "category": "chest",
+      "x": 9,
+      "y": 78,
+      "z": 24
+    },
+    {
+      "id": "devonian:logs:lever:0",
+      "roomName": "Logs",
+      "category": "lever",
+      "x": 25,
+      "y": 84,
+      "z": 28
+    },
+    {
+      "id": "devonian:pedestal:chest:0",
+      "roomName": "Pedestal",
+      "category": "chest",
+      "x": 31,
+      "y": 70,
+      "z": 15
+    },
+    {
+      "id": "devonian:pedestal:chest:1",
+      "roomName": "Pedestal",
+      "category": "chest",
+      "x": 7,
+      "y": 94,
+      "z": 21
+    },
+    {
+      "id": "devonian:pedestal:chest:2",
+      "roomName": "Pedestal",
+      "category": "chest",
+      "x": 32,
+      "y": 60,
+      "z": 23
+    },
+    {
+      "id": "devonian:pedestal:item:0",
+      "roomName": "Pedestal",
+      "category": "item",
+      "x": 50,
+      "y": 61,
+      "z": 18
+    },
+    {
+      "id": "devonian:pedestal:essence:0",
+      "roomName": "Pedestal",
+      "category": "essence",
+      "x": 53,
+      "y": 61,
+      "z": 22
+    },
+    {
+      "id": "devonian:prison-cell:chest:0",
+      "roomName": "Prison Cell",
+      "category": "chest",
+      "x": 10,
+      "y": 76,
+      "z": 23
+    },
+    {
+      "id": "devonian:grass-ruin:chest:0",
+      "roomName": "Grass Ruin",
+      "category": "chest",
+      "x": 3,
+      "y": 55,
+      "z": 14
+    },
+    {
+      "id": "devonian:grass-ruin:chest:1",
+      "roomName": "Grass Ruin",
+      "category": "chest",
+      "x": 11,
+      "y": 107,
+      "z": 10
+    },
+    {
+      "id": "devonian:grass-ruin:essence:0",
+      "roomName": "Grass Ruin",
+      "category": "essence",
+      "x": 48,
+      "y": 81,
+      "z": 24
+    },
+    {
+      "id": "devonian:grass-ruin:lever:0",
+      "roomName": "Grass Ruin",
+      "category": "lever",
+      "x": 31,
+      "y": 82,
+      "z": 28
+    },
+    {
+      "id": "devonian:grass-ruin:lever:1",
+      "roomName": "Grass Ruin",
+      "category": "lever",
+      "x": 31,
+      "y": 53,
+      "z": 24
+    },
+    {
+      "id": "devonian:granite:item:0",
+      "roomName": "Granite",
+      "category": "item",
+      "x": 14,
+      "y": 60,
+      "z": 24
+    },
+    {
+      "id": "devonian:granite:essence:0",
+      "roomName": "Granite",
+      "category": "essence",
+      "x": 13,
+      "y": 61,
+      "z": 29
+    },
+    {
+      "id": "devonian:mage:chest:0",
+      "roomName": "Mage",
+      "category": "chest",
+      "x": 16,
+      "y": 70,
+      "z": 17
+    },
+    {
+      "id": "devonian:mage:chest:1",
+      "roomName": "Mage",
+      "category": "chest",
+      "x": 42,
+      "y": 62,
+      "z": 15
+    },
+    {
+      "id": "devonian:mage:essence:0",
+      "roomName": "Mage",
+      "category": "essence",
+      "x": 58,
+      "y": 82,
+      "z": 5
+    },
+    {
+      "id": "devonian:mage:bat:0",
+      "roomName": "Mage",
+      "category": "bat",
+      "x": 57,
+      "y": 83,
+      "z": 7
+    },
+    {
+      "id": "devonian:leaves:chest:0",
+      "roomName": "Leaves",
+      "category": "chest",
+      "x": 14,
+      "y": 81,
+      "z": 27
+    },
+    {
+      "id": "devonian:redstone-key:chest:0",
+      "roomName": "Redstone Key",
+      "category": "chest",
+      "x": 28,
+      "y": 62,
+      "z": 23
+    },
+    {
+      "id": "devonian:redstone-key:item:0",
+      "roomName": "Redstone Key",
+      "category": "item",
+      "x": 26,
+      "y": 69,
+      "z": 5
+    },
+    {
+      "id": "devonian:redstone-key:redstone:0",
+      "roomName": "Redstone Key",
+      "category": "redstone",
+      "x": 19,
+      "y": 66,
+      "z": 7
+    },
+    {
+      "id": "devonian:redstone-key:redstone:1",
+      "roomName": "Redstone Key",
+      "category": "redstone",
+      "x": 10,
+      "y": 70,
+      "z": 26
+    },
+    {
+      "id": "devonian:redstone-key:lever:0",
+      "roomName": "Redstone Key",
+      "category": "lever",
+      "x": 5,
+      "y": 70,
+      "z": 27
+    },
+    {
+      "id": "devonian:drop:chest:0",
+      "roomName": "Drop",
+      "category": "chest",
+      "x": 5,
+      "y": 59,
+      "z": 15
+    },
+    {
+      "id": "devonian:drop:chest:1",
+      "roomName": "Drop",
+      "category": "chest",
+      "x": 25,
+      "y": 77,
+      "z": 2
+    },
+    {
+      "id": "devonian:vinny-8-ball:chest:0",
+      "roomName": "Vinny 8 Ball",
+      "category": "chest",
+      "x": 26,
+      "y": 69,
+      "z": 17
+    },
+    {
+      "id": "devonian:vinny-8-ball:lever:0",
+      "roomName": "Vinny 8 Ball",
+      "category": "lever",
+      "x": 17,
+      "y": 80,
+      "z": 1
+    },
+    {
+      "id": "devonian:golden-oasis:chest:0",
+      "roomName": "Golden Oasis",
+      "category": "chest",
+      "x": 12,
+      "y": 63,
+      "z": 23
+    },
+    {
+      "id": "devonian:golden-oasis:chest:1",
+      "roomName": "Golden Oasis",
+      "category": "chest",
+      "x": 13,
+      "y": 63,
+      "z": 25
+    },
+    {
+      "id": "devonian:golden-oasis:redstone:0",
+      "roomName": "Golden Oasis",
+      "category": "redstone",
+      "x": 12,
+      "y": 71,
+      "z": 8
+    },
+    {
+      "id": "devonian:black-flag:chest:0",
+      "roomName": "Black Flag",
+      "category": "chest",
+      "x": 27,
+      "y": 80,
+      "z": 3
+    },
+    {
+      "id": "devonian:black-flag:chest:1",
+      "roomName": "Black Flag",
+      "category": "chest",
+      "x": 28,
+      "y": 80,
+      "z": 25
+    },
+    {
+      "id": "devonian:black-flag:item:0",
+      "roomName": "Black Flag",
+      "category": "item",
+      "x": 22,
+      "y": 59,
+      "z": 27
+    },
+    {
+      "id": "devonian:sand-dragon:chest:0",
+      "roomName": "Sand Dragon",
+      "category": "chest",
+      "x": 15,
+      "y": 86,
+      "z": 26
+    },
+    {
+      "id": "devonian:chambers:chest:0",
+      "roomName": "Chambers",
+      "category": "chest",
+      "x": 53,
+      "y": 57,
+      "z": 47
+    },
+    {
+      "id": "devonian:chambers:chest:1",
+      "roomName": "Chambers",
+      "category": "chest",
+      "x": 4,
+      "y": 69,
+      "z": 57
+    },
+    {
+      "id": "devonian:chambers:chest:2",
+      "roomName": "Chambers",
+      "category": "chest",
+      "x": 7,
+      "y": 69,
+      "z": 40
+    },
+    {
+      "id": "devonian:chambers:chest:3",
+      "roomName": "Chambers",
+      "category": "chest",
+      "x": 15,
+      "y": 83,
+      "z": 2
+    },
+    {
+      "id": "devonian:chambers:bat:0",
+      "roomName": "Chambers",
+      "category": "bat",
+      "x": 33,
+      "y": 84,
+      "z": 57
+    },
+    {
+      "id": "devonian:chambers:lever:0",
+      "roomName": "Chambers",
+      "category": "lever",
+      "x": 55,
+      "y": 71,
+      "z": 37
+    },
+    {
+      "id": "devonian:doors:chest:0",
+      "roomName": "Doors",
+      "category": "chest",
+      "x": 5,
+      "y": 87,
+      "z": 28
+    },
+    {
+      "id": "devonian:doors:chest:1",
+      "roomName": "Doors",
+      "category": "chest",
+      "x": 31,
+      "y": 51,
+      "z": 17
+    },
+    {
+      "id": "devonian:doors:chest:2",
+      "roomName": "Doors",
+      "category": "chest",
+      "x": 8,
+      "y": 58,
+      "z": 17
+    },
+    {
+      "id": "devonian:doors:chest:3",
+      "roomName": "Doors",
+      "category": "chest",
+      "x": 8,
+      "y": 58,
+      "z": 13
+    },
+    {
+      "id": "devonian:doors:bat:0",
+      "roomName": "Doors",
+      "category": "bat",
+      "x": 46,
+      "y": 65,
+      "z": 15
+    },
+    {
+      "id": "devonian:doors:lever:0",
+      "roomName": "Doors",
+      "category": "lever",
+      "x": 43,
+      "y": 59,
+      "z": 15
+    },
+    {
+      "id": "devonian:doors:lever:1",
+      "roomName": "Doors",
+      "category": "lever",
+      "x": 45,
+      "y": 59,
+      "z": 15
+    },
+    {
+      "id": "devonian:stone-window:bat:0",
+      "roomName": "Stone Window",
+      "category": "bat",
+      "x": 2,
+      "y": 72,
+      "z": 16
+    },
+    {
+      "id": "devonian:stone-window:bat:1",
+      "roomName": "Stone Window",
+      "category": "bat",
+      "x": 24,
+      "y": 80,
+      "z": 8
+    },
+    {
+      "id": "devonian:trinity:chest:0",
+      "roomName": "Trinity",
+      "category": "chest",
+      "x": 14,
+      "y": 75,
+      "z": 27
+    },
+    {
+      "id": "devonian:trinity:item:0",
+      "roomName": "Trinity",
+      "category": "item",
+      "x": 7,
+      "y": 74,
+      "z": 27
+    },
+    {
+      "id": "devonian:trinity:bat:0",
+      "roomName": "Trinity",
+      "category": "bat",
+      "x": 2,
+      "y": 94,
+      "z": 26
+    },
+    {
+      "id": "devonian:trinity:bat:1",
+      "roomName": "Trinity",
+      "category": "bat",
+      "x": 8,
+      "y": 87,
+      "z": 18
+    },
+    {
+      "id": "devonian:staircase:chest:0",
+      "roomName": "Staircase",
+      "category": "chest",
+      "x": 28,
+      "y": 66,
+      "z": 3
+    },
+    {
+      "id": "devonian:staircase:item:0",
+      "roomName": "Staircase",
+      "category": "item",
+      "x": 12,
+      "y": 78,
+      "z": 26
+    },
+    {
+      "id": "devonian:staircase:essence:0",
+      "roomName": "Staircase",
+      "category": "essence",
+      "x": 22,
+      "y": 75,
+      "z": 2
+    },
+    {
+      "id": "devonian:pipes:chest:0",
+      "roomName": "Pipes",
+      "category": "chest",
+      "x": 107,
+      "y": 45,
+      "z": 15
+    },
+    {
+      "id": "devonian:pipes:chest:1",
+      "roomName": "Pipes",
+      "category": "chest",
+      "x": 63,
+      "y": 55,
+      "z": 26
+    },
+    {
+      "id": "devonian:pipes:chest:2",
+      "roomName": "Pipes",
+      "category": "chest",
+      "x": 119,
+      "y": 54,
+      "z": 5
+    },
+    {
+      "id": "devonian:pipes:chest:3",
+      "roomName": "Pipes",
+      "category": "chest",
+      "x": 7,
+      "y": 42,
+      "z": 3
+    },
+    {
+      "id": "devonian:pipes:chest:4",
+      "roomName": "Pipes",
+      "category": "chest",
+      "x": 117,
+      "y": 62,
+      "z": 26
+    },
+    {
+      "id": "devonian:pipes:item:0",
+      "roomName": "Pipes",
+      "category": "item",
+      "x": 49,
+      "y": 32,
+      "z": 6
+    },
+    {
+      "id": "devonian:pipes:bat:0",
+      "roomName": "Pipes",
+      "category": "bat",
+      "x": 122,
+      "y": 57,
+      "z": 19
+    },
+    {
+      "id": "devonian:pipes:lever:0",
+      "roomName": "Pipes",
+      "category": "lever",
+      "x": 52,
+      "y": 94,
+      "z": 15
+    },
+    {
+      "id": "devonian:pirate:chest:0",
+      "roomName": "Pirate",
+      "category": "chest",
+      "x": 17,
+      "y": 83,
+      "z": 60
+    },
+    {
+      "id": "devonian:pirate:chest:1",
+      "roomName": "Pirate",
+      "category": "chest",
+      "x": 46,
+      "y": 84,
+      "z": 57
+    },
+    {
+      "id": "devonian:pirate:chest:2",
+      "roomName": "Pirate",
+      "category": "chest",
+      "x": 15,
+      "y": 60,
+      "z": 46
+    },
+    {
+      "id": "devonian:pirate:item:0",
+      "roomName": "Pirate",
+      "category": "item",
+      "x": 4,
+      "y": 60,
+      "z": 58
+    },
+    {
+      "id": "devonian:pirate:essence:0",
+      "roomName": "Pirate",
+      "category": "essence",
+      "x": 19,
+      "y": 60,
+      "z": 4
+    },
+    {
+      "id": "devonian:pirate:bat:0",
+      "roomName": "Pirate",
+      "category": "bat",
+      "x": 15,
+      "y": 63,
+      "z": 45
+    },
+    {
+      "id": "devonian:pirate:lever:0",
+      "roomName": "Pirate",
+      "category": "lever",
+      "x": 15,
+      "y": 82,
+      "z": 19
+    },
+    {
+      "id": "devonian:altar:chest:0",
+      "roomName": "Altar",
+      "category": "chest",
+      "x": 51,
+      "y": 88,
+      "z": 45
+    },
+    {
+      "id": "devonian:altar:chest:1",
+      "roomName": "Altar",
+      "category": "chest",
+      "x": 19,
+      "y": 83,
+      "z": 43
+    },
+    {
+      "id": "devonian:altar:chest:2",
+      "roomName": "Altar",
+      "category": "chest",
+      "x": 11,
+      "y": 44,
+      "z": 39
+    },
+    {
+      "id": "devonian:altar:item:0",
+      "roomName": "Altar",
+      "category": "item",
+      "x": 14,
+      "y": 71,
+      "z": 48
+    },
+    {
+      "id": "devonian:altar:essence:0",
+      "roomName": "Altar",
+      "category": "essence",
+      "x": 17,
+      "y": 93,
+      "z": 27
+    },
+    {
+      "id": "devonian:altar:bat:0",
+      "roomName": "Altar",
+      "category": "bat",
+      "x": 36,
+      "y": 55,
+      "z": 35
+    },
+    {
+      "id": "devonian:slime:chest:0",
+      "roomName": "Slime",
+      "category": "chest",
+      "x": 29,
+      "y": 87,
+      "z": 14
+    },
+    {
+      "id": "devonian:slime:item:0",
+      "roomName": "Slime",
+      "category": "item",
+      "x": 3,
+      "y": 86,
+      "z": 10
+    },
+    {
+      "id": "devonian:slime:item:1",
+      "roomName": "Slime",
+      "category": "item",
+      "x": 90,
+      "y": 57,
+      "z": 15
+    },
+    {
+      "id": "devonian:slime:essence:0",
+      "roomName": "Slime",
+      "category": "essence",
+      "x": 20,
+      "y": 86,
+      "z": 15
+    },
+    {
+      "id": "devonian:slime:bat:0",
+      "roomName": "Slime",
+      "category": "bat",
+      "x": 14,
+      "y": 52,
+      "z": 14
+    },
+    {
+      "id": "devonian:ritual:chest:0",
+      "roomName": "Ritual",
+      "category": "chest",
+      "x": 15,
+      "y": 80,
+      "z": 3
+    },
+    {
+      "id": "devonian:ritual:chest:1",
+      "roomName": "Ritual",
+      "category": "chest",
+      "x": 27,
+      "y": 69,
+      "z": 2
+    },
+    {
+      "id": "devonian:ritual:bat:0",
+      "roomName": "Ritual",
+      "category": "bat",
+      "x": 15,
+      "y": 86,
+      "z": 25
+    },
+    {
+      "id": "devonian:criss-cross:chest:0",
+      "roomName": "Criss-Cross",
+      "category": "chest",
+      "x": 15,
+      "y": 66,
+      "z": 6
+    },
+    {
+      "id": "devonian:criss-cross:lever:0",
+      "roomName": "Criss-Cross",
+      "category": "lever",
+      "x": 15,
+      "y": 75,
+      "z": 29
+    },
+    {
+      "id": "devonian:carpets:chest:0",
+      "roomName": "Carpets",
+      "category": "chest",
+      "x": 15,
+      "y": 85,
+      "z": 15
+    },
+    {
+      "id": "devonian:redstone-crypt:chest:0",
+      "roomName": "Redstone Crypt",
+      "category": "chest",
+      "x": 9,
+      "y": 69,
+      "z": 3
+    },
+    {
+      "id": "devonian:redstone-crypt:chest:1",
+      "roomName": "Redstone Crypt",
+      "category": "chest",
+      "x": 29,
+      "y": 70,
+      "z": 15
+    },
+    {
+      "id": "devonian:redstone-crypt:redstone:0",
+      "roomName": "Redstone Crypt",
+      "category": "redstone",
+      "x": 4,
+      "y": 71,
+      "z": 4
+    },
+    {
+      "id": "devonian:redstone-crypt:lever:0",
+      "roomName": "Redstone Crypt",
+      "category": "lever",
+      "x": 15,
+      "y": 68,
+      "z": 15
+    },
+    {
+      "id": "devonian:zodd:chest:0",
+      "roomName": "Zodd",
+      "category": "chest",
+      "x": 7,
+      "y": 70,
+      "z": 3
+    },
+    {
+      "id": "devonian:rare-carpets:chest:0",
+      "roomName": "Rare Carpets",
+      "category": "chest",
+      "x": 15,
+      "y": 85,
+      "z": 15
+    },
+    {
+      "id": "devonian:rare-overgrown:chest:0",
+      "roomName": "Rare Overgrown",
+      "category": "chest",
+      "x": 5,
+      "y": 69,
+      "z": 7
+    },
+    {
+      "id": "devonian:rare-overgrown:item:0",
+      "roomName": "Rare Overgrown",
+      "category": "item",
+      "x": 19,
+      "y": 83,
+      "z": 28
+    },
+    {
+      "id": "devonian:rare-overgrown:bat:0",
+      "roomName": "Rare Overgrown",
+      "category": "bat",
+      "x": 7,
+      "y": 75,
+      "z": 9
+    },
+    {
+      "id": "devonian:rare-overgrown:lever:0",
+      "roomName": "Rare Overgrown",
+      "category": "lever",
+      "x": 15,
+      "y": 85,
+      "z": 2
+    },
+    {
+      "id": "devonian:lava-pit:chest:0",
+      "roomName": "Lava Pit",
+      "category": "chest",
+      "x": 23,
+      "y": 92,
+      "z": 3
+    },
+    {
+      "id": "devonian:lava-pit:chest:1",
+      "roomName": "Lava Pit",
+      "category": "chest",
+      "x": 15,
+      "y": 63,
+      "z": 13
+    },
+    {
+      "id": "devonian:lava-pit:item:0",
+      "roomName": "Lava Pit",
+      "category": "item",
+      "x": 2,
+      "y": 88,
+      "z": 14
+    },
+    {
+      "id": "devonian:three-floors:chest:0",
+      "roomName": "Three Floors",
+      "category": "chest",
+      "x": 12,
+      "y": 89,
+      "z": 13
+    },
+    {
+      "id": "devonian:silver-sword:chest:0",
+      "roomName": "Silver Sword",
+      "category": "chest",
+      "x": 18,
+      "y": 69,
+      "z": 13
+    },
+    {
+      "id": "devonian:rail-track:chest:0",
+      "roomName": "Rail Track",
+      "category": "chest",
+      "x": 28,
+      "y": 63,
+      "z": 7
+    },
+    {
+      "id": "devonian:rail-track:bat:0",
+      "roomName": "Rail Track",
+      "category": "bat",
+      "x": 20,
+      "y": 72,
+      "z": 10
+    },
+    {
+      "id": "devonian:rail-track:bat:1",
+      "roomName": "Rail Track",
+      "category": "bat",
+      "x": 6,
+      "y": 82,
+      "z": 21
+    },
+    {
+      "id": "devonian:rare-pillars:chest:0",
+      "roomName": "Rare Pillars",
+      "category": "chest",
+      "x": 24,
+      "y": 69,
+      "z": 19
+    },
+    {
+      "id": "devonian:rare-pillars:lever:0",
+      "roomName": "Rare Pillars",
+      "category": "lever",
+      "x": 24,
+      "y": 88,
+      "z": 3
+    },
+    {
+      "id": "devonian:higher-blaze:chest:0",
+      "roomName": "Higher Blaze",
+      "category": "chest",
+      "x": 2,
+      "y": 68,
+      "z": 27
+    },
+    {
+      "id": "devonian:lower-blaze:chest:0",
+      "roomName": "Lower Blaze",
+      "category": "chest",
+      "x": 2,
+      "y": 118,
+      "z": 27
+    }
+  ]
+}

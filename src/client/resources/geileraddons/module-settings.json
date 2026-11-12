@@ -1,0 +1,240 @@
+{
+  "modules": {
+    "Slot IDs": {
+      "settings": [
+        { "id": "labelTextColor", "type": "color", "name": "Label Text Color", "default": [255, 77, 90, 255] }
+      ],
+      "groups": [ { "name": "Display", "settings": ["labelTextColor"] } ]
+    },
+    "System Clock": {
+      "settings": [
+        { "id": "timeFormat", "type": "dropdown", "name": "Time Format", "default": "24-hour", "choices": ["24-hour", "12-hour"] },
+        { "id": "showSeconds", "type": "toggle", "name": "Show Seconds", "default": true },
+        { "id": "textColor", "type": "color", "name": "Text Color", "default": [255, 255, 255, 255] },
+        { "id": "showBackground", "type": "toggle", "name": "Show Background", "default": false },
+        { "id": "backgroundColor", "type": "color", "name": "Background Color", "default": [0, 0, 0, 128] }
+      ]
+    },
+    "Terminal Stats": {
+      "settings": [
+        { "id": "breakdown", "type": "toggle", "name": "Show Breakdown", "default": true },
+        { "id": "selfOnly", "type": "toggle", "name": "Count Self Only", "default": false }
+      ],
+      "groups": [ { "name": "Breakdown", "toggle": "breakdown", "settings": ["selfOnly"] } ]
+    },
+    "Terminal Titles": {
+      "settings": [
+        { "id": "replaceTitles", "type": "toggle", "name": "Replace Titles", "default": false },
+        { "id": "titleTemplate", "type": "text", "name": "Title Template", "default": "&a{type} {current}/{total}", "maxLength": 80 }
+      ],
+      "groups": [ { "name": "Title Format", "toggle": "replaceTitles", "settings": ["titleTemplate"] } ]
+    },
+    "Safari Floor Drops": {
+      "settings": [
+        { "id": "scanDelay", "type": "slider", "name": "Scan Delay", "min": 1, "max": 200, "default": 20, "integer": true },
+        { "id": "color", "type": "color", "name": "Color", "default": [255, 0, 0, 107] },
+        { "id": "depthCheck", "type": "toggle", "name": "Depth Check", "default": false }
+      ]
+    },
+    "Livid Helper": {
+      "settings": [
+        { "id": "highlight", "type": "toggle", "name": "Highlight Livid", "default": true },
+        { "id": "showTimer", "type": "toggle", "name": "Show Invulnerability Timer", "default": true },
+        { "id": "showTargetTitle", "type": "toggle", "name": "Show Target Color Title", "default": true },
+        { "id": "showTracer", "type": "toggle", "name": "Show Livid Tracer", "default": true },
+        { "id": "useTargetColor", "type": "toggle", "name": "Match Target Color", "default": true },
+        { "id": "tracerColor", "type": "color", "name": "Tracer Color", "default": [255, 85, 85, 255] },
+        { "id": "tracerWidth", "type": "slider", "name": "Tracer Width", "min": 0.5, "max": 5.0, "default": 2.0 }
+      ],
+      "groups": [ { "name": "Livid", "toggle": "highlight", "settings": ["showTimer", "showTargetTitle", "showTracer", "useTargetColor", "tracerColor", "tracerWidth"] } ]
+    },
+    "Tree Broken Notifier": {
+      "settings": [
+        { "id": "giftEnabled", "type": "toggle", "name": "On Tree Gift", "default": true },
+        { "id": "giftText", "type": "text", "name": "Gift Text", "default": "Baum Kaputt", "maxLength": 48 },
+        { "id": "giftSound", "type": "text", "name": "Gift Sound", "default": "minecraft:entity.player.levelup", "maxLength": 64 },
+        { "id": "giftPitch", "type": "slider", "name": "Gift Pitch", "min": 0.5, "max": 2.0, "default": 1.0 },
+        { "id": "hideGiftChat", "type": "toggle", "name": "Hide Gift Message", "default": false },
+        { "id": "felledEnabled", "type": "toggle", "name": "On Timber / Petalfall", "default": true },
+        { "id": "felledText", "type": "text", "name": "Felled Text", "default": "Kaboom", "maxLength": 48 },
+        { "id": "felledSound", "type": "text", "name": "Felled Sound", "default": "minecraft:block.note_block.bass", "maxLength": 64 },
+        { "id": "felledPitch", "type": "slider", "name": "Felled Pitch", "min": 0.5, "max": 2.0, "default": 0.8 },
+        { "id": "hideFelledChat", "type": "toggle", "name": "Hide Felled Message", "default": false },
+        { "id": "duration", "type": "slider", "name": "Duration (s)", "min": 0.5, "max": 10.0, "default": 2.0 },
+        { "id": "playSound", "type": "toggle", "name": "Play Sound", "default": true },
+        { "id": "volume", "type": "slider", "name": "Volume", "min": 0.0, "max": 1.0, "default": 1.0 }
+      ],
+      "groups": [
+        { "name": "Tree Gift", "settings": ["giftEnabled", "giftText", "giftSound", "giftPitch", "hideGiftChat"] },
+        { "name": "Timber & Petalfall", "settings": ["felledEnabled", "felledText", "felledSound", "felledPitch", "hideFelledChat"] },
+        { "name": "Shared", "settings": ["duration", "playSound", "volume"] }
+      ]
+    },
+    "Key Pickup": {
+      "settings": [
+        { "id": "highlightDrops", "type": "toggle", "name": "Highlight Dropped Keys", "default": true },
+        { "id": "keyTracer", "type": "toggle", "name": "Trace Dropped Keys", "default": true },
+        { "id": "tracerWidth", "type": "slider", "name": "Key Tracer Width", "min": 0.5, "max": 5.0, "default": 1.5 },
+        { "id": "alertPickups", "type": "toggle", "name": "Alert on Key Pickup", "default": true },
+        { "id": "alertLocalPickups", "type": "toggle", "name": "Alert on Local Pickup", "default": true },
+        { "id": "alertPartyPickups", "type": "toggle", "name": "Alert on Party Pickup", "default": true },
+        { "id": "alertUnattributedPickups", "type": "toggle", "name": "Alert on Unattributed Pickup", "default": true },
+        { "id": "alertSystemPickupMessages", "type": "toggle", "name": "Alert on Confirmed Pickup Messages", "default": true },
+        { "id": "alertNewDrops", "type": "toggle", "name": "Alert on Newly Spawned Keys", "default": true },
+        { "id": "range", "type": "slider", "name": "Key Highlight Range", "min": 8, "max": 128, "default": 64, "integer": true },
+        { "id": "throughWalls", "type": "toggle", "name": "Draw Through Walls", "default": true },
+        { "id": "alertTitle", "type": "toggle", "name": "Show Alert Title", "default": true },
+        { "id": "playSound", "type": "toggle", "name": "Play Alert Sound", "default": true },
+        { "id": "sound", "type": "text", "name": "Alert Sound", "default": "entity.experience_orb.pickup", "maxLength": 96 },
+        { "id": "volume", "type": "slider", "name": "Alert Volume", "min": 0.0, "max": 1.0, "default": 0.8 },
+        { "id": "pitch", "type": "slider", "name": "Alert Pitch", "min": 0.1, "max": 2.0, "default": 1.0 },
+        { "id": "witherColor", "type": "color", "name": "Wither Key Color", "default": [255, 75, 75, 255] },
+        { "id": "bloodColor", "type": "color", "name": "Blood Key Color", "default": [255, 55, 55, 255] }
+      ],
+      "groups": [
+        { "name": "Dropped Keys", "toggle": "highlightDrops", "settings": ["keyTracer", "tracerWidth", "range", "throughWalls", "witherColor", "bloodColor"] },
+        { "name": "Alerts", "toggle": "alertPickups", "settings": ["alertLocalPickups", "alertPartyPickups", "alertUnattributedPickups", "alertSystemPickupMessages", "alertNewDrops", "alertTitle", "playSound", "sound", "volume", "pitch"] }
+      ]
+    },
+    "Room Alerts": {
+      "settings": [
+        { "id": "roomClear", "type": "toggle", "name": "Room Cleared Alert", "default": true },
+        { "id": "roomClearTitle", "type": "toggle", "name": "Show Title", "default": true },
+        { "id": "roomClearText", "type": "text", "name": "Title Text", "default": "Room Cleared", "maxLength": 64 },
+        { "id": "roomClearColor", "type": "color", "name": "Room Cleared Title Color", "label": "Title Color", "default": [0, 220, 255, 255] },
+        { "id": "roomClearSoundEnabled", "type": "toggle", "name": "Play Sound", "default": true },
+        { "id": "roomClearSound", "type": "text", "name": "Room Cleared Sound ID", "label": "Sound ID", "default": "entity.player.levelup", "maxLength": 96 },
+        { "id": "roomClearVolume", "type": "slider", "name": "Sound Volume", "min": 0.0, "max": 1.0, "default": 0.8 },
+        { "id": "roomClearPitch", "type": "slider", "name": "Sound Pitch", "min": 0.1, "max": 2.0, "default": 1.0 },
+        { "id": "secretsComplete", "type": "toggle", "name": "Secrets Complete Alert", "default": true },
+        { "id": "secretsTitle", "type": "toggle", "name": "Secrets Show Title", "label": "Show Title", "default": true },
+        { "id": "secretsText", "type": "text", "name": "Secrets Title Text", "label": "Title Text", "default": "Secrets Cleared", "maxLength": 64 },
+        { "id": "secretsColor", "type": "color", "name": "Secrets Complete Title Color", "label": "Title Color", "default": [85, 255, 100, 255] },
+        { "id": "secretsSoundEnabled", "type": "toggle", "name": "Secrets Play Sound", "label": "Play Sound", "default": true },
+        { "id": "secretsSound", "type": "text", "name": "Secrets Complete Sound ID", "label": "Sound ID", "default": "block.note_block.pling", "maxLength": 96 },
+        { "id": "secretsVolume", "type": "slider", "name": "Secrets Sound Volume", "label": "Sound Volume", "min": 0.0, "max": 1.0, "default": 0.8 },
+        { "id": "secretsPitch", "type": "slider", "name": "Secrets Sound Pitch", "label": "Sound Pitch", "min": 0.1, "max": 2.0, "default": 1.0 },
+        { "id": "alertDuration", "type": "slider", "name": "Title Duration (ticks)", "min": 1, "max": 200, "default": 60, "integer": true }
+      ],
+      "groups": [
+        { "name": "Room Cleared", "toggle": "roomClear", "settings": ["roomClearTitle", "roomClearText", "roomClearColor", "roomClearSoundEnabled", "roomClearSound", "roomClearVolume", "roomClearPitch"] },
+        { "name": "Secrets Cleared", "toggle": "secretsComplete", "settings": ["secretsTitle", "secretsText", "secretsColor", "secretsSoundEnabled", "secretsSound", "secretsVolume", "secretsPitch"] },
+        { "name": "Display", "settings": ["alertDuration"] }
+      ]
+    },
+    "i4 helper": {
+      "settings": [
+        { "id": "completedColor", "type": "color", "name": "Completed Block", "default": [255, 0, 0, 255] },
+        { "id": "activeColor", "type": "color", "name": "Active Block", "default": [0, 255, 0, 255] },
+        { "id": "aimColor", "type": "color", "name": "Aim Sphere", "default": [255, 255, 0, 200] },
+        { "id": "prefireColor", "type": "color", "name": "Prefire Sphere", "default": [255, 140, 0, 200] },
+        { "id": "aimSphereSize", "type": "slider", "name": "Aim Sphere Size", "min": 0.05, "max": 0.6, "default": 0.25 },
+        { "id": "prefireSphereSize", "type": "slider", "name": "Prefire Sphere Size", "min": 0.05, "max": 0.6, "default": 0.2 }
+      ],
+      "groups": [
+        { "name": "Blocks", "settings": ["completedColor", "activeColor"] },
+        { "name": "Aim Spheres", "settings": ["aimColor", "aimSphereSize", "prefireColor", "prefireSphereSize"] }
+      ]
+    },
+    "Score Titles": {
+      "settings": [
+        { "id": "alerts", "type": "toggle", "name": "Score Alerts", "default": true },
+        { "id": "firstThreshold", "type": "slider", "name": "First Threshold", "min": 0, "max": 300, "default": 270, "integer": true },
+        { "id": "secondThreshold", "type": "slider", "name": "Second Threshold", "min": 0, "max": 300, "default": 300, "integer": true },
+        { "id": "alertText", "type": "text", "name": "Alert Text", "default": "Score {score}", "maxLength": 80 },
+        { "id": "durationTicks", "type": "slider", "name": "Duration (Ticks)", "min": 10, "max": 300, "default": 20, "integer": true },
+        { "id": "playSound", "type": "toggle", "name": "Play Sound", "default": true },
+        { "id": "soundId", "type": "text", "name": "Sound ID", "default": "block.anvil.land", "maxLength": 96 },
+        { "id": "paulBonus", "type": "dropdown", "name": "Paul Score Bonus", "default": "UNKNOWN", "choices": ["UNKNOWN", "NO", "YES"], "labels": { "UNKNOWN": "Unknown", "NO": "No Paul bonus", "YES": "Paul bonus active" } }
+      ],
+      "groups": [
+        { "name": "Milestones", "toggle": "alerts", "settings": ["firstThreshold", "secondThreshold"] },
+        { "name": "Presentation", "settings": ["alertText", "durationTicks", "playSound", "soundId"] },
+        { "name": "Score Inputs", "settings": ["paulBonus"] }
+      ]
+    },
+    "Chat": {
+      "settings": [
+        { "id": "extraWidth", "type": "slider", "name": "Extra Width", "min": 0, "max": 16384, "default": 0, "integer": true },
+        { "id": "extraFocusedHeight", "type": "slider", "name": "Extra Focused Height", "min": 0, "max": 16384, "default": 0, "integer": true },
+        { "id": "extraUnfocusedHeight", "type": "slider", "name": "Extra Unfocused Height", "min": 0, "max": 16384, "default": 0, "integer": true },
+        { "id": "copyOnRightClick", "type": "toggle", "name": "Copy Message on Right-click", "default": true },
+        { "id": "legacyWindowWidth", "type": "slider", "name": "Window Width", "min": 0, "max": 16384, "default": 0, "integer": true },
+        { "id": "legacyWindowHeight", "type": "slider", "name": "Window Height", "min": 0, "max": 16384, "default": 0, "integer": true }
+      ],
+      "groups": [
+        { "name": "Size", "settings": ["extraWidth", "extraFocusedHeight", "extraUnfocusedHeight"] },
+        { "name": "Messages", "settings": ["copyOnRightClick"] }
+      ]
+    },
+    "Pest Highlighter": {
+      "settings": [
+        { "id": "box", "type": "toggle", "name": "Box", "default": false },
+        { "id": "circle", "type": "toggle", "name": "Circle", "label": "Ring Mode", "default": true },
+        { "id": "tracer", "type": "toggle", "name": "Tracer", "default": true },
+        { "id": "showName", "type": "toggle", "name": "Show Name", "default": false },
+        { "id": "depthCheck", "type": "toggle", "name": "Depth Check", "default": true },
+        { "id": "scanInterval", "type": "slider", "name": "Scan Interval", "min": 1, "max": 200, "default": 20, "integer": true },
+        { "id": "outlineColor", "type": "color", "name": "Outline Color", "default": [182, 47, 0, 255] },
+        { "id": "outlineWidth", "type": "slider", "name": "Outline Width", "min": 0.5, "max": 5.0, "default": 2.0 },
+        { "id": "fillColor", "type": "color", "name": "Fill Color", "default": [182, 47, 0, 60] },
+        { "id": "circleColor", "type": "color", "name": "Circle Color", "default": [0, 167, 255, 255] },
+        { "id": "circleWidth", "type": "slider", "name": "Circle Width", "min": 0.5, "max": 5.0, "default": 5.0 },
+        { "id": "circleRadius", "type": "slider", "name": "Circle Radius", "min": 0.1, "max": 3.0, "default": 0.99761915 },
+        { "id": "circleSpeed", "type": "slider", "name": "Circle Speed", "min": 0.1, "max": 4.0, "default": 0.20129871 },
+        { "id": "ringCount", "type": "slider", "name": "Ring Count", "min": 1, "max": 8, "default": 1, "integer": true },
+        { "id": "tracerColor", "type": "color", "name": "Tracer Color", "default": [0, 201, 255, 255] },
+        { "id": "tracerWidth", "type": "slider", "name": "Tracer Width", "min": 0.5, "max": 5.0, "default": 2.0 },
+        { "id": "nameColor", "type": "color", "name": "Name Color", "default": [182, 47, 0, 255] },
+        { "id": "labelSize", "type": "slider", "name": "Label Size", "min": 0.5, "max": 4.0, "default": 1.0 }
+      ],
+      "groups": [
+        { "name": "Display", "settings": ["box", "circle", "tracer", "showName", "depthCheck", "scanInterval"] },
+        { "name": "Appearance", "groups": [
+          { "name": "Box", "settings": ["outlineColor", "outlineWidth", "fillColor"] },
+          { "name": "Ring", "settings": ["circleColor", "circleWidth", "circleRadius", "circleSpeed", "ringCount"] },
+          { "name": "Tracer", "settings": ["tracerColor", "tracerWidth"] },
+          { "name": "Name", "settings": ["nameColor", "labelSize"] }
+        ] }
+      ]
+    },
+    "Third Person Camera": {
+      "settings": [
+        { "id": "frontFacing", "type": "toggle", "name": "Front Facing", "label": "Allow Front Camera", "default": false },
+        { "id": "noCameraClip", "type": "toggle", "name": "No Camera Clip", "default": false },
+        { "id": "cameraDistance", "type": "slider", "name": "Camera Distance", "min": 0.1, "max": 16.0, "default": 4.0 },
+        { "id": "showOwnPlayerName", "type": "toggle", "name": "Show Your Name", "default": false },
+        { "id": "freeLookEnabled", "type": "toggle", "name": "Free Look Enabled", "label": "Enable Free Look", "default": false },
+        { "id": "freeLookKeybind", "type": "text", "name": "Free Look Keybind", "default": "key.keyboard.c", "maxLength": 48, "keybind": true }
+      ],
+      "groups": [
+        { "name": "Camera", "settings": ["frontFacing", "noCameraClip", "cameraDistance", "showOwnPlayerName"] },
+        { "name": "Free Look", "settings": ["freeLookEnabled", "freeLookKeybind"] }
+      ]
+    },
+    "Secret Clicked": {
+      "settings": [
+        { "id": "boxes", "type": "toggle", "name": "Secret Boxes", "default": true },
+        { "id": "boxStyle", "type": "dropdown", "name": "Box Style", "default": "FILLED_OUTLINE", "choices": ["OUTLINE", "FILLED", "FILLED_OUTLINE"], "labels": { "OUTLINE": "Outline", "FILLED": "Filled", "FILLED_OUTLINE": "Filled Outline" } },
+        { "id": "boxColor", "type": "color", "name": "Box Color", "label": "Box Outline Color", "default": [255, 170, 0, 204] },
+        { "id": "depthCheck", "type": "toggle", "name": "Depth Check", "default": false },
+        { "id": "lockedColor", "type": "color", "name": "Locked Color", "label": "Locked Outline Color", "default": [255, 85, 85, 204] },
+        { "id": "timeToStay", "type": "slider", "name": "Time To Stay", "label": "Box Time To Stay (s)", "min": 0.5, "max": 120.0, "default": 7.0 },
+        { "id": "boxesInBoss", "type": "toggle", "name": "Box In Boss", "default": false },
+        { "id": "itemBoxes", "type": "toggle", "name": "Item Boxes", "default": true },
+        { "id": "chime", "type": "toggle", "name": "Play Chime", "label": "Secret Chime", "default": true },
+        { "id": "feedbackWindowMillis", "type": "slider", "name": "Confirmation Window (ms)", "min": 100, "max": 10000, "default": 1000, "integer": true },
+        { "id": "allowSecretBlocksInBoss", "type": "toggle", "name": "Allow Secret Blocks in Boss", "label": "Track Secret Blocks in Boss", "default": false },
+        { "id": "chimeInBoss", "type": "toggle", "name": "Chime In Boss", "default": false },
+        { "id": "sound", "type": "text", "name": "Chime Sound", "default": "entity.blaze.hurt", "maxLength": 96 },
+        { "id": "volume", "type": "slider", "name": "Chime Volume", "min": 0.0, "max": 2.0, "default": 1.5 },
+        { "id": "pitch", "type": "slider", "name": "Chime Pitch", "min": 0.1, "max": 2.0, "default": 1.0 }
+      ],
+      "groups": [
+        { "name": "Secret Boxes", "toggle": "boxes", "settings": ["boxStyle", "boxColor", "depthCheck", "lockedColor", "timeToStay", "boxesInBoss", "itemBoxes"] },
+        { "name": "Secret Chime", "toggle": "chime", "settings": ["chimeInBoss", "sound", "volume", "pitch"] },
+        { "name": "Click Confirmation", "settings": ["feedbackWindowMillis", "allowSecretBlocksInBoss"] }
+      ]
+    }
+  }
+}

@@ -1,0 +1,650 @@
+package geiler.addons.client.macro;
+
+import com.google.gson.JsonParser;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.mojang.blaze3d.platform.InputConstants;
+import geiler.addons.client.config.ClickGuiState;
+import geiler.addons.client.config.MacroStepConfigCodec;
+import geiler.addons.client.inventory.PlayerInventoryControlsChecks;
+import geiler.addons.client.location.Island;
+import geiler.addons.client.module.BooleanSetting;
+import geiler.addons.client.module.ModuleKeybind;
+import geiler.addons.client.module.Setting;
+import geiler.addons.client.module.SettingGroup;
+import geiler.addons.client.module.TextSetting;
+import geiler.addons.client.module.impl.MacrosModule;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
+
+/** Pure workflow checks that do not need a running client or server. */
+public final class MacroChecks {
+	private MacroChecks() {
+	}
+
+	public static void run() {
+		checkReusableFunctionLimits();
+		checkKotlinMacroModelContracts();
+		MacroDefinition macro = new MacroDefinition(7);
+		macro.setCanvasView(120, -45, 1.0f);
+		macro.setCanvasZoom(30.0f);
+		assertEquals(30.0f, macro.canvasZoom(), "macro canvas stores zoom as a percentage");
+		assertEquals(120.0f, macro.canvasPanX(), "changing zoom alone leaves horizontal pan unchanged");
+		assertEquals(-45.0f, macro.canvasPanY(), "changing zoom alone leaves vertical pan unchanged");
+		macro.setCanvasZoom(0.001f);
+		assertEquals(1.0f, macro.canvasZoom(), "macro canvas can zoom out to the one percent floor");
+		assertSame(MacroTriggerContext.ANY_NON_TEXT_SCREEN, macro.triggerContext(),
+			"new macros are allowed in non-text contexts by default");
+		MacroStep.Command delayed = new MacroStep.Command("/example");
+		assertEquals(0, delayed.delayMin(), "new nodes have no hidden minimum delay");
+		assertEquals(0, delayed.delayMax(), "new nodes have no hidden maximum delay");
+		delayed.setDelay(250, 90_000);
+		assertEquals(250, delayed.delayMin(), "node delay lower bound");
+		assertEquals(60_000, delayed.delayMax(), "node delay upper bound");
+		delayed.setDelay(-1, -1);
+		assertEquals(0, delayed.delayMin(), "clearing a node delay is immediate");
+		assertEquals(0, delayed.delayMax(), "clearing a node delay removes the range");
+
+		delayed.setDelay(400, 600);
+		delayed.setDelayMin(800);
+		assertEquals(800, delayed.delayMin(), "raising the delay minimum above the maximum keeps the typed minimum");
+		assertEquals(800, delayed.delayMax(), "raising the delay minimum above the maximum lifts the maximum");
+		MacroStep.Wait ranged = new MacroStep.Wait(400, 600);
+		ranged.setMinMillis(800);
+		assertEquals(800, ranged.minMillis(), "wait minimum above the maximum is kept");
+		assertEquals(800, ranged.maxMillis(), "wait maximum follows a higher minimum");
+		ranged.setMaxMillis(100);
+		assertEquals(800, ranged.minMillis(), "typing a lower maximum never lowers the minimum");
+		assertEquals(800, ranged.maxMillis(), "a maximum below the minimum clamps up to the minimum");
+
+		MacroStep.Repeat freshRepeat = new MacroStep.Repeat(false, 3);
+		MacroStep.RepeatUntil freshUntil = new MacroStep.RepeatUntil(null);
+		geiler.addons.client.config.ClickGuiState.expandNewMacroNode(freshRepeat);
+		geiler.addons.client.config.ClickGuiState.expandNewMacroNode(freshUntil);
+		assertTrue(geiler.addons.client.config.ClickGuiState.macroNodeExpanded(freshRepeat)
+				&& geiler.addons.client.config.ClickGuiState.macroNodeExpanded(freshUntil),
+			"new Repeat and Repeat Until nodes open with their bag visible");
+		assertTrue(!geiler.addons.client.config.ClickGuiState.macroNodeExpanded(
+				geiler.addons.client.config.ClickGuiState.expandNewMacroNode(new MacroStep.Wait(1, 2))),
+			"leaf nodes have no bag to expand");
+
+		MacroStep.Repeat repeat = new MacroStep.Repeat(true, 0);
+		repeat.steps().add(new MacroStep.Wait(10, 20));
+		macro.steps().add(new MacroStep.Command("/example"));
+		macro.steps().add(repeat);
+		assertTrue(repeat.forever(), "repeat supports an endless loop");
+		assertEquals(1, repeat.count(), "finite repeat count clamps to one");
+		assertEquals(2, macro.steps().size(), "workflow keeps ordered top-level steps");
+
+		assertSame(MacroFlowRules.UntilDecision.EXIT, MacroFlowRules.repeatUntil(true, true),
+			"Repeat Until checks its condition before entering the body");
+		assertSame(MacroFlowRules.UntilDecision.RUN_BODY, MacroFlowRules.repeatUntil(false, true),
+			"Repeat Until runs the body while its stop condition is false");
+		assertSame(MacroFlowRules.UntilDecision.EMPTY_BODY, MacroFlowRules.repeatUntil(false, false),
+			"an empty Repeat Until body aborts rather than spinning");
+		assertSame(MacroFlowRules.WorldSwitchStart.COMPLETE,
+			MacroFlowRules.worldSwitchStart(true, Island.HUB, Island.HUB),
+			"a world switch to the island the player is already on completes at once");
+		assertSame(MacroFlowRules.WorldSwitchStart.WAIT,
+			MacroFlowRules.worldSwitchStart(true, Island.GARDEN, Island.HUB),
+			"a world switch to another island waits for the level change");
+		assertSame(MacroFlowRules.WorldSwitchStart.WAIT,
+			MacroFlowRules.worldSwitchStart(true, Island.NONE, Island.HUB),
+			"an unknown current island still waits");
+		assertSame(MacroFlowRules.WorldSwitchStart.DETECTION_OFF,
+			MacroFlowRules.worldSwitchStart(false, Island.HUB, Island.HUB),
+			"with island detection off a world switch cannot complete and says so");
+		List<MacroValue> callArguments = new ArrayList<>();
+		callArguments.add(MacroValue.itemCount("ENCHANTED_CARROT", "minecraft:carrot"));
+		callArguments.add(MacroValue.literal(MacroValue.Type.NUMBER, "5"));
+		List<MacroValue> materialized = new ArrayList<>(MacroFlowRules.materializeItemCountArguments(callArguments, value -> 12));
+		assertEquals(MacroValue.Type.NUMBER, materialized.get(0).type(), "item-count arguments become number literals");
+		assertEquals("12", materialized.get(0).value(), "item-count arguments carry the live count into the function");
+		assertSame(callArguments.get(1), materialized.get(1), "other arguments pass through unchanged");
+		assertFalse(MacroRuntimeRules.inputBlockWaitExpired(false, 1L, 120_000_000_000L),
+			"an indefinite wait without an input block never times out");
+		assertFalse(MacroRuntimeRules.inputBlockWaitExpired(true, 1L, 30_000_000_000L),
+			"an input block survives a short indefinite wait");
+		assertTrue(MacroRuntimeRules.inputBlockWaitExpired(true, 1L, 61_000_000_000L),
+			"an indefinite wait with an input block ends the run after 60 seconds");
+		assertTrue(MacroFlowRules.compareValues("10", 9.0) > 0, "text 10 is greater than number 9");
+		assertEquals(0, MacroFlowRules.compareValues("5", 5.0), "text 5 equals number 5");
+		assertEquals(0, MacroFlowRules.compareValues(5.0, " 5.0 "), "number 5 equals padded text 5.0");
+		assertTrue(MacroFlowRules.compareValues("10", "9") < 0, "two texts keep comparing as text");
+		assertTrue(MacroFlowRules.compareValues("abc", 9.0) != 0, "non-numeric text never equals a number");
+		assertEquals(5.0, MacroFlowRules.parsePlainNumber("5"), "plain integers parse");
+		assertEquals(-2.5, MacroFlowRules.parsePlainNumber(" -2.5 "), "signed decimals parse");
+		assertEquals(null, MacroFlowRules.parsePlainNumber("NaN"), "NaN text is rejected");
+		assertEquals(null, MacroFlowRules.parsePlainNumber("Infinity"), "Infinity text is rejected");
+		assertEquals(null, MacroFlowRules.parsePlainNumber("5d"), "a Java type suffix is rejected");
+		assertEquals(null, MacroFlowRules.parsePlainNumber("0x1p3"), "hex float text is rejected");
+		assertEquals(256, MacroFlowRules.MAX_CHAT_LENGTH, "macro chat and command text is limited to the protocol length");
+		assertTrue(MacroFlowRules.missingItemEndsUntil(true, true),
+			"a missing Click Item can finish the final Repeat Until iteration");
+		assertFalse(MacroFlowRules.missingItemEndsUntil(true, false),
+			"a missing item does not skip the body while the stop condition is false");
+		assertFalse(MacroFlowRules.contextEnded(true, true, false, true),
+			"world-switch wait does not cancel just because the old player context ended");
+		assertTrue(MacroFlowRules.contextEnded(false, true, true, false),
+			"disabling the macro system cancels a running workflow");
+		assertTrue(MacroFlowRules.contextEnded(true, false, false, true),
+			"losing the level cancels even a workflow waiting for a world switch");
+		assertTrue(MacroFlowRules.itemNameMatches("Confirm Entry", "confirm", true),
+			"partial item matching ignores case after formatting normalization");
+		assertFalse(MacroFlowRules.itemNameMatches("Confirm Entry", "Confirm", false),
+			"exact item matching rejects a partial name");
+		assertTrue(MacroFlowRules.itemNameMatchesAny("Confirm Entry", "Claim, Confirm", true),
+			"comma-separated partial names are alternatives");
+		assertTrue(MacroFlowRules.itemNameMatchesAny("Claim", " Confirm , Claim ", false),
+			"comma-separated exact names are trimmed alternatives");
+		assertFalse(MacroFlowRules.itemNameMatchesAny("Claim", "Confirm, Collect", true),
+			"item matching requires at least one matching alternative");
+
+		MacroDefinition movable = new MacroDefinition(14);
+		MacroStep.IfElse moveBranch = new MacroStep.IfElse(new MacroCondition.Always(true));
+		MacroStep.Command movableNode = new MacroStep.Command("/preserve");
+		movableNode.setDelay(45, 90);
+		MacroStep.Command siblingNode = new MacroStep.Command("/sibling");
+		movable.steps().add(moveBranch);
+		movable.steps().add(movableNode);
+		movable.steps().add(siblingNode);
+		assertTrue(MacroTreeRules.move(movable, movable.steps(), movableNode, moveBranch.thenSteps(), 0),
+			"tree rules move a node into a child slot");
+		assertSame(movableNode, moveBranch.thenSteps().getFirst(), "tree movement preserves the original node object");
+		assertFalse(MacroTreeRules.canMove(movable, movable.steps(), moveBranch, moveBranch.thenSteps(), 0),
+			"tree rules reject moving a branch into its own descendants");
+		assertTrue(MacroTreeRules.move(movable, moveBranch.thenSteps(), movableNode, movable.steps(), movable.steps().size()),
+			"tree rules move a child back to the root list");
+		assertTrue(MacroTreeRules.move(movable, movable.steps(), movableNode, movable.steps(), 1),
+			"tree rules reorder nodes within one sibling list");
+		assertSame(movableNode, movable.steps().get(1), "same-list movement adjusts the insertion index after removal");
+		assertEquals(45, movableNode.delayMin(), "tree movement preserves node delay settings");
+		assertEquals(90, movableNode.delayMax(), "tree movement preserves node delay settings");
+		MacroDefinition switchMove = new MacroDefinition(16);
+		MacroStep.Switch switchNode = new MacroStep.Switch();
+		MacroStep.Repeat switchNested = new MacroStep.Repeat(false, 1);
+		switchNested.steps().add(new MacroStep.Command("/inside-switch"));
+		switchNode.cases().getFirst().steps().add(switchNested);
+		switchMove.steps().add(switchNode);
+		assertTrue(MacroTreeRules.containsDescendantList(switchNode, switchNested.steps()),
+			"switch case stacks participate in descendant traversal");
+		assertEquals(2, MacroTreeRules.subtreeDepth(switchNode),
+			"switch case and nested repeat bodies contribute to subtree depth");
+		assertFalse(MacroTreeRules.canMove(switchMove, switchMove.steps(), switchNode, switchNested.steps(), 0),
+			"tree rules reject moving a switch into a nested case descendant");
+		MacroDefinition tooDeep = new MacroDefinition(15);
+		List<MacroStep> deepTarget = tooDeep.steps();
+		for (int i = 0; i <= MacroTreeRules.MAX_DEPTH; i++) {
+			MacroStep.Repeat nestedRepeat = new MacroStep.Repeat(false, 1);
+			deepTarget.add(nestedRepeat);
+			deepTarget = nestedRepeat.steps();
+		}
+		assertFalse(MacroTreeRules.canInsert(tooDeep, new MacroStep.Command("/too-deep"), deepTarget),
+			"tree rules reject an insertion beyond the codec nesting limit");
+		MacroDefinition maximumDepth = new MacroDefinition(17);
+		List<MacroStep> maximumDepthTarget = maximumDepth.steps();
+		for (int i = 0; i < MacroTreeRules.MAX_DEPTH; i++) {
+			MacroStep.Repeat nested = new MacroStep.Repeat(false, 1);
+			maximumDepthTarget.add(nested);
+			maximumDepthTarget = nested.steps();
+		}
+		assertTrue(MacroTreeRules.canInsert(maximumDepth, new MacroStep.Chat("at max depth"), maximumDepthTarget),
+			"a leaf remains insertable at the codec's maximum nesting depth");
+		assertTrue(MacroCondition.ItemScope.CONTAINER.includesPlayerSlot(false),
+			"container scope includes non-player slots");
+		assertFalse(MacroCondition.ItemScope.CONTAINER.includesPlayerSlot(true),
+			"container scope excludes player inventory slots");
+		assertFalse(MacroCondition.ItemScope.PLAYER_INVENTORY.includesPlayerSlot(false),
+			"player inventory scope excludes container slots");
+		assertTrue(MacroCondition.ItemScope.PLAYER_INVENTORY.includesPlayerSlot(true),
+			"player inventory scope includes player slots");
+		assertTrue(MacroCondition.ItemScope.CONTAINER_AND_PLAYER.includesPlayerSlot(false)
+			&& MacroCondition.ItemScope.CONTAINER_AND_PLAYER.includesPlayerSlot(true),
+			"combined scope includes both slot groups");
+		MacroCondition.Item missingFromContainer = new MacroCondition.Item("Confirm", false, true,
+			MacroCondition.ItemScope.CONTAINER);
+		assertTrue(missingFromContainer.matches(false), "missing-item conditions pass when the selected area has no match");
+		assertFalse(missingFromContainer.matches(true), "missing-item conditions fail when the selected area has a match");
+		MacroCondition.Item presentInPlayer = new MacroCondition.Item("Confirm", true, true,
+			MacroCondition.ItemScope.PLAYER_INVENTORY);
+		assertTrue(presentInPlayer.matches(true), "present-item conditions pass when the selected area has a match");
+		assertFalse(presentInPlayer.matches(false), "present-item conditions fail when the selected area has no match");
+		Random delayRandom = new Random(17);
+		for (int i = 0; i < 100; i++) {
+			int delay = MacroFlowRules.randomDelay(30, 50, delayRandom);
+			assertTrue(delay >= 30 && delay <= 50, "randomized node delay stays inside its inclusive range");
+		}
+		for (int i = 0; i < 100; i++) {
+			int holdMillis = MacroFlowRules.randomDelay(125, 375, delayRandom);
+			assertTrue(holdMillis >= 125 && holdMillis <= 375,
+				"randomized hold duration stays inside its inclusive range");
+		}
+		MacroStep.Key holdRange = new MacroStep.Key("key.keyboard.left.shift", true, 125, 375);
+		assertEquals(125, holdRange.holdMinMillis(), "key node retains the random hold minimum");
+		assertEquals(375, holdRange.holdMaxMillis(), "key node retains the random hold maximum");
+		assertFalse(InputConstants.getKey(holdRange.key()).equals(InputConstants.UNKNOWN),
+			"the captured left Shift identifier resolves to a usable game key");
+		MacroKeyHoldState syntheticHold = new MacroKeyHoldState();
+		syntheticHold.begin(InputConstants.KEY_LSHIFT, 1_000);
+		assertTrue(syntheticHold.isDown(InputConstants.KEY_LSHIFT, 999),
+			"synthetic Shift remains down through vanilla input polling during its hold");
+		assertFalse(syntheticHold.isDown(InputConstants.KEY_RSHIFT, 999),
+			"left Shift holds do not report right Shift as pressed");
+		assertTrue(syntheticHold.isDue(1_000), "synthetic held keys become due at their configured deadline");
+		assertFalse(syntheticHold.isDown(InputConstants.KEY_LSHIFT, 1_000),
+			"synthetic key state expires exactly at the hold deadline");
+		syntheticHold.clear();
+		assertFalse(syntheticHold.isDown(InputConstants.KEY_LSHIFT, 999),
+			"cancellation clears synthetic key state immediately");
+		for (int modifier : new int[] {InputConstants.KEY_LSHIFT, InputConstants.KEY_RSHIFT,
+			InputConstants.KEY_LCONTROL, InputConstants.KEY_RCONTROL, InputConstants.KEY_LALT,
+			InputConstants.KEY_RALT, InputConstants.KEY_LSUPER, InputConstants.KEY_RSUPER}) {
+			syntheticHold.begin(modifier, 2_000);
+			assertTrue(syntheticHold.isDown(modifier, 1_999),
+				"synthetic modifier key remains visible while held: " + modifier);
+			syntheticHold.clear();
+		}
+
+		MacroStep.WorldSwitch switchStep = new MacroStep.WorldSwitch(Island.GARDEN);
+		assertSame(Island.GARDEN, switchStep.target(), "world switch keeps its selected destination");
+		switchStep.setTarget(Island.NONE);
+		assertSame(Island.HUB, switchStep.target(), "world switch fails safe for unknown destinations");
+		assertEquals("world_switch", switchStep.type(), "world switch has a stable persisted type");
+
+		macro.setIslands(List.of(Island.GARDEN));
+		macro.setIslandRestricted(true);
+		assertTrue(macro.allowsIsland(Island.GARDEN), "selected island passes the filter");
+		assertFalse(macro.allowsIsland(Island.HUB), "unselected island is blocked");
+		macro.setIslandRestricted(false);
+		assertTrue(macro.allowsIsland(Island.HUB), "disabled island filter allows every island");
+		macro.setIslands(List.of(Island.GARDEN, Island.OTHER, Island.NONE));
+		assertEquals(1, macro.islands().size(), "non-selectable islands are ignored");
+		macro.setName("Shared routine");
+		macro.setTriggerContext(MacroTriggerContext.CONTAINER_ONLY);
+		macro.steps().getFirst().setDelay(125, 350);
+		String packageText = MacroTransfer.encode(List.of(macro));
+		MacroTransfer.ImportResult imported = MacroTransfer.decode(packageText, 100);
+		assertTrue(imported.success(), "macro package can be decoded");
+		assertEquals(1, imported.macros().size(), "macro package keeps its selection count");
+		MacroDefinition copy = imported.macros().getFirst();
+		assertEquals(100, copy.id(), "import assigns a fresh macro id");
+		assertEquals("Shared routine", copy.name(), "import keeps the macro name");
+		assertSame(MacroTriggerContext.CONTAINER_ONLY, copy.triggerContext(), "import keeps trigger context");
+		assertEquals(125, copy.steps().getFirst().delayMin(), "import keeps node delay minimum");
+		assertEquals(350, copy.steps().getFirst().delayMax(), "import keeps node delay maximum");
+		assertFalse(MacroTransfer.decode("not a macro package", 0).success(),
+			"invalid clipboard data is rejected");
+		assertEquals(0.0f, MacroTitleTiming.opacity(0, 200, 1_000, 300), "macro title begins transparent");
+		assertEquals(0.5f, MacroTitleTiming.opacity(100, 200, 1_000, 300), "macro title fades in linearly");
+		assertEquals(1.0f, MacroTitleTiming.opacity(700, 200, 1_000, 300), "macro title remains visible during hold");
+		assertEquals(0.5f, MacroTitleTiming.opacity(1_350, 200, 1_000, 300), "macro title fades out linearly");
+		assertEquals(0.0f, MacroTitleTiming.opacity(1_500, 200, 1_000, 300), "macro title ends transparent");
+
+		MacroDefinition oldFormat = new MacroDefinition(21);
+		oldFormat.steps().add(new MacroStep.Command("/legacy"));
+		JsonObject legacyPackage = JsonParser.parseString(MacroTransfer.encode(List.of(oldFormat))).getAsJsonObject();
+		legacyPackage.addProperty("version", 1);
+		JsonObject legacyZoomMacro = legacyPackage.getAsJsonArray("macros").get(0).getAsJsonObject();
+		legacyZoomMacro.addProperty("canvasZoom", 0.01f);
+		legacyZoomMacro.remove("canvasZoomVersion");
+		MacroTransfer.ImportResult importedV1 = MacroTransfer.decode(legacyPackage.toString(), 120);
+		assertTrue(importedV1.success(), "version 1 macro transfer packages remain importable");
+		assertEquals("/legacy", ((MacroStep.Chat) importedV1.macros().getFirst().steps().getFirst()).message(),
+			"version 1 import migrates a legacy command without changing its behavior");
+		assertEquals(100.0f, importedV1.macros().getFirst().canvasZoom(),
+			"legacy one-percent zoom migrates to the new 100-percent value");
+		legacyZoomMacro.addProperty("canvasZoom", 1.0f);
+		legacyZoomMacro.addProperty("canvasZoomVersion", 1);
+		MacroTransfer.ImportResult importedVersion1Zoom = MacroTransfer.decode(legacyPackage.toString(), 120);
+		assertEquals(100.0f, importedVersion1Zoom.macros().getFirst().canvasZoom(),
+			"previous percent-based transfers map old 1 percent to new 100 percent");
+
+		MacroDefinition effects = new MacroDefinition(22);
+		MacroStep.Title title = new MacroStep.Title();
+		title.setText("Dungeon ready");
+		title.setFont("minecraft:uniform");
+		title.setScale(3.25f);
+		title.setTextColor(0xFF33CCAA);
+		title.setShowBackground(true);
+		title.setBackgroundColor(0xFF182030);
+		title.setBackgroundOpacity(180);
+		title.setFadeInMillis(450);
+		title.setHoldMillis(1_750);
+		title.setFadeOutMillis(600);
+		MacroStep.Sound sound = new MacroStep.Sound("minecraft:entity.experience_orb.pickup");
+		effects.steps().add(title);
+		effects.steps().add(sound);
+		JsonObject currentPackage = JsonParser.parseString(MacroTransfer.encode(List.of(effects))).getAsJsonObject();
+		assertEquals(8, currentPackage.get("version").getAsInt(), "new macro transfers use format version 8");
+		MacroDefinition effectsCopy = MacroTransfer.decode(currentPackage.toString(), 121).macros().getFirst();
+		MacroStep.Title titleCopy = (MacroStep.Title) effectsCopy.steps().get(0);
+		assertEquals(title.text(), titleCopy.text(), "v4 transfer preserves macro title text");
+		assertEquals(title.font(), titleCopy.font(), "v4 transfer preserves title font");
+		assertEquals(title.scale(), titleCopy.scale(), "v4 transfer preserves title size");
+		assertEquals(title.fadeInMillis(), titleCopy.fadeInMillis(), "v4 transfer preserves title fade-in");
+		assertEquals(title.holdMillis(), titleCopy.holdMillis(), "v4 transfer preserves title duration");
+		assertEquals(title.fadeOutMillis(), titleCopy.fadeOutMillis(), "v4 transfer preserves title fade-out");
+		assertEquals(title.backgroundOpacity(), titleCopy.backgroundOpacity(), "v4 transfer preserves title background opacity");
+		assertEquals(title.textColor(), titleCopy.textColor(), "v4 transfer preserves title text color");
+		assertEquals(title.showBackground(), titleCopy.showBackground(), "v4 transfer preserves optional title background");
+		assertEquals(title.backgroundColor(), titleCopy.backgroundColor(), "v4 transfer preserves background color");
+		assertEquals(sound.soundId(), ((MacroStep.Sound) effectsCopy.steps().get(1)).soundId(),
+			"v4 transfer preserves registered sound event ids");
+		var effectsConfig = MacroStepConfigCodec.encode(effects.steps());
+		List<MacroStep> effectsConfigCopy = MacroStepConfigCodec.decode(JsonParser.parseString(effectsConfig.toString()).getAsJsonArray());
+		assertEquals(title.text(), ((MacroStep.Title) effectsConfigCopy.get(0)).text(),
+			"local config round-trip preserves title steps");
+		assertEquals(sound.soundId(), ((MacroStep.Sound) effectsConfigCopy.get(1)).soundId(),
+			"local config round-trip preserves sound steps");
+
+		MacroDefinition nested = new MacroDefinition(9);
+		MacroCondition stopWhenMissing = new MacroCondition.Item("Confirm, Claim", false, true, true);
+		MacroStep.RepeatUntil repeatUntil = new MacroStep.RepeatUntil(stopWhenMissing);
+		repeatUntil.setDelay(80, 120);
+		MacroStep.InventoryClick clickMatching = new MacroStep.InventoryClick();
+		clickMatching.setTarget(MacroStep.InventoryClick.Target.ITEM);
+		clickMatching.setName("Confirm, Claim");
+		clickMatching.setContains(true);
+		clickMatching.setDelay(250, 400);
+		repeatUntil.steps().add(clickMatching);
+		repeatUntil.steps().add(new MacroStep.Wait(40, 60));
+		MacroStep.IfElse nestedBranch = new MacroStep.IfElse(new MacroCondition.All(List.of(
+			new MacroCondition.Screen("Auction", true, true),
+			new MacroCondition.Not(new MacroCondition.World(false)))));
+		nestedBranch.thenSteps().add(repeatUntil);
+		nestedBranch.elseSteps().add(new MacroStep.Key("key.keyboard.left.shift", true, 125, 375));
+		nested.steps().add(nestedBranch);
+		MacroTransfer.ImportResult nestedImport = MacroTransfer.decode(MacroTransfer.encode(List.of(nested)), 101);
+		assertTrue(nestedImport.success(), "clipboard preserves nested Repeat Until workflows");
+		MacroStep.IfElse restoredBranch = (MacroStep.IfElse) nestedImport.macros().getFirst().steps().getFirst();
+		MacroStep.Repeat restoredUntil = (MacroStep.Repeat) restoredBranch.thenSteps().getFirst();
+		assertEquals(MacroStep.Repeat.Mode.UNTIL, restoredUntil.mode(), "legacy Repeat Until maps to unified Repeat");
+		assertEquals(stopWhenMissing, restoredUntil.condition(), "clipboard preserves Repeat Until item condition");
+		assertEquals(2, restoredUntil.steps().size(), "clipboard preserves Repeat Until children");
+		assertEquals("Confirm, Claim", ((MacroStep.InventoryClick) restoredUntil.steps().getFirst()).name(),
+			"clipboard preserves comma-separated click alternatives");
+		assertEquals(250, restoredUntil.steps().getFirst().delayMin(), "clipboard preserves child node delays");
+		assertEquals(400, restoredUntil.steps().getFirst().delayMax(), "clipboard preserves child delay ranges");
+		assertEquals(1, restoredBranch.elseSteps().size(), "clipboard preserves the other If/Else branch");
+		MacroStep.Key restoredKey = (MacroStep.Key) restoredBranch.elseSteps().getFirst();
+		assertEquals("key.keyboard.left.shift", restoredKey.key(), "clipboard preserves the captured modifier key name");
+		assertEquals(125, restoredKey.holdMinMillis(), "clipboard preserves randomized hold minimum");
+		assertEquals(375, restoredKey.holdMaxMillis(), "clipboard preserves randomized hold maximum");
+		var configTree = MacroStepConfigCodec.encode(nested.steps());
+		var configRoundTrip = MacroStepConfigCodec.decode(JsonParser.parseString(configTree.toString()).getAsJsonArray());
+		MacroStep.IfElse configBranch = (MacroStep.IfElse) configRoundTrip.getFirst();
+		MacroStep.Repeat configUntil = (MacroStep.Repeat) configBranch.thenSteps().getFirst();
+		assertEquals(stopWhenMissing, configUntil.condition(), "config round trip preserves Repeat Until condition");
+		assertEquals(2, configUntil.steps().size(), "config round trip preserves nested loop body");
+		assertEquals(80, configUntil.delayMin(), "config round trip preserves loop delay minimum");
+		assertEquals(120, configUntil.delayMax(), "config round trip preserves loop delay maximum");
+		assertEquals(nestedBranch.condition(), configBranch.condition(), "config round trip preserves composed AND/NOT conditions");
+		MacroStep.Key configKey = (MacroStep.Key) configBranch.elseSteps().getFirst();
+		assertEquals(125, configKey.holdMinMillis(), "config round trip preserves randomized hold minimum");
+		assertEquals(375, configKey.holdMaxMillis(), "config round trip preserves randomized hold maximum");
+		assertEquals("Confirm, Claim", ((MacroStep.InventoryClick) configUntil.steps().getFirst()).name(),
+			"config round trip preserves comma-separated click alternatives");
+		assertEquals("Confirm, Claim", ((MacroCondition.Item) configUntil.condition()).name(),
+			"config round trip preserves comma-separated condition alternatives");
+
+		MacroDefinition scopedItems = new MacroDefinition(13);
+		for (MacroCondition.ItemScope scope : MacroCondition.ItemScope.values()) {
+			scopedItems.steps().add(new MacroStep.WaitUntil(new MacroCondition.Item("Confirm", false, true, scope)));
+		}
+		var scopedConfig = MacroStepConfigCodec.encode(scopedItems.steps());
+		List<MacroStep> scopedConfigCopy = MacroStepConfigCodec.decode(JsonParser.parseString(scopedConfig.toString()).getAsJsonArray());
+		String[] scopeNames = {"container", "player", "all"};
+		for (int i = 0; i < scopeNames.length; i++) {
+			assertEquals(scopeNames[i], scopedConfig.get(i).getAsJsonObject().getAsJsonObject("condition")
+				.get("scope").getAsString(), "local config writes the canonical Item scope " + scopeNames[i]);
+			MacroCondition.Item restored = (MacroCondition.Item) ((MacroStep.WaitUntil) scopedConfigCopy.get(i)).condition();
+			assertSame(MacroCondition.ItemScope.values()[i], restored.scope(),
+				"local config preserves Item scan scope " + scopeNames[i]);
+		}
+		JsonObject scopedClipboard = JsonParser.parseString(MacroTransfer.encode(List.of(scopedItems))).getAsJsonObject();
+		MacroTransfer.ImportResult scopedClipboardImport = MacroTransfer.decode(scopedClipboard.toString(), 103);
+		assertTrue(scopedClipboardImport.success(), "clipboard accepts all Item scan scopes");
+		for (int i = 0; i < scopeNames.length; i++) {
+			assertEquals(scopeNames[i], scopedClipboard.getAsJsonArray("macros").get(0).getAsJsonObject()
+				.getAsJsonArray("steps").get(i).getAsJsonObject().getAsJsonObject("condition")
+				.get("scope").getAsString(), "clipboard writes the canonical Item scope " + scopeNames[i]);
+			MacroCondition.Item restored = (MacroCondition.Item) ((MacroStep.WaitUntil)
+				scopedClipboardImport.macros().getFirst().steps().get(i)).condition();
+			assertSame(MacroCondition.ItemScope.values()[i], restored.scope(),
+				"clipboard preserves Item scan scope " + scopeNames[i]);
+		}
+
+		List<MacroStep> legacyScopeConfig = MacroStepConfigCodec.decode(JsonParser.parseString(
+			"[{\"type\":\"wait_until\",\"condition\":{\"type\":\"item\",\"includePlayerInventory\":false}},"
+			+ "{\"type\":\"wait_until\",\"condition\":{\"type\":\"item\",\"includePlayerInventory\":true}}]").getAsJsonArray());
+		assertSame(MacroCondition.ItemScope.CONTAINER,
+			((MacroCondition.Item) ((MacroStep.WaitUntil) legacyScopeConfig.get(0)).condition()).scope(),
+			"legacy config false maps to container only");
+		assertSame(MacroCondition.ItemScope.CONTAINER_AND_PLAYER,
+			((MacroCondition.Item) ((MacroStep.WaitUntil) legacyScopeConfig.get(1)).condition()).scope(),
+			"legacy config true maps to both slot groups");
+		JsonObject legacyScopeClipboard = JsonParser.parseString(MacroTransfer.encode(List.of(scopedItems))).getAsJsonObject();
+		legacyScopeClipboard.addProperty("version", 2);
+		for (int i = 0; i < 2; i++) {
+			JsonObject condition = legacyScopeClipboard.getAsJsonArray("macros").get(0).getAsJsonObject()
+				.getAsJsonArray("steps").get(i).getAsJsonObject().getAsJsonObject("condition");
+			condition.remove("scope");
+			condition.addProperty("includePlayerInventory", i == 1);
+		}
+		MacroTransfer.ImportResult legacyScopeImport = MacroTransfer.decode(legacyScopeClipboard.toString(), 104);
+		assertTrue(legacyScopeImport.success(), "clipboard reads legacy Item scope booleans");
+		assertSame(MacroCondition.ItemScope.CONTAINER,
+			((MacroCondition.Item) ((MacroStep.WaitUntil) legacyScopeImport.macros().getFirst().steps().get(0)).condition()).scope(),
+			"legacy clipboard false maps to container only");
+		assertSame(MacroCondition.ItemScope.CONTAINER_AND_PLAYER,
+			((MacroCondition.Item) ((MacroStep.WaitUntil) legacyScopeImport.macros().getFirst().steps().get(1)).condition()).scope(),
+			"legacy clipboard true maps to both slot groups");
+
+		List<MacroStep> legacyKeyConfig = MacroStepConfigCodec.decode(JsonParser.parseString(
+			"[{\"type\":\"key\",\"key\":\"key.keyboard.space\",\"hold\":true,\"holdMillis\":321}]").getAsJsonArray());
+		MacroStep.Key legacyConfigKey = (MacroStep.Key) legacyKeyConfig.getFirst();
+		assertEquals(321, legacyConfigKey.holdMinMillis(), "legacy config hold duration becomes the range minimum");
+		assertEquals(321, legacyConfigKey.holdMaxMillis(), "legacy config hold duration remains fixed");
+		MacroDefinition legacyMacro = new MacroDefinition(12);
+		legacyMacro.steps().add(new MacroStep.Key("key.keyboard.space", true, 650));
+		JsonObject legacyClipboard = JsonParser.parseString(MacroTransfer.encode(List.of(legacyMacro))).getAsJsonObject();
+		JsonObject legacyStep = legacyClipboard.getAsJsonArray("macros").get(0).getAsJsonObject()
+			.getAsJsonArray("steps").get(0).getAsJsonObject();
+		legacyStep.remove("holdMinMillis");
+		legacyStep.remove("holdMaxMillis");
+		legacyStep.addProperty("holdMillis", 650);
+		MacroStep.Key legacyClipboardKey = (MacroStep.Key) MacroTransfer.decode(legacyClipboard.toString(), 102)
+			.macros().getFirst().steps().getFirst();
+		assertEquals(650, legacyClipboardKey.holdMinMillis(), "legacy clipboard hold duration becomes the range minimum");
+		assertEquals(650, legacyClipboardKey.holdMaxMillis(), "legacy clipboard hold duration remains fixed");
+
+		// Old (pre-scripts) packages read their steps through the same codec as the local config.
+		MacroDefinition modeMacro = new MacroDefinition(14);
+		MacroStep.Key mouseKey = new MacroStep.Key("", false, 250);
+		mouseKey.setInputMode(MacroStep.Key.InputMode.MOUSE);
+		mouseKey.setMouseButton(MacroStep.MouseButton.Button.RIGHT);
+		MacroStep.Repeat untilLoop = new MacroStep.Repeat(false, 1);
+		untilLoop.setMode(MacroStep.Repeat.Mode.UNTIL);
+		untilLoop.setCondition(new MacroCondition.World(false));
+		modeMacro.steps().add(mouseKey);
+		modeMacro.steps().add(untilLoop);
+		JsonObject modePackage = JsonParser.parseString(MacroTransfer.encode(List.of(modeMacro))).getAsJsonObject();
+		modePackage.addProperty("version", 2);
+		modePackage.getAsJsonArray("macros").get(0).getAsJsonObject().remove("scripts");
+		List<MacroStep> modeSteps = MacroTransfer.decode(modePackage.toString(), 105).macros().getFirst().steps();
+		assertSame(MacroStep.Key.InputMode.MOUSE, ((MacroStep.Key) modeSteps.get(0)).inputMode(),
+			"old-package import keeps the input mode of a mouse step");
+		assertSame(MacroStep.MouseButton.Button.RIGHT, ((MacroStep.Key) modeSteps.get(0)).mouseButton(),
+			"old-package import keeps the mouse button");
+		assertEquals(untilLoop.condition(), ((MacroStep.Repeat) modeSteps.get(1)).condition(),
+			"old-package import keeps the Repeat Until condition");
+
+		MacroDefinition selectable = new MacroDefinition(8);
+		selectable.setIslands(List.of(Island.GARDEN));
+		MacrosModule.INSTANCE.restore(List.of(selectable));
+		SettingGroup macroGroup = findGroup(MacrosModule.INSTANCE.groups(), "macro-entry:" + selectable.id());
+		assertTrue(macroGroup != null, "macro has a stable keyed settings group");
+		TextSetting rename = null;
+		for (Setting setting : macroGroup.settings()) {
+			if (setting instanceof TextSetting text && "Rename Macro".equals(text.displayName())) rename = text;
+		}
+		assertTrue(rename != null, "macro exposes an explicit rename field");
+		rename.setValue("Garden Routine");
+		MacrosModule.INSTANCE.syncSettings();
+		assertEquals("Garden Routine", selectable.name(), "renaming updates the macro");
+		assertEquals(1, macroGroup.children().size(), "macro has a nested island group");
+		SettingGroup islands = macroGroup.children().getFirst();
+		long selectableCount = java.util.Arrays.stream(Island.values()).filter(Island::selectable).count();
+		assertEquals((int) selectableCount, islands.settings().size(), "island group exposes every selectable island");
+		BooleanSetting garden = null;
+		for (Setting setting : islands.settings()) {
+			if (setting instanceof BooleanSetting toggle && toggle.name().equals(Island.GARDEN.label())) garden = toggle;
+		}
+		assertTrue(garden != null && garden.value(), "saved island is checked in the island group");
+		garden.setValue(false);
+		MacrosModule.INSTANCE.syncSettings();
+		assertFalse(selectable.islands().contains(Island.GARDEN), "unchecking an island updates the macro");
+
+		// Every macro's Islands section carries the same heading, so its fold state has to be keyed by
+		// the macro. Sharing one key means expanding Islands in one macro expands it in all of them.
+		MacroDefinition secondMacro = new MacroDefinition(9);
+		MacrosModule.INSTANCE.restore(List.of(selectable, secondMacro));
+		MacrosModule.INSTANCE.syncSettings();
+		List<SettingGroup> islandSections = new ArrayList<>();
+		collectGroups(MacrosModule.INSTANCE.groups(), "Islands", islandSections);
+		assertEquals(2, islandSections.size(), "each macro contributes its own Islands section");
+		assertTrue(islandSections.get(0).stateKey() != null && islandSections.get(1).stateKey() != null,
+			"a repeated Islands heading states its own identity");
+		assertFalse(islandSections.get(0).stateKey().equals(islandSections.get(1).stateKey()),
+			"two macros do not share one Islands fold key");
+
+		ClickGuiState.toggleCollapsed(MacrosModule.INSTANCE, islandSections.get(0));
+		assertTrue(ClickGuiState.isCollapsed(MacrosModule.INSTANCE, islandSections.get(0))
+				!= ClickGuiState.isCollapsed(MacrosModule.INSTANCE, islandSections.get(1)),
+			"expanding one macro's Islands section leaves the other alone");
+
+		assertEquals("None", ModuleKeybind.NONE.displayName(), "macro keybind uses the shared display format");
+		MacroRuntimeChecks.run();
+		MacroChatTriggerChecks.run();
+		MacroInventoryCountChecks.run();
+		MacroPersistenceChecks.run();
+		PlayerInventoryControlsChecks.run();
+	}
+
+	private static void checkReusableFunctionLimits() {
+		List<MacroFunction> tooMany = new ArrayList<>();
+		for (int index = 0; index <= MacroFunction.MAX_FUNCTIONS; index++) tooMany.add(new MacroFunction());
+		boolean exportRejected = false;
+		try {
+			MacroTransfer.encode(List.of(new MacroDefinition(900)), tooMany);
+		} catch (IllegalArgumentException expected) {
+			exportRejected = true;
+		}
+		assertTrue(exportRejected, "macro export refuses to truncate a function catalog over the save limit");
+
+		JsonObject packageRoot = JsonParser.parseString(
+			MacroTransfer.encode(List.of(new MacroDefinition(901)))).getAsJsonObject();
+		JsonArray functions = new JsonArray();
+		for (int index = 0; index <= MacroFunction.MAX_FUNCTIONS; index++) {
+			JsonObject function = new JsonObject();
+			function.addProperty("id", "function-" + index);
+			function.addProperty("name", "Function " + index);
+			function.add("steps", new JsonArray());
+			functions.add(function);
+		}
+		packageRoot.add("functions", functions);
+		MacroTransfer.ImportResult imported = MacroTransfer.decode(packageRoot.toString(), 902);
+		assertFalse(imported.success(), "macro import refuses a function catalog over the save limit");
+		assertTrue(imported.error().contains(Integer.toString(MacroFunction.MAX_FUNCTIONS)),
+			"over-limit macro import explains the function limit");
+	}
+
+	private static void checkKotlinMacroModelContracts() {
+		assertEquals("player", MacroCondition.ItemScope.PLAYER_INVENTORY.serializedName(),
+			"item-scope serialization keeps its stable lowercase value");
+		assertSame(MacroCondition.ItemScope.PLAYER_INVENTORY,
+			MacroCondition.ItemScope.fromSerialized("PLAYER", MacroCondition.ItemScope.CONTAINER),
+			"item-scope parsing remains case-insensitive");
+		assertSame(MacroCondition.ItemScope.CONTAINER,
+			MacroCondition.ItemScope.fromSerialized("future-scope", MacroCondition.ItemScope.CONTAINER),
+			"unknown item-scope values preserve the caller's fallback");
+		assertSame(MacroCondition.ItemScope.CONTAINER_AND_PLAYER,
+			MacroCondition.ItemScope.fromLegacy(true), "legacy item scope still includes the player inventory");
+
+		MacroCondition.InventoryCount lowerBound = new MacroCondition.InventoryCount(
+			"\u2003ENCHANTED_CARROT\u2003", "\u2003minecraft:carrot\u2003", null, -1);
+		assertEquals("ENCHANTED_CARROT", lowerBound.skyBlockItemId(),
+			"inventory-count IDs retain Java strip normalization");
+		assertEquals("minecraft:carrot", lowerBound.vanillaItemId(),
+			"inventory-count fallback IDs retain Java strip normalization");
+		assertSame(MacroCondition.Variable.Operator.GREATER_OR_EQUAL, lowerBound.operator(),
+			"inventory-count conditions retain their null-operator default");
+		assertEquals(0, lowerBound.threshold(), "inventory-count thresholds clamp below zero");
+		assertEquals(999_999, new MacroCondition.InventoryCount("", "",
+			MacroCondition.Variable.Operator.EQUALS, 1_000_000).threshold(),
+			"inventory-count thresholds clamp at the accepted maximum");
+
+		MacroValue localFallback = new MacroValue(null, true, null, MacroValue.Scope.NONE, null, null);
+		assertSame(MacroValue.Type.TEXT, localFallback.type(), "variable values retain their null-type default");
+		assertSame(MacroValue.Scope.LOCAL, localFallback.scope(),
+			"variable references with NONE scope normalize to local scope");
+		assertEquals(0.0d, MacroValue.variable(MacroValue.Type.NUMBER, "missing").resolve(java.util.Map.of()),
+			"missing variable references resolve to their typed default");
+		assertEquals(true, MacroValue.literal(MacroValue.Type.BOOLEAN, "TrUe").resolve(java.util.Map.of()),
+			"boolean value resolution keeps Java parseBoolean case-insensitivity");
+		assertEquals(0.0d, MacroValue.literal(MacroValue.Type.NUMBER, "NaN").resolve(java.util.Map.of()),
+			"non-finite numeric literals resolve to zero");
+
+		AtomicInteger configChanges = new AtomicInteger();
+		MacroVariableStore variables = new MacroVariableStore(configChanges::incrementAndGet);
+		MacroVariableStore.Definition count = variables.create(" Count ", MacroValue.Type.NUMBER);
+		assertTrue(count != null, "a clean global variable can be created");
+		assertEquals("Count", count.name(), "global variable names retain whitespace trimming");
+		assertEquals(1, configChanges.get(), "creating a global variable schedules one config save");
+		assertTrue(variables.create("count", MacroValue.Type.TEXT) == null,
+			"global variable names remain case-insensitively unique");
+		variables.setValue(count.id(), 4);
+		assertEquals(1, configChanges.get(), "session-only value changes do not schedule config saves");
+		assertTrue(variables.setPersistValue(count.id(), true), "global variables can opt into value persistence");
+		assertEquals(2, configChanges.get(), "changing the persistence choice schedules a config save");
+		variables.setValue(count.id(), "4.0");
+		assertEquals(2, configChanges.get(), "writing the same coerced persistent value avoids a redundant save");
+		variables.setValue(count.id(), "5");
+		assertEquals(3, configChanges.get(), "changing a persistent value schedules a config save");
+	}
+
+	private static SettingGroup findGroup(List<SettingGroup> groups, String stateKey) {
+		for (SettingGroup group : groups) {
+			if (stateKey.equals(group.stateKey())) return group;
+			SettingGroup nested = findGroup(group.children(), stateKey);
+			if (nested != null) return nested;
+		}
+		return null;
+	}
+
+	private static void collectGroups(List<SettingGroup> groups, String name, List<SettingGroup> result) {
+		for (SettingGroup group : groups) {
+			if (name.equals(group.name())) result.add(group);
+			collectGroups(group.children(), name, result);
+		}
+	}
+
+	private static void assertSame(Object expected, Object actual, String label) {
+		if (expected != actual) throw new AssertionError(label + ": expected " + expected + ", got " + actual);
+	}
+
+	private static void assertEquals(Object expected, Object actual, String label) {
+		if (!java.util.Objects.equals(expected, actual)) throw new AssertionError(label + ": expected " + expected + ", got " + actual);
+	}
+
+	private static void assertTrue(boolean value, String label) {
+		if (!value) throw new AssertionError(label);
+	}
+
+	private static void assertFalse(boolean value, String label) {
+		if (value) throw new AssertionError(label);
+	}
+}

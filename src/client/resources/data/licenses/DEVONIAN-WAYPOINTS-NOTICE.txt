@@ -1,0 +1,33 @@
+Devonian dungeon waypoint data notice
+
+Project: Synnerz/devonian
+Source revision: 6e98846e02c4e1b676ab5c17424913b708ca07ac
+Source file: src/main/resources/assets/devonian/dungeons/DungeonWaypoints.json
+License: GPL-3.0; see DEVONIAN-GPL-3.0.txt in this directory.
+
+GeilerAddons redistributes a modified subset in
+../geileraddons/devonian-dungeon-waypoints.json. The source's room-relative integer coordinates
+and category distinctions are retained. Rows are flattened to one marker per record and assigned
+stable local IDs. No coordinates were authored or inferred by GeilerAddons.
+
+The subset contains 452 records across 121 local marker names. All 120 source rows are mapped by
+115 exact room names, the punctuation-only alias "Criss Cross" to local "Criss-Cross", three
+cross-checked name aliases ("Silvers Sword" to "Silver Sword", "Mini Rail Track" to "Rail Track",
+and "Pillars" to "Rare Pillars"), and the generic "Blaze" row split into local "Higher Blaze" and
+"Lower Blaze" using independently labeled matching chest coordinates from Skyblocker. Core hashes
+were not used to make these joins.
+
+  chest:   238 records in 108 rooms
+  item:     74 records in 58 rooms
+  essence:  35 records in 30 rooms
+  bat:      49 records in 43 rooms
+  redstone:  4 records in 3 rooms
+  lever:    52 records in 45 rooms
+
+Thirteen of the 121 local marker names have no chest records. This is partial coverage and does not
+establish that every room or secret is represented.
+
+The shared data file SHA-256 is
+B9D490C10A971122174D64FA1A86193F1E6BA180BBD4572FB31746907BB1E18F
+Detailed provenance and runtime-transform notes are in DUNGEON-SOLVER-DATA-PROVENANCE.md and
+docs/devonian-mimic-data-provenance.md.

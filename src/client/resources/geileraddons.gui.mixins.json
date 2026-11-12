@@ -1,0 +1,13 @@
+{
+	"required": true,
+	"package": "geiler.addons.client.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"AbstractContainerScreenTooltipMixin",
+		"GuiGraphicsExtractorScissorMixin",
+		"GuiGraphicsExtractorScissorStackAccessor"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

@@ -1,0 +1,145 @@
+package geiler.addons.client.gui
+
+import net.minecraft.resources.Identifier
+
+/** Bundled pixel-art icons and source dimensions for registered modules. */
+object ModuleIconTextures {
+    private val icons = mapOf(
+        "Debug" to icon("debug"),
+        "General" to icon("octicon-gear-16", gui = true),
+        "Slot IDs" to icon("slot_ids"),
+        "i4 helper" to icon("i4_helper"),
+        "Experimentation Solver" to icon("experiment_solver"),
+        "Auto Experiments" to icon("auto_experiments"),
+        "Auto Kick" to icon("auto_kick"),
+        "Party Finder Stats" to icon("party_finder_stats"),
+        "Dungeon Guide" to icon("dungeon_guide"),
+        "Box Doors" to icon("box_doors"),
+        "Tiki Helper" to icon("tiki_helper"),
+        "Safari Floor Drops" to icon("safari_floor_drops"),
+        "Hideyho Finder" to icon("hideyho_finder"),
+        "Sparkling Critter" to icon("sparkling_critter"),
+        "Pest Highlighter" to icon("pest_highlighter"),
+        "Infested plot" to icon("infested_plot"),
+        "Tree Tracker" to icon("tree_tracker"),
+        "Tree Broken Notifier" to icon("tree_broken_notifier"),
+        "Macros" to icon("macros"),
+        "Theme" to icon("octicon-paintbrush-16", gui = true),
+        "Mob Highlight" to icon("mob_highlight"),
+        "Dungeon Mob ESP" to icon("dungeon_mob_esp"),
+        "Block ESP" to icon("block_esp"),
+        "Inventory Buttons" to icon("inventory_buttons"),
+        "Animations" to icon("animations"),
+        "Chat Channels" to icon("chat_channels"),
+        "Hide Particles" to icon("hide_particles"),
+        "Player Size" to icon("player_size"),
+        "Third Person Camera" to icon("camera"),
+        "Chat" to icon("chat"),
+        "System Clock" to icon("system_clock"),
+        "Spirit Leap Menu" to icon("spirit_leap_menu"),
+        "Glass Doors" to icon("glass_doors"),
+        "Puzzle Solvers" to icon("puzzle_solvers"),
+        "Run Splits" to icon("run_splits"),
+        "Snap Tap" to icon("snap_tap"),
+        "Terminal Stats" to icon("terminal_stats"),
+        "Terminal Titles" to icon("terminal_titles"),
+        "Dungeon Map" to icon("dungeon_map"),
+        "Room Alerts" to icon("room_alerts"),
+        "Key Pickup" to icon("key_pickup"),
+        "Score Titles" to icon("score_titles"),
+        "Blood Camp" to icon("blood_camp"),
+        "Livid Helper" to icon("livid_helper"),
+        "Invincibility Timers" to icon("invincibility_timer"),
+        "Secret Clicked" to icon("secret_clicked"),
+        "Slayer Tracker" to icon("slayer_tracker"),
+        "Pest Tracker" to icon("pest_tracker"),
+        "Crop Fever Timer" to icon("crop_fever_timer"),
+        "Party Commands" to icon("party_commands"),
+        "Lobby Sniper" to icon("lobby_sniper"),
+        "Slot Locking" to icon("slot_locking"),
+        "Player Names" to icon("player_names"),
+        "Custom Scoreboard" to icon("custom_scoreboard"),
+    )
+
+    private val sourceSizes = mapOf(
+        "Debug" to 256,
+        "General" to 256,
+        "Slot IDs" to 256,
+        "i4 helper" to 256,
+        "Experimentation Solver" to 256,
+        "Auto Experiments" to 256,
+        "Auto Kick" to 256,
+        "Theme" to 256,
+        "Party Finder Stats" to 256,
+        "Dungeon Guide" to 256,
+        "Box Doors" to 256,
+        "Tiki Helper" to 256,
+        "Safari Floor Drops" to 256,
+        "Hideyho Finder" to 256,
+        "Sparkling Critter" to 256,
+        "Pest Highlighter" to 256,
+        "Infested plot" to 256,
+        "Tree Tracker" to 256,
+        "Tree Broken Notifier" to 256,
+        "Macros" to 256,
+        "Mob Highlight" to 256,
+        "Dungeon Mob ESP" to 256,
+        "Block ESP" to 256,
+        "Inventory Buttons" to 256,
+        "Animations" to 230,
+        "Chat Channels" to 230,
+        "Hide Particles" to 230,
+        "Player Size" to 230,
+        "Third Person Camera" to 230,
+        "Chat" to 230,
+        "System Clock" to 230,
+        "Spirit Leap Menu" to 230,
+        "Glass Doors" to 230,
+        "Puzzle Solvers" to 230,
+        "Run Splits" to 230,
+        "Snap Tap" to 230,
+        "Terminal Stats" to 256,
+        "Terminal Titles" to 256,
+        "Dungeon Map" to 256,
+        "Room Alerts" to 256,
+        "Key Pickup" to 256,
+        "Score Titles" to 256,
+        "Blood Camp" to 256,
+        "Livid Helper" to 256,
+        "Invincibility Timers" to 256,
+        "Secret Clicked" to 256,
+        "Slayer Tracker" to 256,
+        "Pest Tracker" to 256,
+        "Crop Fever Timer" to 256,
+        "Party Commands" to 256,
+        "Lobby Sniper" to 256,
+        "Slot Locking" to 256,
+        "Player Names" to 256,
+        "Custom Scoreboard" to 256,
+    )
+
+    private val tintable = setOf(
+        "Animations", "Auto Experiments", "Auto Kick", "Block ESP", "Box Doors", "Chat", "Chat Channels",
+        "Debug", "Dungeon Guide", "Dungeon Mob ESP", "Experimentation Solver", "General", "Glass Doors",
+        "Hide Particles", "Hideyho Finder", "i4 helper", "Infested plot", "Inventory Buttons", "Macros",
+        "Mob Highlight", "Party Finder Stats", "Pest Highlighter", "Player Size", "Puzzle Solvers", "Run Splits",
+        "Safari Floor Drops", "Slot IDs", "Snap Tap", "Sparkling Critter", "Spirit Leap Menu", "System Clock", "Theme",
+        "Third Person Camera", "Tiki Helper", "Tree Broken Notifier", "Tree Tracker",
+        "Terminal Stats", "Terminal Titles", "Dungeon Map", "Room Alerts", "Key Pickup", "Score Titles", "Blood Camp", "Livid Helper", "Invincibility Timers", "Secret Clicked", "Slayer Tracker", "Pest Tracker", "Crop Fever Timer", "Party Commands", "Lobby Sniper", "Slot Locking", "Player Names", "Custom Scoreboard",
+    )
+
+    @JvmStatic
+    fun forModule(moduleName: String): Identifier? = icons[moduleName]
+
+    @JvmStatic
+    fun isTintable(moduleName: String): Boolean = moduleName in tintable
+
+    @JvmStatic
+    fun sourceSize(moduleName: String): Int = sourceSizes[moduleName] ?: 64
+
+    private fun icon(file: String, gui: Boolean = false): Identifier =
+        Identifier.fromNamespaceAndPath(
+            "geileraddons",
+            "textures/${if (gui) "gui" else "module_icons"}/$file.png",
+        )
+}

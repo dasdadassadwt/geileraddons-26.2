@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "players": [
+    {
+      "name": "ExamplePlayer",
+      "alias": "Example Buddy",
+      "size": 1.25,
+      "color": "#45B6FE"
+    },
+    {
+      "name": "GradientDemo",
+      "alias": "Gradient Demo",
+      "size": 0.85,
+      "gradient": ["#FF5A5F", "#FFC145", "#A66BFF"],
+      "animation": {
+        "mode": "scroll",
+        "speed": 0.25
+      }
+    }
+  ]
+}

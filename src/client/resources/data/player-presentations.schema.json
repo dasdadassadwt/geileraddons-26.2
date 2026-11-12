@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/dasdadassadwt/geileraddons-26.2/main/src/client/resources/data/player-presentations.schema.json",
+  "title": "GeilerAddons player presentation profile",
+  "description": "Client-only player aliases, label colors and gradients, optional animated gradients, and model size multipliers.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "players"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "players": {
+      "type": "array",
+      "maxItems": 512,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_]{1,16}$",
+            "description": "The Minecraft account name used to match this player, without case sensitivity."
+          },
+          "alias": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^(?!\\s*$)[^\\u0000-\\u001F\\u007F§]+$",
+            "description": "Replacement text for supported player-name rendering locations."
+          },
+          "size": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 4.0,
+            "description": "Client-side player avatar model scale multiplier; it does not change hitboxes or server state."
+          },
+          "sizeX": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 4.0,
+            "description": "Client-side player avatar model scale multiplier on the X axis."
+          },
+          "sizeY": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 4.0,
+            "description": "Client-side player avatar model scale multiplier on the Y axis."
+          },
+          "sizeZ": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 4.0,
+            "description": "Client-side player avatar model scale multiplier on the Z axis."
+          },
+          "color": {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$",
+            "description": "Static RGB color for the player's displayed name, written as #RRGGBB. Mutually exclusive with gradient."
+          },
+          "gradient": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            },
+            "description": "Two to eight RGB color stops for a left-to-right gradient across the displayed name."
+          },
+          "animation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["mode"],
+            "properties": {
+              "mode": {
+                "const": "scroll",
+                "description": "Continuously scrolls the configured gradient across the displayed name."
+              },
+              "speed": {
+                "type": "number",
+                "minimum": 0.05,
+                "maximum": 2.0,
+                "default": 0.25,
+                "description": "Gradient cycles per second; defaults to one cycle every four seconds."
+              }
+            },
+            "description": "Optional animated gradient settings. Requires gradient."
+          },
+          "effect": {
+            "description": "Legacy opaque metadata retained for compatibility; it does not change potion, gameplay, or rendering behavior.",
+            "oneOf": [
+              { "type": "string" },
+              { "type": "number" },
+              { "type": "boolean" },
+              { "type": "object" },
+              { "type": "array" },
+              { "type": "null" }
+            ]
+          }
+        },
+        "allOf": [
+          { "not": { "required": ["color", "gradient"] } },
+          {
+            "if": { "required": ["size"] },
+            "then": {
+              "not": {
+                "anyOf": [
+                  { "required": ["sizeX"] },
+                  { "required": ["sizeY"] },
+                  { "required": ["sizeZ"] }
+                ]
+              }
+            }
+          },
+          {
+            "if": {
+              "anyOf": [
+                { "required": ["sizeX"] },
+                { "required": ["sizeY"] },
+                { "required": ["sizeZ"] }
+              ]
+            },
+            "then": {
+              "required": ["sizeX", "sizeY", "sizeZ"],
+              "not": { "required": ["size"] }
+            }
+          },
+          {
+            "if": { "required": ["animation"] },
+            "then": { "required": ["gradient"] }
+          }
+        ]
+      }
+    }
+  }
+}

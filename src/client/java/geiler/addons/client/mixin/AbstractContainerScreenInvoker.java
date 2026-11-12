@@ -1,0 +1,31 @@
+package geiler.addons.client.mixin;
+
+import geiler.addons.client.access.AbstractContainerScreenAccess;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.inventory.Slot;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.gen.Invoker;
+
+/**
+ * Lets the custom experiment surface feed an accepted click back through vanilla's container
+ * path. Keeping this as an invoker is important: the server sees precisely the same slot id,
+ * button and {@link ContainerInput} that the normal inventory screen would have sent.
+ */
+@Mixin(AbstractContainerScreen.class)
+public interface AbstractContainerScreenInvoker extends AbstractContainerScreenAccess {
+	@Invoker("slotClicked")
+	void geileraddons$invokeSlotClicked(Slot slot, int slotId, int button, ContainerInput input);
+
+	@org.spongepowered.asm.mixin.gen.Accessor("leftPos")
+	int geileraddons$getLeftPos();
+
+	@org.spongepowered.asm.mixin.gen.Accessor("topPos")
+	int geileraddons$getTopPos();
+
+	@org.spongepowered.asm.mixin.gen.Accessor("imageWidth")
+	int geileraddons$getImageWidth();
+
+	@org.spongepowered.asm.mixin.gen.Accessor("imageHeight")
+	int geileraddons$getImageHeight();
+}
