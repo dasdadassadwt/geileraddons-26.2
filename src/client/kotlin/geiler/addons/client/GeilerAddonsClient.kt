@@ -4,6 +4,18 @@ import geiler.addons.GeilerAddons
 import geiler.addons.client.chat.ChatChannelsLocalStore
 import geiler.addons.client.chat.ChatCommandReplyBackend
 import geiler.addons.client.command.GeilerAddonsCommand
+import geiler.addons.client.macros.MacroRuntime
+import geiler.addons.client.macros.module.AreaKillerModule
+import geiler.addons.client.macros.module.PathfinderModule
+import geiler.addons.client.macros.module.EtherwarpModule
+import geiler.addons.client.macros.module.HumanRecorderModule
+import geiler.addons.client.macros.module.EtherwarpSimModule
+import geiler.addons.client.macros.module.JumpBoostModule
+import geiler.addons.client.macros.module.OneTapModule
+import geiler.addons.client.macros.module.RotationEngineModule
+import geiler.addons.client.macros.module.SpeedSimModule
+import geiler.addons.client.macros.sim.SimModules
+import geiler.addons.client.macros.sim.SimRuntime
 import geiler.addons.client.config.ConfigTransferService
 import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.config.ModConfig
@@ -69,7 +81,25 @@ import geiler.addons.client.module.impl.ExperimentSolverModule
 import geiler.addons.client.module.impl.GardenPlotBordersModule
 import geiler.addons.client.module.impl.GeneralModule
 import geiler.addons.client.module.impl.HideAllParticlesModule
+import geiler.addons.client.module.impl.AnimationFixModule
+import geiler.addons.client.module.impl.DisconnectFixModule
+import geiler.addons.client.module.impl.DoubleUseFixModule
+import geiler.addons.client.module.impl.GyroWandModule
+import geiler.addons.client.module.impl.ItemCooldownsModule
+import geiler.addons.client.module.impl.LoadoutKeybindsModule
+import geiler.addons.client.module.impl.MimicAnnouncerModule
+import geiler.addons.client.module.impl.NoRenderModule
+import geiler.addons.client.module.impl.RagnarockModule
+import geiler.addons.client.module.impl.SpringBootsModule
+import geiler.addons.client.module.impl.TerracottaTimerModule
+import geiler.addons.client.module.impl.WardrobeKeybindsModule
 import geiler.addons.client.module.impl.SnapTapModule
+import geiler.addons.client.module.impl.AutoSprintModule
+import geiler.addons.client.module.impl.BlockOverlayModule
+import geiler.addons.client.module.impl.FreecamModule
+import geiler.addons.client.module.impl.FullbrightModule
+import geiler.addons.client.module.impl.NoFogModule
+import geiler.addons.client.module.impl.ScrollableTooltipModule
 import geiler.addons.client.module.impl.HideyhoFinderModule
 import geiler.addons.client.module.impl.I4HelperModule
 import geiler.addons.client.module.impl.InventoryButtonsModule
@@ -140,12 +170,16 @@ class GeilerAddonsClient : ClientModInitializer {
         SpiritLeapResourceReloadListener.register()
         // Register first so ModConfig can restore the global gate before loading module state.
         registerModules()
+        SimRuntime.init()
+        MacroRuntime.init()
         HudManager.register(TreeTrackerModule.INSTANCE, 0.01f, 0.10f)
         HudManager.register(DungeonHelperModule.INSTANCE, 0.50f, 0.03f)
         HudManager.register(DungeonRoomOverlayModule.INSTANCE, 0.77f, 0.55f)
         HudManager.register(DungeonRunSplitsModule.INSTANCE, 0.03f, 0.22f)
         HudManager.register(DungeonLividSolverModule.INSTANCE, 0.03f, 0.44f)
         HudManager.register(DungeonInvincibilityTimerModule.INSTANCE, 0.03f, 0.54f)
+        HudManager.register(ItemCooldownsModule.INSTANCE, 0.03f, 0.74f)
+        HudManager.register(SpringBootsModule.INSTANCE, 0.45f, 0.62f)
         HudManager.register(DungeonTerminalStatsModule.INSTANCE, 0.03f, 0.64f)
         HudManager.register(PestTrackerModule.INSTANCE, 0.02f, 0.55f)
         HudManager.register(SlayerTrackerModule.INSTANCE, 0.02f, 0.72f)
@@ -209,6 +243,12 @@ class GeilerAddonsClient : ClientModInitializer {
                 player.connection.sendCommand(partyAnnouncement)
             }
             InstanceRequeueModule.INSTANCE.onChatMessage(content)
+            if (overlay) ItemCooldownsModule.INSTANCE.onActionBar(content)
+            else {
+                MimicAnnouncerModule.INSTANCE.onChatMessage(content)
+                RagnarockModule.INSTANCE.onChatMessage(content)
+                ItemCooldownsModule.INSTANCE.onChatMessage(content)
+            }
             I4HelperModule.INSTANCE.onChatMessage(content)
             TikiHelperModule.INSTANCE.onChatMessage(content)
             TreeTrackerModule.INSTANCE.onChatMessage(content)
@@ -291,6 +331,29 @@ class GeilerAddonsClient : ClientModInitializer {
             CropFeverTimerModule.INSTANCE.tick()
             HideAllParticlesModule.INSTANCE.tick(clientTick)
             SnapTapModule.INSTANCE.tick(clientTick)
+            AutoSprintModule.INSTANCE.tick()
+            NoFogModule.INSTANCE.tick()
+            FullbrightModule.INSTANCE.tick()
+            BlockOverlayModule.INSTANCE.tick()
+            ScrollableTooltipModule.INSTANCE.tick()
+            FreecamModule.INSTANCE.tick()
+            NoRenderModule.INSTANCE.tick()
+            AnimationFixModule.INSTANCE.tick()
+            DoubleUseFixModule.INSTANCE.tick()
+            DisconnectFixModule.INSTANCE.tick()
+            ItemCooldownsModule.INSTANCE.tick()
+            GyroWandModule.INSTANCE.tick()
+            MimicAnnouncerModule.INSTANCE.tick()
+            TerracottaTimerModule.INSTANCE.tick()
+            WardrobeKeybindsModule.INSTANCE.tick()
+            LoadoutKeybindsModule.INSTANCE.tick()
+            SpringBootsModule.INSTANCE.tick()
+            RagnarockModule.INSTANCE.tick()
+            SimModules.tick()
+            EtherwarpModule.INSTANCE.tick()
+            RotationEngineModule.INSTANCE.tick()
+            HumanRecorderModule.INSTANCE.tick()
+            MacroRuntime.tick()
             LobbyTargetWatchModule.INSTANCE.tick()
             UtilityTimerModule.INSTANCE.tick()
             PlayerNamesModule.INSTANCE.tick()
@@ -368,6 +431,10 @@ class GeilerAddonsClient : ClientModInitializer {
                 DungeonClassEspModule.INSTANCE.render(context)
                 TrailModule.INSTANCE.render(context)
                 BlockEspModule.INSTANCE.render(context)
+                BlockOverlayModule.INSTANCE.render(context)
+                GyroWandModule.INSTANCE.render(context)
+                TerracottaTimerModule.INSTANCE.render(context)
+                SpringBootsModule.INSTANCE.render(context)
             } finally {
                 scope.close()
             }
@@ -485,6 +552,34 @@ class GeilerAddonsClient : ClientModInitializer {
             registerModule(BlockEspModule.INSTANCE)
             registerModule(InventoryButtonsModule.INSTANCE)
             registerModule(SnapTapModule.INSTANCE)
+            registerModule(AutoSprintModule.INSTANCE)
+            registerModule(NoFogModule.INSTANCE)
+            registerModule(FullbrightModule.INSTANCE)
+            registerModule(BlockOverlayModule.INSTANCE)
+            registerModule(ScrollableTooltipModule.INSTANCE)
+            registerModule(FreecamModule.INSTANCE)
+            registerModule(NoRenderModule.INSTANCE)
+            registerModule(AnimationFixModule.INSTANCE)
+            registerModule(DoubleUseFixModule.INSTANCE)
+            registerModule(DisconnectFixModule.INSTANCE)
+            registerModule(ItemCooldownsModule.INSTANCE)
+            registerModule(GyroWandModule.INSTANCE)
+            registerModule(MimicAnnouncerModule.INSTANCE)
+            registerModule(TerracottaTimerModule.INSTANCE)
+            registerModule(WardrobeKeybindsModule.INSTANCE)
+            registerModule(LoadoutKeybindsModule.INSTANCE)
+            registerModule(SpringBootsModule.INSTANCE)
+            registerModule(RagnarockModule.INSTANCE)
+            // The Macros workspace: its modules live in their own categories and their own config file.
+            registerModule(SpeedSimModule.INSTANCE)
+            registerModule(JumpBoostModule.INSTANCE)
+            registerModule(OneTapModule.INSTANCE)
+            registerModule(EtherwarpSimModule.INSTANCE)
+            registerModule(EtherwarpModule.INSTANCE)
+            registerModule(RotationEngineModule.INSTANCE)
+            registerModule(HumanRecorderModule.INSTANCE)
+            registerModule(PathfinderModule.INSTANCE)
+            registerModule(AreaKillerModule.INSTANCE)
         }
 
         private fun registerModule(module: Module) {
@@ -613,6 +708,7 @@ class GeilerAddonsClient : ClientModInitializer {
                 }
             }
             if (lividRoom) {
+                odin.observeLividTargetPresence(entitiesById)
                 odin.recordLividCandidateScan(
                     scannedLividEntities,
                     namedLividCandidates,

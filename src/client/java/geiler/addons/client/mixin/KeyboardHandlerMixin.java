@@ -4,6 +4,8 @@ import com.mojang.blaze3d.platform.InputConstants;
 import geiler.addons.client.module.ModuleKeybindManager;
 import geiler.addons.client.access.AbstractContainerScreenAccess;
 import geiler.addons.client.module.impl.DungeonOdinAssistModule;
+import geiler.addons.client.module.impl.LoadoutKeybindsModule;
+import geiler.addons.client.module.impl.WardrobeKeybindsModule;
 import geiler.addons.client.module.impl.SpiritLeapSurfaceOwner;
 import geiler.addons.client.inventory.PlayerInventoryControls;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -28,6 +30,13 @@ public abstract class KeyboardHandlerMixin {
 		if (ModuleKeybindManager.handleKeyEvent(client, action, event)) {
 			ci.cancel();
 			return;
+		}
+		if (action == InputConstants.PRESS && client.gui.screen() instanceof AbstractContainerScreen<?> menu) {
+			String keyName = InputConstants.getKey(event).getName();
+			if (WardrobeKeybindsModule.INSTANCE.onKey(menu, keyName) || LoadoutKeybindsModule.INSTANCE.onKey(menu, keyName)) {
+				ci.cancel();
+				return;
+			}
 		}
 		if (action == InputConstants.PRESS && client.gui.screen() instanceof AbstractContainerScreen<?> screen
 			&& DungeonOdinAssistModule.INSTANCE.handleSpiritLeapKey(spiritLeapKeyName(event),

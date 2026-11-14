@@ -1,6 +1,7 @@
 package geiler.addons.client.gui
 
 import geiler.addons.client.module.impl.DungeonInvincibilityTimerModule
+import geiler.addons.client.module.impl.ItemCooldownsModule
 import geiler.addons.client.module.impl.ItemRarityBackgroundsModule
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.world.entity.player.Player
@@ -35,5 +36,6 @@ object SlotItemOverlays {
     @JvmStatic
     fun afterItem(graphics: GuiGraphicsExtractor, stack: ItemStack, x: Int, y: Int) {
         DungeonInvincibilityTimerModule.INSTANCE.drawItemFill(graphics, stack, x, y)
+        ItemCooldownsModule.INSTANCE.drawOnItem(graphics, stack, x, y)
     }
 }

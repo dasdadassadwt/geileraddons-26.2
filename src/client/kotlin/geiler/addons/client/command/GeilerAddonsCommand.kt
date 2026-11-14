@@ -3,7 +3,9 @@ package geiler.addons.client.command
 import com.mojang.brigadier.arguments.StringArgumentType
 import geiler.addons.client.config.ConfigTransferService
 import geiler.addons.client.dungeon.DungeonStatsCommand
-import geiler.addons.client.gui.ClickGuiScreen
+import geiler.addons.client.gui.ClickGuiStyle
+import geiler.addons.client.module.impl.VisualModule
+import geiler.addons.client.macros.command.MacroCommands
 import geiler.addons.client.gui.ConfigResetScreen
 import geiler.addons.client.gui.ConfigTransferScreen
 import geiler.addons.client.module.impl.PartyFinderStatsModule
@@ -106,6 +108,7 @@ object GeilerAddonsCommand {
                         .executes { PartyFinderStatsModule.INSTANCE.showLoadedPartyStats() },
                 )
             UtilityCommandBuilder.appendTo(root)
+            MacroCommands.appendTo(root)
             val registeredRoot = dispatcher.register(root)
             for (alias in arrayOf("Ga", "gA", "GA")) {
                 dispatcher.register(
@@ -120,7 +123,7 @@ object GeilerAddonsCommand {
     private fun openClickGui(): Int {
         if (ConfigTransferService.isBusy()) return busyNotice()
         Minecraft.getInstance().execute {
-            Minecraft.getInstance().gui.setScreen(ClickGuiScreen())
+            Minecraft.getInstance().gui.setScreen(ClickGuiStyle.screen(VisualModule.INSTANCE.clickGuiStyle()))
         }
         return 1
     }

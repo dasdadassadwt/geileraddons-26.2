@@ -3,6 +3,7 @@ package geiler.addons.client.module.impl
 import geiler.addons.client.access.PlayerTabOverlayAccess
 import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.dungeon.DungeonContextTracker
+import geiler.addons.client.dungeon.DungeonMapInfoLogic
 import geiler.addons.client.dungeon.DungeonFloor
 import geiler.addons.client.dungeon.DungeonGuideSegments
 import geiler.addons.client.dungeon.DungeonMapGeometry
@@ -16,6 +17,7 @@ import geiler.addons.client.dungeon.odin.DungeonBossTimers
 import geiler.addons.client.dungeon.odin.DungeonIcePathSolver
 import geiler.addons.client.dungeon.odin.DungeonLividTracker
 import geiler.addons.client.dungeon.odin.DungeonLividOverlayLabel
+import geiler.addons.client.dungeon.odin.DungeonLividReleaseRules
 import geiler.addons.client.dungeon.odin.DungeonMaskProcTimers
 import geiler.addons.client.dungeon.odin.DungeonOdinBlazeOverlay
 import geiler.addons.client.dungeon.odin.DungeonOdinPuzzleObserver
@@ -213,7 +215,7 @@ class DungeonOdinAssistModule private constructor() : Module(
         private fun terminalStatsEnabled(): Boolean = DungeonTerminalStatsModule.INSTANCE.isEnabled()
         private fun terminalTitlesEnabled(): Boolean = DungeonTerminalTitlesModule.INSTANCE.isEnabled()
 
-        private fun scoreTabLines(client: Minecraft?): List<String> {
+        internal fun scoreTabLines(client: Minecraft?): List<String> {
             if (client == null || client.gui == null) return emptyList()
             val player = client.player ?: return emptyList()
             if (player.connection == null) return emptyList()
@@ -305,6 +307,7 @@ class DungeonOdinAssistModule private constructor() : Module(
     private val lividTracker = DungeonLividTracker()
     @Volatile private var publishedLividTarget: DungeonLividTracker.TargetSnapshot? = null
     private var titledLividTargetKey: String? = null
+    private var lividMissingTicks = 0
     private var lastLividDiagnosticTick = Long.MIN_VALUE
     private var lastLividDiagnosticStatus: String? = null
     private var lastLividMarkerEvidence = "unobserved"
@@ -354,6 +357,7 @@ class DungeonOdinAssistModule private constructor() : Module(
     private var scoreRunKey: String? = null
     private var scoreRunEntryKey: String? = null
     private var scoreBloodDone: Boolean? = null
+    @Volatile private var mapRunInfo: DungeonMapInfoLogic.RunSnapshot? = null
     private var scoreRunEntryObserved = false
     private val scoreBonusSignals = DungeonOdinScoreCalculator.RunSignals()
 
@@ -532,6 +536,7 @@ class DungeonOdinAssistModule private constructor() : Module(
         if (!inDungeon) {
             if (wasInDungeon) reset()
             wasInDungeon = false
+            mapRunInfo = null
             setPuzzleScanState(client, "inactive", "Dungeon context is inactive.")
             clearPuzzleGuidance()
             return
@@ -588,7 +593,11 @@ class DungeonOdinAssistModule private constructor() : Module(
             clearPuzzleGuidance()
         }
         if (!scorerEnabled() || !scoreAlertsEnabled.value()) DungeonScorerModule.INSTANCE.clearAlert()
-        if (!scorerEnabled()) return
+        val mapInfoWanted = DungeonRoomOverlayModule.INSTANCE.mapInfoWanted()
+        if (!scorerEnabled() && !mapInfoWanted) {
+            mapRunInfo = null
+            return
+        }
         scoreBonusSignals.observePaul(
             when (scorePaulBonus.value()) {
                 "YES" -> true
@@ -605,6 +614,8 @@ class DungeonOdinAssistModule private constructor() : Module(
         )
         val scoreFloor = floor ?: teamSignals.floor
         val score = DungeonOdinScoreCalculator.calculate(scoreFloor, tabStats, scoreBloodDone, inBoss)
+        mapRunInfo = DungeonMapInfoLogic.RunSnapshot(scoreFloor, tabStats, score, inBoss)
+        if (!scorerEnabled()) return
         val crossed = scoreTracker.update(
             score, scoreThresholdOne.intValue(), scoreThresholdTwo.intValue(), scoreAlertsEnabled.value(),
         )
@@ -623,6 +634,9 @@ class DungeonOdinAssistModule private constructor() : Module(
             DungeonScorerModule.INSTANCE.recordSoundOutcome(clientTick, soundResult, configuredSoundId)
         }
     }
+
+    /** The latest score, tab and floor data for the Dungeon Map info panel; null outside a dungeon or when unwanted. */
+    fun mapRunInfo(): DungeonMapInfoLogic.RunSnapshot? = mapRunInfo
 
     /** Captures Odin's authoritative team-prefix floor and clear-percent updates on the client thread. */
     fun onDungeonTeamUpdate(teamText: String?) {
@@ -720,7 +734,10 @@ class DungeonOdinAssistModule private constructor() : Module(
             if (totalUpdate != null && localRunSummary.value()) showLocalRunSummary(floor, totalUpdate)
         }
         if (bossTimersEnabled()) bossTimers.onChat(plain)
-        if (lividEnabled() && livid.value()) lividTracker.observeChat(plain, floor.number() == 5)
+        if (lividEnabled() && livid.value()) {
+            lividTracker.observeChat(plain, floor.number() == 5)
+            if (DungeonLividReleaseRules.isRunEnd(plain)) releaseLivid("run-end")
+        }
         if (invincibilityEnabled()) {
             val proc = maskTimers.observeChat(plain, true, bonzoCooldownSeconds)
             if (proc != null) pendingProcAlert = proc
@@ -865,6 +882,36 @@ class DungeonOdinAssistModule private constructor() : Module(
     }
 
     fun isLividHighlightEnabled(): Boolean = lividEnabled() && livid.value()
+
+    /** Releases the Livid target once its matched entity has been missing or dead for a few ticks. */
+    fun observeLividTargetPresence(entities: Map<Int, net.minecraft.world.entity.LivingEntity>) {
+        if (!lividEnabled() || !livid.value()) {
+            lividMissingTicks = 0
+            return
+        }
+        val id = lividTracker.matchedEntityId()
+        if (id < 0) {
+            lividMissingTicks = 0
+            return
+        }
+        val entity = entities[id]
+        val alive = entity != null && !entity.isRemoved && entity.isAlive && entity.health > 0.0f
+        lividMissingTicks = DungeonLividReleaseRules.nextMissingTicks(lividMissingTicks, alive)
+        if (DungeonLividReleaseRules.shouldRelease(lividMissingTicks)) {
+            releaseLivid(if (entity == null) "entity-missing" else "entity-dead")
+        }
+    }
+
+    private fun releaseLivid(reason: String) {
+        if (lividTracker.released() && lividTracker.matchedEntityId() < 0) return
+        lividTracker.releaseTarget()
+        lividMissingTicks = 0
+        publishedLividTarget = null
+        lastLividDiagnosticEvent = "release=$reason"
+        GeilerAddonsLog.write(
+            Category.F7, DungeonLividSolverModule.INSTANCE.name(), lastClientTick, "RELEASE reason=$reason",
+        )
+    }
 
     fun observeLividPlayerEntity(uuid: UUID?, entityId: Int, formattedName: String?): Boolean =
         lividEnabled() && livid.value() &&
@@ -2233,6 +2280,7 @@ class DungeonOdinAssistModule private constructor() : Module(
         scoreBloodDone = null
         scoreRunEntryObserved = false
         scoreBonusSignals.resetUnknown()
+        mapRunInfo = null
         puzzleObserver.reset()
         puzzleTimingTracker.onLevelLoad()
         puzzleTimingLevel = null
@@ -2242,6 +2290,7 @@ class DungeonOdinAssistModule private constructor() : Module(
         splitEntryBuffer.clear()
         bossTimers.reset()
         lividTracker.reset()
+        lividMissingTicks = 0
         publishedLividTarget = null
         maskTimers.reset()
         terminals.reset()

@@ -6,6 +6,7 @@ import geiler.addons.client.module.ColorSetting
 import geiler.addons.client.module.ModuleAction
 import geiler.addons.client.module.ModulePreview
 import geiler.addons.client.module.NumberSetting
+import geiler.addons.client.module.RangeSetting
 import geiler.addons.client.module.SettingGroup
 import geiler.addons.client.module.TextSetting
 
@@ -54,6 +55,16 @@ internal data class ColorRow(
 @JvmRecord
 internal data class NumberRow(
     val setting: NumberSetting,
+    val bounds: ClickGuiScreen.Rect,
+    val slider: ClickGuiScreen.Rect?,
+    val field: ClickGuiScreen.Rect?,
+) : Row {
+    override fun getBounds(): ClickGuiScreen.Rect = bounds
+}
+
+@JvmRecord
+internal data class RangeRow(
+    val setting: RangeSetting,
     val bounds: ClickGuiScreen.Rect,
     val slider: ClickGuiScreen.Rect?,
     val field: ClickGuiScreen.Rect?,

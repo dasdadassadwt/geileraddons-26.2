@@ -9,6 +9,7 @@ import geiler.addons.client.module.Module
 import geiler.addons.client.module.ModuleAction
 import geiler.addons.client.module.ModulePreview
 import geiler.addons.client.module.NumberSetting
+import geiler.addons.client.module.RangeSetting
 import geiler.addons.client.module.Setting
 import geiler.addons.client.module.SettingGroup
 import geiler.addons.client.module.TextSetting
@@ -124,7 +125,10 @@ internal object ClickGuiSettingsLayout {
         for (child in group.children) {
             if (visibleGroup(module, child)) return true
         }
-        return false
+        // A section that holds only a custom row has no setting to show but is still there.
+        return group.name != null && module.extraPreviews().any {
+            it.previewEnabled() && it.previewGroupName() == group.name
+        }
     }
 
     private fun layoutGroup(
@@ -188,6 +192,20 @@ internal object ClickGuiSettingsLayout {
                     rows.add(NumberRow(setting, bounds, slider, field))
                     cursorY += ROW_HEIGHT
                 }
+                is RangeSetting -> {
+                    val bounds = ClickGuiScreen.Rect(x, cursorY, moduleWidth, ROW_HEIGHT)
+                    val fieldWidth = minOf(NUMBER_FIELD_WIDTH * 2, maxOf(1, moduleWidth - 18))
+                    val field = ClickGuiScreen.Rect(
+                        x + moduleWidth - fieldWidth - 14,
+                        cursorY + (ROW_HEIGHT - TEXT_FIELD_HEIGHT) / 2,
+                        fieldWidth,
+                        TEXT_FIELD_HEIGHT,
+                    )
+                    val sliderRight = field.x() - 8
+                    val slider = ClickGuiScreen.Rect(x + 16, cursorY + 16, maxOf(1, sliderRight - (x + 16)), 4)
+                    rows.add(RangeRow(setting, bounds, slider, field))
+                    cursorY += ROW_HEIGHT
+                }
                 is BooleanSetting -> {
                     rows.add(ToggleRow(setting, ClickGuiScreen.Rect(x, cursorY, moduleWidth, ROW_HEIGHT)))
                     cursorY += ROW_HEIGHT
@@ -225,13 +243,12 @@ internal object ClickGuiSettingsLayout {
             }
         }
 
-        val preview = module as? ModulePreview
-        if (preview != null && preview.previewEnabled() && preview.previewGroupName() != null &&
-            preview.previewGroupName() == group.name
-        ) {
-            val contentHeight = maxOf(1, preview.previewHeight(moduleWidth, availableHeight))
-            rows.add(PreviewRow(preview, ClickGuiScreen.Rect(x, cursorY, moduleWidth, contentHeight)))
-            cursorY += contentHeight + PREVIEW_GAP
+        for (preview in listOfNotNull(module as? ModulePreview) + module.extraPreviews()) {
+            if (preview.previewEnabled() && preview.previewGroupName() != null && preview.previewGroupName() == group.name) {
+                val contentHeight = maxOf(1, preview.previewHeight(moduleWidth, availableHeight))
+                rows.add(PreviewRow(preview, ClickGuiScreen.Rect(x, cursorY, moduleWidth, contentHeight)))
+                cursorY += contentHeight + PREVIEW_GAP
+            }
         }
 
         for (child in group.children) {

@@ -73,6 +73,20 @@ public final class PlayerPresentationChecks {
 			"name transform preserves the original leaf style");
 		check(PlayerNameTextTransform.replace(original, "NoMatch", "Alias") == original,
 			"unmatched names retain the original immutable component");
+		check(PlayerNameTextTransform.restorePresentedLeaves(original) == original
+				&& PlayerNameTextTransform.restorePresentedLeaves(original) == original,
+			"restoring an untransformed component twice returns the same instance (clean-root cache)");
+		check(PlayerNameTextTransform.restorePresentedLeaves(renamed) == original,
+			"a transformed component still restores to its original after clean roots are cached");
+		WeakIdentityCache<Component, String> identityCache = new WeakIdentityCache<>(2);
+		Component keyA = Component.literal("same");
+		Component keyB = Component.literal("same");
+		identityCache.set(keyA, "a");
+		check("a".equals(identityCache.get(keyA)) && identityCache.get(keyB) == null,
+			"identity cache distinguishes equal but distinct components");
+		identityCache.set(keyB, "b");
+		identityCache.set(Component.literal("c"), "c");
+		check(identityCache.getSize() <= 2, "identity cache stays within its entry bound");
 		Component generic = PlayerNameTextTransform.replaceKnown(original,
 			text -> "ExamplePlayer".equalsIgnoreCase(text) ? "Alias" : null);
 		check("[VIP] Alias joined".equals(generic.getString()),

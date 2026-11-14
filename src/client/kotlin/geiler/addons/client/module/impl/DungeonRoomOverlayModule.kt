@@ -115,6 +115,9 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
         group(
             SettingGroup.switched("Overlay", settings.showMap, settings.showExits,
                 settings.revealUnopened, settings.showInBoss, settings.rotateMap),
+            SettingGroup.switched("Map Info", settings.mapInfo, settings.mapInfoIncludeRemaining,
+                settings.mapInfoRemaining, settings.mapInfoDeaths, settings.mapInfoHideInBoss,
+                settings.mapInfoBackground),
             SettingGroup.switchedFolded("Map Preview", settings.showPreview),
             SettingGroup.folded("Map Style", copyStyle, importStyle, resetStyle),
             SettingGroup.folded("Appearance").containing(
@@ -672,6 +675,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
             ", hudRenderNanos=" + lastHudRenderNanos + "/" + maximumHudRenderNanos +
             ", hudRenderCount=" + hudRenderCount +
             ", playerTeleportSnaps=" + playerTeleportSnaps + ", playerSnapped=" + lastPlayerPositionSnapped +
+            ", mapInfo={" + mapInfoDiagnostics() + "}" +
             ", render=" + lastRenderSummary
         val elapsed = diagnosticTick - lastAutomaticDiagnosticTick
         val changed = status != lastAutomaticDiagnostic
@@ -1107,7 +1111,64 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
     override fun width(font: Font?): Int =
         DungeonRoomOverlayLayout.scaledDimension(layout(font!!).width, settings.mapScale.value())
     override fun height(font: Font?): Int =
-        DungeonRoomOverlayLayout.scaledDimension(layout(font!!).height, settings.mapScale.value())
+        DungeonRoomOverlayLayout.scaledDimension(layout(font!!).height + mapInfoHeight(), settings.mapScale.value())
+
+    /** The Map Info panel is wanted whenever the module and its Map Info switch are on, so the data is gathered. */
+    fun mapInfoWanted(): Boolean = isEnabled() && settings.mapInfo.value()
+
+    /** The panel is part of the map box except in the boss phase when it is set to hide there. */
+    private fun mapInfoShown(): Boolean =
+        settings.mapInfo.value() && !(settings.mapInfoHideInBoss.value() && inBossPhase())
+
+    private fun mapInfoHeight(): Int = if (mapInfoShown()) DungeonMapInfoLogic.PANEL_HEIGHT else 0
+
+    private fun mapInfoOptions() = DungeonMapInfoLogic.Options(
+        includeRemaining = settings.mapInfoIncludeRemaining.value(),
+        remainingIsAll = settings.mapInfoRemaining.value() == "Remaining",
+        showUnfound = settings.mapInfoDeaths.value() == "Unfound",
+    )
+
+    /** Bounded evidence of what the Map Info panel is fed: counts and flags only, no names. */
+    private fun mapInfoDiagnostics(): String {
+        if (!settings.mapInfo.value()) return "off"
+        val run = DungeonOdinAssistModule.INSTANCE.mapRunInfo() ?: return "shown=" + mapInfoShown() + ",data=none"
+        val info = DungeonMapInfoLogic.info(run, 0)
+        return "shown=" + mapInfoShown() + ",found=" + info.secretsFound + ",percent=" + info.secretsPercent +
+            ",total=" + info.totalSecrets + ",needed=" + info.neededSecrets + ",deaths=" + info.deaths +
+            ",crypts=" + info.crypts + ",mimic=" + info.mimic + ",prince=" + info.prince + ",bats=" + info.batKillers +
+            ",paul=" + info.paul + ",floor=" + info.floorNumber + ",score=" + (info.score ?: "none") +
+            ",scoreRange=" + run.score.minimum() + "-" + run.score.maximum()
+    }
+
+    /** Secrets of the rooms already opened on the map: the "known" part of the Unfound count. */
+    private fun knownSecrets(state: DungeonRoomOverlayGeometry.Snapshot): Int =
+        state.rooms().filter { it.visibility() == DungeonRoomOverlayGeometry.RoomVisibility.OBSERVED }
+            .sumOf { it.maxSecrets() }
+
+    /** Draws the Map Info panel under the map, in the map's own scaled space, as wide as the map. */
+    private fun drawMapInfo(
+        graphics: GuiGraphicsExtractor,
+        font: Font,
+        state: DungeonRoomOverlayGeometry.Snapshot,
+        layout: DungeonRoomOverlayLayout.Layout,
+        preview: Boolean,
+    ) {
+        if (!mapInfoShown()) return
+        val info = if (preview) DungeonMapInfoLogic.sampleInfo()
+        else DungeonMapInfoLogic.info(DungeonOdinAssistModule.INSTANCE.mapRunInfo(), knownSecrets(state))
+        val pose = graphics.pose()
+        pose.pushMatrix()
+        pose.translate(0f, layout.height.toFloat())
+        graphics.fill(0, 0, layout.width, DungeonMapInfoLogic.PANEL_HEIGHT, settings.mapInfoBackground.argb())
+        val options = mapInfoOptions()
+        val fit = DungeonMapInfoLogic.fitScale(layout.width, info, options) { font.width(it) }
+        // A narrow map shrinks the text so the secrets and score (and the second row) never overlap.
+        pose.translate(0f, (DungeonMapInfoLogic.PANEL_HEIGHT * (1f - fit)) / 2f)
+        pose.scale(fit, fit)
+        val lines = DungeonMapInfoLogic.layout((layout.width / fit).toInt(), info, options) { font.width(it) }
+        for (line in lines) graphics.text(font, Component.literal(line.text), line.x, line.y, 0xFFFFFFFF.toInt())
+        pose.popMatrix()
+    }
     override fun previewWidth(font: Font?): Int = width(font)
     override fun previewHeight(font: Font?): Int = height(font)
     override fun previewMode(): String = if (snapshot.available()) "live" else "sample"
@@ -1134,10 +1195,11 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
             pose.pushMatrix()
             pose.translate(
                 x + maxOf(0f, (width(font) - layout.width * scale) / 2.0f),
-                y + maxOf(0f, (height(font) - layout.height * scale) / 2.0f),
+                y + maxOf(0f, (height(font) - (layout.height + mapInfoHeight()) * scale) / 2.0f),
             )
             pose.scale(scale, scale)
             drawMapContents(graphics, font, state, layout, false)
+            drawMapInfo(graphics, font, state, layout, false)
             pose.popMatrix()
         } finally {
             lastHudRenderNanos = maxOf(0L, System.nanoTime() - started)
@@ -1246,9 +1308,10 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
         val pose = graphics.pose()
         pose.pushMatrix()
         pose.translate(x + maxOf(0f, (width(font) - layout.width * scale) / 2.0f),
-            y + maxOf(0f, (height(font) - layout.height * scale) / 2.0f))
+            y + maxOf(0f, (height(font) - (layout.height + mapInfoHeight()) * scale) / 2.0f))
         pose.scale(scale, scale)
         drawMapContents(graphics, font, current, layout, true)
+        drawMapInfo(graphics, font, current, layout, true)
         pose.popMatrix()
     }
 
@@ -2413,6 +2476,11 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
             val showExits = BooleanSetting("Show Room Exits", true)
             val revealUnopened = BooleanSetting("Reveal Unopened Rooms", "Illegal Map: Reveal Unopened Rooms", true)
             val showInBoss = BooleanSetting("Show In Boss", false)
+            val mapInfo = BooleanSetting("Show Map Info", "Map Info", true)
+            val mapInfoIncludeRemaining = BooleanSetting("Include Remaining", false)
+            val mapInfoRemaining = ChoiceSetting("Remaining Secrets", "Minimum", "Minimum", "Remaining")
+            val mapInfoDeaths = ChoiceSetting("Map Info Deaths", "Deaths", "Deaths", "Unfound")
+            val mapInfoHideInBoss = BooleanSetting("Hide Map Info In Boss", true)
             val showPlayers = BooleanSetting("Show Players", true)
             val showPlayerNames = BooleanSetting("Show Player Names", true)
             val showPlayerClasses = BooleanSetting("Show Player Class", false)
@@ -2469,6 +2537,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
             val playerNamesScale = NumberSetting("Player Names Scale", 0.1f, 10.0f, 0.75f)
             val unopenedDarkenFactor = NumberSetting("Unopened Darken Factor", 0.0f, 1.0f, 0.7f)
             val background = rgba("MapBackground", "Map Background", 242, 242, 242, 73)
+            val mapInfoBackground = rgba("MapInfoBackground", "Map Info Background", 85, 85, 85, 0)
             val outlineColor = rgba("MapOutline", "Map Outline", 227, 225, 225, 186)
             val textColor = rgb("TextColor", "Text Color", 100, 100, 100)
             val playerNameColor = rgb("PlayerNameColor", "Player Name Color", 70, 70, 70)
@@ -2514,6 +2583,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
                 rareRoomColor, championRoomColor, pendingRoomColor, normalDoorColor, glassDoorColor,
                 startDoorColor, witherDoorColor, bloodDoorColor, fairyDoorColor, unknownDoorColor,
                 unopenedRoomColor, unopenedTextColor, disablePredictions,
+                mapInfo, mapInfoIncludeRemaining, mapInfoRemaining, mapInfoDeaths, mapInfoHideInBoss, mapInfoBackground,
             )
 
             private fun rgb(id: String, name: String, red: Int, green: Int, blue: Int): ColorSetting =

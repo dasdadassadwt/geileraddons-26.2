@@ -93,7 +93,99 @@ public final class GeilerAddonsCommandTreeChecks {
 		assertStringArgument(duration, StringArgumentType.StringType.GREEDY_PHRASE,
 			"/ga timer set accepts a greedy duration expression");
 		require(command(duration), "/ga timer set duration dispatches the update");
+		checkMacroCommands(dispatcher);
 		System.out.println("GeilerAddons command tree checks passed.");
+	}
+
+	/** The macro commands beneath /ga: areakiller, addmobkill, pathfind and spawnmob, with the source's argument shapes. */
+	private static void checkMacroCommands(CommandDispatcher<FabricClientCommandSource> dispatcher) {
+		CommandNode<FabricClientCommandSource> ga = dispatcher.getRoot().getChild("ga");
+		for (String old : new String[] {"areakiller", "addmobkill", "pathfind", "spawnmob", "etw"}) {
+			require(dispatcher.getRoot().getChild(old) == null, "/" + old + " is no longer a top-level command");
+		}
+		CommandNode<FabricClientCommandSource> killer = ga.getChild("areakiller");
+		require(killer != null && killer.getCommand() == null, "/ga areakiller needs a subcommand");
+		require(children(killer).equals(Set.of(
+			"start", "stop", "status", "gui", "add", "remove", "list", "gate", "margin", "slot", "radius", "rest", "overlay")),
+			"/ga areakiller has the ported subcommands and neither map nor mine");
+		CommandNode<FabricClientCommandSource> area = ga.getChild("area");
+		require(area != null && area.getCommand() == null && children(area).equals(Set.of("paint", "use", "show", "list", "info", "clear", "delete")),
+			"/ga area has paint, use, show, list, info, clear and delete");
+		CommandNode<FabricClientCommandSource> paint = child(area, "paint");
+		require(children(paint).contains("off") && children(paint).contains("name"), "/ga area paint takes off or an area name");
+		CommandNode<FabricClientCommandSource> brushRadius = child(child(paint, "name"), "radius");
+		require(children(brushRadius).equals(Set.of("allowed", "preferred", "forbidden", "wall", "rest", "erase")),
+			"/ga area paint <name> <radius> ends in one of the six paints");
+		CommandNode<FabricClientCommandSource> brush = ga.getChild("brush");
+		require(brush != null && children(brush).equals(Set.of("off", "name")), "/ga brush takes off or an area name");
+		require(children(child(brush, "name")).equals(Set.of("allowed", "preferred", "forbidden", "wall", "rest", "erase")),
+			"/ga brush <name> is followed by the paint");
+		require(children(child(child(brush, "name"), "rest")).equals(Set.of("radius")) && command(child(child(child(brush, "name"), "rest"), "radius")),
+			"/ga brush <name> <type> <radius> executes");
+		CommandNode<FabricClientCommandSource> rest = child(killer, "rest");
+		require(command(rest) && children(rest).equals(Set.of("set", "clear", "on", "radius", "delay")),
+			"/ga areakiller rest shows the point and sets, clears, switches, sizes and delays it");
+		for (String child : new String[] {"start", "stop", "status", "gui", "add", "list"}) {
+			require(command(child(killer, child)), "/ga areakiller " + child + " executes");
+		}
+		assertStringArgument(child(child(killer, "add"), "mob"), StringArgumentType.StringType.GREEDY_PHRASE,
+			"/ga areakiller add accepts a greedy mob");
+		require(!command(child(killer, "remove")), "/ga areakiller remove needs a mob");
+		assertStringArgument(child(child(killer, "remove"), "mob"), StringArgumentType.StringType.GREEDY_PHRASE,
+			"/ga areakiller remove accepts a greedy mob");
+
+		CommandNode<FabricClientCommandSource> gate = child(killer, "gate");
+		for (String argument : new String[] {"x1", "y1", "z1", "x2", "y2", "z2"}) {
+			require(!command(gate), "/ga areakiller gate needs all six coordinates");
+			gate = child(gate, argument);
+			require(gate instanceof ArgumentCommandNode<?, ?> node && node.getType() instanceof IntegerArgumentType,
+				"/ga areakiller gate " + argument + " is an integer");
+		}
+		require(command(gate), "/ga areakiller gate executes after six coordinates");
+		assertIntRange(child(child(killer, "margin"), "blocks"), 0, 3, "/ga areakiller margin is 0 to 3");
+		assertIntRange(child(child(killer, "slot"), "slot"), 1, 9, "/ga areakiller slot is 1 to 9");
+		assertIntRange(child(child(killer, "radius"), "blocks"), 0, 1024, "/ga areakiller radius is 0 to 1024");
+		require(command(child(child(killer, "overlay"), "on")), "/ga areakiller overlay takes a flag");
+
+		CommandNode<FabricClientCommandSource> addMobKill = ga.getChild("addmobkill");
+		require(command(addMobKill), "/ga addmobkill adds the mob looked at");
+		assertStringArgument(child(addMobKill, "mob"), StringArgumentType.StringType.GREEDY_PHRASE,
+			"/ga addmobkill accepts a greedy mob");
+
+		CommandNode<FabricClientCommandSource> pathfind = ga.getChild("pathfind");
+		require(command(pathfind), "/ga pathfind alone shows its usage");
+		require(command(child(pathfind, "stop")), "/ga pathfind stop executes");
+		CommandNode<FabricClientCommandSource> axis = pathfind;
+		for (String argument : new String[] {"x", "y", "z"}) {
+			axis = child(axis, argument);
+			require(axis instanceof ArgumentCommandNode<?, ?> node
+				&& node.getType() instanceof com.mojang.brigadier.arguments.DoubleArgumentType,
+				"/ga pathfind " + argument + " is a double");
+		}
+		require(command(axis) && !command(child(pathfind, "x")), "/ga pathfind executes only after x y z");
+		CommandNode<FabricClientCommandSource> snapshot = child(pathfind, "snapshot");
+		require(command(snapshot), "/ga pathfind snapshot executes with the default radius");
+		assertIntRange(child(snapshot, "radius"), 4, 64, "/ga pathfind snapshot radius is 4 to 64");
+
+		CommandNode<FabricClientCommandSource> spawn = ga.getChild("spawnmob");
+		require(spawn != null && !command(spawn), "/ga spawnmob needs its arguments");
+		CommandNode<FabricClientCommandSource> radius = child(child(spawn, "count"), "radius");
+		require(((ArgumentCommandNode<?, ?>) child(spawn, "count")).getType() instanceof IntegerArgumentType count
+			&& count.getMinimum() == 1 && count.getMaximum() == 200 && !command(child(spawn, "count")),
+			"/ga spawnmob count is 1 to 200 and does not execute alone");
+		require(((ArgumentCommandNode<?, ?>) radius).getType() instanceof IntegerArgumentType range
+			&& range.getMinimum() == 1 && range.getMaximum() == 64 && !command(radius),
+			"/ga spawnmob radius is 1 to 64 and does not execute alone");
+		CommandNode<FabricClientCommandSource> mob = child(radius, "mob");
+		require(command(mob) && ((ArgumentCommandNode<?, ?>) mob).getType() instanceof com.mojang.brigadier.arguments.StringArgumentType,
+			"/ga spawnmob <count> <radius> <mob> executes");
+	}
+
+	private static void assertIntRange(CommandNode<FabricClientCommandSource> node, int min, int max, String message) {
+		require(node instanceof ArgumentCommandNode<?, ?>, message);
+		Object type = ((ArgumentCommandNode<?, ?>) node).getType();
+		require(type instanceof IntegerArgumentType range && range.getMinimum() == min && range.getMaximum() == max, message);
+		require(command(node), message);
 	}
 
 	private static Set<String> children(CommandNode<FabricClientCommandSource> node) {

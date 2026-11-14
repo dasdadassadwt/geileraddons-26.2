@@ -49,6 +49,7 @@ object ConfigProfileCodecSupport {
         "scoreboard/layout.json",
         "inventory-controls/controls.json",
         "secret-waypoints.json",
+        "macros-workspace.json",
     )
 
     /** Client-local credentials, counters, caches, and user fonts stay outside portable profiles. */

@@ -1,5 +1,6 @@
 package geiler.addons.client.module.impl;
 
+import geiler.addons.client.gui.ClickGuiStyle;
 import geiler.addons.client.gui.GuiTheme;
 import geiler.addons.client.module.Category;
 import geiler.addons.client.module.ChoiceSetting;
@@ -97,6 +98,9 @@ public final class VisualModuleChecks {
 			&& "Expressive".equals(motion.value())
 			&& motion.choices().equals(List.of("None", "Reduced", "Expressive")),
 			"the Motion key, default and choices remain stable");
+		check("Style".equals(theme.clickGuiStyleSetting().name()) && "Modern".equals(theme.clickGuiStyleSetting().value())
+			&& theme.clickGuiStyleSetting().choices().equals(List.of("Modern", "Classic")) && theme.clickGuiStyle() == ClickGuiStyle.MODERN,
+			"the Style setting defaults to Modern and offers Modern and Classic");
 		check("Theme Macro + Inventory Colors".equals(theme.themeSurfaces().name())
 			&& theme.themeSurfaces().value(),
 			"the themed-surfaces key and enabled default remain stable");
@@ -108,7 +112,7 @@ public final class VisualModuleChecks {
 			"the Colours group retains the same rows and order");
 		check(names(groups.get(1).settings()).equals(Arrays.asList(PRESET_NAMES)),
 			"the Presets group retains all nine actions in order");
-		check(names(groups.get(2).settings()).equals(List.of("Motion"))
+		check(names(groups.get(2).settings()).equals(List.of("Style", "Motion"))
 			&& names(groups.get(3).settings()).equals(List.of("Theme Macro + Inventory Colors")),
 			"Click GUI and Surfaces retain their setting rows");
 		check(names(theme.actions()).equals(Arrays.asList(PRESET_NAMES)),

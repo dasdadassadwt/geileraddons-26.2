@@ -45,8 +45,6 @@ class ScoreboardModule private constructor(
         ClientTickEvents.END_CLIENT_TICK.register { _ -> synchronizeSettings() }
     }
 
-    override fun isWorkInProgress(): Boolean = true
-
     override fun isSettingVisible(setting: Setting): Boolean {
         val rowIndex = customRows.indexOfFirst { it === setting }
         if (rowIndex < 0) return super.isSettingVisible(setting)

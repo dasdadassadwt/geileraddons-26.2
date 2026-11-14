@@ -49,7 +49,8 @@ internal object DungeonStatsServiceCore {
     private val TIMEOUT: Duration = Duration.ofSeconds(10)
     private const val MAX_RESPONSE_BYTES = 8 * 1024 * 1024
     private const val MAX_JSON_DEPTH = 32
-    private const val MAX_JSON_NODES = 50_000
+    // Active-player profiles reach ~127k nodes (5.3 MB); the 8 MB body cap bounds this.
+    private const val MAX_JSON_NODES = 500_000
     private const val MAX_ITEM_TEXT_CHARS = 64 * 1024
     private const val MAX_COMPRESSED_VALUE_CHARS = 256 * 1024
     private const val MAX_NBT_BYTES = 2 * 1024 * 1024
@@ -180,6 +181,8 @@ internal object DungeonStatsServiceCore {
     fun retryAfterForChecks(value: String?): Long = retryAfterMillis(value)
 
     fun encodePathForChecks(value: String): String = encodePath(value)
+
+    fun maxJsonNodesForChecks(): Int = MAX_JSON_NODES
 
     fun formatTime(seconds: Long): String {
         if (seconds <= 0) return "-"

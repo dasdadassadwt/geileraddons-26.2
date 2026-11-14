@@ -12,7 +12,12 @@ public final class ModuleIconTexturesChecks {
 		"Terminal Stats", "Terminal Titles", "Dungeon Map", "Room Alerts", "Key Pickup", "Score Titles",
 		"Blood Camp", "Livid Helper", "Invincibility Timers", "Secret Clicked", "Slayer Tracker",
 		"Pest Tracker", "Crop Fever Timer", "Party Commands", "Lobby Sniper", "Slot Locking",
-		"Player Names", "Custom Scoreboard", "Snap Tap");
+		"Player Names", "Custom Scoreboard", "Snap Tap",
+			"Auto Sprint", "Block Overlay", "Freecam", "Fullbright", "No Fog", "Scrollable Tooltip", "1 Tap",
+			"Human Recorder", "Etherwarp", "Etherwarp Sim", "Area Killer", "Rotation Engine", "Speed Sim",
+			"Jump Boost", "Pathfinder", "Secret Waypoints", "Item Cooldowns", "No Render", "Animation Fix", "Double Use Fix",
+			"Disconnect Fix", "Gyro Wand", "Mimic Announcer", "Terracotta Timer", "Wardrobe Keybinds", "Loadout Keybinds",
+			"Spring Boots", "Ragnarock");
 
 	public static void run() throws Exception {
 		Path root = Path.of("src", "main", "resources", "assets", "geileraddons");

@@ -403,7 +403,8 @@ public final class ClickGuiScrollChecks {
 	}
 
 	private static void checkCategoryScroll() {
-		check(ClickGuiScreen.categoryContentHeight() == Category.values().length * 22,
+		check(ClickGuiScreen.categoryContentHeight()
+				== Category.Companion.of(geiler.addons.client.module.Workspace.NORMAL).size() * 22,
 			"the compatibility helper still reports its baseline row height");
 		int compactContent = ClickGuiScreen.categoryContentHeightForPanelHeight(367);
 		check(compactContent == 228, "the compact rail fits all nine categories below its header gap");

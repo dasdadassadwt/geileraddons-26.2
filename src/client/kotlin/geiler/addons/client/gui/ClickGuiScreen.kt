@@ -2,6 +2,7 @@ package geiler.addons.client.gui
 
 import geiler.addons.client.config.ClickGuiState
 import geiler.addons.client.module.Category
+import geiler.addons.client.module.Workspace
 import geiler.addons.client.module.Module
 import geiler.addons.client.module.ModuleCategoryFilter
 import geiler.addons.client.module.impl.GeneralModule
@@ -19,7 +20,7 @@ object ClickGuiScreenGeometry {
 
     @JvmStatic
     fun categoryContentHeightForPanelHeight(panelHeight: Int): Int =
-        categoryContentHeightForPanelHeight(panelHeight, Category.values().size)
+        categoryContentHeightForPanelHeight(panelHeight, Category.of(Workspace.NORMAL).size)
 
     @JvmStatic
     fun categoryContentHeightForPanelHeight(panelHeight: Int, rowCount: Int): Int {
@@ -30,7 +31,7 @@ object ClickGuiScreenGeometry {
 
     @JvmStatic
     fun categoryMaxScroll(panelHeight: Int, viewportHeight: Int): Int =
-        categoryMaxScroll(panelHeight, viewportHeight, Category.values().size)
+        categoryMaxScroll(panelHeight, viewportHeight, Category.of(Workspace.NORMAL).size)
 
     @JvmStatic
     fun categoryMaxScroll(panelHeight: Int, viewportHeight: Int, rowCount: Int): Int =

@@ -16,7 +16,7 @@ public final class CodeStyleChecks {
 	private static final Path ROOT = Path.of("src/client/kotlin");
 	/** Separate screens that remain on purpose; new per-module hubs must be inline settings instead. */
 	private static final Set<String> SCREEN_ALLOWLIST = Set.of(
-		"BlockPickerScreen", "ClickGuiScreen", "ClickGuiScreenImpl", "ConfigResetScreen", "ConfigTransferScreen",
+		"BlockPickerScreen", "ClickGuiClassicScreen", "ClickGuiScreen", "ClickGuiScreenImpl", "ConfigResetScreen", "ConfigTransferScreen",
 		"DungeonFloorPickerScreen", "DungeonGuideEditorScreen", "DungeonGuideStagesScreen", "FolderManagerScreen",
 		"GuiColorPickerScreen", "HotbarBindingCaptureScreen", "InventoryButtonPickerScreen", "InventoryButtonTextScreen", "MacroShareScreen", "MoveUiScreen",
 		"PlayerSizeEditorScreen", "ScoreboardFontImportScreen", "ScratchMacroEditorScreen", "SecretWaypointEditorScreen",

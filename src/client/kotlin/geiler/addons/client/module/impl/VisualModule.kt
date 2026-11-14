@@ -3,6 +3,7 @@ package geiler.addons.client.module.impl
 import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.config.ModConfig
 import geiler.addons.client.gui.GuiTheme
+import geiler.addons.client.gui.ClickGuiStyle
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.ChoiceSetting
@@ -29,7 +30,7 @@ class VisualModule private constructor(settings: Settings) : Module(
     settings.background, settings.border, settings.accent, settings.text, settings.muted,
     settings.iconColor, settings.tracker, settings.amethyst, settings.midnight, settings.forest,
     settings.aurora, settings.ember, settings.orchid, settings.iceGlass, settings.roseGlass,
-    settings.clickGuiMotion, settings.themeSurfaces,
+    settings.guiStyle, settings.clickGuiMotion, settings.themeSurfaces,
 ) {
     private val background = settings.background
     private val border = settings.border
@@ -38,6 +39,7 @@ class VisualModule private constructor(settings: Settings) : Module(
     private val muted = settings.muted
     private val iconColor = settings.iconColor
     private val clickGuiMotion = settings.clickGuiMotion
+    private val guiStyle = settings.guiStyle
     private val themeSurfaces = settings.themeSurfaces
 
     private var lastBackground = 0
@@ -61,7 +63,7 @@ class VisualModule private constructor(settings: Settings) : Module(
             SettingGroup("Presets", settings.tracker, settings.amethyst, settings.midnight,
                 settings.forest, settings.aurora, settings.ember, settings.orchid,
                 settings.iceGlass, settings.roseGlass),
-            SettingGroup("Click GUI", settings.clickGuiMotion),
+            SettingGroup("Click GUI", settings.guiStyle, settings.clickGuiMotion),
             SettingGroup("Surfaces", settings.themeSurfaces),
         )
 
@@ -81,6 +83,8 @@ class VisualModule private constructor(settings: Settings) : Module(
         val text = ColorSetting("Text", 234, 242, 255, 255)
         val muted = ColorSetting("Muted Text", 126, 143, 168, 255)
         val iconColor = ColorSetting("Icon color", 234, 242, 255)
+        /** Modern is the sidebar-and-cards menu; Classic is one column of modules per category. */
+        val guiStyle = ChoiceSetting("Style", "Modern", "Modern", "Classic")
         val clickGuiMotion = ChoiceSetting("Motion", "Expressive", "None", "Reduced", "Expressive")
 
         /**
@@ -273,6 +277,11 @@ class VisualModule private constructor(settings: Settings) : Module(
     }
 
     fun clickGuiMotion(): ChoiceSetting = clickGuiMotion
+
+    fun clickGuiStyleSetting(): ChoiceSetting = guiStyle
+
+    /** The menu layout: [ClickGuiStyle]. */
+    fun clickGuiStyle(): ClickGuiStyle = ClickGuiStyle.fromSetting(guiStyle.value())
 
     /** User-editable RGB tint for monochrome module icons. */
     fun iconColorSetting(): ColorSetting = iconColor

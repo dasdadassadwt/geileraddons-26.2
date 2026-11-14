@@ -1,7 +1,11 @@
 package geiler.addons.client.mixin;
 
 import geiler.addons.client.module.impl.I4HelperModule;
+import geiler.addons.client.module.impl.MimicAnnouncerModule;
+import geiler.addons.client.module.impl.RagnarockModule;
 import geiler.addons.client.module.impl.SafariFloorDropsModule;
+import geiler.addons.client.module.impl.SpringBootsModule;
+import geiler.addons.client.module.impl.TerracottaTimerModule;
 import geiler.addons.client.module.impl.TikiHelperModule;
 import geiler.addons.client.module.impl.DungeonMobEspModule;
 import geiler.addons.client.module.impl.DungeonOdinAssistModule;
@@ -36,6 +40,7 @@ import net.minecraft.network.protocol.game.ClientboundSetTimePacket;
 import net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
+import net.minecraft.network.protocol.game.ClientboundEntityEventPacket;
 import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.network.protocol.game.ClientboundTakeItemEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
@@ -224,6 +229,7 @@ public abstract class ClientPacketListenerMixin {
 		I4HelperModule.INSTANCE.onBlockChange(packet.getPos(), packet.getBlockState());
 		TikiHelperModule.INSTANCE.onBlockChange(packet.getPos(), packet.getBlockState());
 		DungeonDoorTracker.onBlockChange(packet.getPos());
+		TerracottaTimerModule.INSTANCE.onBlockChange(packet.getPos(), packet.getBlockState());
 		SecretWaypointsModule.INSTANCE.onSecretBlockUpdate(geileraddons$blockUpdatePositionBefore,
 			geileraddons$blockUpdateStateBefore, packet.getBlockState());
 		DungeonOdinAssistModule.INSTANCE.onPuzzleBlockChange(geileraddons$blockUpdatePositionBefore,
@@ -254,6 +260,7 @@ public abstract class ClientPacketListenerMixin {
 			TikiHelperModule.INSTANCE.onBlockChange(change.position(), change.state());
 			DungeonDoorTracker.onBlockChange(change.position());
 			SecretWaypointsModule.INSTANCE.onSecretBlockUpdate(change.position(), change.oldState(), change.state());
+			TerracottaTimerModule.INSTANCE.onBlockChange(change.position(), change.state());
 			DungeonOdinAssistModule.INSTANCE.onPuzzleBlockChange(change.position(), change.oldState(),
 				change.position(), change.state());
 		}
@@ -289,6 +296,16 @@ public abstract class ClientPacketListenerMixin {
 		String soundId = packet.getSound().unwrapKey().map(key -> key.identifier().toString())
 			.orElseGet(() -> packet.getSound().value().location().toString());
 		SecretWaypointsModule.INSTANCE.onBatDeathSound(soundId, packet.getX(), packet.getY(), packet.getZ());
+		SpringBootsModule.INSTANCE.onSound("minecraft:block.note_block.pling".equals(soundId),
+			"minecraft:entity.firework_rocket.launch".equals(soundId), packet.getPitch());
+		RagnarockModule.INSTANCE.onSound(packet.getPitch(), packet.getSound().value().location());
+	}
+
+	/** An entity status event, after the entity handled it; a baby zombie's death event is the Mimic dying. */
+	@Inject(method = "handleEntityEvent", at = @At("TAIL"))
+	private void geileraddons$onEntityEvent(ClientboundEntityEventPacket packet, CallbackInfo ci) {
+		if (level == null) return;
+		MimicAnnouncerModule.INSTANCE.onEntityEvent(packet.getEntity(level), packet.getEventId());
 	}
 
 	/** Replaces only server title packets, leaving local alert titles and subtitles untouched. */

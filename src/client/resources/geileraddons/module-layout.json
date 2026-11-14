@@ -4,10 +4,10 @@
     { "category": "F7", "id": "general", "label": "General", "except": ["i4 helper", "Terminal Stats", "Terminal Titles"] },
     { "category": "HUNTING", "id": "critter-safari", "label": "Critter Safari", "modules": ["Hideyho Finder", "Safari Floor Drops", "Sparkling Critter"] },
     { "category": "HUNTING", "id": "general", "label": "General", "except": ["Hideyho Finder", "Safari Floor Drops", "Sparkling Critter"] },
-    { "category": "VISUAL", "id": "player-camera", "label": "Player & Camera", "modules": ["Player Names", "Player Size", "Third Person Camera", "Animations"] },
-    { "category": "VISUAL", "id": "highlights-effects", "label": "Highlights & Effects", "modules": ["Mob Highlight", "Block ESP", "Hide Particles"] },
-    { "category": "VISUAL", "id": "interface", "label": "Interface", "modules": ["Custom Scoreboard", "Inventory Buttons"] },
+    { "category": "VISUAL", "id": "player-camera", "label": "Player & Camera", "modules": ["Player Names", "Player Size", "Third Person Camera", "Freecam", "Animations"] },
+    { "category": "VISUAL", "id": "highlights-effects", "label": "Highlights & Effects", "modules": ["Mob Highlight", "Block ESP", "Block Overlay", "Fullbright", "No Fog", "Hide Particles", "No Render", "Gyro Wand"] },
+    { "category": "VISUAL", "id": "interface", "label": "Interface", "modules": ["Custom Scoreboard", "Inventory Buttons", "Item Cooldowns"] },
     { "category": "MISCELLANEOUS", "id": "chat-party", "label": "Chat & Party", "modules": ["Chat", "Chat Channels", "Party Commands", "Lobby Sniper"] },
-    { "category": "MISCELLANEOUS", "id": "utilities", "label": "Utilities", "modules": ["Macros", "Slot Locking", "System Clock", "Snap Tap"] }
+    { "category": "MISCELLANEOUS", "id": "utilities", "label": "Utilities", "modules": ["Macros", "Slot Locking", "System Clock", "Snap Tap", "Auto Sprint", "Scrollable Tooltip", "Animation Fix", "Double Use Fix", "Disconnect Fix", "Wardrobe Keybinds", "Loadout Keybinds", "Spring Boots", "Ragnarock"] }
   ]
 }

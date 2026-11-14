@@ -673,7 +673,7 @@ object MacroRunner {
         }
     }
 
-    private fun isTextOrEditorScreen(screen: Screen?): Boolean = screen is ChatScreen || screen is ClickGuiScreen ||
+    private fun isTextOrEditorScreen(screen: Screen?): Boolean = screen is ChatScreen || screen is ClickGuiScreen || screen is geiler.addons.client.gui.ClickGuiClassicScreen ||
         screen is ScratchMacroEditorScreen || screen is InventoryButtonPickerScreen ||
         screen is InventoryButtonTextScreen
 

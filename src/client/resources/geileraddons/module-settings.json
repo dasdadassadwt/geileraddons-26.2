@@ -212,6 +212,39 @@
         { "name": "Free Look", "settings": ["freeLookEnabled", "freeLookKeybind"] }
       ]
     },
+    "No Fog": {
+      "settings": [
+        { "id": "underwater", "type": "toggle", "name": "Underwater", "label": "Remove Underwater Fog", "default": true },
+        { "id": "lava", "type": "toggle", "name": "Lava", "label": "Remove Lava Fog", "default": true }
+      ]
+    },
+    "Freecam": {
+      "settings": [
+        { "id": "speed", "type": "slider", "name": "Speed", "label": "Flight Speed (blocks per tick)", "min": 0.1, "max": 10.0, "default": 1.0 }
+      ]
+    },
+    "Block Overlay": {
+      "settings": [
+        { "id": "boxEntity", "type": "toggle", "name": "Highlight Entity", "default": false },
+        { "id": "wireColor", "type": "color", "name": "Block Outline Color", "default": [20, 254, 234, 255] },
+        { "id": "fillColor", "type": "color", "name": "Block Fill Color", "default": [0, 0, 0, 0] },
+        { "id": "wireWidth", "type": "slider", "name": "Outline Line Width", "min": 0.0, "max": 10.0, "default": 3.0 },
+        { "id": "wirePhase", "type": "toggle", "name": "Outline Wire Phase", "label": "Outline Wire Phase (through walls)", "default": true },
+        { "id": "fillPhase", "type": "toggle", "name": "Outline Fill Phase", "label": "Outline Fill Phase (through walls)", "default": false },
+        { "id": "dynamicPhase", "type": "toggle", "name": "Dynamic Phase", "label": "Dynamic Phase (through walls only in first person)", "default": false }
+      ]
+    },
+    "Scrollable Tooltip": {
+      "settings": [
+        { "id": "allowHorizontal", "type": "toggle", "name": "Allow Horizontal", "label": "Allow Horizontal (Shift + wheel)", "default": true },
+        { "id": "allowVertical", "type": "toggle", "name": "Allow Vertical", "label": "Allow Vertical (wheel)", "default": true },
+        { "id": "allowScale", "type": "toggle", "name": "Allow Scaling", "label": "Allow Scaling (Ctrl + wheel)", "default": true },
+        { "id": "lockInPlace", "type": "toggle", "name": "Tooltip Lock In Place", "default": false },
+        { "id": "dontDivideByScale", "type": "toggle", "name": "Tooltip Ignore Scale", "default": false },
+        { "id": "resetTooltip", "type": "toggle", "name": "Tooltip Reset", "label": "Tooltip Reset (on new slot)", "default": true },
+        { "id": "startTop", "type": "toggle", "name": "Tooltip Start At Top", "default": false }
+      ]
+    },
     "Secret Clicked": {
       "settings": [
         { "id": "boxes", "type": "toggle", "name": "Secret Boxes", "default": true },
@@ -234,6 +267,126 @@
         { "name": "Secret Boxes", "toggle": "boxes", "settings": ["boxStyle", "boxColor", "depthCheck", "lockedColor", "timeToStay", "boxesInBoss", "itemBoxes"] },
         { "name": "Secret Chime", "toggle": "chime", "settings": ["chimeInBoss", "sound", "volume", "pitch"] },
         { "name": "Click Confirmation", "settings": ["feedbackWindowMillis", "allowSecretBlocksInBoss"] }
+      ]
+    },
+    "Hide Particles": {
+      "settings": [
+        {"id": "hideAll", "type": "toggle", "name": "Hide All", "label": "Hide All Particles", "default": true},
+        {"id": "blockBreaking", "type": "toggle", "name": "Block Breaking", "label": "Hide Block Breaking Particles", "default": false},
+        {"id": "explosions", "type": "toggle", "name": "Explosions", "label": "Hide Explosion Particles", "default": false}
+      ]
+    },
+    "No Render": {
+      "settings": [
+        {"id": "fireOverlay", "type": "toggle", "name": "Fire Overlay", "default": false},
+        {"id": "foodBar", "type": "toggle", "name": "Food Bar", "default": false},
+        {"id": "armorBar", "type": "toggle", "name": "Armor Bar", "default": false},
+        {"id": "bossBar", "type": "toggle", "name": "Boss Bar", "default": false},
+        {"id": "effectDisplay", "type": "toggle", "name": "Effect Display", "default": false},
+        {"id": "recipeBook", "type": "toggle", "name": "Recipe Book", "default": false},
+        {"id": "deadEntities", "type": "toggle", "name": "Dead Entities", "default": false},
+        {"id": "deadPoof", "type": "toggle", "name": "Dead Poof", "default": false},
+        {"id": "lightning", "type": "toggle", "name": "Lightning", "default": false},
+        {"id": "fallingBlocks", "type": "toggle", "name": "Falling Blocks", "default": false},
+        {"id": "entityFire", "type": "toggle", "name": "Entity Fire", "default": false},
+        {"id": "mageBeam", "type": "toggle", "name": "Mage Beam", "default": false},
+        {"id": "powderCoating", "type": "toggle", "name": "Powder Coating", "default": false},
+        {"id": "guidedSheep", "type": "toggle", "name": "Guided Sheep", "default": false},
+        {"id": "bonePlating", "type": "toggle", "name": "Bone Plating", "default": false},
+        {"id": "treeBits", "type": "toggle", "name": "Tree Bits", "default": false},
+        {"id": "nausea", "type": "toggle", "name": "Nausea", "default": false},
+        {"id": "expOrbs", "type": "toggle", "name": "Exp Orbs", "default": false},
+        {"id": "stuckArrows", "type": "toggle", "name": "Stuck Arrows", "default": false}
+      ],
+      "groups": [
+        {"name": "Overlays & HUD", "settings": ["fireOverlay", "foodBar", "armorBar", "bossBar", "effectDisplay", "recipeBook", "nausea"]},
+        {"name": "Entities", "settings": ["deadEntities", "lightning", "fallingBlocks", "entityFire", "guidedSheep", "bonePlating", "treeBits", "expOrbs", "stuckArrows"]},
+        {"name": "Particles", "settings": ["deadPoof", "mageBeam", "powderCoating"]}
+      ]
+    },
+    "Animation Fix": {
+      "settings": [
+        {"id": "skyblockOnly", "type": "toggle", "name": "Skyblock Only", "default": false}
+      ]
+    },
+    "Double Use Fix": {
+      "settings": [
+        {"id": "skyblockOnly", "type": "toggle", "name": "Skyblock Only", "default": false}
+      ]
+    },
+    "Item Cooldowns": {
+      "settings": [
+        {"id": "mode", "type": "dropdown", "name": "Mode", "default": "ON_ITEM", "choices": ["ON_ITEM", "BOX", "BOTH"], "labels": {"ON_ITEM": "On Item", "BOX": "Box", "BOTH": "Both"}},
+        {"id": "readyCheck", "type": "toggle", "name": "Ready Check", "label": "Show Check When Ready", "default": true},
+        {"id": "checkSeconds", "type": "slider", "name": "Check Seconds", "label": "Check Stays (s)", "min": 1, "max": 10, "default": 3, "integer": true},
+        {"id": "mageReduction", "type": "toggle", "name": "Mage Reduction", "label": "Apply Mage Cooldown Reduction", "default": true}
+      ]
+    },
+    "Gyro Wand": {
+      "settings": [
+        {"id": "color", "type": "color", "name": "Color", "label": "Range Color", "default": [170, 0, 170, 128]},
+        {"id": "showCooldown", "type": "toggle", "name": "Show Cooldown", "default": true},
+        {"id": "cooldownColor", "type": "color", "name": "Cooldown Color", "default": [255, 85, 85, 128]},
+        {"id": "depthCheck", "type": "toggle", "name": "Depth Check", "default": true},
+        {"id": "fill", "type": "toggle", "name": "Fill", "label": "Fill The Area", "default": true}
+      ]
+    },
+    "Mimic Announcer": {
+      "settings": [
+        {"id": "sendMimic", "type": "toggle", "name": "Send Mimic Message", "default": true},
+        {"id": "sendPrince", "type": "toggle", "name": "Send Prince Message", "default": true},
+        {"id": "sendBat", "type": "toggle", "name": "Send Bat Message", "default": true}
+      ]
+    },
+    "Ragnarock": {
+      "settings": [
+        {"id": "castAlert", "type": "toggle", "name": "Cast Alert", "default": true},
+        {"id": "cancelAlert", "type": "toggle", "name": "Cancel Alert", "default": true},
+        {"id": "strengthGained", "type": "toggle", "name": "Strength Gained", "default": true},
+        {"id": "announceStrength", "type": "toggle", "name": "Announce Strength", "label": "Announce Strength In Party", "default": false}
+      ]
+    },
+    "Wardrobe Keybinds": {
+      "settings": [
+        {"id": "nextPage", "type": "text", "name": "Next Page", "default": "key.keyboard.right", "maxLength": 64, "keybind": true},
+        {"id": "previousPage", "type": "text", "name": "Previous Page", "default": "key.keyboard.left", "maxLength": 64, "keybind": true},
+        {"id": "unequip", "type": "text", "name": "Unequip", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "disableUnequip", "type": "toggle", "name": "Disable Unequip", "label": "Prevent Unequipping Equipped Set", "default": false},
+        {"id": "wardrobe1", "type": "text", "name": "Wardrobe 1", "default": "key.keyboard.1", "maxLength": 64, "keybind": true},
+        {"id": "wardrobe2", "type": "text", "name": "Wardrobe 2", "default": "key.keyboard.2", "maxLength": 64, "keybind": true},
+        {"id": "wardrobe3", "type": "text", "name": "Wardrobe 3", "default": "key.keyboard.3", "maxLength": 64, "keybind": true},
+        {"id": "wardrobe4", "type": "text", "name": "Wardrobe 4", "default": "key.keyboard.4", "maxLength": 64, "keybind": true},
+        {"id": "wardrobe5", "type": "text", "name": "Wardrobe 5", "default": "key.keyboard.5", "maxLength": 64, "keybind": true},
+        {"id": "wardrobe6", "type": "text", "name": "Wardrobe 6", "default": "key.keyboard.6", "maxLength": 64, "keybind": true},
+        {"id": "wardrobe7", "type": "text", "name": "Wardrobe 7", "default": "key.keyboard.7", "maxLength": 64, "keybind": true},
+        {"id": "wardrobe8", "type": "text", "name": "Wardrobe 8", "default": "key.keyboard.8", "maxLength": 64, "keybind": true},
+        {"id": "wardrobe9", "type": "text", "name": "Wardrobe 9", "default": "key.keyboard.9", "maxLength": 64, "keybind": true}
+      ],
+      "groups": [
+        {"name": "Navigation", "settings": ["nextPage", "previousPage", "unequip", "disableUnequip"]},
+        {"name": "Slot Keys", "folded": true, "settings": ["wardrobe1", "wardrobe2", "wardrobe3", "wardrobe4", "wardrobe5", "wardrobe6", "wardrobe7", "wardrobe8", "wardrobe9"]}
+      ]
+    },
+    "Loadout Keybinds": {
+      "settings": [
+        {"id": "nextPage", "type": "text", "name": "Next Page", "default": "key.keyboard.right", "maxLength": 64, "keybind": true},
+        {"id": "previousPage", "type": "text", "name": "Previous Page", "default": "key.keyboard.left", "maxLength": 64, "keybind": true},
+        {"id": "loadout1", "type": "text", "name": "Loadout 1", "default": "key.keyboard.1", "maxLength": 64, "keybind": true},
+        {"id": "loadout2", "type": "text", "name": "Loadout 2", "default": "key.keyboard.2", "maxLength": 64, "keybind": true},
+        {"id": "loadout3", "type": "text", "name": "Loadout 3", "default": "key.keyboard.3", "maxLength": 64, "keybind": true},
+        {"id": "loadout4", "type": "text", "name": "Loadout 4", "default": "key.keyboard.4", "maxLength": 64, "keybind": true},
+        {"id": "loadout5", "type": "text", "name": "Loadout 5", "default": "key.keyboard.5", "maxLength": 64, "keybind": true},
+        {"id": "loadout6", "type": "text", "name": "Loadout 6", "default": "key.keyboard.6", "maxLength": 64, "keybind": true},
+        {"id": "loadout7", "type": "text", "name": "Loadout 7", "default": "key.keyboard.7", "maxLength": 64, "keybind": true},
+        {"id": "loadout8", "type": "text", "name": "Loadout 8", "default": "key.keyboard.8", "maxLength": 64, "keybind": true},
+        {"id": "loadout9", "type": "text", "name": "Loadout 9", "default": "key.keyboard.9", "maxLength": 64, "keybind": true},
+        {"id": "loadout10", "type": "text", "name": "Loadout 10", "default": "key.keyboard.0", "maxLength": 64, "keybind": true},
+        {"id": "loadout11", "type": "text", "name": "Loadout 11", "default": "key.keyboard.minus", "maxLength": 64, "keybind": true},
+        {"id": "loadout12", "type": "text", "name": "Loadout 12", "default": "key.keyboard.equal", "maxLength": 64, "keybind": true}
+      ],
+      "groups": [
+        {"name": "Navigation", "settings": ["nextPage", "previousPage"]},
+        {"name": "Slot Keys", "folded": true, "settings": ["loadout1", "loadout2", "loadout3", "loadout4", "loadout5", "loadout6", "loadout7", "loadout8", "loadout9", "loadout10", "loadout11", "loadout12"]}
       ]
     }
   }

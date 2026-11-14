@@ -27,6 +27,10 @@ object PlayerNameTextTransform {
     private val STALE_COMPONENTS = ReferenceQueue<Component>()
     private val PRESENTATION_ORIGINALS: MutableMap<IdentityWeakReference, Component> = HashMap()
 
+    /** Roots already walked and found to hold no presented leaves; components are immutable, so the verdict is permanent. */
+    private val CLEAN_STALE_COMPONENTS = ReferenceQueue<Component>()
+    private val CLEAN_ROOTS: MutableMap<IdentityWeakReference, Boolean> = HashMap()
+
     @JvmStatic
     fun replace(source: Component?, playerName: String?, alias: String?): Component? {
         if (source == null || playerName == null || alias == null || isJavaBlank(alias)
@@ -111,6 +115,14 @@ object PlayerNameTextTransform {
     @JvmStatic
     fun restorePresentedLeaves(source: Component?): Component? {
         if (source == null) return null
+        // Chat lines and hover trees are re-presented every frame; a clean root must cost O(1), not a tree walk.
+        if (isCleanRoot(source)) return source
+        val result = restoreTree(source)
+        if (result === source) rememberCleanRoot(source)
+        return result
+    }
+
+    private fun restoreTree(source: Component): Component {
         val original = rememberedOriginal(source)
         if (original != null) return original
 
@@ -118,7 +130,7 @@ object PlayerNameTextTransform {
         val rewrittenSiblings = ArrayList<Component>(source.siblings.size)
         var childChanged = false
         for (sibling in source.siblings) {
-            val rewritten = restorePresentedLeaves(sibling)
+            val rewritten = restoreTree(sibling)
             rewrittenSiblings.add(rewritten)
             childChanged = childChanged || rewritten !== sibling
         }
@@ -655,7 +667,7 @@ object PlayerNameTextTransform {
         for (index in sourceArguments.indices) {
             val argument = sourceArguments[index]
             if (argument !is Component) continue
-            val restored = restorePresentedLeaves(argument)
+            val restored = restoreTree(argument)
             if (restored !== argument) {
                 restoredArguments[index] = restored
                 changed = true
@@ -672,13 +684,13 @@ object PlayerNameTextTransform {
     private fun restoreStyle(style: Style): Style {
         val event = style.hoverEvent
         if (event is HoverEvent.ShowText) {
-            val restored = restorePresentedLeaves(event.value())
+            val restored = restoreTree(event.value())
             if (restored !== event.value()) return style.withHoverEvent(HoverEvent.ShowText(restored))
         } else if (event is HoverEvent.ShowEntity) {
             val info = event.entity()
             val name = info.name.orElse(null)
             if (name != null) {
-                val restored = restorePresentedLeaves(name)
+                val restored = restoreTree(name)
                 if (restored !== name) {
                     return style.withHoverEvent(HoverEvent.ShowEntity(
                         HoverEvent.EntityTooltipInfo(info.type, info.uuid, restored),
@@ -1071,6 +1083,25 @@ object PlayerNameTextTransform {
         synchronized(PRESENTATION_ORIGINALS) {
             purgeStaleComponents()
             return PRESENTATION_ORIGINALS[IdentityWeakReference(transformed, null)]
+        }
+    }
+
+    private fun isCleanRoot(component: Component): Boolean {
+        synchronized(PRESENTATION_ORIGINALS) {
+            while (true) CLEAN_ROOTS.remove(CLEAN_STALE_COMPONENTS.poll() as? IdentityWeakReference ?: break)
+            return CLEAN_ROOTS.containsKey(IdentityWeakReference(component, null))
+        }
+    }
+
+    private fun rememberCleanRoot(component: Component) {
+        synchronized(PRESENTATION_ORIGINALS) {
+            CLEAN_ROOTS[IdentityWeakReference(component, CLEAN_STALE_COMPONENTS)] = true
+            while (CLEAN_ROOTS.size > MAX_REMEMBERED_COMPONENTS) {
+                val iterator = CLEAN_ROOTS.keys.iterator()
+                if (!iterator.hasNext()) break
+                iterator.next()
+                iterator.remove()
+            }
         }
     }
 

@@ -99,8 +99,8 @@ public final class PresentationControlChecks {
 		check("Slot Locking".equals(inventoryControls.name())
 			&& "Player Inventory Controls".equals(inventoryControls.configName())
 			&& inventoryControls.category() == Category.MISCELLANEOUS
-			&& !inventoryControls.defaultEnabled() && inventoryControls.isWorkInProgress(),
-			"Slot Locking retains its public/config identity, category, default-off state, and WIP marker");
+			&& !inventoryControls.defaultEnabled() && !inventoryControls.isWorkInProgress(),
+			"Slot Locking retains its public/config identity, category and default-off state, and carries no WIP marker");
 		check(booleanValues(inventoryControls.booleanSettings()).equals(Map.of(
 			"Protect Bound Slots", true,
 			"Bound Outline", true))
@@ -201,8 +201,8 @@ public final class PresentationControlChecks {
 			&& "Hide All Particles".equals(particles.configName())
 			&& "Hides particle effects on this client.".equals(particles.description())
 			&& particles.category() == Category.VISUAL
-			&& !particles.hasSettings() && particles.booleanSettings().isEmpty(),
-			"Hide Particles keeps its off-by-default single-toggle identity");
+			&& particles.hasSettings() && particles.booleanSettings().size() == 3,
+			"Hide Particles keeps its off-by-default identity with Hide All, Block Breaking and Explosions");
 	}
 
 	private static void playerSizeScalingUsesEnabledSources(PlayerSizeModule module) {

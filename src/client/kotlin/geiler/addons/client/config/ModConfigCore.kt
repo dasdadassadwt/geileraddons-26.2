@@ -9,6 +9,7 @@ import geiler.addons.client.dungeon.DungeonRoomOverlaySettingsMigration
 import geiler.addons.client.enchanting.AutoExperimentDelayRange
 import geiler.addons.client.hud.HudManager
 import geiler.addons.client.location.Island
+import geiler.addons.client.macros.config.MacroWorkspaceConfig
 import geiler.addons.client.macro.MacroDefinition
 import geiler.addons.client.macro.MacroFunction
 import geiler.addons.client.macro.MacroRunner
@@ -19,6 +20,7 @@ import geiler.addons.client.module.ColorSetting
 import geiler.addons.client.module.Module
 import geiler.addons.client.module.ModuleKeybind
 import geiler.addons.client.module.ModuleManager
+import geiler.addons.client.module.Workspace
 import geiler.addons.client.module.impl.AutoExperimentsModule
 import geiler.addons.client.module.impl.BlockEspEntry
 import geiler.addons.client.module.impl.BlockEspModule
@@ -111,6 +113,8 @@ object ModConfigCore {
     @JvmStatic
     fun load() {
         val data = readData()
+        // The Macros workspace has its own file; its modules are not part of config.json.
+        MacroWorkspaceConfig.load()
         val migratedLegacyChatHud = ModConfigMigrations.migrateLegacyChatHud(data.enabled, data.toggles)
         val migratedDungeonMapSettings = DungeonRoomOverlaySettingsMigration.migrate(
             legacyMutableMapView(data.toggles), legacySetView(data.migrations),
@@ -139,6 +143,7 @@ object ModConfigCore {
             settingKey(GeneralModule.INSTANCE, "Icon color"),
         )
         for (module in ModuleManager.modules()) {
+            if (module.category().workspace != Workspace.NORMAL) continue
             val savedKeybind = data.keybinds[module.configName()]
             val savedKey = savedKeybind?.key
             if (!module.showsKeybindControl()) {
@@ -410,24 +415,26 @@ object ModConfigCore {
     @JvmStatic
     fun flushNow(): Boolean {
         val future = if (dirty) {
+            MacroWorkspaceConfig.save()
             enqueueSave(snapshotData(), mutationVersion)
         } else {
             synchronized(SAVE_LOCK) { pendingSave }
         }
-        return waitFor(future)
+        return waitFor(future) && MacroWorkspaceConfig.flushNow()
     }
 
     /** Waits for the already queued client-thread snapshot without snapshotting off-thread. */
     @JvmStatic
     fun flushPrepared(): Boolean {
         val future = synchronized(SAVE_LOCK) { pendingSave }
-        val saved = waitFor(future)
+        val saved = waitFor(future) && MacroWorkspaceConfig.flushNow()
         return synchronized(SAVE_LOCK) { saved && !dirty }
     }
 
     /** Queues an explicit client-thread snapshot so settings-screen closure never writes inline. */
     @JvmStatic
     fun save() {
+        MacroWorkspaceConfig.save()
         enqueueSave(snapshotData(), mutationVersion)
     }
 
@@ -462,6 +469,7 @@ object ModConfigCore {
     fun resetModuleDefaultsExcept(excludedConfigNames: Set<String>?) {
         val excluded = excludedConfigNames?.let { java.util.Set.copyOf(it) } ?: emptySet()
         for (module in ModuleManager.modules()) {
+            if (module.category().workspace != Workspace.NORMAL) continue
             if (excluded.contains(module.configName())) continue
             module.colorSettings().forEach { it.reset() }
             module.numberSettings().forEach { it.reset() }
@@ -509,14 +517,17 @@ object ModConfigCore {
         TikiFingerprints.replaceAll(emptyMap())
         HudManager.resetPositions()
         for (type in TreeType.values()) TreeTrackerModule.INSTANCE.tracker().stats(type).restore(0, 0, 0, 0)
-        ClickGuiState.setCategory(Category.values()[0])
-        ClickGuiState.setOpenModule(null)
-        ClickGuiState.setExpandedColor(null)
-        ClickGuiState.setSettingsScroll(0)
-        ClickGuiState.setCategoryScroll(0)
-        for (category in Category.values()) ClickGuiState.setGridScroll(category, 0)
-        ClickGuiState.setFavoriteCategoryIds(emptyList())
-        ClickGuiState.setFavoriteModuleIds(emptyList())
+        ClickGuiState.runIn(Workspace.NORMAL) {
+            ClickGuiState.setCategory(Category.values()[0])
+            ClickGuiState.setOpenModule(null)
+            ClickGuiState.setExpandedColor(null)
+            ClickGuiState.setSettingsScroll(0)
+            ClickGuiState.setCategoryScroll(0)
+            for (category in Category.of(Workspace.NORMAL)) ClickGuiState.setGridScroll(category, 0)
+            ClickGuiState.setFavoriteCategoryIds(emptyList())
+            ClickGuiState.setFavoriteModuleIds(emptyList())
+        }
+        MacroWorkspaceConfig.resetRuntime()
     }
 
     /** Queues a current snapshot after a targeted reset changes live settings or collections. */
@@ -530,6 +541,8 @@ object ModConfigCore {
         val data = ModConfig.Data()
         data.migrations.addAll(completedMigrations)
         for (module in ModuleManager.modules()) {
+            // The Macros workspace keeps its modules in its own file.
+            if (module.category().workspace != Workspace.NORMAL) continue
             data.enabled[module.configName()] = module.isEnabled()
             if (module.showsKeybindControl() && module.keybind().isBound()) {
                 val savedKeybind = ModConfig.KeybindData()
@@ -619,15 +632,17 @@ object ModConfigCore {
         data.macroVariables = MacroVariableConfigCodec.encode(MacrosModule.INSTANCE.globalVariables().savedVariables())
         data.macroFolders = MacrosModule.INSTANCE.folders().folders()
         data.inventoryButtons = InventoryButtonConfigCodec.encode(InventoryButtonsModule.INSTANCE.placements())
-        data.uiCategory = ClickGuiState.category()!!.name
-        data.uiOpenModule = ClickGuiState.openModule()?.configName()
-        data.uiExpandedColor = ClickGuiState.expandedColor()?.name()
-        data.uiSettingsScroll = ClickGuiState.settingsScroll()
-        data.uiCategoryScroll = ClickGuiState.categoryScroll()
-        data.uiGridScrollByCategory = HashMap()
-        for ((category, scroll) in ClickGuiState.gridScrolls()) data.uiGridScrollByCategory[category.name] = scroll
-        data.uiFavoriteCategories = ClickGuiState.favoriteCategoryIds().stream().sorted().toList()
-        data.uiFavoriteModules = ClickGuiState.favoriteModuleIds().stream().sorted().toList()
+        ClickGuiState.runIn(Workspace.NORMAL) {
+            data.uiCategory = ClickGuiState.category()!!.name
+            data.uiOpenModule = ClickGuiState.openModule()?.configName()
+            data.uiExpandedColor = ClickGuiState.expandedColor()?.name()
+            data.uiSettingsScroll = ClickGuiState.settingsScroll()
+            data.uiCategoryScroll = ClickGuiState.categoryScroll()
+            data.uiGridScrollByCategory = HashMap()
+            for ((category, scroll) in ClickGuiState.gridScrolls()) data.uiGridScrollByCategory[category.name] = scroll
+            data.uiFavoriteCategories = ClickGuiState.favoriteCategoryIds().stream().sorted().toList()
+            data.uiFavoriteModules = ClickGuiState.favoriteModuleIds().stream().sorted().toList()
+        }
         data.checkForUpdates = GeneralModule.INSTANCE.checkForUpdates().value()
         data.hypixelModApi = GeneralModule.INSTANCE.islandDetectionApi().value()
         return data
@@ -1131,6 +1146,10 @@ object ModConfigCore {
 
     /** Resolves saved names back to live objects; anything that no longer exists is dropped. */
     private fun loadUiState(data: ModConfig.Data) {
+        ClickGuiState.runIn(Workspace.NORMAL) { loadNormalUiState(data) }
+    }
+
+    private fun loadNormalUiState(data: ModConfig.Data) {
         ClickGuiState.setCategoryScroll(data.uiCategoryScroll)
         ClickGuiState.setGridScrolls(data.uiGridScrollByCategory)
         ClickGuiState.setFavoriteCategoryIds(data.uiFavoriteCategories)

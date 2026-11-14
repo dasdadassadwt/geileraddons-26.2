@@ -1,5 +1,6 @@
 package geiler.addons.client.gui
 
+import geiler.addons.client.config.ClickGuiState
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.Module
 import geiler.addons.client.module.ModuleCategoryFilter
@@ -79,8 +80,18 @@ class ClickGuiModuleSearch {
         visibleCategory = null
     }
 
+    /** Drops the cached index and results; the next query is built for the workspace that is showing. */
+    fun invalidate() {
+        searchIndex = null
+        visibleCategory = null
+    }
+
+    /** A search only finds modules of the workspace that is showing. */
     private fun moduleSearchIndex(): List<ClickGuiSearchEntry> {
         searchIndex?.let { return it }
-        return ClickGuiModuleSearchBehavior.buildSearchIndex(ModuleManager.modules()).also { searchIndex = it }
+        val workspace = ClickGuiState.workspace()
+        return ClickGuiModuleSearchBehavior
+            .buildSearchIndex(ModuleManager.modules().filter { it.category().workspace == workspace })
+            .also { searchIndex = it }
     }
 }

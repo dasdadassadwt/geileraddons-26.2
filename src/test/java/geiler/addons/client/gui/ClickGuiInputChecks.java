@@ -24,6 +24,10 @@ public final class ClickGuiInputChecks {
 			&& source.indexOf("followSavedView()", action) < action + 120,
 			"after a module action runs, the open screen follows the view it saved (Edit Class Colors)");
 		check(source.contains("action=slider_drag"), "slider drags write a bounded diagnostic event");
+		check(KeybindCapture.clearsBinding(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) && KeybindCapture.clearsBinding(org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE)
+			&& KeybindCapture.clearsBinding(org.lwjgl.glfw.GLFW.GLFW_KEY_DELETE) && !KeybindCapture.clearsBinding(org.lwjgl.glfw.GLFW.GLFW_KEY_A),
+			"Escape, Backspace and Delete clear a captured keybind; other keys bind");
+		check(source.contains("KeybindCapture.clearsBinding(event.key())"), "the Click GUI keybind capture uses the shared clear rule");
 	}
 
 	private static void check(boolean condition, String message) {

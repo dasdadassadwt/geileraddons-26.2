@@ -42,8 +42,6 @@ class PlayerInventoryControlsModule private constructor(settings: Settings) : Mo
         )
     }
 
-    override fun isWorkInProgress(): Boolean = true
-
     /** Preserve the old config key while changing the user-facing module name. */
     override fun configName(): String = "Player Inventory Controls"
 

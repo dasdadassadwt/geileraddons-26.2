@@ -153,6 +153,15 @@ public final class DungeonStatsChecks {
 		}
 		assertJsonLimit("[[0]]", 1, 10, "JSON nesting beyond the configured depth is rejected");
 		assertJsonLimit("[0,1]", 1, 2, "JSON nodes beyond the configured count are rejected");
+		// Real SkyBlock profiles reach ~127k nodes (5.3 MB); the service limit must accept them.
+		StringBuilder large = new StringBuilder("[");
+		for (int i = 0; i < 200_000; i++) large.append(i == 0 ? "0" : ",0");
+		large.append(']');
+		try {
+			BoundedDungeonJsonParser.parse(large.toString(), 32, DungeonStatsService.maxJsonNodesForChecks());
+		} catch (IOException exception) {
+			throw new AssertionError("a large real-world profile stays within the service JSON node limit", exception);
+		}
 	}
 
 	private static void assertJsonLimit(String json, int maximumDepth, int maximumNodes, String message) {

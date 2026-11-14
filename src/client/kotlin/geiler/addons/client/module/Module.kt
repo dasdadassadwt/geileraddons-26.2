@@ -37,7 +37,16 @@ abstract class Module {
         freshInstallEnabled = enabledByDefault
         this.settings = Collections.unmodifiableList(settings.toList())
         colorSettings = ofType(ColorSetting::class.java)
-        numberSettings = ofType(NumberSetting::class.java)
+        // A range is saved through its two parts, so they are listed with the plain numbers.
+        numberSettings = Collections.unmodifiableList(
+            settings.flatMap { s ->
+                when (s) {
+                    is NumberSetting -> listOf(s)
+                    is RangeSetting -> listOf(s.lowPart, s.highPart)
+                    else -> emptyList()
+                }
+            },
+        )
         booleanSettings = ofType(BooleanSetting::class.java)
         choiceSettings = ofType(ChoiceSetting::class.java)
         textSettings = ofType(TextSetting::class.java)
@@ -79,6 +88,12 @@ abstract class Module {
         return Collections.singletonList(SettingGroup(null, null, false, settings, emptyList()))
             .also { groups = it }
     }
+
+    /**
+     * More previews or custom rows, each placed in the settings group named by its [ModulePreview.previewGroupName].
+     * The module itself is also a preview when it implements [ModulePreview]; this is for the rest.
+     */
+    open fun extraPreviews(): List<ModulePreview> = emptyList()
 
     open fun hasSettings(): Boolean = settings.isNotEmpty()
 

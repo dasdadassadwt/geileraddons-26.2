@@ -195,8 +195,8 @@ public final class ScoreboardFeatureChecks {
 		ScoreboardModule module = ScoreboardModule.INSTANCE;
 		if (!module.name().equals("Custom Scoreboard") || !module.configName().equals("Custom Scoreboard")
 			|| !module.description().equals("Replace the sidebar with custom text and a chosen font, background, and border.")
-			|| module.category() != Category.VISUAL || module.defaultEnabled() || !module.isWorkInProgress()) {
-			throw new AssertionError("Custom Scoreboard identity, config key, category, default, or WIP marker changed.");
+			|| module.category() != Category.VISUAL || module.defaultEnabled() || module.isWorkInProgress()) {
+			throw new AssertionError("Custom Scoreboard identity, config key, category or default changed, or it regained a WIP marker.");
 		}
 
 		if (module.actions().size() != 1 || !module.actions().get(0).label().equals("Import Font")

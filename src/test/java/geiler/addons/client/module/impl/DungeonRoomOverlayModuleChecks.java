@@ -80,11 +80,11 @@ public final class DungeonRoomOverlayModuleChecks {
 			"the legacy shadow toggle remains persisted but hidden from the settings panel");
 		check(module.isSettingVisible(textShadowMode), "the replacement text shadow mode remains visible");
 
-		equals(32, booleans.size(), "registered boolean setting count");
+		equals(35, booleans.size(), "registered boolean setting count");
 		equals(13, numbers.size(), "registered number setting count");
-		equals(5, choices.size(), "registered choice setting count");
-		equals(27, colors.size(), "registered color setting count");
-		equals(77, booleans.size() + numbers.size() + choices.size() + colors.size(),
+		equals(7, choices.size(), "registered choice setting count");
+		equals(28, colors.size(), "registered color setting count");
+		equals(83, booleans.size() + numbers.size() + choices.size() + colors.size(),
 			"all persisted setting IDs remain registered");
 
 		List<Boolean> oldBooleanValues = booleans.stream().map(BooleanSetting::rawValue).toList();
@@ -105,11 +105,13 @@ public final class DungeonRoomOverlayModuleChecks {
 				"Show Checkmarks", "Hide Checkmark With Name", "Show Puzzle Name", "Show Room Secrets",
 				"Skip Secret Count When Exactly One", "Skip Common Room Names", "Skip Yellow Room Name",
 				"Show Fairy Checkmark", "Checkmark Only When Green", "Checkmark If Secret Count Is Zero",
-				"Color Room Text By Checkmark", "Disable Predictions"),
+				"Color Room Text By Checkmark", "Disable Predictions", "Show Map Info", "Include Remaining",
+				"Hide Map Info In Boss"),
 				booleans.stream().map(Setting::name).toList(), "boolean setting IDs and order");
 		boolean[] booleanDefaults = {
 			true, true, true, true, false, true, true, false, false, true, false, true, false, true, true, true,
 			false, true, true, false, false, false, true, true, false, false, false, false, false, false, true, false,
+			true, false, true,
 		};
 		for (int i = 0; i < booleans.size(); i++)
 			check(booleans.get(i).value() == booleanDefaults[i], "default for " + booleans.get(i).name());
@@ -145,6 +147,8 @@ public final class DungeonRoomOverlayModuleChecks {
 			{"Room Icon Alignment", "Center", "Top Left|Top Right|Bottom Left|Bottom Right|Center|CenterL"},
 			{"Text Shadow", "None", "None|Drop|Outline"},
 			{"Icon Style", "IllegalMap", "IllegalMap|NEU|Vanilla New|Vanilla Old"},
+			{"Remaining Secrets", "Minimum", "Minimum|Remaining"},
+			{"Map Info Deaths", "Deaths", "Deaths|Unfound"},
 		};
 		for (int i = 0; i < choices.size(); i++) {
 			ChoiceSetting setting = choices.get(i);
@@ -164,7 +168,7 @@ public final class DungeonRoomOverlayModuleChecks {
 			{"RareRoomColor", "6B3A11"}, {"ChampionRoomColor", "FEDF00"}, {"PendingRoomColor", "37415A"},
 			{"NormalDoorColor", "6B3A11"}, {"GlassDoorColor", "5FE4DC"}, {"StartDoorColor", "64E085"},
 			{"WitherDoorColor", "000000"}, {"BloodDoorColor", "FF5555"}, {"FairyDoorColor", "F4138B"},
-			{"UnknownDoorColor", "1C1C1C"}, {"UnopenedRoomColor", "484C5B"}, {"UnopenedTextColor", "E1E6F0"},
+			{"UnknownDoorColor", "1C1C1C"}, {"UnopenedRoomColor", "484C5B"}, {"UnopenedTextColor", "E1E6F0"}, {"MapInfoBackground", "55555500"},
 		};
 		for (int i = 0; i < colors.size(); i++) {
 			equals(colorDefaults[i][0], colors.get(i).name(), "color setting order at " + i);
@@ -178,18 +182,20 @@ public final class DungeonRoomOverlayModuleChecks {
 			check(colors.get(i).setHex(oldColorValues.get(i)), "restore color setting " + colors.get(i).name());
 	}
 
-		equals(List.of("Overlay", "Map Preview", "Map Style", "Appearance"),
+		equals(List.of("Overlay", "Map Info", "Map Preview", "Map Style", "Appearance"),
 			module.groups().stream().map(SettingGroup::name).toList(), "top-level settings groups");
 		SettingGroup overlay = module.groups().get(0);
 		equals("Show Map", overlay.toggle().name(), "overlay section toggle");
 		equals(List.of("Show Room Exits", "Reveal Unopened Rooms", "Show In Boss", "Rotate Map Around Player"),
 			overlay.settings().stream().map(Setting::name).toList(), "overlay section settings");
-		SettingGroup preview = module.groups().get(1);
+		SettingGroup mapInfoGroup = module.groups().get(1);
+		equals("Show Map Info", mapInfoGroup.toggle().name(), "map info section toggle");
+		SettingGroup preview = module.groups().get(2);
 		equals("Show Preview", preview.toggle().name(), "preview section toggle");
-		SettingGroup mapStyle = module.groups().get(2);
+		SettingGroup mapStyle = module.groups().get(3);
 		equals(List.of("Copy Style to Clipboard", "Import Style from Clipboard", "Reset All Map Settings"),
 			mapStyle.settings().stream().map(Setting::name).toList(), "style actions group");
-		SettingGroup appearance = module.groups().get(3);
+		SettingGroup appearance = module.groups().get(4);
 		equals(List.of("Layout", "Players", "Room Text and Icons", "Colors"),
 			appearance.children().stream().map(SettingGroup::name).toList(), "appearance settings groups");
 		SettingGroup colorsGroup = appearance.children().get(3);

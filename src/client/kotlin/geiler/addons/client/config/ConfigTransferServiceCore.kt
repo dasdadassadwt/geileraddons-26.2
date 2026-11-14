@@ -492,14 +492,17 @@ object ConfigTransferServiceCore {
     }
 
     private fun resetClickGuiState() {
-        ClickGuiState.setCategory(Category.values()[0])
-        ClickGuiState.setOpenModule(null)
-        ClickGuiState.setExpandedColor(null)
-        ClickGuiState.setSettingsScroll(0)
-        ClickGuiState.setCategoryScroll(0)
-        for (category in Category.values()) ClickGuiState.setGridScroll(category, 0)
-        ClickGuiState.setFavoriteCategoryIds(emptyList())
-        ClickGuiState.setFavoriteModuleIds(emptyList())
+        // This reset belongs to config.json's view state; the Macros workspace keeps its own.
+        ClickGuiState.runIn(geiler.addons.client.module.Workspace.NORMAL) {
+            ClickGuiState.setCategory(Category.values()[0])
+            ClickGuiState.setOpenModule(null)
+            ClickGuiState.setExpandedColor(null)
+            ClickGuiState.setSettingsScroll(0)
+            ClickGuiState.setCategoryScroll(0)
+            for (category in Category.of(geiler.addons.client.module.Workspace.NORMAL)) ClickGuiState.setGridScroll(category, 0)
+            ClickGuiState.setFavoriteCategoryIds(emptyList())
+            ClickGuiState.setFavoriteModuleIds(emptyList())
+        }
     }
 
     private fun flushAll(): Boolean {

@@ -3,6 +3,7 @@ package geiler.addons.client.mixin;
 import com.mojang.blaze3d.platform.InputConstants;
 import geiler.addons.client.chat.ChatNativeCopy;
 import geiler.addons.client.module.ModuleKeybindManager;
+import geiler.addons.client.module.impl.FreecamModule;
 import geiler.addons.client.module.impl.NoCursorResetModule;
 import geiler.addons.client.module.impl.ThirdPersonCameraModule;
 import net.minecraft.client.Minecraft;
@@ -58,6 +59,7 @@ public abstract class MouseHandlerMixin {
 	@Redirect(method = "turnPlayer", at = @At(value = "INVOKE",
 		target = "Lnet/minecraft/client/player/LocalPlayer;turn(DD)V"))
 	private void geileraddons$holdFreeLook(LocalPlayer player, double yawDelta, double pitchDelta) {
+		if (FreecamModule.INSTANCE.captureTurn(yawDelta, pitchDelta)) return;
 		if (!ThirdPersonCameraModule.INSTANCE.captureFreeLookTurn(yawDelta, pitchDelta)) player.turn(yawDelta, pitchDelta);
 	}
 }

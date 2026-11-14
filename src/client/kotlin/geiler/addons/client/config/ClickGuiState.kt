@@ -5,6 +5,7 @@ import geiler.addons.client.module.Category
 import geiler.addons.client.module.ColorSetting
 import geiler.addons.client.module.Module
 import geiler.addons.client.module.SettingGroup
+import geiler.addons.client.module.Workspace
 import java.util.Collections
 import java.util.EnumMap
 import java.util.LinkedHashSet
@@ -13,26 +14,42 @@ import java.util.WeakHashMap
 /**
  * View state shared by GUI screens in one game session. Persisted positions and category selection
  * are copied to ModConfig; filter, expansion, and fold state intentionally remain in memory only.
+ *
+ * The persisted part is kept per [Workspace]: the Normal workspace is saved in `config.json` as before and the Macros
+ * workspace in its own file, so each keeps its own category, scroll positions and favorites. The functions without a
+ * workspace argument act on the workspace that is showing.
  */
 object ClickGuiState {
-    private var category: Category? = Category.values()[0]
-    private var openModule: Module? = null
-    private var expandedColor: ColorSetting? = null
-    private var settingsScroll = 0
-    private var categoryScroll = 0
-    private val gridScrollByCategory = EnumMap<Category, Int>(Category::class.java)
+    /** Everything the Click GUI remembers about one workspace. */
+    private class Bank(workspace: Workspace) {
+        var category: Category? = Category.of(workspace)[0]
+        var openModule: Module? = null
+        var expandedColor: ColorSetting? = null
+        var settingsScroll = 0
+        var categoryScroll = 0
+        val gridScrollByCategory = EnumMap<Category, Int>(Category::class.java)
+
+        /** Stable category enum names persisted for the Click GUI's favorites. */
+        val favoriteCategoryIds: MutableSet<String> = LinkedHashSet()
+
+        /** Stable module config names persisted for the Click GUI's favorites. */
+        val favoriteModuleIds: MutableSet<String> = LinkedHashSet()
+    }
+
+    private val banks = EnumMap<Workspace, Bank>(Workspace::class.java).also { map ->
+        for (workspace in Workspace.values()) map[workspace] = Bank(workspace)
+    }
+    private var workspace = Workspace.NORMAL
+
+    private fun bank(): Bank = banks.getValue(workspace)
+
+    private fun bankFor(category: Category): Bank = banks.getValue(category.workspace)
 
     /** Selected one-level module filter for each broad category; filter selections are session-only. */
     private val moduleFilterByCategory = EnumMap<Category, String>(Category::class.java)
 
     /** Expanded category parents. Expansion is a view preference and remains session-only. */
     private val expandedCategories: MutableSet<Category> = LinkedHashSet()
-
-    /** Stable category enum names persisted for the Click GUI's favorites. */
-    private val favoriteCategoryIds: MutableSet<String> = LinkedHashSet()
-
-    /** Stable module config names persisted for the Click GUI's favorites. */
-    private val favoriteModuleIds: MutableSet<String> = LinkedHashSet()
 
     /** Expanded section keys. This stays in memory so each fresh game session starts folded. */
     private val expandedGroups: MutableSet<String> = LinkedHashSet()
@@ -42,52 +59,73 @@ object ClickGuiState {
         Collections.newSetFromMap(WeakHashMap<MacroStep, Boolean>())
 
     @JvmStatic
-    fun category(): Category? = category
+    fun workspace(): Workspace = workspace
 
     @JvmStatic
-    fun setCategory(value: Category?) {
-        category = value
+    fun setWorkspace(value: Workspace) {
+        workspace = value
+    }
+
+    /** Runs [action] as if [target] were showing, then puts the showing workspace back. */
+    @JvmStatic
+    fun runIn(target: Workspace, action: Runnable) {
+        val previous = workspace
+        workspace = target
+        try {
+            action.run()
+        } finally {
+            workspace = previous
+        }
     }
 
     @JvmStatic
-    fun openModule(): Module? = openModule
+    fun category(): Category? = bank().category
+
+    /** A category goes to its own workspace's state, whichever workspace is showing. */
+    @JvmStatic
+    fun setCategory(value: Category?) {
+        if (value == null) bank().category = null else bankFor(value).category = value
+    }
+
+    @JvmStatic
+    fun openModule(): Module? = bank().openModule
 
     @JvmStatic
     fun setOpenModule(value: Module?) {
-        openModule = value
+        bank().openModule = value
     }
 
     @JvmStatic
-    fun expandedColor(): ColorSetting? = expandedColor
+    fun expandedColor(): ColorSetting? = bank().expandedColor
 
     @JvmStatic
     fun setExpandedColor(value: ColorSetting?) {
-        expandedColor = value
+        bank().expandedColor = value
     }
 
     @JvmStatic
-    fun settingsScroll(): Int = settingsScroll
+    fun settingsScroll(): Int = bank().settingsScroll
 
     @JvmStatic
     fun setSettingsScroll(value: Int) {
-        settingsScroll = value
+        bank().settingsScroll = value
     }
 
     @JvmStatic
-    fun categoryScroll(): Int = categoryScroll
+    fun categoryScroll(): Int = bank().categoryScroll
 
     @JvmStatic
     fun setCategoryScroll(value: Int) {
-        categoryScroll = maxOf(0, value)
+        bank().categoryScroll = maxOf(0, value)
     }
 
     @JvmStatic
-    fun gridScroll(value: Category?): Int = value?.let { gridScrollByCategory.getOrDefault(it, 0) } ?: 0
+    fun gridScroll(value: Category?): Int = value?.let { bankFor(it).gridScrollByCategory.getOrDefault(it, 0) } ?: 0
 
     @JvmStatic
     fun setGridScroll(category: Category?, value: Int) {
         if (category == null) return
-        gridScrollByCategory[category] = maxOf(0, value)
+        bankFor(category).gridScrollByCategory[category] = maxOf(0, value)
     }
 
     @JvmStatic
@@ -113,58 +151,63 @@ object ClickGuiState {
     }
 
     @JvmStatic
-    fun gridScrolls(): Map<Category, Int> = java.util.Map.copyOf(gridScrollByCategory)
+    fun gridScrolls(): Map<Category, Int> = java.util.Map.copyOf(bank().gridScrollByCategory)
 
     @JvmStatic
     fun setGridScrolls(values: Map<String, Int?>?) {
-        gridScrollByCategory.clear()
+        bank().gridScrollByCategory.clear()
         if (values == null) return
-        for (category in Category.values()) {
+        for (category in Category.of(workspace)) {
             val saved = values[category.name]
             if (saved != null) setGridScroll(category, saved)
         }
     }
 
     @JvmStatic
-    fun isFavorite(value: Category?): Boolean = value != null && favoriteCategoryIds.contains(value.name)
+    fun isFavorite(value: Category?): Boolean = value != null && bankFor(value).favoriteCategoryIds.contains(value.name)
 
     @JvmStatic
     fun toggleFavorite(value: Category?) {
         if (value == null) return
-        if (!favoriteCategoryIds.remove(value.name)) favoriteCategoryIds.add(value.name)
+        val ids = bankFor(value).favoriteCategoryIds
+        if (!ids.remove(value.name)) ids.add(value.name)
     }
 
     @JvmStatic
-    fun favoriteCategoryIds(): Set<String> = java.util.Set.copyOf(favoriteCategoryIds)
+    fun favoriteCategoryIds(): Set<String> = java.util.Set.copyOf(bank().favoriteCategoryIds)
 
     @JvmStatic
     fun setFavoriteCategoryIds(values: Collection<String?>?) {
-        favoriteCategoryIds.clear()
+        val ids = bank().favoriteCategoryIds
+        ids.clear()
         if (values == null) return
-        for (value in Category.values()) {
-            if (values.contains(value.name)) favoriteCategoryIds.add(value.name)
+        for (value in Category.of(workspace)) {
+            if (values.contains(value.name)) ids.add(value.name)
         }
     }
 
     @JvmStatic
-    fun isFavorite(value: Module?): Boolean = value != null && favoriteModuleIds.contains(value.configName())
+    fun isFavorite(value: Module?): Boolean =
+        value != null && bankFor(value.category()).favoriteModuleIds.contains(value.configName())
 
     @JvmStatic
     fun toggleFavorite(value: Module?) {
         if (value == null) return
         val stableId = value.configName()
-        if (!favoriteModuleIds.remove(stableId)) favoriteModuleIds.add(stableId)
+        val ids = bankFor(value.category()).favoriteModuleIds
+        if (!ids.remove(stableId)) ids.add(stableId)
     }
 
     @JvmStatic
-    fun favoriteModuleIds(): Set<String> = java.util.Set.copyOf(favoriteModuleIds)
+    fun favoriteModuleIds(): Set<String> = java.util.Set.copyOf(bank().favoriteModuleIds)
 
     @JvmStatic
     fun setFavoriteModuleIds(values: Collection<String?>?) {
-        favoriteModuleIds.clear()
+        val ids = bank().favoriteModuleIds
+        ids.clear()
         if (values == null) return
         for (value in values) {
-            if (value != null && value.isNotBlank()) favoriteModuleIds.add(value)
+            if (value != null && value.isNotBlank()) ids.add(value)
         }
     }
 

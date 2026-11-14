@@ -489,6 +489,36 @@ public final class DungeonOdinAcceptanceChecks {
 		livid.reset();
 		require(livid.targetEntityName() == null && livid.invulnerabilityTicks() == 0
 			&& !livid.timerVisible(true), "a full Livid reset clears both target and timer state");
+		// The real Livid dying or the run ending must drop the target, timer and HUD label for good.
+		DungeonLividTracker gone = new DungeonLividTracker();
+		java.util.UUID goneUuid = java.util.UUID.randomUUID();
+		gone.observeChat(startLine, true);
+		require(gone.observeMarkerWool("gray", true) && gone.observePlayerEntity(goneUuid, 7, "§7Doctor Livid", true)
+			&& gone.matchedEntityId() == 7 && gone.selectedTarget(true, false) != null,
+			"a matched Livid exposes its entity id and target snapshot");
+		gone.releaseTarget();
+		require(gone.selectedTarget(true, false) == null && gone.targetEntityName() == null
+			&& gone.invulnerabilityTicks() == 0 && !gone.timerVisible(true) && gone.matchedEntityId() == -1
+			&& gone.released(), "releasing the Livid drops the target snapshot, the timer and the matched entity id");
+		require(!gone.observeMarkerWool("gray", true) && !gone.observePlayerEntity(goneUuid, 7, "§7Doctor Livid", true)
+			&& gone.selectedTarget(true, false) == null,
+			"a released Livid is not re-acquired from the leftover wool marker or its lingering entity");
+		require(gone.observeChat(startLine, true) && !gone.released() && gone.observeMarkerWool("gray", true),
+			"the next boss start line re-arms a released Livid tracker");
+		gone.releaseTarget();
+		gone.reset();
+		require(!gone.released(), "a level-load reset clears the release latch");
+		require(DungeonLividReleaseRules.shouldRelease(DungeonLividReleaseRules.RELEASE_TICKS)
+			&& !DungeonLividReleaseRules.shouldRelease(DungeonLividReleaseRules.RELEASE_TICKS - 1)
+			&& DungeonLividReleaseRules.nextMissingTicks(9, true) == 0
+			&& DungeonLividReleaseRules.nextMissingTicks(3, false) == 4
+			&& DungeonLividReleaseRules.nextMissingTicks(DungeonLividReleaseRules.RELEASE_TICKS, false)
+				== DungeonLividReleaseRules.RELEASE_TICKS,
+			"the Livid target is released only after a sustained run of missing or dead ticks");
+		require(DungeonLividReleaseRules.isRunEnd("> EXTRA STATS <")
+			&& DungeonLividReleaseRules.isRunEnd("  > EXTRA STATS <  ")
+			&& !DungeonLividReleaseRules.isRunEnd("EXTRA STATS") && !DungeonLividReleaseRules.isRunEnd(null),
+			"the run-end line is recognised exactly");
 		String[][] colors = {
 			{"white", "Vendetta Livid", "ffffffff"}, {"magenta", "Crossed Livid", "ffff55ff"},
 			{"yellow", "Arcade Livid", "ffffff55"}, {"lime", "Smile Livid", "ff55ff55"},

@@ -13,15 +13,33 @@ internal class DungeonLividTrackerCore {
     private var matchingPlayerEntityId = -1
     private var invulnerabilityTicks = 0
 
+    /** Set once the real Livid died or the run ended; stops the stale target from being re-observed. */
+    private var released = false
+
     fun observeChat(plainMessage: String?, floorFive: Boolean): Boolean {
         if (!floorFive || plainMessage == null || !START_LINE.matcher(javaTrim(plainMessage)).matches()) return false
+        released = false
         invulnerabilityTicks = INVULNERABILITY_TICKS
         return true
     }
 
+    /** Whether [releaseTarget] has run since the last boss start line or reset. */
+    fun released(): Boolean = released
+
+    /** Drops the selected target and timer for good: the real Livid is gone or the run is over. */
+    fun releaseTarget() {
+        released = true
+        current = null
+        clearMatchingPlayer()
+        invulnerabilityTicks = 0
+    }
+
+    /** The client entity id of the matched Livid, or -1 when none is matched. */
+    fun matchedEntityId(): Int = matchingPlayerEntityId
+
     /** Supply only the dye color from the client-observed wool block in the Livid room. */
     fun observeMarkerWool(dyeName: String?, inFloorFiveBoss: Boolean): Boolean {
-        if (!inFloorFiveBoss || dyeName == null) return false
+        if (released || !inFloorFiveBoss || dyeName == null) return false
         val resolved = Livid.fromDye(dyeName) ?: return false
         if (current != resolved) clearMatchingPlayer()
         current = resolved
@@ -102,6 +120,7 @@ internal class DungeonLividTrackerCore {
     fun timerVisible(inFloorFiveBoss: Boolean): Boolean = inFloorFiveBoss && invulnerabilityTicks > 0
 
     fun reset() {
+        released = false
         current = null
         clearMatchingPlayer()
         invulnerabilityTicks = 0

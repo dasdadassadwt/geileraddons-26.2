@@ -6,6 +6,7 @@ import geiler.addons.client.config.ModConfig
 import geiler.addons.client.macro.MacroTriggerContext
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
+import geiler.addons.client.module.Workspace
 import geiler.addons.client.module.ChoiceSetting
 import geiler.addons.client.module.ColorSetting
 import geiler.addons.client.module.DebugState
@@ -16,6 +17,7 @@ import geiler.addons.client.module.ModuleKeybindManager
 import geiler.addons.client.module.ModuleManager
 import geiler.addons.client.module.ModulePreview
 import geiler.addons.client.module.NumberSetting
+import geiler.addons.client.module.RangeSetting
 import geiler.addons.client.module.Setting
 import geiler.addons.client.module.SettingGroup
 import geiler.addons.client.module.TextSetting
@@ -95,12 +97,22 @@ import geiler.addons.client.gui.ClickGuiTextEditing.selectedText
 import geiler.addons.client.gui.ClickGuiTextEditing.selection
 
 /** The module and settings screen, rendered through Minecraft's client-thread extractor. */
-class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
-    private var selectedCategory: Category = ClickGuiState.category() ?: Category.values()[0]
+class ClickGuiScreen @JvmOverloads constructor(
+    /** Opened from the Classic menu: leaving a module's settings goes back to it instead of to the module grid. */
+    private val fromClassic: Boolean = false,
+) : Screen(Component.literal("GeilerAddons")) {
+    private var selectedCategory: Category = ClickGuiState.category() ?: Category.of(ClickGuiState.workspace())[0]
     private var openSettingsModule: Module? = ClickGuiState.openModule()
     private var expandedColorSetting: ColorSetting? = ClickGuiState.expandedColor()
     private var draggingPicker: PickerPart? = null
     private var draggingNumberSetting: NumberSetting? = null
+
+    /** The range being dragged and which of its two thumbs follows the mouse. */
+    private var draggingRange: RangeSetting? = null
+    private var draggingRangeHigh = false
+
+    /** The preview that took the mouse press now being dragged, if any. */
+    private var draggingPreview: ModulePreview? = null
     private var focusedTextSetting: TextSetting? = null
     private var textCursor = 0
     private var textAnchor = -1
@@ -572,7 +584,9 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
     private fun orderedCategories(): List<Category> {
         val snapshot = orderedCategorySnapshot
         if (snapshot != null && orderedCategoryFavoritesRevision == favoriteRevision) return snapshot
-        val ordered = ClickGuiScreenCategoryBehavior.orderFavoriteCategories(Category.values())
+        val ordered = ClickGuiScreenCategoryBehavior.orderFavoriteCategories(
+            Category.of(ClickGuiState.workspace()).toTypedArray(),
+        )
         orderedCategorySnapshot = ordered
         orderedCategoryFavoritesRevision = favoriteRevision
         return ordered
@@ -975,6 +989,7 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         is ColorRow -> "Click a colour to open its picker; drag the controls or enter a hex value."
         is NumberRow -> "Drag the slider or click the value field to enter a number between " +
             "${numberText(row.setting.min())} and ${numberText(row.setting.max())}. Press Enter to apply a typed value."
+        is RangeRow -> module.settingTooltip(row.setting) ?: "Drag either end of the slider: each time the value is needed, one is drawn between the two ends."
         is ToggleRow -> module.settingTooltip(row.setting) ?: "Toggle ${row.setting.displayName()}."
         is ChoiceRow -> module.settingTooltip(row.setting)
             ?: "Click to choose the next value; right-click chooses the previous value."
@@ -1009,6 +1024,8 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
             roundedRect(graphics, to.x + 7, y, to.w - 7, to.h, componentRadius(), withOpacity(CATEGORY_SELECTED, 0.19f))
         }
         val viewportBottom = contentTop + categoryViewportHeight(panelY)
+        // The rows scroll inside their own viewport so none can run under the workspace button.
+        graphics.enableScissor(panelX, contentTop, panelX + categoryWidth(), viewportBottom)
         for (i in entries.indices) {
             val full = allRows[i]
             val y = full.y - categoryScroll
@@ -1026,6 +1043,8 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
                 ICON_FAVORITE_FILLED, ICON_FAVORITE_OUTLINE,
             )
         }
+        graphics.disableScissor()
+        renderWorkspaceButton(graphics, font, mouseX, mouseY, panelX, panelY)
         val notice = UpdateChecker.bannerText()
         if (notice != null) {
             val text = textFit(font, notice, maxOf(1, categoryWidth() - 28))
@@ -1033,6 +1052,29 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
             graphics.text(font, text, panelX + 14, y, TEXT_WARN)
         }
         graphics.disableScissor()
+    }
+
+    /** The switch to the other workspace, drawn like a category row with an accent outline and an arrow to show it leaves. */
+    private fun renderWorkspaceButton(
+        graphics: GuiGraphicsExtractor,
+        font: Font,
+        mouseX: Int,
+        mouseY: Int,
+        panelX: Int,
+        panelY: Int,
+    ) {
+        val rect = workspaceButtonRect(panelX, panelY)
+        val hovered = rect.contains(mouseX, mouseY)
+        val radius = componentRadius()
+        roundedRect(graphics, rect.x, rect.y, rect.w, rect.h, radius, if (hovered) BUTTON_HOVER else BUTTON_BG)
+        roundedRectOutline(graphics, rect.x, rect.y, rect.w, rect.h, radius, withOpacity(SLIDER_FILL, if (hovered) 0.9f else 0.55f))
+        val workspace = ClickGuiState.workspace()
+        val label = if (workspace == Workspace.NORMAL) workspace.switchLabel() + "  ›" else "‹  " + workspace.switchLabel()
+        ClickGuiScreenRenderBehavior.drawCenteredScaledText(
+            graphics, font, textFit(font, label, maxOf(1, Math.round((rect.w - 8) / CATEGORY_TEXT_SCALE))),
+            rect.x + rect.w / 2, rect.y + (rect.h - Math.round(TEXT_HEIGHT * CATEGORY_TEXT_SCALE)) / 2,
+            SLIDER_FILL, CATEGORY_TEXT_SCALE,
+        )
     }
 
     private fun renderView(
@@ -1604,6 +1646,7 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
             is PreviewRow -> renderPreview(graphics, font, row.preview, row.bounds)
             is ColorRow -> renderColorRow(graphics, font, mouseX, mouseY, row, hoverable, now, motion)
             is NumberRow -> renderNumberRow(graphics, font, row, now, motion)
+            is RangeRow -> renderRangeRow(graphics, font, row, now, motion)
             is ToggleRow -> renderToggleRow(graphics, font, mouseX, mouseY, row, hoverable, now, motion)
             is ChoiceRow -> renderChoiceRow(graphics, font, mouseX, mouseY, row, hoverable, now, motion)
             is TextRow -> renderTextRow(graphics, font, row, now, motion)
@@ -1652,6 +1695,7 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
             is PreviewRow -> PreviewRow(row.preview, bounds)
             is ColorRow -> ColorRow(row.setting, bounds, translatePicker(row.picker, dx, dy))
             is NumberRow -> NumberRow(row.setting, bounds, translateRect(row.slider, dx, dy), translateRect(row.field, dx, dy))
+            is RangeRow -> RangeRow(row.setting, bounds, translateRect(row.slider, dx, dy), translateRect(row.field, dx, dy))
             is ToggleRow -> ToggleRow(row.setting, bounds)
             is ChoiceRow -> ChoiceRow(row.setting, bounds, translateRect(row.field, dx, dy))
             is TextRow -> TextRow(row.setting, bounds, translateRect(row.field, dx, dy))
@@ -1794,6 +1838,28 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         renderNumberField(graphics, font, numberRow, now, motion)
     }
 
+    private fun renderRangeRow(graphics: GuiGraphicsExtractor, font: Font, rangeRow: RangeRow, now: Long, motion: ClickGuiMotion) {
+        val field = rangeRow.field!!
+        val setting = rangeRow.setting
+        val controlWidth = field.w + 36
+        moduleText(graphics, font, textFit(font, setting.displayName(), moduleTextWidth(rangeRow.bounds.w - controlWidth)),
+            rangeRow.bounds.x + 16, rangeRow.bounds.y + 1, TEXT_SECONDARY)
+        val slider = rangeRow.slider!!
+        val pulse = interactionPulse(setting, now, motion)
+        val track = if (pulse > 0.0f) lerpColor(SLIDER_TRACK, PANEL_HIGHLIGHT, pulse * 0.4f) else SLIDER_TRACK
+        roundedRect(graphics, slider.x, slider.y, slider.w, slider.h, slider.h / 2, track)
+        val lowX = slider.x + Math.round(slider.w * setting.lowFraction())
+        val highX = slider.x + Math.round(slider.w * setting.highFraction())
+        val fill = if (pulse > 0.0f) lerpColor(SLIDER_FILL, TEXT_PRIMARY, pulse * 0.22f) else SLIDER_FILL
+        if (highX > lowX) roundedRect(graphics, lowX, slider.y, highX - lowX, slider.h, slider.h / 2, fill)
+        for (thumbX in intArrayOf(lowX, highX)) {
+            roundedRect(graphics, thumbX - 2, slider.y - 2, 5, slider.h + 4, 2, TEXT_PRIMARY)
+        }
+        roundedRectBordered(graphics, field.x, field.y, field.w, field.h, 3, SLIDER_TRACK, SLIDER_TRACK, BORDER)
+        val text = textFit(font, setting.display(), maxOf(1, field.w - 8))
+        graphics.text(font, text, field.x + 4, field.y + (field.h - TEXT_HEIGHT) / 2, TEXT_PRIMARY)
+    }
+
     private fun renderNumberField(graphics: GuiGraphicsExtractor, font: Font, numberRow: NumberRow,
         now: Long, motion: ClickGuiMotion) {
         val field = numberRow.field!!
@@ -1842,7 +1908,7 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         val fieldBorder = if (focused) SLIDER_FILL else if (pulse > 0.0f) lerpColor(BORDER, PANEL_HIGHLIGHT, pulse) else BORDER
         roundedRectBordered(graphics, field.x, field.y, field.w, field.h, 3, SLIDER_TRACK, SLIDER_TRACK, fieldBorder)
         val value = if (setting.keybindCapture()) {
-            if (focused && focusedTextSetting === setting) "Press a key…" else keybindDisplayName(setting.value())
+            if (focused && focusedTextSetting === setting) KeybindCapture.HINT else keybindDisplayName(setting.value())
         } else setting.value()
         val inner = maxOf(1, field.w - 8)
         if (setting.keybindCapture()) {
@@ -2106,7 +2172,13 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         if (left && transitionFrom == null && settingsModule != null && settingsBackRect(rightX, panelY).contains(mouseX, mouseY)) {
             markInteraction("Back to modules")
             playClick()
+            if (fromClassic) { returnToClassic(); return true }
             requestNavigation(ViewState(selectedCategory, null, gridScroll, 0, null), -1)
+            return true
+        }
+
+        if (left && transitionFrom == null && workspaceButtonRect(panelX, panelY).contains(mouseX, mouseY)) {
+            switchWorkspace()
             return true
         }
 
@@ -2265,6 +2337,21 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
                         return true
                     }
                 }
+                is RangeRow -> {
+                    val slider = row.slider
+                    if (slider != null && slider.contains(mouseX, mouseY)) {
+                        markInteraction(row.setting); playClick()
+                        val at = (mouseX - slider.x) / slider.w.toFloat()
+                        val lowGap = Math.abs(at - row.setting.lowFraction())
+                        val highGap = Math.abs(at - row.setting.highFraction())
+                        // The nearer thumb follows; on a tie the side of the mouse decides, so stacked thumbs can part.
+                        draggingRange = row.setting
+                        draggingRangeHigh = if (highGap == lowGap) at > row.setting.highFraction() else highGap < lowGap
+                        logGuiDiagnostic("EVENT action=slider_drag,phase=start,slider=${row.setting.name()},thumb=${if (draggingRangeHigh) "high" else "low"}")
+                        applyRangeSlider(row.setting, draggingRangeHigh, slider, mouseX)
+                        return true
+                    }
+                }
                 is ToggleRow -> if (row.bounds.contains(mouseX, mouseY)) {
                     markInteraction(row.setting); playClick()
                     val wasEnabled = row.setting.value()
@@ -2309,8 +2396,57 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
                     invalidateSettingsLayout()
                     return true
                 }
-                is PreviewRow -> Unit
+                is PreviewRow -> if (left && row.bounds.contains(mouseX, mouseY)) {
+                    val content = previewContent(row.bounds)
+                    if (row.preview.previewMousePressed(
+                            mouseX - content.x, mouseY - content.y, content.w, content.h, 0, doubleClick, minecraft.hasShiftDown(),
+                        )
+                    ) {
+                        draggingPreview = row.preview
+                        markInteraction(row.preview)
+                        return true
+                    }
+                } else if (right && row.bounds.contains(mouseX, mouseY)) {
+                    val content = previewContent(row.bounds)
+                    if (row.preview.previewMousePressed(
+                            mouseX - content.x, mouseY - content.y, content.w, content.h, 1, doubleClick, minecraft.hasShiftDown(),
+                        )
+                    ) {
+                        markInteraction(row.preview)
+                        row.preview.previewMouseReleased(mouseX - content.x, mouseY - content.y, content.w, content.h, 1)
+                        ModConfig.markDirty()
+                        return true
+                    }
+                }
             }
+        }
+        return true
+    }
+
+    /** The area a preview draws its own content in: the same box [renderPreview] hands to the preview. */
+    private fun previewContent(bounds: Rect): Rect =
+        Rect(bounds.x + PADDING, bounds.y + 5, maxOf(1, bounds.w - PADDING * 2), maxOf(1, bounds.h - 8))
+
+    /** Sends a drag or the release of a press a preview took to that preview; true when one was being dragged. */
+    private fun routePreviewMouse(event: MouseButtonEvent, release: Boolean): Boolean {
+        val preview = draggingPreview ?: return false
+        val module = openSettingsModule
+        if (module != null) {
+            for (row in settingsRows(module, panelX() + categoryWidth(), panelY())) {
+                if (row is PreviewRow && row.preview === preview) {
+                    val content = previewContent(row.bounds)
+                    val localX = event.x().toInt() - content.x
+                    val localY = event.y().toInt() - content.y
+                    if (release) preview.previewMouseReleased(localX, localY, content.w, content.h, event.button())
+                    else preview.previewMouseDragged(localX, localY, content.w, content.h, event.button())
+                    break
+                }
+            }
+        }
+        if (release) {
+            draggingPreview = null
+            persistView()
+            ModConfig.markDirty()
         }
         return true
     }
@@ -2350,12 +2486,16 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
     override fun mouseDragged(event: MouseButtonEvent, dragX: Double, dragY: Double): Boolean {
         if (!inputSettled()) return true
         if (event.button() == 0 && dragSelection(event.x().toInt())) return true
+        if (draggingPreview != null) return routePreviewMouse(event, release = false)
         val module = openSettingsModule ?: return super.mouseDragged(event, dragX, dragY)
         val rightX = panelX() + categoryWidth()
         val mouseX = event.x().toInt()
         val mouseY = event.y().toInt()
-        if (draggingPicker != null || draggingNumberSetting != null) {
+        if (draggingPicker != null || draggingNumberSetting != null || draggingRange != null) {
             for (row in settingsRows(module, rightX, panelY())) {
+                if (row is RangeRow && row.setting === draggingRange) {
+                    row.slider?.let { applyRangeSlider(row.setting, draggingRangeHigh, it, mouseX); return true }
+                }
                 if (draggingPicker != null && row is ColorRow && row.setting === expandedColorSetting && row.picker != null) {
                     applyPicker(row.setting, row.picker!!, mouseX, mouseY)
                     return true
@@ -2374,14 +2514,17 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
 
     override fun mouseReleased(event: MouseButtonEvent): Boolean {
         selectingField = null
+        if (draggingPreview != null) return routePreviewMouse(event, release = true)
         if (!inputSettled()) {
             draggingPicker = null
             draggingNumberSetting = null
+            draggingRange = null
             return true
         }
-        if (draggingPicker != null || draggingNumberSetting != null) {
+        if (draggingPicker != null || draggingNumberSetting != null || draggingRange != null) {
             draggingPicker = null
             draggingNumberSetting = null
+            draggingRange = null
             persistView()
             ModConfig.markDirty()
             return true
@@ -2511,14 +2654,7 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         }
         val textSetting = focusedTextSetting
         if (textSetting != null && textSetting.keybindCapture()) {
-            if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
-                focusedTextSetting = null
-                textCursor = 0
-                textAnchor = -1
-                return true
-            }
-            val key = if (event.key() == GLFW.GLFW_KEY_BACKSPACE || event.key() == GLFW.GLFW_KEY_DELETE)
-                InputConstants.UNKNOWN else InputConstants.getKey(event)
+            val key = if (KeybindCapture.clearsBinding(event.key())) InputConstants.UNKNOWN else InputConstants.getKey(event)
             if (key != null) {
                 textSetting.setValue(key.name)
                 focusedTextSetting = null
@@ -2594,6 +2730,7 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
             if (draggingPicker != null) { draggingPicker = null; return true }
             if (draggingNumberSetting != null) { draggingNumberSetting = null; return true }
+            if (draggingRange != null) { draggingRange = null; return true }
             if (expandedColorSetting != null) {
                 expandedColorSetting = null
                 invalidateSettingsLayout()
@@ -2601,6 +2738,7 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
                 return true
             }
             if (openSettingsModule != null) {
+                if (fromClassic) { returnToClassic(); return true }
                 requestNavigation(ViewState(selectedCategory, null, gridScroll, 0, null), -1)
                 persistView()
                 return true
@@ -2608,6 +2746,15 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
             return super.keyPressed(event)
         }
         return super.keyPressed(event)
+    }
+
+    /** Leaves the settings page for the Classic menu this screen was opened from. */
+    private fun returnToClassic() {
+        openSettingsModule = null
+        expandedColorSetting = null
+        persistView()
+        // The style may have been switched on the Theme page that is being left.
+        beginClose(ClickGuiStyle.screen(VisualModule.INSTANCE.clickGuiStyle()))
     }
 
     private fun blurTextField() {
@@ -2722,11 +2869,13 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
     private fun pollSliderDrag(mouseX: Int, mouseY: Int) {
         val slider = draggingNumberSetting
         val picker = draggingPicker
-        if (slider == null && picker == null) return
+        val range = draggingRange
+        if (slider == null && picker == null && range == null) return
         // GLFW, not the MouseHandler flag: vanilla only updates that flag while no screen is open.
         if (GLFW.glfwGetMouseButton(minecraft.window.handle(), GLFW.GLFW_MOUSE_BUTTON_LEFT) != GLFW.GLFW_PRESS) {
-            logGuiDiagnostic("EVENT action=slider_drag,phase=end,slider=${slider?.name() ?: "picker"}")
+            logGuiDiagnostic("EVENT action=slider_drag,phase=end,slider=${slider?.name() ?: range?.name() ?: "picker"}")
             draggingNumberSetting = null
+            draggingRange = null
             draggingPicker = null
             persistView()
             ModConfig.markDirty()
@@ -2735,6 +2884,10 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         if (!inputSettled()) return
         val module = openSettingsModule ?: return
         for (row in settingsRows(module, panelX() + categoryWidth(), panelY())) {
+            if (range != null && row is RangeRow && row.setting === range) {
+                row.slider?.let { applyRangeSlider(range, draggingRangeHigh, it, mouseX) }
+                return
+            }
             if (slider != null && row is NumberRow && row.setting === slider) {
                 row.slider?.let { applyNumberSlider(slider, it, mouseX) }
                 return
@@ -2766,6 +2919,13 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         if (setting.value() != previous) invalidateSettingsLayout()
     }
 
+    private fun applyRangeSlider(setting: RangeSetting, high: Boolean, slider: Rect, mouseX: Int) {
+        val fraction = (mouseX - slider.x) / slider.w.toFloat()
+        val before = setting.low() to setting.high()
+        if (high) setting.setHighFraction(fraction) else setting.setLowFraction(fraction)
+        if (before != (setting.low() to setting.high())) invalidateSettingsLayout()
+    }
+
     private fun categoryRowBounds(panelX: Int, panelY: Int): List<Rect> {
         val rows = ArrayList<Rect>()
         val entries = categoryEntries()
@@ -2780,10 +2940,64 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
     private fun categoryTopInset(): Int = maxOf(8, Math.round(panelHeight() * 0.034f))
     private fun categoryViewportTop(panelY: Int): Int = contentTop(panelY)
 
-    private fun categoryViewportHeight(panelY: Int): Int {
+    /** Where the scrolling category rows end: the switch button and a small gap sit below them. */
+    private fun categoryViewportBottom(panelY: Int): Int {
         val bottomReserve = if (UpdateChecker.bannerText() == null) gridInset() else CATEGORY_NOTICE_HEIGHT + gridInset()
-        val bottom = panelY + panelHeight() - bottomReserve
-        return maxOf(1, bottom - categoryViewportTop(panelY))
+        return panelY + panelHeight() - bottomReserve - workspaceButtonHeight() - WORKSPACE_BUTTON_GAP
+    }
+
+    private fun categoryViewportHeight(panelY: Int): Int =
+        maxOf(1, categoryViewportBottom(panelY) - categoryViewportTop(panelY))
+
+    private fun workspaceButtonHeight(): Int = maxOf(20, categoryRowHeight() - 4)
+
+    /** The Normal/Macros switch: the last row of the category rail, pinned below the scrolling rows. */
+    private fun workspaceButtonRect(panelX: Int, panelY: Int): Rect {
+        val height = workspaceButtonHeight()
+        val y = categoryViewportBottom(panelY) + WORKSPACE_BUTTON_GAP
+        return Rect(panelX + 7, y, maxOf(1, categoryWidth() - 14), height)
+    }
+
+    /**
+     * Swaps the whole screen to the other workspace. The view being left is written to its own saved state first and
+     * the other workspace's saved view is loaded, so each workspace comes back exactly as it was left.
+     */
+    private fun switchWorkspace() {
+        persistView()
+        val target = ClickGuiState.workspace().otherWorkspace()
+        markInteraction("Workspace " + target.name)
+        playClick()
+        ClickGuiState.setWorkspace(target)
+        navigationQueue.clear()
+        transitionFrom = null
+        transitionTo = null
+        expansionFrom = null
+        expansionTo = null
+        settingsLayoutTransition = null
+        focusedTextSetting = null
+        focusedNumberSetting = null
+        focusedHexSetting = null
+        selectingField = null
+        draggingNumberSetting = null
+        draggingRange = null
+        draggingPicker = null
+        draggingPreview = null
+        setSearchQuery("")
+        selectedCategory = ClickGuiState.category() ?: Category.of(target)[0]
+        openSettingsModule = ClickGuiState.openModule()
+        expandedColorSetting = ClickGuiState.expandedColor()
+        settingsScroll = ClickGuiState.settingsScroll()
+        categoryScroll = ClickGuiState.categoryScroll()
+        gridScroll = ClickGuiState.gridScroll(selectedCategory)
+        gridScrollVisual = gridScroll.toDouble()
+        settingsScrollVisual = settingsScroll.toDouble()
+        orderedCategorySnapshot = null
+        moduleSearch.invalidate()
+        invalidateSettingsLayout()
+        favoriteStateChanged()
+        clampCategoryScroll()
+        ModConfig.markDirty()
+        logGuiDiagnostic("EVENT action=workspace,workspace=${target.name},category=${selectedCategory.name}")
     }
 
     private fun categoryEntryAt(mouseX: Double, mouseY: Double, panelX: Int, panelY: Int): CategoryEntry? {
@@ -2923,6 +3137,7 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         private const val SCROLLBAR_WIDTH = 3
         private const val SCROLLBAR_GUTTER = SCROLLBAR_WIDTH + 6
         private const val CATEGORY_NOTICE_HEIGHT = 14
+        private const val WORKSPACE_BUTTON_GAP = 4
         private const val FAVORITE_COLOR = 0xFFFF4B5C.toInt()
         private const val WIP_BADGE_LABEL = "WIP"
         private const val GUI_DIAGNOSTIC_MODULE = "Click GUI"
@@ -2984,7 +3199,7 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
         @JvmStatic fun gridCardContentWidth(viewportWidth: Int): Int = ClickGuiModuleGrid.gridCardContentWidth(viewportWidth, SCROLLBAR_GUTTER)
         @JvmStatic fun cardWidthForGridViewport(viewportWidth: Int, columns: Int, gap: Int): Int =
             ClickGuiModuleGrid.cardWidthForGridViewport(viewportWidth, columns, gap, SCROLLBAR_GUTTER)
-        @JvmStatic fun categoryContentHeight(): Int = Category.values().size * ClickGuiSettingsLayout.ROW_HEIGHT
+        @JvmStatic fun categoryContentHeight(): Int = Category.of(Workspace.NORMAL).size * ClickGuiSettingsLayout.ROW_HEIGHT
         @JvmStatic fun categoryContentHeightForPanelHeight(panelHeight: Int): Int =
             ClickGuiScreenGeometry.categoryContentHeightForPanelHeight(panelHeight)
         @JvmStatic fun categoryContentHeightForPanelHeight(panelHeight: Int, rowCount: Int): Int =
@@ -3031,6 +3246,7 @@ class ClickGuiScreen : Screen(Component.literal("GeilerAddons")) {
             is PreviewRow -> row.preview
             is ColorRow -> row.setting
             is NumberRow -> row.setting
+            is RangeRow -> row.setting
             is ToggleRow -> row.setting
             is ChoiceRow -> row.setting
             is TextRow -> row.setting

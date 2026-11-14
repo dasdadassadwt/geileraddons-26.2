@@ -49,6 +49,14 @@ class DungeonLividTracker {
 
     fun reset() = core.reset()
 
+    /** Drops the target and timer after the real Livid died or the run ended; stays dropped until the next boss start. */
+    fun releaseTarget() = core.releaseTarget()
+
+    fun released(): Boolean = core.released()
+
+    /** The matched Livid's client entity id, or -1. */
+    fun matchedEntityId(): Int = core.matchedEntityId()
+
     companion object {
         /** Returns whether a stripped name exactly matches one of the nine named Livid players. */
         @JvmStatic

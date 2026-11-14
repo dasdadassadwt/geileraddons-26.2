@@ -71,7 +71,25 @@ public final class RegisteredModuleCatalogChecks {
 		"NoLoadingScreenModule",
 		"BlockEspModule",
 		"InventoryButtonsModule",
-		"SnapTapModule"
+		"SnapTapModule",
+		"AutoSprintModule",
+		"NoFogModule",
+		"FullbrightModule",
+		"BlockOverlayModule",
+		"ScrollableTooltipModule",
+		"FreecamModule",
+		"NoRenderModule",
+		"AnimationFixModule",
+		"DoubleUseFixModule",
+		"DisconnectFixModule",
+		"ItemCooldownsModule",
+		"GyroWandModule",
+		"MimicAnnouncerModule",
+		"TerracottaTimerModule",
+		"WardrobeKeybindsModule",
+		"LoadoutKeybindsModule",
+		"SpringBootsModule",
+		"RagnarockModule"
 	);
 
 	private RegisteredModuleCatalogChecks() { }
@@ -85,6 +103,13 @@ public final class RegisteredModuleCatalogChecks {
 		if (!EXPECTED_MODULES.equals(actual)) {
 			throw new AssertionError("Registered module catalog/order changed: expected "
 				+ EXPECTED_MODULES + ", got " + actual);
+		}
+		List<String> withoutIcon = ModuleManager.modules().stream()
+			.map(module -> module.name())
+			.filter(name -> geiler.addons.client.gui.ModuleIconTextures.forModule(name) == null)
+			.collect(Collectors.toList());
+		if (!withoutIcon.isEmpty()) {
+			throw new AssertionError("Every registered module needs a bundled icon; missing: " + withoutIcon);
 		}
 	}
 

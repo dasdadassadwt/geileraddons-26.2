@@ -89,4 +89,7 @@ object DungeonStatsService {
 
     @JvmStatic
     fun encodePathForChecks(value: String): String = DungeonStatsServiceCore.encodePathForChecks(value)
+
+    @JvmStatic
+    fun maxJsonNodesForChecks(): Int = DungeonStatsServiceCore.maxJsonNodesForChecks()
 }

@@ -16,6 +16,7 @@ import geiler.addons.client.presentation.PlayerNameGradientRenderState
 import geiler.addons.client.presentation.PlayerNameTextTransform
 import geiler.addons.client.presentation.PlayerPresentationProfileStore
 import geiler.addons.client.presentation.PlayerPresentationProfiles
+import geiler.addons.client.presentation.WeakIdentityCache
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphicsExtractor
@@ -50,7 +51,7 @@ class PlayerNamesModule private constructor(settings: Settings) : Module(
     private val ownGradientAnimated = settings.ownGradientAnimated
     private val ownGradientSpeed = settings.ownGradientSpeed
 
-    private val transformedComponents = WeakHashMap<Component, CachedComponent>()
+    private val transformedComponents = WeakIdentityCache<Component, CachedComponent>(MAX_TRANSFORM_CACHE_ENTRIES)
     private val transformedStrings = WeakHashMap<String, CachedString>()
     private val transformCalls = LongArray(TRANSFORM_PATHS.size)
     private val matchedInputs = LongArray(TRANSFORM_PATHS.size)
@@ -380,7 +381,6 @@ class PlayerNamesModule private constructor(settings: Settings) : Module(
     }
 
     private fun trimTransformCaches() {
-        trimTransformCache(transformedComponents)
         trimTransformCache(transformedStrings)
     }
 
