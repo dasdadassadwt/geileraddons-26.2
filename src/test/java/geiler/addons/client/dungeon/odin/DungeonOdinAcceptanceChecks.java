@@ -418,6 +418,8 @@ public final class DungeonOdinAcceptanceChecks {
 		require("6.5S".equals(DungeonLividOverlayLabel.create(true, true, 130).text())
 			&& DungeonLividOverlayLabel.create(true, true, 130).colorArgb() == 0xFFFF5555,
 			"the floating Livid label follows the tracked red countdown range");
+			require(DungeonLividOverlayLabel.HUD_SCALE == 1.0f,
+				"the Livid timer is projected HUD text at the real font scale, not vector strokes");
 		require(!timer.observeChat(startLine, false) && !timer.observeChat(startLine + "!", true)
 			&& timer.invulnerabilityTicks() == 0,
 			"the Livid timer ignores non-F5 and non-exact boss chat lines");

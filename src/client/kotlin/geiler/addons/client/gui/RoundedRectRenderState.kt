@@ -2,6 +2,7 @@ package geiler.addons.client.gui
 
 import com.mojang.blaze3d.pipeline.RenderPipeline
 import com.mojang.blaze3d.vertex.VertexConsumer
+import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.navigation.ScreenRectangle
 import net.minecraft.client.gui.render.TextureSetup
@@ -31,8 +32,14 @@ internal class RoundedRectRenderState private constructor(
     private val colorBottom: Int,
     outline: Boolean,
 ) : GuiElementRenderState {
-    private val geometry = geometry(width, height, radius, outline)
     private val pose = Matrix3x2f(graphics.pose())
+
+    /**
+     * Antialiasing needs one pixel of coverage to be one screen pixel. Under the GUI scale and any pose scale a GUI
+     * unit is several pixels, so the shape is built [k] times finer and its vertices divided by [k] again.
+     */
+    private val k = supersample(pose)
+    private val geometry = geometry(width * k, height * k, radius * k, k, outline)
     private val scissor = (graphics as GuiGraphicsExtractorScissorAccess).`geileraddons$getScissorArea`()
     private val elementBounds: ScreenRectangle? =
         ScreenRectangle(x, y, width, height).transformMaxBounds(pose).let { uncut ->
@@ -43,10 +50,14 @@ internal class RoundedRectRenderState private constructor(
         for (quad in geometry.quads) {
             val top = withAlphaScale(lerpColor(colorTop, colorBottom, quad.topFraction), quad.alphaScale)
             val bottom = withAlphaScale(lerpColor(colorTop, colorBottom, quad.bottomFraction), quad.alphaScale)
-            consumer.addVertexWith2DPose(pose, (x + quad.x0).toFloat(), (y + quad.y0).toFloat()).setColor(top)
-            consumer.addVertexWith2DPose(pose, (x + quad.x0).toFloat(), (y + quad.y1).toFloat()).setColor(bottom)
-            consumer.addVertexWith2DPose(pose, (x + quad.x1).toFloat(), (y + quad.y1).toFloat()).setColor(bottom)
-            consumer.addVertexWith2DPose(pose, (x + quad.x1).toFloat(), (y + quad.y0).toFloat()).setColor(top)
+            val x0 = x + quad.x0 / k.toFloat()
+            val y0 = y + quad.y0 / k.toFloat()
+            val x1 = x + quad.x1 / k.toFloat()
+            val y1 = y + quad.y1 / k.toFloat()
+            consumer.addVertexWith2DPose(pose, x0, y0).setColor(top)
+            consumer.addVertexWith2DPose(pose, x0, y1).setColor(bottom)
+            consumer.addVertexWith2DPose(pose, x1, y1).setColor(bottom)
+            consumer.addVertexWith2DPose(pose, x1, y0).setColor(top)
         }
     }
 
@@ -58,7 +69,7 @@ internal class RoundedRectRenderState private constructor(
 
     override fun bounds(): ScreenRectangle? = elementBounds
 
-    private data class GeometryKey(val width: Int, val height: Int, val radius: Int, val outline: Boolean)
+    private data class GeometryKey(val width: Int, val height: Int, val radius: Int, val thickness: Int, val outline: Boolean)
 
     private data class Geometry(val quads: List<Quad>)
 
@@ -114,11 +125,21 @@ internal class RoundedRectRenderState private constructor(
             )
         }
 
-        private fun geometry(width: Int, height: Int, radius: Int, outline: Boolean): Geometry {
-            val key = GeometryKey(width, height, radius, outline)
+        const val MAX_SUPERSAMPLE = 8
+
+        /** Screen pixels per GUI unit under [pose]: GUI scale times the pose's own scale, rounded, at least 1. */
+        private fun supersample(pose: Matrix3x2f): Int {
+            val guiScale = Minecraft.getInstance().window.guiScale.toDouble()
+            val sx = Math.hypot(pose.m00.toDouble(), pose.m01.toDouble())
+            val sy = Math.hypot(pose.m10.toDouble(), pose.m11.toDouble())
+            return Math.round(guiScale * Math.sqrt(sx * sy)).toInt().coerceIn(1, MAX_SUPERSAMPLE)
+        }
+
+        private fun geometry(width: Int, height: Int, radius: Int, thickness: Int, outline: Boolean): Geometry {
+            val key = GeometryKey(width, height, radius, thickness, outline)
             geometries[key]?.let { return it }
 
-            val built = buildGeometry(width, height, radius, outline)
+            val built = buildGeometry(width, height, radius, thickness, outline)
             geometries[key] = built
             if (geometries.size > MAX_CACHED_SHAPES) {
                 val oldest = geometries.keys.iterator().next()
@@ -127,18 +148,19 @@ internal class RoundedRectRenderState private constructor(
             return built
         }
 
-        private fun buildGeometry(width: Int, height: Int, radius: Int, outline: Boolean): Geometry {
+        private fun buildGeometry(width: Int, height: Int, radius: Int, thickness: Int, outline: Boolean): Geometry {
             val quads = ArrayList<Quad>()
             if (outline) {
-                add(quads, radius, 0, width - radius, 1, 0.0f, 0.0f, 1.0)
-                add(quads, radius, height - 1, width - radius, height, 0.0f, 0.0f, 1.0)
-                add(quads, 0, radius, 1, height - radius, 0.0f, 0.0f, 1.0)
-                add(quads, width - 1, radius, width, height - radius, 0.0f, 0.0f, 1.0)
+                val t = thickness
+                add(quads, radius, 0, width - radius, t, 0.0f, 0.0f, 1.0)
+                add(quads, radius, height - t, width - radius, height, 0.0f, 0.0f, 1.0)
+                add(quads, 0, radius, t, height - radius, 0.0f, 0.0f, 1.0)
+                add(quads, width - t, radius, width, height - radius, 0.0f, 0.0f, 1.0)
                 for (row in 0 until radius) {
                     for (px in 0 until radius) {
                         val coverage = java.lang.Math.max(
                             0.0,
-                            coverage(px, row, radius) - coverage(px - 1, row - 1, radius - 1),
+                            coverage(px, row, radius) - coverage(px - t, row - t, radius - t),
                         )
                         if (coverage <= 0.0) continue
                         val right = width - 1 - px

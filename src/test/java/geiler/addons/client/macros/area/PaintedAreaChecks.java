@@ -26,7 +26,8 @@ public final class PaintedAreaChecks {
 		PaintedArea area = new PaintedArea("rest");
 		area.put(4, 64, 4, Paint.REST, 0);
 		check(area.restCount() == 1 && area.allows(4, 64, 4), "a rest cell is walkable");
-		check(!area.restrictive() && area.allows(9, 64, 9), "and rest paint alone does not limit the macro to the painted ground");
+		check(area.restrictive() && !area.allows(9, 64, 9), "rest paint counts as allowed ground: the macro stands on painted ground only");
+		check(area.preferredCount() == 1 && area.costFactor(4, 64, 4) < 1.0 && area.minCostFactor() == area.costFactor(4, 64, 4), "and as preferred ground: it is cheaper");
 		area.put(5, 64, 4, Paint.REST, 0);
 		int[] first = area.restCell(0);
 		int[] second = area.restCell(1);
@@ -38,6 +39,7 @@ public final class PaintedAreaChecks {
 		check(area.restCount() == 1 && area.restrictive(), "painting over one takes it out of the rest cells");
 		area.erase(5, 64, 4);
 		check(area.restCount() == 0, "so does erasing");
+		check(area.preferredCount() == 0 && area.walkableCount() == 1, "and the rest cell is counted out of the preferred and allowed ground");
 	}
 
 	private static void checkAllowedOnly() {

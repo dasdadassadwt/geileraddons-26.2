@@ -60,6 +60,9 @@ enum class Island(
     /** No answer at all: not on Hypixel, the API is off, or its handshake has not finished. */
     NONE(null, "None", "nowhere known");
 
+    /** The Hypixel mode string this island reports (also Skyblocker's island id), or null for the no-answer states. */
+    fun mode(): String? = mode
+
     /** The plain name, for a list that names islands rather than explaining an absence. */
     fun label(): String = islandLabel
 

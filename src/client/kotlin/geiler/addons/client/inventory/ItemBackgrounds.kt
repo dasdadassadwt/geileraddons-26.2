@@ -96,13 +96,57 @@ object ItemBackgrounds {
         return runs.toIntArray()
     }
 
+    /**
+     * Rarity by SkyBlock id, learned from stacks that carry lore. The server re-sends armor without lore (only its
+     * skin and custom data), so such a stack takes the rarity last seen on a full stack of the same id.
+     */
+    private const val MAX_IDS = 512
+    private val byId = HashMap<String, SkyblockRarity>()
+    private var fallbackUsed = 0
+
+    /** [info] with the remembered rarity filled in for a stripped stack; a stack with a rarity is remembered by its id. */
+    @JvmStatic
+    fun rememberRarity(id: String, hasLore: Boolean, info: StackInfo): StackInfo {
+        if (id.isEmpty() || id == "PET") return info
+        val rarity = info.rarity
+        if (rarity != null) {
+            if (byId.size >= MAX_IDS && !byId.containsKey(id)) byId.clear()
+            byId[id] = rarity
+            return info
+        }
+        if (hasLore) return info
+        val known = byId[id] ?: return info
+        fallbackUsed++
+        return StackInfo(info.skyblockId, known, info.jacobColor, info.hasAttributes)
+    }
+
+    /** A stripped stack with an id and no rarity yet: do not cache it, the id may be learned a moment later. */
+    @JvmStatic
+    fun isUnresolved(id: String, hasLore: Boolean, info: StackInfo): Boolean =
+        id.isNotEmpty() && id != "PET" && !hasLore && info.rarity == null
+
+    @JvmStatic
+    fun idMemorySize(): Int = byId.size
+
+    @JvmStatic
+    fun idFallbackUsed(): Int = fallbackUsed
+
+    @JvmStatic
+    fun clearMemory() {
+        byId.clear()
+        fallbackUsed = 0
+    }
+
     @JvmStatic
     fun info(stack: ItemStack): StackInfo {
         if (stack.isEmpty) return EMPTY
         cache[stack]?.let { return it }
         if (cache.size >= MAX_CACHE) cache.clear()
-        val computed = compute(stack)
-        cache[stack] = computed
+        val tag = stack.get(DataComponents.CUSTOM_DATA)?.copyTag()
+        val id = tag?.getStringOr("id", "") ?: ""
+        val lore = stack.get(DataComponents.LORE)?.lines()?.map { it.string } ?: emptyList()
+        val computed = rememberRarity(id, lore.isNotEmpty(), compute(tag, id, lore))
+        if (!isUnresolved(id, lore.isNotEmpty(), computed)) cache[stack] = computed
         return computed
     }
 
@@ -112,10 +156,7 @@ object ItemBackgrounds {
     @JvmStatic
     fun cacheSize(): Int = cache.size
 
-    private fun compute(stack: ItemStack): StackInfo {
-        val tag = stack.get(DataComponents.CUSTOM_DATA)?.copyTag()
-        val id = tag?.getStringOr("id", "") ?: ""
-        val lore = stack.get(DataComponents.LORE)?.lines()?.map { it.string } ?: emptyList()
+    private fun compute(tag: net.minecraft.nbt.CompoundTag?, id: String, lore: List<String>): StackInfo {
         val rarity = if (id == "PET") petFromTag(tag?.getStringOr("petInfo", "") ?: "") else rarityFromLore(lore)
         val attributes = tag != null && tag.contains("attributes") && id != "ATTRIBUTE_SHARD"
         return StackInfo(id, rarity, jacobColor(lore), attributes)

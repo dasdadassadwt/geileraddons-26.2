@@ -213,7 +213,9 @@ class PathfindMacro private constructor(private val config: AreaKillerConfig) {
         }
 
         // No way all the way. A leg that gets closer is worth walking, and the next search starts from there.
-        if (route != null) {
+        val ledge = config.useTeleport && config.useEtherwarp && towardWarps < MAX_TOWARD_WARPS &&
+            destination.y - player.y > running.terrain().jumpHeight() + LEDGE_EXTRA
+        if (route != null && !ledge) {
             val left = route.endPoint().distanceTo(Vec3.atBottomCenterOf(destination))
             if (left < bestDistance - PROGRESS_BLOCKS) {
                 bestDistance = left
@@ -383,6 +385,9 @@ class PathfindMacro private constructor(private val config: AreaKillerConfig) {
     }
 
     companion object {
+        /** How much higher than the best jump the destination has to be for a teleport to go before any walk. */
+        private const val LEDGE_EXTRA = 0.5
+
         private const val MAX_STUCK_STRIKES = 3
 
         /** A route that stops short of the place is searched again this often, in milliseconds. */

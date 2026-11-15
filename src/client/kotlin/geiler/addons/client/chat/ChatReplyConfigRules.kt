@@ -138,6 +138,22 @@ object ChatReplyConfigRules {
         return true
     }
 
+    /** The blocklist with [name] added (normalized), or null when it is invalid, already listed, or the list is full. */
+    @JvmStatic
+    fun blocklistWith(current: List<String?>?, name: String?): List<String>? {
+        val trimmed = name?.javaTrim() ?: return null
+        if (!USERNAME.matcher(trimmed).matches()) return null
+        val list = normalizeUsernames(current)
+        val key = trimmed.lowercase(Locale.ROOT)
+        if (key in list || list.size >= MAX_FILTER_NAMES) return null
+        return list + key
+    }
+
+    /** The blocklist without [name] (case-insensitive); unchanged when it was not listed. */
+    @JvmStatic
+    fun blocklistWithout(current: List<String?>?, name: String?): List<String> =
+        normalizeUsernames(current).filter { !it.equals(name?.javaTrim(), ignoreCase = true) }
+
     /** Old files had implicit list activation; preserve that behavior when migrating the nullable toggle. */
     @JvmStatic
     fun resolveLegacyFilterEnabled(savedEnabled: Boolean?, names: List<String?>?): Boolean =

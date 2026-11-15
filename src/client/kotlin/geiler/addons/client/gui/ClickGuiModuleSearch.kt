@@ -42,9 +42,10 @@ object ClickGuiModuleSearchBehavior {
     }
 
     @JvmStatic
-    fun categoryMatches(category: Category, module: Module): Boolean =
+    @JvmOverloads
+    fun categoryMatches(category: Category, module: Module, filterId: String = "all"): Boolean =
         ClickGuiScreenCategoryBehavior.isModuleCardVisible(module) &&
-            ModuleCategoryFilter.resolve(category, "all").matches(module)
+            ModuleCategoryFilter.resolve(category, filterId).matches(module)
 }
 
 /** Owns the screen's cached module search index and visible result snapshot. */
@@ -56,15 +57,17 @@ class ClickGuiModuleSearch {
     private var visibleFavoritesRevision = -1L
     private var visibleFilterId: String? = null
 
-    fun visibleModules(category: Category, rawQuery: String, favoritesRevision: Long): List<Module> {
-        val filterId = "all"
+    /** [chipFilterId] narrows the plain category grid only; a search is global. */
+    @JvmOverloads
+    fun visibleModules(category: Category, rawQuery: String, favoritesRevision: Long, chipFilterId: String = "all"): List<Module> {
+        val filterId = if (rawQuery.isBlank()) ModuleCategoryFilter.resolve(category, chipFilterId).id() else "all"
         if (visibleCategory == category && rawQuery == visibleRawQuery &&
             visibleFilterId == filterId && visibleFavoritesRevision == favoritesRevision
         ) return visibleSnapshot
 
         val query = ClickGuiModuleSearchBehavior.normalizeQuery(rawQuery)
         val matches = if (query.isEmpty()) {
-            ModuleManager.modules(category).filter { ClickGuiModuleSearchBehavior.categoryMatches(category, it) }
+            ModuleManager.modules(category).filter { ClickGuiModuleSearchBehavior.categoryMatches(category, it, filterId ?: "all") }
         } else {
             ClickGuiModuleSearchBehavior.matchingModules(moduleSearchIndex(), query)
         }

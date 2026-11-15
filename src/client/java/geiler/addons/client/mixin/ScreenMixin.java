@@ -90,7 +90,8 @@ public abstract class ScreenMixin {
 	private void geileraddons$hideExperimentBackground(Screen screen, GuiGraphicsExtractor graphics,
 		int mouseX, int mouseY, float delta) {
 		if (screen instanceof AbstractContainerScreen<?> container
-			&& ExperimentSolverModule.INSTANCE.ownsScreen(container)) return;
+			&& (ExperimentSolverModule.INSTANCE.ownsScreen(container)
+				|| geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.ownsScreen(container))) return;
 		screen.extractBackground(graphics, mouseX, mouseY, delta);
 	}
 

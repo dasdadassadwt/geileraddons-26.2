@@ -752,23 +752,23 @@ public final class DungeonOdinHelperChecks {
 			"Mimic gate rejects unknown coordinate, another room, normal chest, and other phases");
 		check(DungeonSpecialMobRules.isF7WitherBoss(true, false, true, "Wither")
 			&& !DungeonSpecialMobRules.isF7WitherBoss(false, false, true, "Wither")
-			&& !DungeonSpecialMobRules.isF7WitherBoss(true, true, true, "Wither")
+			&& DungeonSpecialMobRules.isF7WitherBoss(true, true, true, "Wither")
 			&& !DungeonSpecialMobRules.isF7WitherBoss(true, false, false, "Wither")
 			&& !DungeonSpecialMobRules.isF7WitherBoss(true, false, true, "Wither King"),
-			"F7 Wither gate excludes other floors, M7, other entity types, and Wither King");
+			"F7 Wither gate covers regular and Master F7 and excludes other floors, other entity types, and Wither King");
 		check(DungeonSpecialMobRules.shouldScanF7WitherBoss(true, true, true, false, true)
 			&& !DungeonSpecialMobRules.shouldScanF7WitherBoss(true, false, true, false, true)
 			&& !DungeonSpecialMobRules.shouldScanF7WitherBoss(true, true, true, false, false)
 			&& !DungeonSpecialMobRules.shouldScanF7WitherBoss(false, true, true, false, true)
 			&& !DungeonSpecialMobRules.shouldScanF7WitherBoss(true, true, false, false, true)
-			&& !DungeonSpecialMobRules.shouldScanF7WitherBoss(true, true, true, true, true),
-			"Wither name and entity paths require an enabled regular F7 dungeon after observed boss entry");
+			&& DungeonSpecialMobRules.shouldScanF7WitherBoss(true, true, true, true, true),
+			"Wither name and entity paths require an enabled F7 dungeon (regular or Master) after observed boss entry");
 		check(DungeonSpecialMobRules.isEarlyF7WitherBoss(true, false, true, true)
 			&& !DungeonSpecialMobRules.isEarlyF7WitherBoss(true, false, false, true)
 			&& !DungeonSpecialMobRules.isEarlyF7WitherBoss(false, false, true, true)
-			&& !DungeonSpecialMobRules.isEarlyF7WitherBoss(true, true, true, true)
+			&& DungeonSpecialMobRules.isEarlyF7WitherBoss(true, true, true, true)
 			&& !DungeonSpecialMobRules.isEarlyF7WitherBoss(true, false, true, false),
-			"the pre-name type path requires observed boss phase and the exact regular-F7 Wither entity");
+			"the pre-name type path requires observed boss phase and the exact F7 Wither entity, regular or Master");
 		check(DungeonSpecialMobRules.defaultClassColor(DungeonClass.ARCHER) == 0xFFFFAA00
 			&& DungeonSpecialMobRules.defaultClassColor(DungeonClass.BERSERK) == 0xFFAA0000
 			&& DungeonSpecialMobRules.defaultClassColor(DungeonClass.HEALER) == 0xFFFF55FF

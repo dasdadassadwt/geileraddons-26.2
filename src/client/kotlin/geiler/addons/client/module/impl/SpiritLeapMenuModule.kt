@@ -26,6 +26,7 @@ class SpiritLeapMenuModule private constructor(private val settings: Settings) :
     settings.povTransparency, settings.sort, settings.keyMode, settings.customOrder, settings.topLeftKey,
     settings.topRightKey, settings.bottomLeftKey, settings.bottomRightKey, settings.archerKey,
     settings.berserkKey, settings.healerKey, settings.mageKey, settings.tankKey,
+    settings.showMap, settings.mapScale,
 ) {
     init {
         group(
@@ -36,6 +37,7 @@ class SpiritLeapMenuModule private constructor(private val settings: Settings) :
             ),
             SettingGroup("Teammate Cards", settings.classColors, settings.sort, settings.customOrder,
                 settings.extraRoundness, settings.cardDistance),
+            SettingGroup("Dungeon Map", settings.showMap, settings.mapScale),
             SettingGroup("POV Cameras", settings.showPovs, settings.povFps, settings.povTransparency),
             SettingGroup("Class Colors", settings.tankColor, settings.berserkColor, settings.mageColor,
                 settings.archerColor, settings.healerColor),
@@ -48,10 +50,11 @@ class SpiritLeapMenuModule private constructor(private val settings: Settings) :
         SpiritLeapPovRenderer.cameraPanelPipeline()
     }
 
-    override fun settingTooltip(setting: Setting): String? =
-        if (setting.name() == "Custom Order") {
-            "Enter player names separated by commas. The first name is placed in the top-left card."
-        } else null
+    override fun settingTooltip(setting: Setting): String? = when (setting.name()) {
+        "Custom Order" -> "Enter player names separated by commas. The first name is placed in the top-left card."
+        "Map Scale" -> "Map may cover the teammate cards when scaled up. Hidden while the Dungeon Room Overlay map is visible."
+        else -> null
+    }
 
     override fun onEnable() {
         SpiritLeapPovRenderer.INSTANCE.onFeatureEnabled()
@@ -73,6 +76,7 @@ class SpiritLeapMenuModule private constructor(private val settings: Settings) :
     }
 
     override fun isSettingVisible(setting: Setting): Boolean {
+        if (setting === mapScale) return showMap.value()
         if (setting === povFps || setting === povTransparency) return showPovs.value()
         if (setting === tankColor || setting === berserkColor || setting === mageColor ||
             setting === archerColor || setting === healerColor
@@ -128,6 +132,8 @@ class SpiritLeapMenuModule private constructor(private val settings: Settings) :
         val healerKey = key("Healer Key", "Healer Key", "3")
         val mageKey = key("Mage Key", "Mage Key", "4")
         val tankKey = key("Tank Key", "Tank Key", "5")
+        val showMap = BooleanSetting("Show Dungeon Map", false)
+        val mapScale = NumberSetting("Map Scale", 0.5f, 4.0f, 1.5f)
 
         private fun key(name: String, label: String, defaultValue: String) =
             TextSetting(name, label, defaultValue, 64, true)
@@ -172,6 +178,8 @@ class SpiritLeapMenuModule private constructor(private val settings: Settings) :
         @JvmField val healerKey = defaultSettings.healerKey
         @JvmField val mageKey = defaultSettings.mageKey
         @JvmField val tankKey = defaultSettings.tankKey
+        @JvmField val showMap = defaultSettings.showMap
+        @JvmField val mapScale = defaultSettings.mapScale
 
         @JvmField val INSTANCE = SpiritLeapMenuModule(defaultSettings)
 
@@ -196,7 +204,7 @@ class SpiritLeapMenuModule private constructor(private val settings: Settings) :
                 " distance=${cardDistance.display()} colors=${tankColor.hex()}/${berserkColor.hex()}/${mageColor.hex()}/${archerColor.hex()}/${healerColor.hex()}" +
                 " showPOVs=${showPovs.value()} povFps=${povUpdatesPerSecond()}" +
                 " povTransparency=${povTransparencyPercent()} clickPhase=${if (onMouseRelease.value()) "release" else "press"}" +
-                " keyMode=${keyMode.value()}" +
+                " keyMode=${keyMode.value()} map=${showMap.value()} mapScale=${mapScale.display()}" +
                 " cornerKeys[tl=${boundedDiagnosticText(topLeftKey.value(), MAX_DIAGNOSTIC_KEY_CHARS)}" +
                 ",tr=${boundedDiagnosticText(topRightKey.value(), MAX_DIAGNOSTIC_KEY_CHARS)}" +
                 ",bl=${boundedDiagnosticText(bottomLeftKey.value(), MAX_DIAGNOSTIC_KEY_CHARS)}" +

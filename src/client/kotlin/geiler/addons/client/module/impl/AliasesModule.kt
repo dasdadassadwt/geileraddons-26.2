@@ -8,6 +8,7 @@ import geiler.addons.client.module.Setting
 import geiler.addons.client.module.SettingGroup
 import geiler.addons.client.module.TextSetting
 import geiler.addons.client.utility.AliasStore
+import geiler.addons.client.utility.BuiltInAliases
 import net.minecraft.client.Minecraft
 import java.util.Locale
 
@@ -20,6 +21,7 @@ class AliasesModule private constructor(private val ui: Settings) : Module(
     ui.aliasText,
     ui.commandText,
     ui.addAlias,
+    ui.builtIn,
 ) {
     private val diagnostics = ModuleDiagnostics(Category.MISCELLANEOUS, { name() })
     private val rows = LinkedHashMap<String, AliasRow>()
@@ -47,6 +49,7 @@ class AliasesModule private constructor(private val ui: Settings) : Module(
             )
         }
         return listOf(
+            SettingGroup("Built-in Aliases", ui.builtIn),
             SettingGroup("Add Alias", ui.aliasText, ui.commandText, ui.addAlias),
             SettingGroup("Aliases", null, false, emptyList<Setting>(), children, false, "aliases-list"),
         )
@@ -101,8 +104,12 @@ class AliasesModule private constructor(private val ui: Settings) : Module(
         diagnostics.status { suppressed -> "aliases=${AliasStore.instance().entries().size} usedSinceLastStatus=$used suppressedEvents=$suppressed".also { used = 0 } }
     }
 
-    private fun resolve(input: String?, replacementInFlight: Boolean): String? =
-        if (!isEnabled() || replacementInFlight) null else AliasStore.instance().resolve(input)
+    /** Built-in queue aliases come first; saved aliases never use a built-in name, so the order cannot conflict. */
+    private fun resolve(input: String?, replacementInFlight: Boolean): String? {
+        if (!isEnabled() || replacementInFlight) return null
+        if (ui.builtIn.value()) BuiltInAliases.command(input)?.let { return it }
+        return AliasStore.instance().resolve(input)
+    }
 
     /** True when this outgoing text is an enabled alias. A replacement being sent is never aliased again. */
     fun shouldIntercept(command: Boolean, input: String?, replacementInFlight: Boolean): Boolean =
@@ -128,6 +135,7 @@ class AliasesModule private constructor(private val ui: Settings) : Module(
     private class Settings {
         val aliasText = TextSetting("Alias", "Alias (for example dh)", "", AliasStore.MAX_ALIAS)
         val commandText = TextSetting("Command", "Command (for example warp dh)", "", AliasStore.MAX_COMMAND)
+        val builtIn = BooleanSetting("Built-in Aliases", true)
         val addAlias = ModuleAction(
             "Add Alias",
             "Save this alias. Each alias below has its own switch, command and Delete.",

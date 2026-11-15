@@ -10,11 +10,11 @@ import geiler.addons.client.module.ModuleCategoryFilter;
 import geiler.addons.client.module.NumberSetting;
 import geiler.addons.client.module.Setting;
 import geiler.addons.client.module.SettingGroup;
+import geiler.addons.client.module.impl.CroesusModule;
 import geiler.addons.client.module.impl.DungeonTerminalStatsModule;
 import geiler.addons.client.module.impl.DungeonTerminalTitlesModule;
 import geiler.addons.client.module.impl.GeneralModule;
 import geiler.addons.client.module.impl.I4HelperModule;
-import geiler.addons.client.module.impl.SecretWaypointsModule;
 import geiler.addons.client.module.impl.VisualModule;
 import net.minecraft.resources.Identifier;
 
@@ -49,6 +49,7 @@ public final class ClickGuiScrollChecks {
 		checkBlockPickerScroll();
 		checkChangelogScrollPrecedence();
 		checkSettingsRowLayout();
+		checkSettingsSearch();
 	}
 
 	private static void checkModuleIconCatalog() {
@@ -228,8 +229,10 @@ public final class ClickGuiScrollChecks {
 			"the compact acceptance size retains a centered, responsive panel");
 		check(ClickGuiModuleGrid.cardColumnsForModuleWidth(500) == 2
 			&& ClickGuiModuleGrid.cardColumnsForModuleWidth(720) == 3
-			&& ClickGuiModuleGrid.cardColumnsForModuleWidth(840) == 3,
-			"module cards use three columns when the content width supports readable cards");
+			&& ClickGuiModuleGrid.cardColumnsForModuleWidth(840) == 3
+			&& ClickGuiModuleGrid.cardColumnsForModuleWidth(900) == 4
+			&& ClickGuiModuleGrid.cardColumnsForModuleWidth(1100) == 4,
+			"module cards use two, three, then four columns as the content width allows");
 		check(ClickGuiModuleGrid.cardHeightForPanelHeight(367) == 63
 			&& ClickGuiModuleGrid.cardHeightForPanelHeight(783) == 135,
 			"card height scales with the panel instead of staying pixel-fixed");
@@ -296,19 +299,45 @@ public final class ClickGuiScrollChecks {
 
 	private static void checkModuleGridSectionsAndGeometry() {
 		List<Module> modules = List.of(DungeonTerminalTitlesModule.INSTANCE, I4HelperModule.INSTANCE,
-			DungeonTerminalStatsModule.INSTANCE, SecretWaypointsModule.INSTANCE);
+			DungeonTerminalStatsModule.INSTANCE, CroesusModule.INSTANCE);
 		List<ClickGuiModuleGrid.Section> sections = ClickGuiModuleGrid.sections(Category.F7, modules, "");
 		check(sections.size() == 2
 			&& sections.get(0).label().equals("F7")
 			&& sections.get(0).modules().equals(modules.subList(0, 3))
 			&& sections.get(1).label().equals("General")
-			&& sections.get(1).modules().equals(List.of(SecretWaypointsModule.INSTANCE)),
+			&& sections.get(1).modules().equals(List.of(CroesusModule.INSTANCE)),
 			"module cards retain child-filter grouping, source order, and the Other/general remainder");
 
 		List<ClickGuiModuleGrid.Section> searchSections = ClickGuiModuleGrid.sections(Category.F7, modules, "terminal");
 		check(searchSections.size() == 1 && searchSections.getFirst().label() == null
 			&& searchSections.getFirst().modules() == modules,
 			"search results keep their flat order without category headings");
+
+		List<Module> f7Only = modules.stream().filter(m ->
+			ClickGuiModuleSearchBehavior.categoryMatches(Category.F7, m, "f7")).toList();
+		List<Module> generalOnly = modules.stream().filter(m ->
+			ClickGuiModuleSearchBehavior.categoryMatches(Category.F7, m, "general")).toList();
+		check(f7Only.equals(modules.subList(0, 3)) && generalOnly.equals(List.of(CroesusModule.INSTANCE))
+				&& modules.stream().allMatch(m -> ClickGuiModuleSearchBehavior.categoryMatches(Category.F7, m, "all"))
+				&& modules.stream().allMatch(m -> ClickGuiModuleSearchBehavior.categoryMatches(Category.F7, m, "gone")),
+			"a subcategory chip keeps only its modules; All and an unknown id keep every module");
+		check(ClickGuiModuleGrid.sections(Category.F7, f7Only, "").size() == 1
+				&& ClickGuiModuleGrid.sections(Category.F7, f7Only, "").getFirst().label().equals("F7"),
+			"a filtered grid shows the single chosen section under its heading");
+
+		List<ClickGuiModuleGrid.ChipRect> wide = ClickGuiModuleGrid.chipLayout(List.of(30, 40, 50), 300, 12, 4, 6).chips();
+		ClickGuiModuleGrid.ChipLayout narrow = ClickGuiModuleGrid.chipLayout(List.of(30, 40, 50), 80, 12, 4, 6);
+		check(wide.size() == 3 && wide.get(0).x() == 0 && wide.get(1).x() == 34 && wide.get(2).x() == 78
+				&& wide.stream().allMatch(c -> c.y() == 0 && c.h() == 12)
+				&& ClickGuiModuleGrid.chipLayout(List.of(30, 40, 50), 300, 12, 4, 6).height() == 12,
+			"chips sit on one row, in order, with the gap between them when they fit");
+		check(narrow.chips().size() == 3 && narrow.chips().get(0).y() == 0 && narrow.chips().get(1).y() == 0
+				&& narrow.chips().get(2).y() == 18 && narrow.chips().get(2).x() == 0 && narrow.height() == 30
+				&& narrow.chips().stream().allMatch(c -> c.x() >= 0 && c.x() + c.w() <= 80),
+			"chips wrap onto another row, never leave the bar, and report the full bar height");
+		check(ClickGuiModuleGrid.chipLayout(List.of(), 100, 12, 4, 6).height() == 0
+				&& ClickGuiModuleGrid.chipLayout(List.of(200), 80, 12, 4, 6).chips().get(0).w() == 80,
+			"no chips take no space and an oversized chip is clamped to the bar width");
 
 		ClickGuiModuleGrid.Layout layout = ClickGuiModuleGrid.layout(sections, 2, 60, 10, 16, 4, 8);
 		check(layout.sections().size() == 2
@@ -427,6 +456,8 @@ public final class ClickGuiScrollChecks {
 	private static void checkCategoryHierarchy() {
 		checkModuleCategoryFilterJavaValueApi();
 		checkSubcategoriesAreData();
+		checkGeneralExcludesSiblingModules();
+		checkDungeonAndMiscSubcategories();
 		checkCategoryBehaviorHelpers();
 		List<ClickGuiScreen.CategoryEntry> collapsedDungeons = ClickGuiScreen.categoryEntries(
 			List.of(Category.F7), Set.of());
@@ -435,12 +466,13 @@ public final class ClickGuiScrollChecks {
 		check(collapsedDungeons.size() == 1 && collapsedDungeons.get(0).isParent()
 			&& collapsedDungeons.get(0).filter().id().equals("all"),
 			"a collapsed Dungeons parent is one row and selects the full category");
-		check(expandedDungeons.size() == 3
+		check(expandedDungeons.size() == 6
 			&& expandedDungeons.get(0).category() == Category.F7
 			&& expandedDungeons.get(1).filter().label().equals("F7")
-			&& expandedDungeons.get(2).filter().label().equals("General")
+			&& expandedDungeons.get(2).filter().label().equals("M7")
+			&& expandedDungeons.get(5).filter().label().equals("General")
 			&& expandedDungeons.stream().noneMatch(entry -> entry.filter().label().equals("F5")),
-			"expanded Dungeons exposes only F7 and General as child filters");
+			"expanded Dungeons exposes F7, M7, Highlight, Room / Map, and General as child filters");
 		check(ClickGuiScreen.categoryEntrySelected(collapsedDungeons.getFirst(), Category.F7, "f7", false)
 			&& ClickGuiScreen.categoryEntryLabel(collapsedDungeons.getFirst(), "f7", false)
 			.equals("Dungeons · F7"),
@@ -465,7 +497,7 @@ public final class ClickGuiScrollChecks {
 			"a collapsed Hunting parent exposes its retained General filter");
 
 		Module dungeonF7 = new CategoryCheckModule("i4 helper", Category.F7);
-		Module dungeonGeneral = new CategoryCheckModule("Dungeon Guide", Category.F7);
+		Module dungeonGeneral = new CategoryCheckModule("Croesus", Category.F7);
 		Module tiki = new CategoryCheckModule("Tiki Helper", Category.HUNTING);
 		Module safari = new CategoryCheckModule("Sparkling Critter", Category.HUNTING);
 		check(ModuleCategoryFilter.resolve(Category.F7, "all").matches(dungeonF7)
@@ -561,6 +593,25 @@ public final class ClickGuiScrollChecks {
 			"Kotlin action buttons preserve resting, hover, and pulse colors");
 	}
 
+	/** Dungeons and Miscellaneous expose their new chips in order, and a module sits under one named chip only. */
+	private static void checkDungeonAndMiscSubcategories() {
+		check(ModuleCategoryFilter.options(Category.F7).stream().map(ModuleCategoryFilter::label).toList()
+			.equals(List.of("All", "F7", "M7", "Highlight", "Room / Map", "General")),
+			"Dungeons lists F7, M7, Highlight, Room / Map, and General in that order");
+		check(ModuleCategoryFilter.options(Category.MISCELLANEOUS).stream().map(ModuleCategoryFilter::label).toList()
+			.containsAll(List.of("Inventory", "Player", "World", "Display", "Fix")),
+			"Miscellaneous offers the Inventory, Player, World, Display, and Fix subcategories");
+		for (Category category : List.of(Category.F7, Category.MISCELLANEOUS)) {
+			Set<String> seen = new java.util.HashSet<>();
+			for (ModuleCategoryFilter child : ModuleCategoryFilter.children(category)) {
+				if ("general".equals(child.id())) continue;
+				for (String name : child.includedNames()) {
+					check(seen.add(name), name + " belongs to one " + category + " subcategory only");
+				}
+			}
+		}
+	}
+
 	/** A subcategory exists because the layout data says so; adding one needs no code. */
 	private static void checkSubcategoriesAreData() {
 		var parsed = ModuleCategoryFilter.parseLayout("{\"subcategories\":["
@@ -575,6 +626,25 @@ public final class ClickGuiScrollChecks {
 		check(ModuleCategoryFilter.parseLayout("not json").isEmpty(), "malformed layout data yields no subcategories");
 		check(ModuleCategoryFilter.options(Category.MISCELLANEOUS).stream().anyMatch(f -> "utilities".equals(f.id())),
 			"the shipped module-layout.json provides the built-in subcategories");
+	}
+
+	/** General is the catch-all: it must never show a module that another subcategory of the same category lists. */
+	private static void checkGeneralExcludesSiblingModules() {
+		for (Category category : Category.values()) {
+			ModuleCategoryFilter general = ModuleCategoryFilter.resolve(category, "general");
+			if ("all".equals(general.id())) continue;
+			for (ModuleCategoryFilter sibling : ModuleCategoryFilter.children(category)) {
+				if ("general".equals(sibling.id())) continue;
+				for (String name : sibling.includedNames()) {
+					check(!general.matches(new CategoryCheckModule(name, category)),
+						category + " General must not show " + name + " from " + sibling.id());
+				}
+			}
+		}
+		ModuleCategoryFilter dungeonsGeneral = ModuleCategoryFilter.resolve(Category.F7, "general");
+		check(!dungeonsGeneral.matches(new CategoryCheckModule("Wither Dragons", Category.F7))
+			&& !dungeonsGeneral.matches(new CategoryCheckModule("Terminal Solver", Category.F7)),
+			"Dungeons General omits the F7 boss and terminal modules");
 	}
 
 	private static void checkModuleCategoryFilterJavaValueApi() {
@@ -704,6 +774,43 @@ public final class ClickGuiScrollChecks {
 				"debug-only nested settings remain available when diagnostic mode is enabled");
 		} finally {
 			DebugState.setEnabled(debugWasEnabled);
+		}
+	}
+
+	private static void checkSettingsSearch() {
+		SearchLayoutFixture module = new SearchLayoutFixture();
+		boolean debugWasEnabled = DebugState.enabled();
+		try {
+			DebugState.setEnabled(false);
+			check(ClickGuiSettingsLayout.layoutRows(module, 20, 10, null, 200, 160, "").size() == 1,
+				"without a query a folded section keeps only its header");
+			List<Row> beta = ClickGuiSettingsLayout.layoutRows(module, 20, 10, null, 200, 160, "beta");
+			check(beta.size() == 2 && beta.get(0) instanceof GroupRow && beta.get(1) instanceof NumberRow
+				&& ((NumberRow) beta.get(1)).setting().name().equals("Beta Setting"),
+				"a query keeps the matching setting and its section header, even when the section is folded");
+			List<Row> gamma = ClickGuiSettingsLayout.layoutRows(module, 20, 10, null, 200, 160, "gamma");
+			check(gamma.size() == 3 && gamma.get(1) instanceof GroupRow && gamma.get(2) instanceof NumberRow,
+				"a match in a nested folded section opens every ancestor");
+			check(ClickGuiSettingsLayout.layoutRows(module, 20, 10, null, 200, 160, "nested").size() == 3,
+				"a matching section name shows everything inside it");
+			check(ClickGuiSettingsLayout.layoutRows(module, 20, 10, null, 200, 160, "primary").size() == 5,
+				"a matching top section name shows its whole subtree");
+			check(ClickGuiSettingsLayout.layoutRows(module, 20, 10, null, 200, 160, "zzz").isEmpty(),
+				"a query without matches shows no rows");
+		} finally {
+			DebugState.setEnabled(debugWasEnabled);
+		}
+	}
+
+	private static final class SearchLayoutFixture extends Module {
+		private static final NumberSetting ALPHA = new NumberSetting("Alpha Setting", 0.0f, 10.0f, 5.0f);
+		private static final NumberSetting BETA = new NumberSetting("Beta Setting", 0.0f, 10.0f, 5.0f);
+		private static final NumberSetting GAMMA = new NumberSetting("Gamma Setting", 0.0f, 10.0f, 5.0f);
+
+		private SearchLayoutFixture() {
+			super("click-gui-search-fixture", "isolated search check", Category.DEV, ALPHA, BETA, GAMMA);
+			SettingGroup nested = new SettingGroup("Nested", null, true, List.of(GAMMA), List.of());
+			group(new SettingGroup("Primary", null, true, List.of(ALPHA, BETA), List.of(nested)));
 		}
 	}
 

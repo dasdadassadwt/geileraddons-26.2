@@ -56,6 +56,7 @@ public final class ChatReplyCommandChecks {
 		boundsCustomReplyConfigurationAndSenderFilters();
 		validatesTransferAgainstFreshLeaderRoster();
 		validatesPartyActionsAgainstFreshLeaderRoster();
+		incomingPartyActionsTrustThePartyPrefix();
 		queueIsBoundedAndHonorsDueTicks();
 		queueKeepsJavaEntrypointsAndStableOrdering();
 	}
@@ -1372,6 +1373,17 @@ public final class ChatReplyCommandChecks {
 			"blocklist takes precedence over allowlist");
 		check(!ChatReplyConfigRules.senderAllowed("bad name", false, List.of(), false, List.of()),
 			"malformed sender names are denied");
+		check(ChatReplyConfigRules.blocklistWith(List.of("alice"), " Bob ").equals(List.of("alice", "bob"))
+			&& ChatReplyConfigRules.blocklistWith(List.of("alice"), "ALICE") == null
+			&& ChatReplyConfigRules.blocklistWith(List.of(), "bad name") == null
+			&& ChatReplyConfigRules.blocklistWith(List.of(), "") == null,
+			"adding a blocked player normalizes the name and rejects duplicates and invalid names");
+		check(ChatReplyConfigRules.blocklistWith(java.util.stream.IntStream.range(0, 32)
+			.mapToObj(i -> "Player" + i).toList(), "Extra") == null,
+			"the blocklist keeps its 32 name bound");
+		check(ChatReplyConfigRules.blocklistWithout(List.of("alice", "bob"), "ALICE").equals(List.of("bob"))
+			&& ChatReplyConfigRules.blocklistWithout(List.of("alice"), "carol").equals(List.of("alice")),
+			"removing a blocked player ignores case and unknown names");
 	}
 
 	private static void validatesTransferAgainstFreshLeaderRoster() {
@@ -1430,13 +1442,11 @@ public final class ChatReplyCommandChecks {
 		check(!ChatReplyCommandRules.remotePartyActionAllowed(warp, false, List.of(), true, List.of("alice")),
 			"the blocklist still vetoes an open party preset");
 		var kickProbe = ChatReplyCommandRules.parse("Party > Alice: !kick Bo", "!").orElseThrow();
-		check(!ChatReplyCommandRules.remotePartyActionAllowed(kickProbe, false, List.of("Alice"), false, List.of()),
-			"a disabled allowlist cannot authorize a restricted remote party action");
-		check(!ChatReplyCommandRules.remotePartyActionAllowed(kickProbe, true, List.of(), false, List.of())
-			&& ChatReplyCommandRules.remotePartyActionAllowed(kickProbe, true, List.of("ALICE"), false, List.of()),
-			"restricted party actions (kick/promote/demote) require the requester's explicit allowlist entry");
-		check(!ChatReplyCommandRules.remotePartyActionAllowed(kickProbe, true, List.of("Alice"), true, List.of("alice")),
-			"the blocklist still vetoes an allowlisted restricted party action");
+		check(ChatReplyCommandRules.remotePartyActionAllowed(kickProbe, false, List.of(), false, List.of())
+			&& ChatReplyCommandRules.remotePartyActionAllowed(kickProbe, true, List.of(), false, List.of()),
+			"every party action (including kick/promote/demote) is open to any sender; the allowlist is legacy and ignored");
+		check(!ChatReplyCommandRules.remotePartyActionAllowed(kickProbe, false, List.of(), true, List.of("alice")),
+			"the blocklist still vetoes kick/promote/demote requests");
 		var location = ChatReplyCommandRules.parse("Party > Alice: !location", "!").orElseThrow();
 		check(location.command() == ChatReplyCommandRules.Command.LOBBY, "!location is an alias of !lobby");
 		var invite = ChatReplyCommandRules.parse("From Alice: !inv", "!").orElseThrow();
@@ -1476,6 +1486,54 @@ public final class ChatReplyCommandChecks {
 			new ChatReplyCommandRules.Request(ChatChannel.PARTY, "Alice",
 				ChatReplyCommandRules.Command.PARTY_QUEUE_INSTANCE, "bogus", null), party, true, "Self").isEmpty(),
 			"queue action execution validates its command code independently of chat parsing");
+	}
+
+	/** The incoming party path trusts the `Party >` prefix: no fresh roster, membership or known leader is required. */
+	private static void incomingPartyActionsTrustThePartyPrefix() {
+		PartySnapshot none = new PartySnapshot(List.of(), null, false, 0L);
+		var warp = ChatReplyCommandRules.parse("Party > Alice: !warp", "!").orElseThrow();
+		check(ChatReplyCommandRules.incomingPartyActionCommand(warp, none, "Self").equals(Optional.of("party warp")),
+			"warp runs without any party list when the leader is unknown");
+		var allinv = ChatReplyCommandRules.parse("Party > Alice: !allinv", "!").orElseThrow();
+		check(ChatReplyCommandRules.incomingPartyActionCommand(allinv, null, "Self")
+			.equals(Optional.of("party settings allinvite")), "allinvite runs without a party snapshot");
+		var queue = ChatReplyCommandRules.parse("Party > Alice: !f7", "!").orElseThrow();
+		check(ChatReplyCommandRules.incomingPartyActionCommand(queue, none, "Self").equals(Optional.of("odin f7")),
+			"dungeon queue runs without a party list");
+		var kick = ChatReplyCommandRules.parse("Party > Alice: !kick Bob", "!").orElseThrow();
+		check(ChatReplyCommandRules.incomingPartyActionCommand(kick, none, "Self").equals(Optional.of("party kick Bob")),
+			"kick uses the typed username when no roster is known");
+		var kickSender = ChatReplyCommandRules.parse("Party > Alice: !kick", "!").orElseThrow();
+		check(ChatReplyCommandRules.incomingPartyActionCommand(kickSender, none, "Self").equals(Optional.of("party kick Alice")),
+			"a targetless kick uses the sender");
+		var promoteSelf = ChatReplyCommandRules.parse("Party > Alice: !promote Self", "!").orElseThrow();
+		check(ChatReplyCommandRules.incomingPartyActionCommand(promoteSelf, none, "Self").isEmpty(),
+			"the local player is never a target");
+		var transfer = ChatReplyCommandRules.parse("Party > Alice: !pt", "!").orElseThrow();
+		check(ChatReplyCommandRules.incomingPartyActionCommand(transfer, none, "Self").equals(Optional.of("party transfer Alice")),
+			"a targetless transfer hands the party to the sender");
+		PartySnapshot otherLeader = new PartySnapshot(List.of(
+			new PartyMember("Self", null, DungeonClass.ARCHER),
+			new PartyMember("Alice", null, DungeonClass.MAGE)), "Alice", true, 5L);
+		check(ChatReplyCommandRules.incomingPartyActionCommand(warp, otherLeader, "Self").isEmpty(),
+			"leader-only actions are skipped when another player is known to lead the party");
+		var boop = ChatReplyCommandRules.parse("Party > Alice: !boop Bob", "!").orElseThrow();
+		check(ChatReplyCommandRules.incomingPartyActionCommand(boop, otherLeader, "Self").equals(Optional.of("boop Bob")),
+			"boop needs no leader");
+		PartySnapshot selfLeader = new PartySnapshot(List.of(
+			new PartyMember("Self", null, DungeonClass.ARCHER),
+			new PartyMember("Alice", null, DungeonClass.MAGE),
+			new PartyMember("Bob", null, DungeonClass.BERSERK),
+			new PartyMember("Alina", null, DungeonClass.TANK)), "Self", true, 6L);
+		check(ChatReplyCommandRules.incomingPartyActionCommand(
+			ChatReplyCommandRules.parse("Party > Alice: !kick Bo", "!").orElseThrow(), selfLeader, "Self")
+			.equals(Optional.of("party kick Bob")), "a roster prefix still resolves to the canonical member name");
+		check(ChatReplyCommandRules.incomingPartyActionCommand(
+			ChatReplyCommandRules.parse("Party > Mallory: !warp", "!").orElseThrow(), selfLeader, "Self")
+			.equals(Optional.of("party warp")), "a sender missing from an old roster is still served");
+		var whisper = ChatReplyCommandRules.parse("From Alice: !warp", "!");
+		check(whisper.isEmpty() || ChatReplyCommandRules.incomingPartyActionCommand(whisper.get(), none, "Self").isEmpty(),
+			"only the party channel produces party actions");
 	}
 
 	private static void queueIsBoundedAndHonorsDueTicks() {

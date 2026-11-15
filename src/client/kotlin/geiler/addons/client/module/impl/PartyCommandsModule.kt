@@ -244,6 +244,11 @@ class PartyCommandsModule private constructor(settings: Settings) : Module(
         writeDiagnosticEvent("PARTY_ACTION command=${command.name} outcome=${outcome.name}")
     }
 
+    /** A request that was parsed but not run; the reason is a fixed token plus a command name, never chat text. */
+    fun recordRequestDropped(reason: String) {
+        if (diagnosticsActive && isEnabled()) writeDiagnosticEvent("REQUEST_DROPPED reason=$reason")
+    }
+
     private fun recordLocalCommandDiagnostic(outcome: String) {
         if (diagnosticsActive && isEnabled()) {
             writeDiagnosticEvent("LOCAL_COMMAND outcome=$outcome")
@@ -381,8 +386,7 @@ class PartyCommandsModule private constructor(settings: Settings) : Module(
         val result = ArrayList(super.groups())
         syncFilters()
         result.add(SettingGroup("Add Reply", form.command, form.mode, form.value, form.preview, form.add))
-        result.add(SettingGroup.switched("Allowlist (needed for remote actions)", form.allow, form.allowNames))
-        result.add(SettingGroup.switched("Blocklist", form.block, form.blockNames))
+        result.add(blocklistGroup(store))
         result.add(SettingGroup("Reply Folders", form.folderName, form.createFolder))
         result.add(
             SettingGroup(
@@ -396,6 +400,38 @@ class PartyCommandsModule private constructor(settings: Settings) : Module(
             ),
         )
         return Collections.unmodifiableList(result)
+    }
+
+    /** Name field + Block button, then one row per blocked player with a Remove button. */
+    private fun blocklistGroup(store: ChatChannelsLocalStore): SettingGroup {
+        val rows = store.replyBlocklist().map { name ->
+            val remove = ModuleAction("Remove", "Let $name use party commands again.", Runnable { unblockPlayer(name) })
+            SettingGroup(name, null, false, listOf<Setting>(remove), emptyList(), false, "party-block:$name")
+        }
+        return SettingGroup(
+            "Blocklist", form.block, false, listOf<Setting>(form.blockName, form.blockAdd), rows, false,
+            "party-command-blocklist",
+        )
+    }
+
+    private fun blockPlayer() {
+        val store = ChatChannelsLocalStore.instance()
+        val updated = ChatReplyConfigRules.blocklistWith(store.replyBlocklist(), form.blockName.value())
+        if (updated == null) {
+            showFeedback("Enter a valid, not yet blocked username (up to ${ChatReplyConfigRules.MAX_FILTER_NAMES} players).")
+            return
+        }
+        store.setReplyFilters(store.replyAllowlist(), store.replyAllowlistEnabled(), updated, true)
+        form.block.setValue(true)
+        form.blockName.setValue("")
+    }
+
+    private fun unblockPlayer(name: String) {
+        val store = ChatChannelsLocalStore.instance()
+        store.setReplyFilters(
+            store.replyAllowlist(), store.replyAllowlistEnabled(),
+            ChatReplyConfigRules.blocklistWithout(store.replyBlocklist(), name), store.replyBlocklistEnabled(),
+        )
     }
 
     private fun replyFolderGroup(folder: ChatChannelsLocalStore.FolderData, store: ChatChannelsLocalStore): SettingGroup {
@@ -601,10 +637,9 @@ class PartyCommandsModule private constructor(settings: Settings) : Module(
             )
         })
         val add = ModuleAction("Add Reply", "Saves the reply above to the library.", Runnable { addReply() })
-        val allow = BooleanSetting("Allowlist", store.replyAllowlistEnabled())
-        val allowNames = TextSetting("Allowed Senders", store.replyAllowlist().joinToString(", "), 544)
         val block = BooleanSetting("Blocklist", store.replyBlocklistEnabled())
-        val blockNames = TextSetting("Blocked Usernames", store.replyBlocklist().joinToString(", "), 544)
+        val blockName = TextSetting("Player Name", "", 16)
+        val blockAdd = ModuleAction("Block", "Stop this player from using your party commands.", Runnable { blockPlayer() })
         val folderName = TextSetting("New Folder Name", "", 32)
         val createFolder = ModuleAction("Create Folder", "Adds a top-level folder for replies.", Runnable {
             val created = store.replyFolders().create(folderName.value(), null)
@@ -643,21 +678,12 @@ class PartyCommandsModule private constructor(settings: Settings) : Module(
         showFeedback("Reply added.")
     }
 
-    /** Pushes edited sender lists into the store once they are valid usernames. */
+    /** Pushes the Blocklist on/off switch into the store (the names themselves are edited through Block/Remove). */
     private fun syncFilters() {
         val store = ChatChannelsLocalStore.instance()
-        val allowed = splitNames(form.allowNames.value())
-        val blocked = splitNames(form.blockNames.value())
-        if (!ChatReplyConfigRules.validUsernameList(allowed) || !ChatReplyConfigRules.validUsernameList(blocked)) return
-        if (store.replyAllowlistEnabled() == form.allow.value() && store.replyBlocklistEnabled() == form.block.value() &&
-            store.replyAllowlist() == ChatReplyConfigRules.normalizeUsernames(allowed) &&
-            store.replyBlocklist() == ChatReplyConfigRules.normalizeUsernames(blocked)
-        ) return
-        store.setReplyFilters(allowed, form.allow.value(), blocked, form.block.value())
+        if (store.replyBlocklistEnabled() == form.block.value()) return
+        store.setReplyFilters(store.replyAllowlist(), store.replyAllowlistEnabled(), store.replyBlocklist(), form.block.value())
     }
-
-    private fun splitNames(value: String): List<String> =
-        value.split(Regex("[,;\\s]+")).map { it.trim() }.filter { it.isNotEmpty() }.distinct()
 
     private class ReplyControls(entry: ChatReplyEntry) {
         val enabled = BooleanSetting("Enabled", entry.enabled())

@@ -41,7 +41,37 @@ object ClickGuiModuleGrid {
         Math.max(9, Math.round(Math.max(1, panelWidth) * GRID_INSET_FRACTION))
 
     @JvmStatic
-    fun cardColumnsForModuleWidth(moduleWidth: Int): Int = if (moduleWidth >= 720) 3 else 2
+    fun cardColumnsForModuleWidth(moduleWidth: Int): Int = when {
+        moduleWidth >= 900 -> 4
+        moduleWidth >= 720 -> 3
+        else -> 2
+    }
+
+    @JvmRecord
+    data class ChipRect(val x: Int, val y: Int, val w: Int, val h: Int)
+
+    @JvmRecord
+    data class ChipLayout(val chips: List<ChipRect>, val height: Int)
+
+    /** Flows chips left to right, wrapping to a new row when one would pass [availableWidth]. */
+    @JvmStatic
+    fun chipLayout(widths: List<Int>, availableWidth: Int, chipHeight: Int, gapX: Int, gapY: Int): ChipLayout {
+        if (widths.isEmpty()) return ChipLayout(java.util.List.of(), 0)
+        val limit = Math.max(1, availableWidth)
+        val chips = ArrayList<ChipRect>(widths.size)
+        var x = 0
+        var y = 0
+        for (requested in widths) {
+            val w = Math.min(Math.max(1, requested), limit)
+            if (x > 0 && x + w > limit) {
+                x = 0
+                y += chipHeight + gapY
+            }
+            chips.add(ChipRect(x, y, w, chipHeight))
+            x += w + gapX
+        }
+        return ChipLayout(java.util.List.copyOf(chips), y + chipHeight)
+    }
 
     @JvmStatic
     fun gridCardContentWidth(viewportWidth: Int, scrollbarGutter: Int): Int =

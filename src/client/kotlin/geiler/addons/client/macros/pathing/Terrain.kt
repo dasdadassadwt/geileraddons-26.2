@@ -174,9 +174,25 @@ class Terrain @JvmOverloads constructor(
     /** [minimumCostPerBlock] less what preferred painted ground takes off it, if any: the scale of the estimate to a goal. */
     fun heuristicCostPerBlock(): Double = minimumCostPerBlock() * (if (bounded) region.minCostFactor() else 1.0)
 
-    /** The stand the player currently occupies, or the nearest one holding them up. */
+    /**
+     * The stand the player currently occupies, or the nearest one holding them up. A player who stands where the region does not let
+     * them - on ground painted forbidden, say, after a jump landed there - still has the stand they are on: the search leaves from it
+     * and may step out over [ESCAPE_RADIUS] blocks of shut ground, at a price, instead of the macro having nowhere to start from.
+     */
     fun standUnder(target: LocalPlayer): Stand? {
-        val direct = standInColumn(Mth.floor(target.x), Mth.floor(target.z), target.y)
+        escapeFrom = null
+        val inside = standUnder(target, false)
+        if (inside != null || !bounded) return inside
+        val outside = standUnder(target, true) ?: return null
+        escapeFrom = outside
+        return outside
+    }
+
+    /** Whether the last [standUnder] had to take a stand the region shuts. */
+    fun startedOutside(): Boolean = escapeFrom != null
+
+    private fun standUnder(target: LocalPlayer, anywhere: Boolean): Stand? {
+        val direct = standInColumn(Mth.floor(target.x), Mth.floor(target.z), target.y, anywhere)
         if (direct != null) return direct
 
         // On an edge the column under the middle of the player can be empty while their box still rests
@@ -185,7 +201,7 @@ class Terrain @JvmOverloads constructor(
         var bestDistance = Double.POSITIVE_INFINITY
         for (x in Mth.floor(target.x - halfWidth)..Mth.floor(target.x + halfWidth)) {
             for (z in Mth.floor(target.z - halfWidth)..Mth.floor(target.z + halfWidth)) {
-                val candidate = standInColumn(x, z, target.y) ?: continue
+                val candidate = standInColumn(x, z, target.y, anywhere) ?: continue
                 val distance = candidate.feet().distanceToSqr(target.position())
                 if (distance < bestDistance) {
                     bestDistance = distance
@@ -195,6 +211,16 @@ class Terrain @JvmOverloads constructor(
         }
         if (best == null && target.isInWater) return surfaceAbove(target)
         return best
+    }
+
+    /** Where the search started when that was a stand the region shuts; ground within [ESCAPE_RADIUS] of it may be left over at a price. */
+    private var escapeFrom: Stand? = null
+
+    private fun escapes(target: Stand): Boolean {
+        val from = escapeFrom ?: return false
+        val dx = target.centerX() - from.centerX()
+        val dz = target.centerZ() - from.centerZ()
+        return dx * dx + dz * dz <= ESCAPE_RADIUS * ESCAPE_RADIUS
     }
 
     /**
@@ -219,12 +245,12 @@ class Terrain @JvmOverloads constructor(
     fun standNear(x: Double, feetY: Double, z: Double): Stand? = standInColumn(Mth.floor(x), Mth.floor(z), feetY)
 
     /** The highest stand in a column whose floor is at or just below the given feet height. */
-    private fun standInColumn(x: Int, z: Int, feetY: Double): Stand? {
+    private fun standInColumn(x: Int, z: Int, feetY: Double, anywhere: Boolean = false): Stand? {
         val from = Mth.floor(feetY + 0.5)
         val to = from - ceil(settings.maxFallHeight()).toInt() - 2
         var y = from
         while (y >= to) {
-            val stand = standAt(x, y, z)
+            val stand = if (anywhere) standAnywhere(x, y, z) else standAt(x, y, z)
             if (stand != null && stand.floorY <= feetY + STEP_HEIGHT) return stand
             y--
         }
@@ -381,8 +407,12 @@ class Terrain @JvmOverloads constructor(
         val to = edges.to
         for (i in to.indices) {
             val target = to[i]
-            if (bounded && !region.contains(target.x, target.y, target.z)) continue
-            visitor.accept(target, edges.cost[i] + AreaMemory.penalty(level, target.key()), MOVE_TYPES[edges.move[i].toInt()])
+            var outside = 1.0
+            if (bounded && !region.contains(target.x, target.y, target.z)) {
+                if (!escapes(target)) continue
+                outside = ESCAPE_COST_FACTOR
+            }
+            visitor.accept(target, edges.cost[i] * outside + AreaMemory.penalty(level, target.key()), MOVE_TYPES[edges.move[i].toInt()])
         }
     }
 
@@ -934,6 +964,10 @@ class Terrain @JvmOverloads constructor(
 
         /** How high a standing jump actually gets the feet, ignoring potion effects. */
         const val JUMP_HEIGHT = 1.25
+
+        /** How far from a start the region shuts a search may step over shut ground, and how much dearer that ground is to walk. */
+        const val ESCAPE_RADIUS = 3.0
+        const val ESCAPE_COST_FACTOR = 6.0
 
         /** Kept off the very top of a jump: the apex is a moment, and a landing on the edge of it is a guess. */
         private const val JUMP_MARGIN = 0.03

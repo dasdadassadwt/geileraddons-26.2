@@ -14,6 +14,7 @@ import geiler.addons.client.party.PartyMember
 import geiler.addons.client.party.PartySnapshot
 import geiler.addons.client.presentation.PlayerTabNameSource
 import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.PlayerTabOverlay
@@ -1172,7 +1173,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
     override fun previewWidth(font: Font?): Int = width(font)
     override fun previewHeight(font: Font?): Int = height(font)
     override fun previewMode(): String = if (snapshot.available()) "live" else "sample"
-    override fun visible(): Boolean = isActive() && settings.showMap.value() &&
+    override fun visible(): Boolean = isActive() && settings.showMap.value() && !hudMapHiddenInLeapMenu() &&
         DungeonContextTracker.shouldShowMapOverlay(
             settings.showInBoss.value(), DungeonContextTracker.isMobEspPhase(),
             DungeonContextTracker.isMapOverlayStartupContext(),
@@ -1208,12 +1209,62 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
         }
     }
 
+    /** The HUD map is hidden while the Spirit Leap menu shows its clickable leap copy (the HUD copy sat top-left, unclickable). */
+    private fun hudMapHiddenInLeapMenu(): Boolean {
+        if (!SpiritLeapMenuModule.showMap.value()) return false
+        val screen = Minecraft.getInstance().gui.screen() as? AbstractContainerScreen<*> ?: return false
+        return SpiritLeapMapLogic.hudMapHiddenInLeapMenu(
+            DungeonOdinAssistModule.INSTANCE.shouldRenderSpiritLeapScreen(screen), true,
+        )
+    }
+
+    /**
+     * Spirit Leap menu map placement `[x, y, width, height, scale]`: centered over the cards, its bottom edge just
+     * above [cardsTop], shrunk to fit. Null without a live map or room for it.
+     */
+    fun leapMapBounds(font: Font, screenWidth: Int, cardsTop: Int, requestedScale: Float): FloatArray? {
+        if (!isActive() || !snapshot.available()) return null
+        val layout = layout(font)
+        val scale = SpiritLeapMapLogic.scale(requestedScale, layout.height.toFloat())
+        if (scale <= 0f) return null
+        val width = layout.width * scale
+        val height = layout.height * scale
+        return floatArrayOf((screenWidth - width) / 2f, SpiritLeapMapLogic.top(height, cardsTop), width, height, scale)
+    }
+
+    /** Draws the live map for the Spirit Leap menu, never rotated so click positions match the markers. */
+    fun drawLeapMap(graphics: GuiGraphicsExtractor, font: Font, screenWidth: Int, cardsTop: Int, requestedScale: Float): Boolean {
+        val bounds = leapMapBounds(font, screenWidth, cardsTop, requestedScale) ?: return false
+        val pose = graphics.pose()
+        pose.pushMatrix()
+        pose.translate(bounds[0], bounds[1])
+        pose.scale(bounds[4], bounds[4])
+        drawMapContents(graphics, font, snapshotWithInterpolatedPlayers(snapshot), layout(font), false, false)
+        pose.popMatrix()
+        return true
+    }
+
+    /** Teammate markers (not the local player) in screen space for the map drawn by [drawLeapMap]. */
+    fun leapMapMarkers(font: Font, screenWidth: Int, cardsTop: Int, requestedScale: Float): List<SpiritLeapMapLogic.Marker> {
+        val bounds = leapMapBounds(font, screenWidth, cardsTop, requestedScale) ?: return emptyList()
+        val layout = layout(font)
+        val stride = layout.cellSize + layout.cellGap
+        return snapshotWithInterpolatedPlayers(snapshot).players().filter { !it.localPlayer() }.map { player ->
+            val position = SpiritLeapMapLogic.markerPosition(
+                bounds[0], bounds[1], bounds[4], layout.contentInset, layout.gridTop, stride,
+                player.x(), player.z(), player.offsetX(), player.offsetZ(),
+            )
+            SpiritLeapMapLogic.Marker(player.name(), position[0], position[1])
+        }
+    }
+
     private fun drawMapContents(
         graphics: GuiGraphicsExtractor,
         font: Font,
         state: DungeonRoomOverlayGeometry.Snapshot,
         layout: DungeonRoomOverlayLayout.Layout,
         preview: Boolean,
+        allowRotation: Boolean = true,
     ) {
         val pose = graphics.pose()
         graphics.fill(0, 0, layout.width, layout.height, settings.background.argb())
@@ -1222,7 +1273,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
         val gridY = layout.gridTop
         val provisional = !hasRenderableMapLayout(state)
         val hasPlayerPosition = hasLocalPlayerMarker(state)
-        val rotateGrid = settings.rotateMap.value() && (!provisional || hasPlayerPosition)
+        val rotateGrid = allowRotation && settings.rotateMap.value() && (!provisional || hasPlayerPosition)
         val rotationPivot = if (rotateGrid) playerPivot(state, layout, gridX, gridY) else null
         val rotationRadians = if (rotateGrid) mapRotationRadians(state) else 0.0f
         if (rotateGrid) {

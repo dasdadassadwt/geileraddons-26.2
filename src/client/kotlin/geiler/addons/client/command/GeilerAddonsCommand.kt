@@ -6,6 +6,7 @@ import geiler.addons.client.dungeon.DungeonStatsCommand
 import geiler.addons.client.gui.ClickGuiStyle
 import geiler.addons.client.module.impl.VisualModule
 import geiler.addons.client.macros.command.MacroCommands
+import geiler.addons.client.waypoint.WaypointCommands
 import geiler.addons.client.gui.ConfigResetScreen
 import geiler.addons.client.gui.ConfigTransferScreen
 import geiler.addons.client.module.impl.PartyFinderStatsModule
@@ -109,6 +110,8 @@ object GeilerAddonsCommand {
                 )
             UtilityCommandBuilder.appendTo(root)
             MacroCommands.appendTo(root)
+            WaypointCommands.appendTo(root)
+            geiler.addons.client.termsim.TermSimCommand.appendTo(root)
             val registeredRoot = dispatcher.register(root)
             for (alias in arrayOf("Ga", "gA", "GA")) {
                 dispatcher.register(

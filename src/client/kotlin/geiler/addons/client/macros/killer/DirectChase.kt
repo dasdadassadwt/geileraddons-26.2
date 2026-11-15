@@ -1,9 +1,11 @@
 package geiler.addons.client.macros.killer
 
 import geiler.addons.client.macros.input.WalkInput
+import geiler.addons.client.macros.navigation.EdgeGuard
 import geiler.addons.client.macros.pathing.Terrain
 import geiler.addons.client.macros.rotation.SmoothRotation
 import net.minecraft.client.player.LocalPlayer
+import net.minecraft.world.entity.ai.attributes.Attributes
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.phys.Vec3
@@ -97,10 +99,18 @@ class DirectChase {
             return Result.CLOSE
         }
 
+        val yaw = SmoothRotation.lookAt(player.position(), Vec3(target.x, player.y, target.z)).yaw
+        val off = abs(Mth.wrapDegrees(yaw - player.yRot)).toDouble()
+        val run = sprint && gap > max(SPRINT_DISTANCE, sprintBeyond) && off < SPRINT_ANGLE_DEGREES && !player.isInWater
+
         // In the air there is nothing to steer and nothing to check: the keys stay as they were. On the ground the next
-        // stretch has to be a plain walk.
+        // stretch has to be a plain walk, and the ground has to go as far as the player will: a fixed look ahead puts a player at
+        // four times the speed over every edge, with the slide it has after the keys are let go of.
         if (player.onGround() || player.isInWater) {
-            val ahead = min(LOOKAHEAD, flat)
+            val kept = sqrt(motion.x * motion.x + motion.z * motion.z)
+            val push = player.getAttributeValue(Attributes.MOVEMENT_SPEED) * INPUT * (if (run && !player.isSprinting) SPRINT_FACTOR else 1.0)
+            val reach = EdgeGuard.lookahead(kept, push)
+            val ahead = min(reach, flat)
             if (player.isInWater) {
                 if (!waterAheadClear(player, terrain, dx / flat, dz / flat, ahead)) return Result.BLOCKED
             } else {
@@ -109,19 +119,20 @@ class DirectChase {
                 val floor = terrain.surfaceUnder(x, z, player.y, Terrain.STEP_HEIGHT)
                 if (!floor.isFinite()) return Result.BLOCKED
                 if (!terrain.canWalkLine(player.position(), Vec3(x, floor, z))) return Result.BLOCKED
+                // The target is nearer than the slide is long: the ground is only needed as far as the mob, where the run stops.
+                val needed = min(ahead, EdgeGuard.travel(kept, push))
+                if (EdgeGuard.brake(terrain.groundAhead(player.position(), dx / flat, dz / flat, needed), needed, false)) return Result.BLOCKED
             }
         }
 
-        val yaw = SmoothRotation.lookAt(player.position(), Vec3(target.x, player.y, target.z)).yaw
-        val off = abs(Mth.wrapDegrees(yaw - player.yRot)).toDouble()
-        val run = sprint && gap > max(SPRINT_DISTANCE, sprintBeyond) && off < SPRINT_ANGLE_DEGREES && !player.isInWater
         input.walk(yaw, run, player.isInWater)
         return Result.MOVING
     }
 
     companion object {
-        /** How far ahead the ground is checked, in blocks. */
-        private const val LOOKAHEAD = 1.6
+        /** The sprint's share of the speed, and what the keys give of it. */
+        private const val SPRINT_FACTOR = 1.3
+        private const val INPUT = 0.98
 
         /** How many ticks of its current speed a player slides after the keys are let go of, on the ground. */
         private const val COAST_TICKS = 3.5

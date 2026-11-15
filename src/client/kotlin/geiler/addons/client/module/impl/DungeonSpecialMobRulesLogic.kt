@@ -8,11 +8,11 @@ import java.util.Locale
 /** Name and class-color rules for the optional special-mob dungeon overlay. */
 class DungeonSpecialMobRules private constructor() {
     companion object {
-        /** Strict F7 regular-mode label filter; entity type is checked separately by the caller. */
+        /** Strict F7 label filter (regular and Master Mode); entity type is checked separately by the caller. */
         @JvmStatic
         fun isF7WitherBossName(name: String?): Boolean = "wither" == normalize(name)
 
-        /** A Wither overlay is enabled only in regular F7 after the dungeon's boss-entry signal. */
+        /** A Wither overlay is enabled only in F7, regular or Master, after the dungeon's boss-entry signal. [masterMode] is kept for callers and diagnostics. */
         @JvmStatic
         fun shouldScanF7WitherBoss(
             enabled: Boolean,
@@ -20,7 +20,7 @@ class DungeonSpecialMobRules private constructor() {
             floorSeven: Boolean,
             masterMode: Boolean,
             bossPhaseObserved: Boolean,
-        ): Boolean = enabled && inDungeon && floorSeven && !masterMode && bossPhaseObserved
+        ): Boolean = enabled && inDungeon && floorSeven && bossPhaseObserved
 
         /** Early entity-type signal is accepted only after boss entry has been observed. */
         @JvmStatic
@@ -29,7 +29,7 @@ class DungeonSpecialMobRules private constructor() {
             masterMode: Boolean,
             bossPhaseObserved: Boolean,
             witherEntity: Boolean,
-        ): Boolean = floorSeven && !masterMode && bossPhaseObserved && witherEntity
+        ): Boolean = floorSeven && bossPhaseObserved && witherEntity
 
         @JvmStatic
         fun isF7WitherBoss(
@@ -37,7 +37,7 @@ class DungeonSpecialMobRules private constructor() {
             masterMode: Boolean,
             witherBossEntity: Boolean,
             name: String?,
-        ): Boolean = floorSeven && !masterMode && witherBossEntity && isF7WitherBossName(name)
+        ): Boolean = floorSeven && witherBossEntity && isF7WitherBossName(name)
 
         /**
          * Mimic highlighting is safe only when a licensed room record identifies the exact chest

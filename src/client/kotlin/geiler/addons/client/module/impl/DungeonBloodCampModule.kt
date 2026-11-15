@@ -16,6 +16,7 @@ import geiler.addons.client.module.Setting
 import geiler.addons.client.module.SettingGroup
 import geiler.addons.client.render.EspRenderer
 import geiler.addons.client.render.GeilerAddonsRenderTypes
+import geiler.addons.client.render.ProjectedLabelRenderer
 import geiler.addons.client.render.WorldRenderBuffer
 import geiler.addons.client.tree.ChatText
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext
@@ -488,23 +489,6 @@ class DungeonBloodCampModule private constructor() : Module(
                 )
                 lineSubmissions++
             }
-            if (timeLeft.value()) {
-                val seconds = candidate.timeLeftMillis.toFloat() / 1000.0f
-                val color = timeColor(seconds)
-                EspRenderer.renderLabel(
-                    pose,
-                    buffers,
-                    client.gameRenderer.mainCamera().rotation(),
-                    endpoint.x - camera.x,
-                    endpoint.y + 2.0 - camera.y,
-                    endpoint.z - camera.z,
-                    String.format(Locale.ROOT, "%.2fs", seconds),
-                    color,
-                    0.20f,
-                    1.5f,
-                )
-                labelSubmissions++
-            }
         }
         if (candidates.isNotEmpty()) {
             GeilerAddonsRenderTypes.endBatches(buffers)
@@ -518,6 +502,23 @@ class DungeonBloodCampModule private constructor() : Module(
                         ",offsetMs=$mobOffsetMillis,timeOffsetMs=${offset.intValue()}",
                 )
             }
+        }
+    }
+
+    /** HUD element `blood_camp_labels`: real-font time labels projected at each candidate endpoint. */
+    fun renderHud(graphics: GuiGraphicsExtractor) {
+        if (!isEnabled() || !bloodCampAssist.value() || !timeLeft.value() || candidates.isEmpty() || !DungeonContextTracker.isMobEspPhase()) {
+            return
+        }
+        val client = Minecraft.getInstance()
+        val camera = client.gameRenderer.mainCamera()
+        val trackerNowNanos = trackerTimeNanos()
+        for (candidate in candidates) {
+            val endpoint = interpolatedDestination(candidate, trackerNowNanos)
+            val seconds = candidate.timeLeftMillis.toFloat() / 1000.0f
+            val world = Vec3(endpoint.x, endpoint.y + 2.0, endpoint.z)
+            if (ProjectedLabelRenderer.draw(graphics, camera, client.font, world,
+                    String.format(Locale.ROOT, "%.2fs", seconds), timeColor(seconds), HUD_SCALE)) labelSubmissions++
         }
     }
 
@@ -797,6 +798,8 @@ class DungeonBloodCampModule private constructor() : Module(
         private const val MAX_TEXTURE_PROPERTY_BYTES = 16_384
         private const val MAX_CANDIDATE_DIAGNOSTIC_SAMPLES = 8
         private const val WATCHER_RANGE = 20.0
+        /** Real-font scale for the projected time label; 1.0 matches Tiki Helper's default text size. */
+        const val HUD_SCALE = 1.0f
         private val POSITION_GREEN = 0xFF55FF55.toInt()
         private val SPAWN_RED = 0xFFFF5555.toInt()
         private val FINAL_DARK_AQUA = 0xFF00AAAA.toInt()

@@ -1,7 +1,5 @@
 package geiler.addons.client.macros.module
 
-import geiler.addons.client.location.HypixelModApi
-import geiler.addons.client.location.Island
 import geiler.addons.client.macros.sim.EtherwarpCooldown
 import geiler.addons.client.macros.sim.EtherwarpMath
 import geiler.addons.client.macros.sim.EtherwarpRules
@@ -23,7 +21,6 @@ import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.gizmos.GizmoStyle
 import net.minecraft.gizmos.Gizmos
 import net.minecraft.network.protocol.game.ClientboundSoundPacket
-import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket
 import net.minecraft.resources.Identifier
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundEvents
@@ -32,11 +29,10 @@ import net.minecraft.world.entity.Pose
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 import net.minecraft.world.phys.AABB
-import net.minecraft.world.phys.Vec3
 
 /**
  * Hypixel SkyBlock's Etherwarp, as Odin shows it: a box where the warp lands (green when it works, red when it does not),
- * the warp itself without waiting for the server on the private island, and a sound of your own for it. Hold an item with
+ * and a sound of your own for the warp. It never moves you itself on a server: the server does the warp. Hold an item with
  * the ethermerge upgrade (or the Etherwarp Conduit) and sneak. In singleplayer, with the Etherwarp Sim on, a diamond shovel
  * is the item and the warp is the sim's.
  *
@@ -45,8 +41,8 @@ import net.minecraft.world.phys.Vec3
  */
 class EtherwarpModule private constructor(private val c: Carrier) : Module(
     "Etherwarp",
-    "Shows where an etherwarp lands: a green box when it works, a red one when it does not. Warps on your own island " +
-        "without waiting for the server, and can play a sound of your own. Hold the item and sneak (the Etherwarp Conduit " +
+    "Shows where an etherwarp lands: a green box when it works, a red one when it does not. The server " +
+        "does the warp; the module can play a sound of your own. Hold the item and sneak (the Etherwarp Conduit " +
         "needs no sneak). In singleplayer, with the Etherwarp Sim on, a diamond shovel is the item: " +
         "sneak right click is the etherwarp, right click alone the Instant Transmission (8 blocks, one more per tuner).",
     Category.VISUAL,
@@ -262,19 +258,9 @@ class EtherwarpModule private constructor(private val c: Carrier) : Module(
             return true
         }
         warps++
-        if (HypixelModApi.currentIsland() == Island.PRIVATE_ISLAND) {
-            val x = result.landX
-            val y = EtherwarpRules.landY(result.blockY)
-            val z = result.landZ
-            player.connection.send(ServerboundMovePlayerPacket.PosRot(x, y, z, player.yRot, player.xRot, false, false))
-            player.setPos(x, y, z)
-            player.deltaMovement = Vec3.ZERO
-            if (customSound) playCustomSound(player) else playDragonSound(player)
-            diagnostics.event("warp zeroPing=true to=${fmt(x)},${fmt(y)},${fmt(z)} block=${result.blockX},${result.blockY},${result.blockZ}")
-        } else {
-            diagnostics.event("warp zeroPing=false block=${result.blockX},${result.blockY},${result.blockZ} server answers")
-        }
-        // The click still goes to the server, which does the warp.
+        // The mod never moves the player or sends a position on a server: a client-made teleport packet is what an anticheat
+        // flags. The click goes to the server, which does the warp; the sound swap in onSound is the only change.
+        diagnostics.event("warp block=${result.blockX},${result.blockY},${result.blockZ} server answers")
         return false
     }
 
@@ -300,12 +286,6 @@ class EtherwarpModule private constructor(private val c: Carrier) : Module(
         }
         player.level().playLocalSound(
             player.x, player.y, player.z, event, SoundSource.PLAYERS, c.volume.value(), c.pitch.value(), false,
-        )
-    }
-
-    private fun playDragonSound(player: LocalPlayer) {
-        player.level().playLocalSound(
-            player.x, player.y, player.z, SoundEvents.ENDER_DRAGON_HURT, SoundSource.PLAYERS, 1.0f, EtherwarpSim.SOUND_PITCH, false,
         )
     }
 

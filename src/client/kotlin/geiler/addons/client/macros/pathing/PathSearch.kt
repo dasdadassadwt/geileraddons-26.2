@@ -24,6 +24,8 @@ class PathSearch(
     private val settings: PathingSettings,
     /** How much of the per-tick budget a slice may use, see [SearchBudget]. */
     private val budgetScale: Double = 1.0,
+    /** Whether to start with the cheap tier and go on to the thorough ones only when it finds nothing, see [SearchTier]. */
+    tiered: Boolean = true,
 ) {
     enum class Status {
         /** Still searching. */
@@ -49,9 +51,14 @@ class PathSearch(
     }
 
     private val nodes = Long2ObjectOpenHashMap<PathNode>()
-    private val open = NodeHeap()
+    private var open = NodeHeap()
     private val startHeuristic: Double
-    private val weight: Double
+    private val plainWeight: Double
+    private val blocks: Double
+    private var weight = 1.0
+    private var tier = if (tiered) SearchTier.GREEDY else SearchTier.STANDARD
+    private var radiusLimit = 0.0
+    private var tierExpansions = 0
     private var best: PathNode
     private var reached: PathNode? = null
     private var status = Status.RUNNING
@@ -61,14 +68,35 @@ class PathSearch(
         val first = PathNode(start)
         first.h = goal.heuristic(start)
         startHeuristic = first.h
-        val blocks = first.h / terrain.heuristicCostPerBlock()
+        blocks = first.h / terrain.heuristicCostPerBlock()
         val far = max(0.0, min(1.0, (blocks - WEIGHT_NEAR_BLOCKS) / (WEIGHT_FAR_BLOCKS - WEIGHT_NEAR_BLOCKS)))
-        weight = WEIGHT_NEAR + (WEIGHT_FAR - WEIGHT_NEAR) * far
+        plainWeight = WEIGHT_NEAR + (WEIGHT_FAR - WEIGHT_NEAR) * far
+        best = first
+        beginTier(tier, first)
+        totalSearches++
+    }
+
+    /** Sets the search up from the start again for this tier; what the failed ones learnt is not kept, but the closest stand they got to is. */
+    private fun beginTier(next: SearchTier, first: PathNode = PathNode(start).also { it.h = startHeuristic }) {
+        tier = next
+        nodes.clear()
+        open = NodeHeap()
+        weight = next.weight(plainWeight)
+        radiusLimit = next.radius(blocks, (settings.searchRadius() + RADIUS_SLACK).toDouble())
+        tierExpansions = 0
         first.f = weight * first.h
         nodes.put(start.key(), first)
         open.insert(first)
-        best = first
-        totalSearches++
+    }
+
+    /** The tier that ran last: the one that found the way, or the last that was tried. */
+    fun tier(): SearchTier = tier
+
+    /** Goes on to the next tier when there is one; true when it has begun. */
+    private fun escalate(capped: Boolean): Boolean {
+        val next = SearchTier.next(tier, capped) ?: return false
+        beginTier(next)
+        return true
     }
 
     fun status(): Status = status
@@ -96,7 +124,13 @@ class PathSearch(
     private fun work(): Status {
         val deadline = System.nanoTime() + (max(0.25, settings.searchMillisPerTick() * budgetScale) * 1.0E6).toLong()
         var untilClockCheck = EXPANSIONS_PER_CLOCK_CHECK
-        while (!open.isEmpty()) {
+        while (true) {
+            if (open.isEmpty()) {
+                // Everything within this tier's bounds has been seen. A cheap tier's bounds were a guess, so it goes on.
+                if (escalate(false)) continue
+                status = Status.FAILED
+                return status
+            }
             if (--untilClockCheck <= 0) {
                 if (System.nanoTime() >= deadline) return Status.RUNNING
                 untilClockCheck = EXPANSIONS_PER_CLOCK_CHECK
@@ -111,16 +145,15 @@ class PathSearch(
                 status = Status.FOUND
                 return status
             }
-            if (++expansions > MAX_EXPANSIONS) {
+            if (++tierExpansions > tier.maxExpansions) {
+                if (escalate(true)) continue
                 status = Status.FAILED
                 return status
             }
+            expansions++
 
             terrain.expand(current.stand) { to, cost, move -> offer(current, to, cost, move) }
         }
-
-        status = Status.FAILED
-        return status
     }
 
     private fun offer(from: PathNode, to: Terrain.Stand, cost: Double, move: MoveType) {
@@ -177,7 +210,7 @@ class PathSearch(
     private fun outsideBounds(stand: Terrain.Stand): Boolean {
         val dx = stand.centerX() - start.centerX()
         val dz = stand.centerZ() - start.centerZ()
-        val radius = (settings.searchRadius() + RADIUS_SLACK).toDouble()
+        val radius = radiusLimit
         return dx * dx + dz * dz > radius * radius || abs(stand.floorY - start.floorY) > MAX_VERTICAL
     }
 
@@ -221,9 +254,6 @@ class PathSearch(
 
         /** What a change of heading costs, per 45 degrees, at full straightness. Moves cost about 3.6 a block. */
         private const val TURN_PENALTY = 1.2
-
-        /** Hard ceiling on one search, so an unreachable target cannot grind for minutes. */
-        private const val MAX_EXPANSIONS = 60000
 
         /** Checking the clock costs a syscall, so only do it every so many expansions. */
         private const val EXPANSIONS_PER_CLOCK_CHECK = 64

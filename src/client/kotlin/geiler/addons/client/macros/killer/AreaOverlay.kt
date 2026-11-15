@@ -8,6 +8,7 @@ import geiler.addons.client.macros.config.AreaKillerConfig
 import geiler.addons.client.macros.navigation.PathfindMacro
 import geiler.addons.client.macros.pathing.AreaMemory
 import geiler.addons.client.macros.pathing.MoveType
+import geiler.addons.client.macros.pathing.RouteSmoother
 import geiler.addons.client.macros.pathing.Path
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.minecraft.gizmos.GizmoStyle
@@ -33,7 +34,7 @@ object AreaOverlay {
     private const val TARGET_COLOR = 0xFFFF4D4D.toInt()
     private const val DESTINATION_COLOR = 0xFF2DD4BF.toInt()
     private const val GATE_WIDTH = 2.5f
-    private const val ROUTE_WIDTH = 2.0f
+    private const val ROUTE_WIDTH = 3.0f
     private const val TARGET_WIDTH = 1.75f
 
     /** The mob after the one being fought, and the route already worked out to it. */
@@ -174,11 +175,13 @@ object AreaOverlay {
         val brush = PaintBrush.active() ?: return
         val centre = PaintBrush.aim(client) ?: return
         val ring = 0xFFFFFFFF.toInt()
+        // On the level the click would paint, not at the height of the air that was aimed at.
+        val ringY = PaintBrush.levelY(client, centre)?.toDouble() ?: centre.y.toDouble()
         val steps = 28
         var previous: Vec3? = null
         for (i in 0..steps) {
             val angle = i * 2.0 * Math.PI / steps
-            val at = Vec3(centre.x + 0.5 + Math.cos(angle) * (brush.radius + 0.5), centre.y + 0.1, centre.z + 0.5 + Math.sin(angle) * (brush.radius + 0.5))
+            val at = Vec3(centre.x + 0.5 + Math.cos(angle) * (brush.radius + 0.5), ringY + 0.1, centre.z + 0.5 + Math.sin(angle) * (brush.radius + 0.5))
             previous?.let { Gizmos.line(it, at, ring, 2.0f).setAlwaysOnTop() }
             previous = at
         }
@@ -199,9 +202,22 @@ object AreaOverlay {
             Gizmos.cuboid(box, GizmoStyle.stroke(if (next) NEXT_WAYPOINT_COLOR else WAYPOINT_COLOR, WAYPOINT_WIDTH)).setAlwaysOnTop()
         }
 
-        for (i in 1 until route.steps().size) {
-            val previous = route.steps()[i - 1]
-            val step = route.steps()[i]
+        // Walked stretches are drawn as one smooth curve; a jump or a drop is a straight line of its own, marked.
+        val steps = route.steps()
+        var run = ArrayList<DoubleArray>()
+        fun flush() {
+            if (run.size >= 2) drawCurve(RouteSmoother.smooth(run), ROUTE_COLOR, ROUTE_WIDTH)
+            run = ArrayList()
+        }
+        for (i in 1 until steps.size) {
+            val previous = steps[i - 1]
+            val step = steps[i]
+            if (step.move == MoveType.WALK || step.move == MoveType.STEP) {
+                if (run.isEmpty()) run.add(doubleArrayOf(previous.position.x, previous.position.y, previous.position.z))
+                run.add(doubleArrayOf(step.position.x, step.position.y, step.position.z))
+                continue
+            }
+            flush()
             Gizmos.line(lifted(previous.position), lifted(step.position), ROUTE_COLOR, ROUTE_WIDTH).setAlwaysOnTop()
 
             // Mark the places the follower has to do something other than walk, so a route that keeps getting stuck can be
@@ -212,14 +228,19 @@ object AreaOverlay {
                 Gizmos.point(lifted(step.position), DROP_COLOR, ANCHOR_SIZE).setAlwaysOnTop()
             }
         }
+        flush()
+    }
+
+    private fun drawCurve(points: List<DoubleArray>, color: Int, width: Float) {
+        for (i in 1 until points.size) {
+            Gizmos.line(lifted(Vec3(points[i - 1][0], points[i - 1][1], points[i - 1][2])), lifted(Vec3(points[i][0], points[i][1], points[i][2])), color, width).setAlwaysOnTop()
+        }
     }
 
     private fun drawNextRoute(route: Path?) {
         if (route == null) return
-        val steps = route.steps()
-        for (i in 1 until steps.size) {
-            Gizmos.line(lifted(steps[i - 1].position), lifted(steps[i].position), NEXT_ROUTE_COLOR, NEXT_ROUTE_WIDTH).setAlwaysOnTop()
-        }
+        val points = route.steps().map { doubleArrayOf(it.position.x, it.position.y, it.position.z) }
+        drawCurve(RouteSmoother.smooth(points), NEXT_ROUTE_COLOR, NEXT_ROUTE_WIDTH)
     }
 
     private fun lifted(point: Vec3): Vec3 = point.add(0.0, ROUTE_HEIGHT, 0.0)

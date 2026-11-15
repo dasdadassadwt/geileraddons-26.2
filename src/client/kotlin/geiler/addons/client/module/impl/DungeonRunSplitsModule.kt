@@ -38,7 +38,6 @@ class DungeonRunSplitsModule private constructor() : Module(
     showCountValue,
     countSource,
     localRunSummary,
-    showBossTimers,
 ), HudElement {
     @Volatile
     private var splitRows: List<DungeonSplitTracker.Split?> = emptyList()
@@ -54,7 +53,6 @@ class DungeonRunSplitsModule private constructor() : Module(
     init {
         group(
             SettingGroup.switched("Split Display", showSplits, showCurrentSplit, secondTimeDisplay),
-            SettingGroup.switched("Boss Timers", showBossTimers),
             SettingGroup.switched("Completion Summary", localRunSummary),
         )
     }
@@ -341,9 +339,6 @@ class DungeonRunSplitsModule private constructor() : Module(
 
         @JvmField
         val localRunSummary = BooleanSetting("Local Run Summary", true)
-
-        @JvmField
-        val showBossTimers = BooleanSetting("Show Boss Timers", true)
 
         @JvmField
         val INSTANCE = DungeonRunSplitsModule()

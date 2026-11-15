@@ -24,6 +24,11 @@ internal object DungeonQuizRulesCore {
         return match?.sourceQuestion()
     }
 
+    fun isQuestionHeader(rawLine: String?): Boolean =
+        rawLine != null && normalize(rawLine).matches(Regex("question [0-9]+"))
+
+    fun visibleLine(rawLine: String?): String = javaTrim(stripFormatting(rawLine))
+
     fun acceptedAnswers(question: String?, epochSeconds: Long): List<String> {
         if (isSkyblockYearQuestion(question)) {
             val year = Math.floorDiv(epochSeconds - SKYBLOCK_EPOCH_START_SECONDS, SKYBLOCK_YEAR_SECONDS) + 1L

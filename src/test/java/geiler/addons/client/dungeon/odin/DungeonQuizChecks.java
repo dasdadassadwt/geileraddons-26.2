@@ -20,6 +20,7 @@ public final class DungeonQuizChecks {
 	public static void run() {
 		checkTrackerJavaInterop();
 		checkChatMarkerStyling();
+		checkLiveChatFlow();
 		Map<String, String> curatedStatuses = Map.of(
 			"What is the status of Bonzo?", "New Necromancer",
 			"What is the status of Scarf?", "Apprentice Necromancer",
@@ -153,15 +154,51 @@ public final class DungeonQuizChecks {
 			"leaving the dungeon resets all Quiz timer state");
 	}
 
+	/** Replays the exact unprefixed Hypixel Trivia chat captured in the live Modrinth logs. */
+	private static void checkLiveChatFlow() {
+		long epoch = 1_560_276_000L;
+		DungeonQuizTracker live = new DungeonQuizTracker();
+		live.onChat("[STATUE] Oruo the Omniscient: I am Oruo the Omniscient. I have lived many lives. I have learned all there is to know.", true, false, epoch);
+		live.onChat("                                Question #1", true, false, epoch);
+		live.onChat("          How many Fairy Souls are there in Dungeon Hub?", true, false, epoch);
+		require("How many Fairy Souls are there in Dungeon Hub?".equals(live.question()),
+			"a bare question after its Question #N header is captured even when room detection is not Quiz");
+		require(live.unmatchedQuestion() == null, "a matched question leaves no unmatched diagnostic");
+		live.onChat("     §6 ⓐ §a7 Fairy Souls", true, false, epoch);
+		require(live.confirmedOption() != null && "ⓐ".equals(live.confirmedOption().marker())
+			&& "7 Fairy Souls".equals(live.confirmedOption().answer()),
+			"indented, colour-coded live option lines confirm the accepted answer");
+		live.onChat("[STATUE] Oruo the Omniscient: Player answered Question #1 correctly!", true, false, epoch);
+		live.onChat("                                Question #2", true, false, epoch);
+		live.onChat("                  How many unique minions are there?", true, false, epoch);
+		require("How many unique minions are there?".equals(live.question()),
+			"the next question header re-arms capture for the following question");
+		live.onChat("                                Question #3", true, false, epoch);
+		live.onChat("   A question nobody catalogued?", true, false, epoch);
+		require("A question nobody catalogued?".equals(live.unmatchedQuestion()),
+			"an unmatched question after a header is kept for the bounded diagnostic");
+		live.onChat("A stray line after the question", true, false, epoch);
+		require("A question nobody catalogued?".equals(live.unmatchedQuestion()),
+			"only the single line after a Question header is treated as the question");
+		DungeonQuizTracker plain = new DungeonQuizTracker();
+		plain.onChat("What is the status of Scarf?", true, false, epoch);
+		require(plain.question() == null, "a bare question without a header or Quiz room is still ignored");
+	}
+
 	private static void checkChatMarkerStyling() {
+		Component legacy = Component.literal("     §6 ⓐ §a7 Fairy Souls");
+		Component legacyStyled = DungeonQuizChatStyler.apply(legacy, "ⓐ", "7 Fairy Souls");
+		require(legacyStyled != legacy && "ⓐ 7 Fairy Souls".equals(legacyStyled.getString().trim().replaceAll("\\s+", " "))
+			&& hasColor(legacyStyled, 0xFF5555),
+			"an indented line with literal colour codes is recoloured red as a whole");
 		Component input = Component.literal("ⓑ ")
 			.withStyle(Style.EMPTY.withColor(TextColor.fromRgb(0xAAAAAA)))
 			.append(Component.literal("Apprentice Necromancer")
 				.withStyle(Style.EMPTY.withColor(TextColor.fromRgb(0xFFFFFF))));
 		Component styled = DungeonQuizChatStyler.apply(input, "ⓑ", "Apprentice Necromancer");
 		require(styled != input && "ⓑ Apprentice Necromancer".equals(styled.getString())
-			&& hasColor(styled, 0x55FF55) && hasColor(styled, 0xFFFFFF),
-			"the accepted option marker is green while the answer text and its original style remain intact");
+			&& hasColor(styled, 0xFF5555) && !hasColor(styled, 0xFFFFFF) && !hasColor(styled, 0xAAAAAA),
+			"the whole accepted option line is red");
 		Component unrelated = Component.literal("ⓑ unrelated");
 		require(DungeonQuizChatStyler.apply(input, "ⓐ", "Apprentice Necromancer") == input
 			&& DungeonQuizChatStyler.apply(input, "ⓑ", "New Necromancer") == input
@@ -194,6 +231,7 @@ public final class DungeonQuizChecks {
 			checkInstanceMethod(tracker, "timerTicks", int.class);
 			checkInstanceMethod(tracker, "timerMaximumTicks", int.class);
 			checkInstanceMethod(tracker, "timerStage", int.class);
+			checkInstanceMethod(tracker, "unmatchedQuestion", String.class);
 			checkInstanceMethod(tracker, "reset", void.class);
 		} catch (ReflectiveOperationException exception) {
 			throw new AssertionError("Quiz tracker Java API changed", exception);

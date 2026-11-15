@@ -124,6 +124,7 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
 
     /** The rest point: since when nothing has been in reach, the search for a way to it or to a spot round it, and where that is. */
     private var idleSinceMillis = 0L
+    private var restWhyAtMillis = 0L
     private var restSearch: PathSearch? = null
     private var resting = false
     private var restWanderAtMillis = 0L
@@ -702,6 +703,12 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
     }
 
     private fun doSearch(player: LocalPlayer, level: ClientLevel, input: WalkInput) {
+        if (backOffTicks > 0) {
+            // Out of a tight place: a few steps back and to one side, the way a person gets off a corner, then the route is planned again.
+            backOffTicks--
+            input.walk(player.yRot + 180.0f + backOffSide * BACK_OFF_DEGREES, false, false)
+            return
+        }
         if (clusterHold(player, level, input)) return
         keepMoving(player, level, input)
         applySneak(input, "search")
@@ -737,13 +744,17 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
                 rescanAtMillis = Util.getMillis() + EMPTY_SCAN_PAUSE_MILLIS
                 return
             }
-            idleSinceMillis = 0L
             if (!beginSearch(player, level, candidates)) {
                 // Nothing to plan from while the feet are off the ground, or nothing that can be got to - or a warp onto a
-                // target the feet cannot get to has just begun.
-                if (state == State.SEARCHING) watchOrIdle(player, level)
+                // target the feet cannot get to has just begun. Mobs that cannot be got to are no reason to stand about: they
+                // count as nothing in reach, so the rest clock runs and the rest walk can begin.
+                if (state == State.SEARCHING) {
+                    if (target == null && searchGoal == null && tickRest(player, level)) return
+                    watchOrIdle(player, level)
+                }
                 return
             }
+            idleSinceMillis = 0L
         }
         // While the route is worked out the view is not left where it was: on the target if it can be seen.
         watchOrIdle(player, level)
@@ -763,7 +774,7 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
             if (warpOnto(player, level, candidates)) return false
             dropTarget()
             runner.clear()
-            rescanAtMillis = Util.getMillis() + EMPTY_SCAN_PAUSE_MILLIS
+            rescanAtMillis = Util.getMillis() + FAILED_SEARCH_PAUSE_MILLIS
             return false
         }
 
@@ -815,7 +826,7 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
         }
         val route = finished.path()
         diagnostics(
-            "search status=$status length=${route?.length()?.let { String.format(Locale.ROOT, "%.1f", it) } ?: "none"} " +
+            "search status=$status tier=${finished.tier().name} length=${route?.length()?.let { String.format(Locale.ROOT, "%.1f", it) } ?: "none"} " +
                 "from=${one(player.x)},${one(player.y)},${one(player.z)} " +
                 "to=${goal.entities().firstOrNull()?.let { "${one(it.x)},${one(it.y)},${one(it.z)}" } ?: "none"} " +
                 "looked=${finished.expansions()}",
@@ -838,7 +849,10 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
         // missing - but a second failure means it really cannot be got to.
         // Not, though, a partial route that only ends at the edge of the water the player is in: swimming to the wall of a
         // pool is no step toward getting out of it. That is what a warp is for, at once.
-        if (route != null && !endsInWater(player, route) && ++failedSearches < 2) {
+        // Nor one under a ledge no jump can reach: it only ends with the player hopping at the face of it. A teleport up goes first.
+        val ledge = config.useTeleport && goal.entities().firstOrNull()?.let { it.y - player.y > finished.terrain().jumpHeight() + LEDGE_EXTRA } == true
+        if (ledge) diagnostics("ledge goal: the target is above any jump, teleport before walking")
+        if (route != null && !ledge && !endsInWater(player, route) && ++failedSearches < 2) {
             startWalking(route, player)
             return
         }
@@ -850,7 +864,8 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
         adopt(null)
         runner.clear()
         state = State.SEARCHING
-        rescanAtMillis = Util.getMillis() + EMPTY_SCAN_PAUSE_MILLIS
+        // The ones tried are left alone now; any others are looked at again at once, not after the pause of an empty scan.
+        rescanAtMillis = Util.getMillis() + FAILED_SEARCH_PAUSE_MILLIS
     }
 
     /** Whether the player is in water and the route ends in water too, without getting out of it. */
@@ -1045,7 +1060,26 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
     private fun idleLook(player: LocalPlayer, level: ClientLevel) {
         traceLook("idle", "nothing to hit in view")
         val now = Util.getMillis()
+        // A hold on a drifting point ends a moment after a mob of the list comes into view - the time a person takes to notice - and a
+        // hold on a mob ends when it is gone, instead of running its time out on the place where it stood.
+        if (idleLookPoint != null && now < idleLookUntilMillis && ++idlePollTicks % IDLE_POLL_TICKS == 0) {
+            val seen = listedMobInView(player, level)
+            if (idleOnMob && (seen == null || seen !== idleMob)) {
+                idleLookUntilMillis = 0L
+            } else if (!idleOnMob && seen != null) {
+                if (idleNoticeAtMillis == 0L) {
+                    idleNoticeAtMillis = now + IDLE_NOTICE_MIN_MILLIS +
+                        (ThreadLocalRandom.current().nextDouble() * (IDLE_NOTICE_MAX_MILLIS - IDLE_NOTICE_MIN_MILLIS)).toLong()
+                } else if (now >= idleNoticeAtMillis) {
+                    idleLookUntilMillis = 0L
+                    diagnostics("idle look ended: mob='${MobIds.label(seen)}' came into view")
+                }
+            } else {
+                idleNoticeAtMillis = 0L
+            }
+        }
         if (idleLookPoint == null || now >= idleLookUntilMillis) {
+            idleNoticeAtMillis = 0L
             idleLookPoint = idlePoint(player, level)
             idleLookUntilMillis = now + IDLE_LOOK_MIN_MILLIS +
                 (ThreadLocalRandom.current().nextDouble() * (IDLE_LOOK_MAX_MILLIS - IDLE_LOOK_MIN_MILLIS)).toLong()
@@ -1055,16 +1089,16 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
             look.release()
             return
         }
-        look.lookAt(point)
+        look.lookAt(if (idleOnMob) idleMob?.takeIf { it.isAlive && !it.isRemoved }?.boundingBox?.center ?: point else point)
     }
 
-    /**
-     * Where the view rests with nothing to hit. A mob of the kill list that is seen and in front is looked at: it is what the
-     * player is looking for. Otherwise the view is level - a little up at most, see [IdleLook] - and drifts a few degrees either
-     * side of the way last headed, which is where the next mob most likely comes from. Never at the sky, never at the ground.
-     */
-    private fun idlePoint(player: LocalPlayer, level: ClientLevel): Vec3? {
-        val eye = player.eyePosition
+    private var idleOnMob = false
+    private var idleMob: Entity? = null
+    private var idlePollTicks = 0
+    private var idleNoticeAtMillis = 0L
+
+    /** The nearest mob of the list that is seen and no more than a view cone to the side, or null. */
+    private fun listedMobInView(player: LocalPlayer, level: ClientLevel): Entity? {
         var watched: Entity? = null
         var nearest = Double.POSITIVE_INFINITY
         for (entity in level.getEntities(player, player.boundingBox.inflate(config.scanBlocks()))) {
@@ -1078,6 +1112,19 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
                 }
             }
         }
+        return watched
+    }
+
+    /**
+     * Where the view rests with nothing to hit. A mob of the kill list that is seen and in front is looked at: it is what the
+     * player is looking for. Otherwise the view is level - a little up at most, see [IdleLook] - and drifts a few degrees either
+     * side of the way last headed, which is where the next mob most likely comes from. Never at the sky, never at the ground.
+     */
+    private fun idlePoint(player: LocalPlayer, level: ClientLevel): Vec3? {
+        val eye = player.eyePosition
+        val watched = listedMobInView(player, level)
+        idleOnMob = watched != null
+        idleMob = watched
         if (watched != null) return watched.boundingBox.center
         val random = ThreadLocalRandom.current()
         val base = if (idleHeading.isNaN()) player.yRot.toDouble() else idleHeading
@@ -1130,9 +1177,14 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
         // Rest cells painted into the area are the places to rest, and need no rest point; else the one rest point is.
         val painted = area?.paint()?.takeIf { it.restCount() > 0 }
         val point = config.restPoint
-        if (now < restBlockedUntilMillis) return false
-        if (painted == null && (!config.restEnabled || !RestPoint.configured(point))) return false
-        if (!RestPoint.due(now - idleSinceMillis, config.restDelaySeconds)) return false
+        if (now < restBlockedUntilMillis) return restWhy(now, "blocked for ${(restBlockedUntilMillis - now) / 1000}s after an unreachable spot")
+        if (painted == null && (!config.restEnabled || !RestPoint.configured(point))) {
+            return restWhy(
+                now,
+                "no rest place: paintedRestCells=${area?.paint()?.restCount() ?: -1} area='${config.paintArea}' restEnabled=${config.restEnabled} point=${if (RestPoint.configured(point)) "set" else "none"}",
+            )
+        }
+        if (!RestPoint.due(now - idleSinceMillis, config.restDelaySeconds)) return restWhy(now, "not due idleMs=${now - idleSinceMillis} delay=${one(config.restDelaySeconds)}s")
         val random = ThreadLocalRandom.current()
         val spot: BlockPos
         val source: String
@@ -1163,6 +1215,15 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
         return true
     }
 
+    /** Says why the macro is not going to rest, every two seconds at most (the log is bounded), and returns false. */
+    private fun restWhy(now: Long, reason: String): Boolean {
+        if (now >= restWhyAtMillis) {
+            restWhyAtMillis = now + REST_WHY_MILLIS
+            diagnostics("rest check: $reason")
+        }
+        return false
+    }
+
     private fun advanceRest(player: LocalPlayer) {
         val finished = restSearch ?: return
         val status = finished.step()
@@ -1181,7 +1242,12 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
     /** Whether to stop walking to the rest point: a mob has come into reach. Looked at every half second, not every tick. */
     private fun restInterrupted(player: LocalPlayer, level: ClientLevel): Boolean {
         if (++restPollTicks % REST_POLL_TICKS != 0) return false
-        return scanner.candidates(player, level, config.mobs, config.scanBlocks(), 1) { entity -> onThisSideOfGate(player, entity) }.isNotEmpty()
+        val seen = scanner.candidates(player, level, config.mobs, config.scanBlocks(), MAX_CANDIDATES) { entity -> onThisSideOfGate(player, entity) }
+        if (seen.isEmpty()) return false
+        // A mob the ground says cannot be got to does not end the walk to rest, or the walk would be begun and ended every half second.
+        val terrain = Terrain(level, player, config, area!!)
+        val start = terrain.standUnder(player) ?: return true
+        return withoutUnreachable(terrain, start, seen, max(approachNow, PLANNER_MIN_APPROACH)).isNotEmpty()
     }
 
     private fun doWalk(client: Minecraft, player: LocalPlayer, level: ClientLevel, input: WalkInput) {
@@ -1332,10 +1398,18 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
     private var offPathCount = 0
     private var offPathFirstMillis = 0L
 
+    private var backOffTicks = 0
+    private var backOffSide = 1.0f
+
     private fun routeFailed(player: LocalPlayer, level: ClientLevel, input: WalkInput, step: RouteRunner.Step) {
         input.stand(player.isInWater)
         runner.clear()
         resting = false
+        if (step == RouteRunner.Step.STUCK && stuckStrikes >= 1 && player.horizontalCollision && !player.isInWater) {
+            backOffTicks = BACK_OFF_TICKS
+            backOffSide = if (ThreadLocalRandom.current().nextBoolean()) 1.0f else -1.0f
+            diagnostics("back off from a tight place ticks=$backOffTicks strikes=$stuckStrikes")
+        }
         val current = target
         val now = Util.getMillis()
         if (step == RouteRunner.Step.OFF_PATH) {
@@ -1379,6 +1453,7 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
     }
 
     private fun beginEngage() {
+        idleSinceMillis = 0L
         runner.clear()
         stuckStrikes = 0
         finisherReadyMillis = 0L
@@ -1616,13 +1691,18 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
             plan = found
             return found
         }
-        val ordered = planFor(player, found, costs)
+        // The stretches of ground the mobs stand on: one is cleared before the next is gone to.
+        val segments = SegmentRules.cluster(
+            DoubleArray(found.size) { found[it].x }, DoubleArray(found.size) { found[it].y }, DoubleArray(found.size) { found[it].z }, costs,
+        )
+        val ordered = planFor(player, found, costs, segments)
         // The search gets the few best mobs and picks the one cheapest to reach: the first three of the plan, or for the nearest-first
         // default with no view cone the three that cost least by distance and neighbours.
         val few = if (config.targetPattern == TargetPattern.NEAREST && config.viewCone <= 0.0) {
             TargetPlanner.nearestFirst(
-                found.mapIndexed { i, it -> TargetPlanner.Mob(it, it.x, it.z, it.y, costs?.getOrNull(i) ?: Double.NaN) },
+                found.mapIndexed { i, it -> TargetPlanner.Mob(it, it.x, it.z, it.y, costs?.getOrNull(i) ?: Double.NaN, segments[i]) },
                 player.x, player.z, player.y, GOAL_PLANNED,
+                found.indices.minByOrNull { player.distanceToSqr(found[it]) }?.let { segments[it] } ?: -1,
             ).map { it.item }
         } else {
             ordered.take(GOAL_PLANNED)
@@ -1648,14 +1728,14 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
     }
 
     /** Plans the tour over these mobs from the player, and keeps it while it is still about as good. */
-    private fun planFor(player: LocalPlayer, found: List<Entity>, costs: DoubleArray? = null): List<Entity> {
+    private fun planFor(player: LocalPlayer, found: List<Entity>, costs: DoubleArray? = null, segments: IntArray? = null): List<Entity> {
         val motion = player.deltaMovement
         val heading = if (motion.x * motion.x + motion.z * motion.z > 0.0025) {
             Math.toDegrees(atan2(-motion.x, motion.z))
         } else {
             player.yRot.toDouble()
         }
-        val mobs = found.mapIndexed { i, it -> TargetPlanner.Mob(it, it.x, it.z, it.y, costs?.getOrNull(i) ?: Double.NaN) }
+        val mobs = found.mapIndexed { i, it -> TargetPlanner.Mob(it, it.x, it.z, it.y, costs?.getOrNull(i) ?: Double.NaN, segments?.getOrNull(i) ?: -1) }
         val made = TargetPlanner.plan(
             config.targetPattern, mobs, player.x, player.z, heading, ThreadLocalRandom.current(), plan.takeIf { it.isNotEmpty() },
             config.viewCone, player.y,
@@ -1664,7 +1744,7 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
         diagnostics(
             "plan order=[${plan.take(TargetPlanner.DEPTH).joinToString(",") { MobIds.label(it) }}] cost=${one(made.cost)} " +
                 "turn=${one(made.turnDegrees)} ${if (made.kept) "kept" else "replanned"} pattern=${config.targetPattern.name} " +
-                "candidates=${found.size} inView=${inView(player, plan)} behind=${plan.size - inView(player, plan)}",
+                "candidates=${found.size} inView=${inView(player, plan)} behind=${plan.size - inView(player, plan)} segments=${segments?.let { (it.maxOrNull() ?: -1) + 1 } ?: 0}",
         )
         return plan
     }
@@ -2043,6 +2123,7 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
         idleSinceMillis = 0L
         restWanderAtMillis = 0L
         restBlockedUntilMillis = 0L
+        backOffTicks = 0
         routeHeight.reset()
         clearNext()
         prepared = null
@@ -2088,12 +2169,28 @@ class AreaKillerMacro private constructor(private val config: AreaKillerConfig) 
         private const val KEEP_END_DISTANCE = 2.0
         private const val EMPTY_SCAN_PAUSE_MILLIS = 400L
 
+        /** The pause after the mobs tried could not be got to: short, because other mobs may be waiting. */
+        private const val FAILED_SEARCH_PAUSE_MILLIS = 100L
+
+        /** How much higher than the best jump a mob has to be for the way up to be a teleport, not a walk. */
+        private const val LEDGE_EXTRA = 0.5
+
         /** A route point nearer than this, flat, is not looked at: see [steerView]. */
         private const val NEAR_LOOK_BLOCKS = 2.5
 
         /** After a rest spot that could not be got to, how long before the next try, and how often a walk to one is checked for a mob in reach. */
         private const val REST_RETRY_MILLIS = 15_000L
         private const val REST_POLL_TICKS = 10
+
+        /** How often a held idle look checks for a mob coming into view, in ticks, and how long a person takes to notice one. */
+        private const val IDLE_POLL_TICKS = 4
+        private const val IDLE_NOTICE_MIN_MILLIS = 150L
+        private const val IDLE_NOTICE_MAX_MILLIS = 350L
+        private const val REST_WHY_MILLIS = 2_000L
+
+        /** Getting off a corner: this many ticks of walking back and a little to one side, at this angle off straight back. */
+        private const val BACK_OFF_TICKS = 7
+        private const val BACK_OFF_DEGREES = 40.0f
 
         /** How long a target that cannot be reached is left alone. */
 

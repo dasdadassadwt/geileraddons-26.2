@@ -13,6 +13,13 @@ repositories {
 		url = uri("https://repo.hypixel.net/repository/Hypixel/")
 	}
 	maven {
+		name = "AzureAaron"
+		url = uri("https://maven.azureaaron.net/releases")
+		content {
+			includeGroup("net.azureaaron")
+		}
+	}
+	maven {
 		name = "Modrinth"
 		url = uri("https://api.modrinth.com/maven")
 	}
@@ -46,6 +53,9 @@ dependencies {
 	annotationProcessor("io.github.llamalad7:mixinextras-common:0.5.4")
 	implementation("net.hypixel:mod-api:${providers.gradleProperty("hypixel_mod_api_version").get()}")
 	runtimeOnly("maven.modrinth:hypixel-mod-api:${providers.gradleProperty("hypixel_mod_api_fabric_version").get()}")
+	// Skyblocker item value calculator (Apache-2.0), bundled into the mod jar.
+	implementation("net.azureaaron:networth-calculator:1.0.5")
+	include("net.azureaaron:networth-calculator:1.0.5")
 }
 
 tasks.processResources {

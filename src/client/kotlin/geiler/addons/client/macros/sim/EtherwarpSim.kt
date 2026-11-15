@@ -126,7 +126,25 @@ object EtherwarpSim {
     private class Probes(private val level: ClientLevel) {
         private val pos = BlockPos.MutableBlockPos()
 
+        /**
+         * What a cell is, read from the world once per game tick: the planners trace hundreds of rays through the same cells, and a
+         * block state and its collision shape are not free. A cell that changes within a tick is read again in the next.
+         */
         fun flags(x: Int, y: Int, z: Int): Int {
+            if (Memo.level !== level || Memo.time != level.gameTime || Memo.cells.size > Memo.LIMIT) {
+                Memo.level = level
+                Memo.time = level.gameTime
+                Memo.cells.clear()
+            }
+            val key = BlockPos.asLong(x, y, z)
+            val known = Memo.cells.get(key)
+            if (known != Memo.UNKNOWN) return known
+            val flags = read(x, y, z)
+            Memo.cells.put(key, flags)
+            return flags
+        }
+
+        private fun read(x: Int, y: Int, z: Int): Int {
             if (y < level.minY || y >= level.maxY) return EtherwarpMath.PASSABLE
             pos.set(x, y, z)
             val state = level.getBlockState(pos)
@@ -145,6 +163,15 @@ object EtherwarpSim {
             val offset = if (empty) 1 else EtherwarpMath.standOffset(shape.max(Direction.Axis.Y))
             return flags or (offset shl EtherwarpMath.STAND_SHIFT)
         }
+    }
+
+    /** The cells read this tick, see [Probes.flags]. */
+    private object Memo {
+        const val UNKNOWN = Int.MIN_VALUE
+        const val LIMIT = 300_000
+        var level: ClientLevel? = null
+        var time = Long.MIN_VALUE
+        val cells = it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap().also { map -> map.defaultReturnValue(UNKNOWN) }
     }
 
     /** The pitch of the ender dragon hurt sound Hypixel's etherwarp plays. */

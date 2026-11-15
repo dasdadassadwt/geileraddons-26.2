@@ -18,6 +18,8 @@ class DungeonQuizTracker {
     private var currentQuestion: String? = null
     private var currentAcceptedAnswers: List<String> = java.util.List.of()
     private var currentConfirmedOption: DungeonQuizRules.ConfirmedOption? = null
+    private var awaitingQuestionLine = false
+    private var unmatched: String? = null
     private var currentTimerTicks = 0
     private var currentTimerMaximumTicks = 0
     private var currentTimerStage = 0
@@ -59,11 +61,25 @@ class DungeonQuizTracker {
             currentConfirmedOption = option
             return
         }
-        val observed = DungeonQuizRulesCore.observedQuestion(rawLine, true, inPuzzleRoom, active)
+        if (DungeonQuizRulesCore.isQuestionHeader(rawLine)) {
+            // Hypixel prints "Question #N" and then the unprefixed question; room detection is not needed.
+            active = true
+            awaitingQuestionLine = true
+            return
+        }
+        val afterHeader = awaitingQuestionLine && rawLine.isNotBlank()
+        if (afterHeader) awaitingQuestionLine = false
+        val observed = DungeonQuizRulesCore.observedQuestion(rawLine, true, inPuzzleRoom || afterHeader, active)
         if (observed != null) {
             active = true
             currentQuestion = observed
             currentAcceptedAnswers = DungeonQuizRulesCore.acceptedAnswers(observed, epochSeconds)
+            currentConfirmedOption = null
+            unmatched = null
+        } else if (afterHeader) {
+            unmatched = DungeonQuizRulesCore.visibleLine(rawLine).take(120)
+            currentQuestion = null
+            currentAcceptedAnswers = java.util.List.of()
             currentConfirmedOption = null
         }
     }
@@ -89,6 +105,9 @@ class DungeonQuizTracker {
     fun conversationActive(): Boolean = active
     fun acceptedAnswers(): List<String> = currentAcceptedAnswers
     fun confirmedOption(): DungeonQuizRules.ConfirmedOption? = currentConfirmedOption
+
+    /** Last header-announced question the catalog could not match; surfaced in diagnostics so data gaps are visible. */
+    fun unmatchedQuestion(): String? = unmatched
     fun timerTicks(): Int = currentTimerTicks
     fun timerMaximumTicks(): Int = currentTimerMaximumTicks
     fun timerStage(): Int = currentTimerStage
@@ -98,6 +117,8 @@ class DungeonQuizTracker {
         currentQuestion = null
         currentAcceptedAnswers = java.util.List.of()
         currentConfirmedOption = null
+        awaitingQuestionLine = false
+        unmatched = null
         currentTimerTicks = 0
         currentTimerMaximumTicks = 0
         currentTimerStage = 0

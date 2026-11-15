@@ -582,7 +582,13 @@ class DungeonOdinPuzzleObserverCore {
             null -> "none"
             else -> "unknown"
         }
-        val summary = "stage=${quizTracker.timerStage()};question=${if (quizTracker.question() == null) "unknown" else "known"};" +
+        val unmatched = quizTracker.unmatchedQuestion()
+        val questionLabel = when {
+            quizTracker.question() != null -> "known"
+            unmatched != null -> "unmatched[$unmatched]"
+            else -> "unknown"
+        }
+        val summary = "stage=${quizTracker.timerStage()};question=$questionLabel;" +
             "acceptedAnswers=${quizTracker.acceptedAnswers().size};option=$optionLabel;chatStyle=$quizChatStyleDiagnostic;" +
             "visual=$quizVisualDiagnostic"
         return boundedDiagnostic(summary, 220)

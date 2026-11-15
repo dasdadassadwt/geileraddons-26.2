@@ -2,6 +2,7 @@ package geiler.addons.client.module.impl;
 
 import geiler.addons.client.inventory.ItemBackgrounds;
 import geiler.addons.client.inventory.SkyblockRarity;
+import geiler.addons.client.inventory.SlotInfoGrace;
 import geiler.addons.client.module.BooleanSetting;
 import geiler.addons.client.module.Category;
 import geiler.addons.client.module.ChoiceSetting;
@@ -19,6 +20,8 @@ public final class SlotItemOverlayChecks {
 		checkRarityColorsAndFill();
 		checkJacobAndShapes();
 		checkRarityModule();
+		checkSlotGrace();
+		checkIdMemory();
 		checkBatchedDrawing();
 		checkInvincibilityFill();
 		checkNoCursorReset();
@@ -85,6 +88,56 @@ public final class SlotItemOverlayChecks {
 			row = runs[i + 1];
 		}
 		check(row == 16 && runs.length / 3 < 16, "the disc is drawn with fewer than 16 rectangles");
+	}
+
+	/** A slot whose stack briefly arrives without SkyBlock data keeps its last background for a short grace. */
+	private static void checkSlotGrace() {
+		SlotInfoGrace<String> grace = new SlotInfoGrace<>(30L);
+		ItemBackgrounds.StackInfo epic = new ItemBackgrounds.StackInfo("HELM", SkyblockRarity.EPIC, -1, false);
+		ItemBackgrounds.StackInfo blank = new ItemBackgrounds.StackInfo("", null, -1, false);
+		check(grace.resolve("head", "helmet", epic, 100L) == epic, "a stack with a background is used as is");
+		check(grace.resolve("head", "helmet", blank, 110L) == epic && grace.getUsed() == 1,
+			"the same item arriving without data keeps the old background");
+		check(grace.resolve("head", "helmet", blank, 130L) == epic, "the grace runs from the last good sighting");
+		check(grace.resolve("head", "helmet", blank, 131L) == blank, "after the grace the blank stack shows no background");
+		check(grace.resolve("head", "helmet", blank, 132L) == blank, "an expired memo is not revived");
+		grace.resolve("chest", "plate", epic, 200L);
+		check(grace.resolve("chest", "boots", blank, 201L) == blank, "a different item never inherits the memo");
+		grace.resolve("legs", "pants", epic, 300L);
+		check(grace.resolve("other", "pants", blank, 301L) == blank, "a memo belongs to its slot");
+		grace.clear();
+		check(grace.resolve("legs", "pants", blank, 302L) == blank, "clear forgets every memo");
+	}
+
+	/** A stripped stack (SkyBlock id, no lore) takes the rarity last seen on a full stack of the same id. */
+	private static void checkIdMemory() {
+		ItemBackgrounds.clearMemory();
+		ItemBackgrounds.StackInfo stripped = new ItemBackgrounds.StackInfo("LEATHER_HELM", null, -1, false);
+		check(ItemBackgrounds.rememberRarity("LEATHER_HELM", false, stripped) == stripped
+			&& ItemBackgrounds.isUnresolved("LEATHER_HELM", false, stripped), "an unknown id stays blank and unresolved");
+		ItemBackgrounds.StackInfo full = new ItemBackgrounds.StackInfo("LEATHER_HELM", SkyblockRarity.EPIC, -1, false);
+		check(ItemBackgrounds.rememberRarity("LEATHER_HELM", true, full) == full && ItemBackgrounds.idMemorySize() == 1,
+			"a full stack is returned as is and its rarity is remembered");
+		ItemBackgrounds.StackInfo filled = ItemBackgrounds.rememberRarity("LEATHER_HELM", false,
+			new ItemBackgrounds.StackInfo("LEATHER_HELM", null, -1, true));
+		check(filled.getRarity() == SkyblockRarity.EPIC && filled.getHasAttributes() && filled.getSkyblockId().equals("LEATHER_HELM")
+			&& ItemBackgrounds.idFallbackUsed() == 1, "a stripped stack gets the remembered rarity and keeps its own data");
+		check(ItemBackgrounds.rememberRarity("LEATHER_HELM", true, stripped) == stripped,
+			"a stack with lore but no rarity word never takes the remembered rarity");
+		check(!ItemBackgrounds.isUnresolved("LEATHER_HELM", false, filled) && !ItemBackgrounds.isUnresolved("LEATHER_HELM", true, stripped)
+			&& !ItemBackgrounds.isUnresolved("", false, stripped), "only a stripped stack with an id counts as unresolved");
+		ItemBackgrounds.StackInfo pet = new ItemBackgrounds.StackInfo("PET", SkyblockRarity.LEGENDARY, -1, false);
+		ItemBackgrounds.rememberRarity("PET", true, pet);
+		ItemBackgrounds.StackInfo blankPet = new ItemBackgrounds.StackInfo("PET", null, -1, false);
+		check(ItemBackgrounds.rememberRarity("PET", false, blankPet) == blankPet
+			&& ItemBackgrounds.rememberRarity("", true, full) == full && ItemBackgrounds.idMemorySize() == 1,
+			"pets and blank ids are never remembered by id");
+		for (int i = 0; i < 1500; i++) {
+			ItemBackgrounds.rememberRarity("ID_" + i, true, new ItemBackgrounds.StackInfo("ID_" + i, SkyblockRarity.RARE, -1, false));
+		}
+		check(ItemBackgrounds.idMemorySize() <= 512, "the id memory is bounded");
+		ItemBackgrounds.clearMemory();
+		check(ItemBackgrounds.idMemorySize() == 0 && ItemBackgrounds.idFallbackUsed() == 0, "clearMemory forgets every id");
 	}
 
 	private static void checkRarityModule() {

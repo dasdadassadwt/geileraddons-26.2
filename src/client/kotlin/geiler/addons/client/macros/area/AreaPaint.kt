@@ -233,25 +233,33 @@ object PaintBrush {
         val area = current.area
         val r = current.radius
         val terrain = Terrain(level, player, MacroRuntime.config)
+        val stands = standsAround(terrain, centre, r)
+        val reference = BrushLevel.reference(stands, centre.x, centre.y, centre.z)
         var changed = 0
-        for (dx in -r..r) for (dz in -r..r) {
-            if (dx * dx + dz * dz > r * r) continue
-            val x = centre.x + dx
-            val z = centre.z + dz
-            for (y in centre.y - r - 1..centre.y + r + 1) {
-                if (current.paint == null) {
-                    if (area.typeAt(x, y, z) != null) {
-                        area.erase(x, y, z)
+        if (current.paint == null) {
+            // Erasing works on the same level as painting: the cells of the disc within a cell of the reference's height.
+            val levelY = reference?.y ?: centre.y
+            for (dx in -r..r) for (dz in -r..r) {
+                if (dx * dx + dz * dz > r * r) continue
+                for (y in levelY - BrushLevel.TOLERANCE..levelY + BrushLevel.TOLERANCE) {
+                    if (area.typeAt(centre.x + dx, y, centre.z + dz) != null) {
+                        area.erase(centre.x + dx, y, centre.z + dz)
                         changed++
                     }
-                    continue
                 }
-                val stand = terrain.standAt(x, y, z) ?: continue
+            }
+        } else {
+            val chosen = BrushLevel.select(stands, reference)
+            for (stand in chosen) {
                 if (area.size() >= PaintedArea.MAX_CELLS) break
                 val before = area.revision()
-                area.put(x, y, z, current.paint, ((stand.floorY - y) * 8.0).roundToInt().coerceIn(0, 8))
+                area.put(stand.x, stand.y, stand.z, current.paint, ((stand.floorY - stand.y) * 8.0).roundToInt().coerceIn(0, 8))
                 if (area.revision() != before) changed++
             }
+            PaintStore.event(
+                "brush level aim=${centre.x},${centre.y},${centre.z} candidates=${stands.size} reference=" +
+                    (reference?.let { "${it.x},${it.y},${it.z}" } ?: "none") + " painted=${chosen.size}",
+            )
         }
         if (changed > 0) {
             PaintStore.touched(area)
@@ -261,6 +269,35 @@ object PaintBrush {
             client.gui.hud.getChat().addClientSystemMessage(Component.literal("§6[Area] §rThe area '${area.name}' is full (${PaintedArea.MAX_CELLS} cells)"))
         }
         return true
+    }
+
+    /** Every stand of the disc within a few cells of the aim's height: what [BrushLevel] picks the level and the cells from. */
+    private fun standsAround(terrain: Terrain, centre: BlockPos, r: Int): List<BrushLevel.Stand> {
+        val found = ArrayList<BrushLevel.Stand>()
+        val span = BrushLevel.AIM_REACH + BrushLevel.TOLERANCE
+        for (dx in -r..r) for (dz in -r..r) {
+            if (dx * dx + dz * dz > r * r) continue
+            for (y in centre.y - span..centre.y + span) {
+                val stand = terrain.standAt(centre.x + dx, y, centre.z + dz) ?: continue
+                found.add(BrushLevel.Stand(centre.x + dx, y, centre.z + dz, stand.floorY))
+            }
+        }
+        return found
+    }
+
+    /** The feet cell height the brush paints at when clicked now, for drawing its ring; null with no ground at the aim. */
+    @JvmStatic
+    fun levelY(client: Minecraft, centre: BlockPos): Int? {
+        val player = client.player ?: return null
+        val level = client.level ?: return null
+        val terrain = Terrain(level, player, MacroRuntime.config)
+        val column = ArrayList<BrushLevel.Stand>()
+        val span = BrushLevel.AIM_REACH
+        for (y in centre.y - span..centre.y + span) {
+            val stand = terrain.standAt(centre.x, y, centre.z) ?: continue
+            column.add(BrushLevel.Stand(centre.x, y, centre.z, stand.floorY))
+        }
+        return BrushLevel.reference(column, centre.x, centre.y, centre.z)?.y
     }
 
     const val MAX_RADIUS = 16

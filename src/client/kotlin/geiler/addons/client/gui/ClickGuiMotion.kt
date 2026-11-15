@@ -44,6 +44,13 @@ enum class ClickGuiMotion(
         return 1.0f - Math.pow((1.0f - clamped).toDouble(), 5.0).toFloat()
     }
 
+    /** Entrance progress of grid card [index], [elapsedMillis] after its view appeared; only the first six cards stagger. */
+    fun cardEntrance(index: Int, elapsedMillis: Long): Float {
+        if (this == NONE) return 1.0f
+        val delayed = elapsedMillis - Math.min(index, 5) * cardStaggerMillis()
+        return ease(delayed.toFloat() / Math.max(1, transitionMillis()))
+    }
+
     /** Close-only quadratic ease-out; unlike the opening profile it has no spring or long tail. */
     fun closeEase(progress: Float): Float {
         val clamped = clamp(progress)

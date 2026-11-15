@@ -86,7 +86,7 @@ public final class PartyCommandsModuleChecks {
                 "reply editor actions retain their labels and descriptions");
 
             List<SettingGroup> groups = module.groups();
-            check(groups.size() == 8
+            check(groups.size() == 7
                 && groups.subList(0, 2).stream().map(SettingGroup::name).toList()
                     .equals(List.of("Replies", "Incoming Reply Channels"))
                 && groups.get(0).settings().equals(List.of(
@@ -98,9 +98,14 @@ public final class PartyCommandsModuleChecks {
             check("Preset Commands".equals(groups.get(2).name())
                 && groups.get(2).settings().equals(List.copyOf(PartyCommandsModule.presetToggles())),
                 "built-in party presets are listed as visible per-command toggles before the custom library");
-            equals0(List.of("Add Reply", "Allowlist (needed for remote actions)", "Blocklist", "Reply Folders"),
-                groups.subList(3, 7).stream().map(SettingGroup::name).toList());
-            SettingGroup library = groups.get(7);
+            equals0(List.of("Add Reply", "Blocklist", "Reply Folders"),
+                groups.subList(3, 6).stream().map(SettingGroup::name).toList());
+            SettingGroup library = groups.get(6);
+            SettingGroup blocklist = groups.get(4);
+            check("party-command-blocklist".equals(blocklist.stateKey()) && blocklist.toggle() != null
+                && blocklist.settings().stream().map(geiler.addons.client.module.Setting::name).toList()
+                    .equals(List.of("Player Name", "Block")),
+                "the blocklist is a switched group with a Player Name field and a Block button, then one row per name");
             check("Custom Reply Library".equals(library.name())
                 && "party-command-library".equals(library.stateKey())
                 && library.toggle() == null
@@ -114,9 +119,9 @@ public final class PartyCommandsModuleChecks {
             List<SettingGroup> repeatedGroups = module.groups();
             check(groups.get(0) == repeatedGroups.get(0) && groups.get(1) == repeatedGroups.get(1),
                 "static group instances remain stable across dynamic library refreshes");
-            assertSameDynamicControls(library, repeatedGroups.get(7));
+            assertSameDynamicControls(library, repeatedGroups.get(6));
             module.refreshReplySettings();
-            SettingGroup refreshedLibrary = module.groups().get(7);
+            SettingGroup refreshedLibrary = module.groups().get(6);
             assertLibraryMatchesStore(refreshedLibrary, store, prefix.value());
             assertDifferentDynamicControls(library, refreshedLibrary);
 

@@ -44,27 +44,30 @@ object ChatCommandReplyBackend {
             store.enabledChatReplies(),
             store.rules(),
         ).orElse(null) ?: return
-        if (!module.allowsIncomingReply(request.channel()!!) || !module.presetEnabled(request.command())) return
-        if (sameIgnoreCase(request.sender(), localName(client)) ||
-            !ChatReplyCommandRules.senderAllowed(
+        if (!module.allowsIncomingReply(request.channel()!!)) return
+        if (!module.presetEnabled(request.command())) {
+            module.recordRequestDropped("preset_off command=${request.command()!!.name}")
+            return
+        }
+        if (sameIgnoreCase(request.sender(), localName(client))) return
+        if (!ChatReplyCommandRules.senderAllowed(
                 request.sender(),
-                store.replyAllowlistEnabled(),
-                store.replyAllowlist(),
+                false,
+                emptyList(),
                 store.replyBlocklistEnabled(),
                 store.replyBlocklist(),
             )
-        ) return
+        ) {
+            module.recordRequestDropped("sender_blocked command=${request.command()!!.name}")
+            return
+        }
 
         val party = PartyListBackend.snapshot()
-        val freshParty = PartyListBackend.hasFreshSnapshot() && party.inParty()
-        if (request.channel()!!.equals(ChatChannel.PARTY) &&
-            (!freshParty || !containsMember(party, request.sender()))
-        ) return
         if (ChatReplyCommandRules.isRemotePartyAction(request.command()) &&
             !ChatReplyCommandRules.remotePartyActionAllowed(
                 request,
-                store.replyAllowlistEnabled(),
-                store.replyAllowlist(),
+                false,
+                emptyList(),
                 store.replyBlocklistEnabled(),
                 store.replyBlocklist(),
             )
@@ -75,8 +78,8 @@ object ChatCommandReplyBackend {
             )
             return
         }
-        if (ChatReplyCommandRules.requiresPartyLeader(request.command()) &&
-            (!freshParty || !party.isLeader(localName(client)))
+        if (ChatReplyCommandRules.requiresPartyLeader(request.command()) && party.inParty() &&
+            party.leaderName() != null && !party.isLeader(localName(client))
         ) {
             module.recordPartyActionDiagnostic(
                 request.command()!!,
@@ -142,8 +145,8 @@ object ChatCommandReplyBackend {
         if (sameIgnoreCase(request.sender(), localPlayerName) ||
             !ChatReplyCommandRules.senderAllowed(
                 request.sender(),
-                store.replyAllowlistEnabled(),
-                store.replyAllowlist(),
+                false,
+                emptyList(),
                 store.replyBlocklistEnabled(),
                 store.replyBlocklist(),
             )
@@ -151,8 +154,8 @@ object ChatCommandReplyBackend {
         if (ChatReplyCommandRules.isRemotePartyAction(request.command()) &&
             !ChatReplyCommandRules.remotePartyActionAllowed(
                 request,
-                store.replyAllowlistEnabled(),
-                store.replyAllowlist(),
+                false,
+                emptyList(),
                 store.replyBlocklistEnabled(),
                 store.replyBlocklist(),
             )
@@ -165,19 +168,6 @@ object ChatCommandReplyBackend {
         }
         if (!ChatReplyCommandRules.privateReplyRecipientMatches(request, privateCounterpart)) return
         val party = PartyListBackend.snapshot()
-        if (request.channel()!!.equals(ChatChannel.PARTY)) {
-            if (!PartyListBackend.hasFreshSnapshot() || !party.inParty() ||
-                party.generation() != queued.partyGeneration || !containsMember(party, request.sender())
-            ) {
-                if (ChatReplyCommandRules.isPartyAction(request.command())) {
-                    module.recordPartyActionDiagnostic(
-                        request.command()!!,
-                        PartyCommandsModule.PartyActionDiagnosticOutcome.BLOCKED_PARTY_OR_LEADER_OR_TARGET,
-                    )
-                }
-                return
-            }
-        }
 
         if (request.command() == ChatReplyCommandRules.Command.CUSTOM_REPLY) {
             val activePrefix = ChatReplyCommandRules.normalizePrefix(module.commandPrefix().value())
@@ -239,12 +229,7 @@ object ChatCommandReplyBackend {
             else -> throw NoWhenBranchMatchedException()
         }
         val command = if (ChatReplyCommandRules.isPartyAction(request.command())) {
-            ChatReplyCommandRules.partyActionCommand(
-                request,
-                party,
-                PartyListBackend.hasFreshSnapshot(),
-                localPlayerName,
-            ).orElse(null)
+            ChatReplyCommandRules.incomingPartyActionCommand(request, party, localPlayerName).orElse(null)
         } else if (request.command() == ChatReplyCommandRules.Command.PRIVATE_INVITE) {
             ChatReplyCommandRules.privateInviteCommand(request).orElse(null)
         } else {
@@ -404,11 +389,6 @@ object ChatCommandReplyBackend {
 
     private fun sameIgnoreCase(first: String?, second: String?): Boolean =
         first != null && second != null && first.equals(second, ignoreCase = true)
-
-    private fun containsMember(party: PartySnapshot?, playerName: String?): Boolean =
-        party != null && playerName != null && party.members().any { member ->
-            member != null && sameIgnoreCase(member.name(), playerName)
-        }
 
     private data class Pending(
         val request: ChatReplyCommandRules.Request,

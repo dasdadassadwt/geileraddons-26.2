@@ -144,7 +144,8 @@ class PathfinderModule private constructor(private val c: Carrier) : Module(
         k.pathRandomness = c.randomness.high().toDouble()
         k.waypointSpacing = c.waypointSpacing.value().toDouble()
         k.offCentre = c.offCentre.value().toDouble()
-        k.useRouteMap = c.routeMap.rawValue()
+        // The Area Killer chooses and prunes its targets from the map of the ground, so it has the map whatever this switch says.
+        k.useRouteMap = c.routeMap.rawValue() || AreaKillerMacro.isRunning()
         k.saveWorld = c.saveWorld.rawValue()
         k.learnArea = c.learnArea.rawValue()
         k.normalize()
@@ -222,7 +223,7 @@ class PathfinderModule private constructor(private val c: Carrier) : Module(
             "Route randomness" to "How far the whole route is shifted sideways, up to 0.3 of a block at 100, and how much give there is in when the jump key goes down.",
             "Waypoint every" to "The longest stretch between two waypoints of a route, in blocks; a longer straight stretch is divided.",
             "Waypoints off centre" to "How far the waypoints are moved off the middle of their blocks, up to 0.45 of a block at 100.",
-            "Route map" to "Keep a map of the walkable ground around the player: what cannot be reached is known without a search, and searches are guided by the real cost to a few far places. Used by the Area Killer.",
+            "Route map" to "Keep a map of the walkable ground around the player: what cannot be reached is known without a search, and searches are guided by the real cost to a few far places. The Area Killer always uses it.",
             "Save world" to "Keep what has been read of the world on disk, per server and dimension, and plan with it where the world is not loaded. Used while the Area Killer runs.",
             "Learn area" to "Places where the walker got stuck cost the planner more from then on, and are forgiven bit by bit when walked through without trouble. Used while the Area Killer runs.",
         )

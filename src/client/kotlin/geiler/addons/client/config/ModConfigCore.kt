@@ -10,6 +10,7 @@ import geiler.addons.client.enchanting.AutoExperimentDelayRange
 import geiler.addons.client.hud.HudManager
 import geiler.addons.client.location.Island
 import geiler.addons.client.macros.config.MacroWorkspaceConfig
+import geiler.addons.client.waypoint.WaypointStore
 import geiler.addons.client.macro.MacroDefinition
 import geiler.addons.client.macro.MacroFunction
 import geiler.addons.client.macro.MacroRunner
@@ -116,6 +117,11 @@ object ModConfigCore {
         // The Macros workspace has its own file; its modules are not part of config.json.
         MacroWorkspaceConfig.load()
         val migratedLegacyChatHud = ModConfigMigrations.migrateLegacyChatHud(data.enabled, data.toggles)
+        val migratedChatWaypoints = ModConfigMigrations.migrateChatWaypointSplit(
+            data.enabled, data.toggles, data.colors, data.numbers,
+        )
+        val legacyShowNames = ModConfigMigrations.takeLegacyWaypointShowNames(data.toggles)
+        if (legacyShowNames == false) WaypointStore.setAllShowText(false)
         val migratedDungeonMapSettings = DungeonRoomOverlaySettingsMigration.migrate(
             legacyMutableMapView(data.toggles), legacySetView(data.migrations),
             DungeonRoomOverlayModule.INSTANCE.configName(),
@@ -254,7 +260,7 @@ object ModConfigCore {
         loadMacros(data)
         loadInventoryButtons(data)
         loadUiState(data)
-        if (migratedLegacyChatHud || migratedDungeonMapSettings || migratedLegacyTimer || migratedLegacyPresentation ||
+        if (migratedChatWaypoints || legacyShowNames != null || migratedLegacyChatHud || migratedDungeonMapSettings || migratedLegacyTimer || migratedLegacyPresentation ||
             migratedSecretSettings || migratedDungeonSettings || migratedBloodCampSettings || migratedDefaultTheme ||
             migratedDungeonSplitTiming || migratedDungeonMobEspKeybind || migratedRoomAlertSounds ||
             migratedDungeonRoomMapStyle || migratedDungeonHudPosition || migratedIconColor

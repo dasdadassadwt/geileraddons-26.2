@@ -249,6 +249,8 @@ public final class DungeonBloodCampModuleChecks {
 			&& timeColor(module, 0.0f) == 0xFFFF5555
 			&& timeColor(module, -0.001f) == 0xFF55FFFF,
 			"rendered timer labels retain green, amber, red, and expired-color boundaries");
+		check(DungeonBloodCampModule.HUD_SCALE == 1.0f,
+			"the Blood Camp time label is projected HUD text at the real font scale, not vector strokes");
 	}
 
 	private static int timeColor(DungeonBloodCampModule module, float seconds) {

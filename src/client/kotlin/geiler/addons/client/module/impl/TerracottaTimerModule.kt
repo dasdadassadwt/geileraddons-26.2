@@ -1,16 +1,15 @@
 package geiler.addons.client.module.impl
 
 import geiler.addons.client.dungeon.DungeonContextTracker
-import geiler.addons.client.render.EspRenderer
-import geiler.addons.client.render.GeilerAddonsRenderTypes
-import geiler.addons.client.render.WorldRenderBuffer
+import geiler.addons.client.render.ProjectedLabelRenderer
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.Module
-import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext
 import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.core.BlockPos
 import net.minecraft.world.level.block.FlowerPotBlock
 import net.minecraft.world.level.block.state.BlockState
+import net.minecraft.world.phys.Vec3
 import java.util.Locale
 
 /** Pure rules of the Terracotta respawn timers: seconds counted in server ticks, and the countdown color. */
@@ -19,6 +18,8 @@ object TerracottaTimerRules {
     const val NORMAL_SECONDS = 15f
     const val MASTER_SECONDS = 12f
     const val FLOOR = 6
+    /** Real-font scale for the projected label; 1.0 matches Tiki Helper's default text size. */
+    const val HUD_SCALE = 1.0f
     private const val GREEN = 0xFF55FF55.toInt()
     private const val GOLD = 0xFFFFAA00.toInt()
     private const val RED = 0xFFFF5555.toInt()
@@ -55,6 +56,7 @@ class TerracottaTimerModule private constructor() : Module(
     private val timers = ArrayList<Timer>()
     private var started = 0L
     private val diagnostics = ModuleDiagnostics(Category.F7, { name() }, 8, 100L, 300)
+    private var hudDrawn = 0
 
     override fun onEnable() {
         started = 0L
@@ -92,32 +94,27 @@ class TerracottaTimerModule private constructor() : Module(
         val now = serverTicks()
         timers.removeAll { TerracottaTimerRules.remainingSeconds(it.totalSeconds, now - it.startServerTicks) <= 0f }
         if (!inBoss() && timers.isNotEmpty()) timers.clear()
-        diagnostics.status { "enabled=true active=${timers.size} started=$started inBoss=${inBoss()} suppressedEvents=$it" }
+        diagnostics.status { "enabled=true active=${timers.size} started=$started inBoss=${inBoss()} hudLabels=$hudDrawn suppressedEvents=$it" }
     }
 
-    fun render(context: LevelRenderContext) {
+    /** HUD element `terracotta_labels`: real-font text projected above each pot, like Tiki Helper's labels. */
+    fun renderHud(graphics: GuiGraphicsExtractor) {
         if (!isEnabled() || timers.isEmpty() || !inBoss() || !floorSix()) return
-        val client = Minecraft.getInstance()
-        val camera = client.gameRenderer.mainCamera().position()
-        val rotation = client.gameRenderer.mainCamera().rotation()
-        val pose = context.poseStack()
-        val buffers = WorldRenderBuffer.current()
+        val mc = Minecraft.getInstance()
+        val camera = mc.gameRenderer.mainCamera()
         val now = serverTicks()
+        var drawn = 0
         for (timer in timers) {
             val seconds = TerracottaTimerRules.remainingSeconds(timer.totalSeconds, now - timer.startServerTicks)
             if (seconds <= 0f) continue
-            EspRenderer.renderLabel(
-                pose, buffers, rotation,
-                timer.pos.x + 0.5 - camera.x, timer.pos.y + 0.5 - camera.y, timer.pos.z + 0.5 - camera.z,
-                TerracottaTimerRules.label(seconds), TerracottaTimerRules.color(seconds), LABEL_HEIGHT, LABEL_LINE_WIDTH,
-            )
+            val world = Vec3(timer.pos.x + 0.5, timer.pos.y + 0.5, timer.pos.z + 0.5)
+            if (ProjectedLabelRenderer.draw(graphics, camera, mc.font, world,
+                    TerracottaTimerRules.label(seconds), TerracottaTimerRules.color(seconds), TerracottaTimerRules.HUD_SCALE)) drawn++
         }
-        GeilerAddonsRenderTypes.endBatches(buffers)
+        hudDrawn = drawn
     }
 
     companion object {
-        private const val LABEL_HEIGHT = 0.5f
-        private const val LABEL_LINE_WIDTH = 2.5f
 
         @JvmField
         val INSTANCE = TerracottaTimerModule()

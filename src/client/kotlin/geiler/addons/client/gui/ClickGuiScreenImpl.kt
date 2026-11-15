@@ -141,11 +141,14 @@ class ClickGuiScreen @JvmOverloads constructor(
     private val navigationQueue: Deque<NavigationRequest> = ArrayDeque()
 
     private val openedAtNanos = System.nanoTime()
+    /** When the current view appeared; card entrances run on it, so they keep going after the category slide ends. */
+    private var viewEnteredNanos = openedAtNanos
     private var lifecycleStartedNanos = openedAtNanos
     private var closing = false
     private var pendingScreen: Screen? = null
     private var lastFrameNanos = openedAtNanos
     private var searchQuery = ""
+    private var stashedGridQuery = ""
     private var searchCursor = 0
     private var searchFocused = false
     private var searchAnchor = -1
@@ -263,7 +266,7 @@ class ClickGuiScreen @JvmOverloads constructor(
     private fun gridDiagnosticState(category: Category): String {
         val modules = visibleModules(category)
         val layout = moduleGridLayout(category, modules)
-        val viewport = gridViewport(panelX() + categoryWidth(), panelY())
+        val viewport = gridCardViewport(panelX() + categoryWidth(), panelY(), category)
         val sectionSummary = StringBuilder()
         for (section in layout.sections()) {
             if (sectionSummary.isNotEmpty()) sectionSummary.append('|')
@@ -272,7 +275,7 @@ class ClickGuiScreen @JvmOverloads constructor(
                 .append(':').append(section.section().modules().size)
         }
         val scroll = if (category == selectedCategory) gridScroll else ClickGuiState.gridScroll(category)
-        return "category=${category.name},queryActive=${searchQuery.isNotBlank()},cards=${modules.size},sections=$sectionSummary" +
+        return "category=${category.name},filter=${ClickGuiState.moduleFilter(category)},columns=${cardColumns()},queryActive=${searchQuery.isNotBlank()},cards=${modules.size},sections=$sectionSummary" +
             ",categoryScroll=$categoryScroll,categoryViewportHeight=${categoryViewportHeight(panelY())}" +
             ",viewport=${viewport.w}x${viewport.h},contentHeight=${layout.contentHeight()},scroll=$scroll" +
             ",maxScroll=${maxOf(0, layout.contentHeight() - viewport.h)}"
@@ -343,6 +346,20 @@ class ClickGuiScreen @JvmOverloads constructor(
     private fun currentView() = ViewState(selectedCategory, openSettingsModule, gridScroll, settingsScroll, expandedColorSetting)
 
     private fun applyView(view: ViewState) {
+        if (view.module !== openSettingsModule) {
+            // The search box filters whatever is on screen: the module grid, or the open module's settings.
+            // Each keeps its own text, so opening a module from search results starts a fresh settings search
+            // and going back restores the results.
+            if (view.module == null) {
+                searchQuery = stashedGridQuery
+                stashedGridQuery = ""
+            } else {
+                if (openSettingsModule == null) stashedGridQuery = searchQuery
+                searchQuery = ""
+            }
+            searchCursor = searchQuery.length
+            searchAnchor = -1
+        }
         selectedCategory = view.category
         openSettingsModule = view.module
         gridScroll = view.gridScroll
@@ -367,6 +384,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         val from = currentView()
         if (searchQuery.isBlank()) ClickGuiState.setGridScroll(from.category, from.gridScroll)
         applyView(target)
+        viewEnteredNanos = now
         if (from.module !== target.module) {
             expansionFrom = null
             expansionTo = null
@@ -579,7 +597,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         ClickGuiHeaderGeometry.topBarRectForLayout(panelX, panelY, panelWidth(), panelHeight(), icon)
 
     private fun visibleModules(category: Category): List<Module> =
-        moduleSearch.visibleModules(category, searchQuery, favoriteRevision)
+        moduleSearch.visibleModules(category, searchQuery, favoriteRevision, ClickGuiState.moduleFilter(category))
 
     private fun orderedCategories(): List<Category> {
         val snapshot = orderedCategorySnapshot
@@ -607,6 +625,11 @@ class ClickGuiScreen @JvmOverloads constructor(
         searchCursor = clampCursor(searchQuery, searchCursor)
         gridScroll = if (leavingSearch) ClickGuiState.gridScroll(selectedCategory) else 0
         gridScrollVisual = 0.0
+        if (openSettingsModule != null) {
+            settingsScroll = 0
+            settingsScrollVisual = 0.0
+            invalidateSettingsLayout()
+        }
     }
 
     private fun openGeneralSettings() {
@@ -695,7 +718,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         }
 
         if (search.w > 0) {
-            val queryText = if (searchQuery.isEmpty()) "Search modules..." else searchQuery
+            val queryText = if (searchQuery.isEmpty()) (if (openSettingsModule != null) "Search settings..." else "Search modules...") else searchQuery
             val searchTextInset = searchTextInsetForHeight(search.h)
             val searchTextX = search.x + searchTextInset
             val searchTextWidth = searchTextFontWidth(search.w, search.h)
@@ -1104,7 +1127,7 @@ class ClickGuiScreen @JvmOverloads constructor(
             return
         }
         renderViewAt(graphics, font, mouseX, mouseY, currentView(), rightX, panelY, 0,
-            true, true, openedAtNanos, now, motion)
+            true, true, viewEnteredNanos, now, motion)
         graphics.disableScissor()
     }
 
@@ -1157,12 +1180,13 @@ class ClickGuiScreen @JvmOverloads constructor(
         now: Long,
         motion: ClickGuiMotion,
     ) {
-        val viewport = gridViewport(x, panelY)
+        val viewport = gridCardViewport(x, panelY, category)
         val layout = moduleGridLayout(category, modules)
         val maxScroll = maxOf(0, layout.contentHeight() - viewport.h)
         val appliedScroll = maxOf(0, minOf(maxScroll, Math.round(scroll).toInt()))
         val cards = visibleCardRects(layout, viewport, appliedScroll)
         val insideViewport = viewport.contains(mouseX, mouseY)
+        renderFilterChips(graphics, font, mouseX, mouseY, category, x, panelY, hoverable)
         graphics.enableScissor(viewport.x, viewport.y, viewport.x + viewport.w, viewport.y + viewport.h)
         for (section in layout.sections()) {
             if (section.headingY() < 0) continue
@@ -1204,10 +1228,7 @@ class ClickGuiScreen @JvmOverloads constructor(
     }
 
     private fun cardEntrance(index: Int, entranceStart: Long, now: Long, motion: ClickGuiMotion): Float {
-        if (motion == ClickGuiMotion.NONE) return 1.0f
-        val staggerIndex = minOf(index, 5)
-        val delayed = elapsedMillis(entranceStart, now) - staggerIndex * motion.cardStaggerMillis()
-        return motion.ease(delayed.toFloat() / maxOf(1, motion.transitionMillis()))
+        return motion.cardEntrance(index, elapsedMillis(entranceStart, now))
     }
 
     private fun renderCard(
@@ -1246,7 +1267,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         roundedRectBordered(graphics, bounds.x, bounds.y, bounds.w, bounds.h, componentRadius(), background, background, border)
 
         val inset = cardInset()
-        val iconSize = maxOf(16, minOf(Math.round(bounds.h * 0.70f), Math.round(bounds.w * 0.24f)))
+        val iconSize = maxOf(16, minOf(Math.round(bounds.h * 0.70f), Math.round(bounds.w * 0.27f)))
         val iconX = bounds.x + inset + maxOf(1, Math.round(bounds.w * 0.02f))
         val icon = Rect(iconX, bounds.y + (bounds.h - iconSize) / 2, iconSize, iconSize)
         val moduleIcon = ModuleIconTextures.forModule(module.name())
@@ -1302,7 +1323,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         val summary = if (searchQuery.isBlank()) module.description()
             else module.category().displayName() + " · " + module.description()
         val summaryLines = cardSummaryLines(font, module, summary, cardTextWidth(textWidth))
-        val lineLimit = if (bounds.h >= 90) 2 else 1
+        val lineLimit = if (bounds.h >= 88) 3 else 1
         val summaryY = titleY + titleHeight + 4
         val summaryLineHeight = maxOf(9, Math.round(bounds.h * 0.095f))
         for (line in 0 until minOf(lineLimit, summaryLines.size)) {
@@ -1489,6 +1510,77 @@ class ClickGuiScreen @JvmOverloads constructor(
         )
     }
 
+    /** Subcategory chips (All + the category's children); none while searching or when the category has no children. */
+    private fun chipFilters(category: Category): List<ModuleCategoryFilter> {
+        if (searchQuery.isNotBlank()) return emptyList()
+        val options = ModuleCategoryFilter.options(category)
+        return if (options.size > 1) options else emptyList()
+    }
+
+    private fun chipHeight(): Int = maxOf(16, Math.round(panelHeight() * 0.036f))
+    private fun chipGap(): Int = maxOf(5, cardGap() / 2)
+
+    private fun chipLayout(category: Category, viewportWidth: Int): ClickGuiModuleGrid.ChipLayout {
+        val filters = chipFilters(category)
+        if (filters.isEmpty()) return ClickGuiModuleGrid.chipLayout(emptyList(), viewportWidth, chipHeight(), chipGap(), chipGap())
+        val padX = maxOf(8, Math.round(panelWidth() * 0.009f))
+        val widths = filters.map { Math.round(font.width(it.label() ?: "") * CATEGORY_TEXT_SCALE) + padX * 2 }
+        return ClickGuiModuleGrid.chipLayout(widths, viewportWidth - SCROLLBAR_GUTTER, chipHeight(), chipGap(), chipGap())
+    }
+
+    /** The card grid sits below the chip bar; settings views keep using the full [gridViewport]. */
+    private fun gridCardViewport(x: Int, panelY: Int, category: Category): Rect {
+        val base = gridViewport(x, panelY)
+        val bar = chipLayout(category, base.w).height
+        if (bar == 0) return base
+        val shift = bar + cardGap()
+        return Rect(base.x, base.y + shift, base.w, maxOf(1, base.h - shift))
+    }
+
+    private fun chipRects(category: Category, x: Int, panelY: Int): List<Rect> {
+        val base = gridViewport(x, panelY)
+        return chipLayout(category, base.w).chips.map { Rect(base.x + it.x, base.y + it.y, it.w, it.h) }
+    }
+
+    private fun activeFilterId(category: Category): String? =
+        ModuleCategoryFilter.resolve(category, ClickGuiState.moduleFilter(category)).id()
+
+    private fun renderFilterChips(
+        graphics: GuiGraphicsExtractor, font: Font, mouseX: Int, mouseY: Int,
+        category: Category, x: Int, panelY: Int, hoverable: Boolean,
+    ) {
+        val filters = chipFilters(category)
+        if (filters.isEmpty()) return
+        val rects = chipRects(category, x, panelY)
+        val active = activeFilterId(category)
+        for (i in filters.indices) {
+            val rect = rects[i]
+            val selected = filters[i].id() == active
+            val hovered = hoverable && rect.contains(mouseX, mouseY)
+            val background = if (selected) CARD_BG_ENABLED else if (hovered) CARD_BG_HOVER else CARD_BG
+            val border = if (selected) CARD_BORDER_ENABLED else if (hovered) PANEL_HIGHLIGHT else CARD_BORDER
+            roundedRectBordered(graphics, rect.x, rect.y, rect.w, rect.h, componentRadius(), background, background, border)
+            val label = filters[i].label() ?: ""
+            val textWidth = Math.round(font.width(label) * CATEGORY_TEXT_SCALE)
+            val textY = rect.y + (rect.h - Math.round(TEXT_HEIGHT * CATEGORY_TEXT_SCALE)) / 2
+            drawScaledText(graphics, font, label, rect.x + (rect.w - textWidth) / 2, textY,
+                if (selected || hovered) TEXT_PRIMARY else TEXT_SECONDARY, CATEGORY_TEXT_SCALE)
+        }
+    }
+
+    private fun selectFilterChip(category: Category, filter: ModuleCategoryFilter) {
+        val id = filter.id() ?: return
+        if (id == activeFilterId(category)) return
+        ClickGuiState.setModuleFilter(category, id)
+        ClickGuiState.setGridScroll(category, 0)
+        moduleSearch.invalidateVisibleModules()
+        gridScroll = 0
+        gridScrollVisual = 0.0
+        playClick()
+        persistView()
+        logGuiDiagnostic("EVENT action=filter,filter=$id,${gridDiagnosticState(category)}")
+    }
+
     private fun moduleSectionHeaderHeight(): Int = maxOf(16, Math.round(panelHeight() * 0.028f))
     private fun moduleSectionHeaderGap(): Int = maxOf(4, Math.round(panelHeight() * 0.012f))
     private fun moduleSectionGap(): Int = maxOf(8, Math.round(panelHeight() * 0.018f))
@@ -1512,7 +1604,7 @@ class ClickGuiScreen @JvmOverloads constructor(
     private fun gridContentHeight(category: Category, modules: List<Module>): Int = moduleGridLayout(category, modules).contentHeight()
 
     private fun cardRects(category: Category, modules: List<Module>, x: Int, panelY: Int, scroll: Double): List<ClickGuiModuleGrid.CardRect> {
-        val viewport = gridViewport(x, panelY)
+        val viewport = gridCardViewport(x, panelY, category)
         val layout = moduleGridLayout(category, modules)
         val maxScroll = maxOf(0, layout.contentHeight() - viewport.h)
         val appliedScroll = maxOf(0, minOf(maxScroll, Math.round(scroll).toInt()))
@@ -2010,19 +2102,20 @@ class ClickGuiScreen @JvmOverloads constructor(
         val viewportHeight = settingsViewport(x, panelY()).h
         val previewOffset = ClickGuiSettingsLayout.previewOffset(module, contentWidth, viewportHeight)
         val debugEnabled = DebugState.enabled()
+        val query = ClickGuiModuleSearchBehavior.normalizeQuery(searchQuery)
         val cached = settingsLayoutCache
         if (cached != null && cached.module === module && cached.rowX == rowX && cached.contentWidth == contentWidth &&
             cached.previewOffset == previewOffset && cached.expandedColor === expandedColor &&
-            cached.revision == settingsLayoutRevision && cached.debugEnabled == debugEnabled
+            cached.revision == settingsLayoutRevision && cached.debugEnabled == debugEnabled && cached.query == query
         ) return cached
-        val rows = ClickGuiSettingsLayout.layoutRows(module, rowX, previewOffset, expandedColor, contentWidth, viewportHeight)
+        val rows = ClickGuiSettingsLayout.layoutRows(module, rowX, previewOffset, expandedColor, contentWidth, viewportHeight, query)
         var contentHeight = previewOffset
         for (row in rows) {
             val bounds = row.getBounds()
             contentHeight = maxOf(contentHeight, bounds.y + bounds.h)
         }
         val updated = SettingsLayoutCache(module, rowX, contentWidth, previewOffset, expandedColor,
-            settingsLayoutRevision, debugEnabled, rows, contentHeight)
+            settingsLayoutRevision, debugEnabled, rows, contentHeight, query)
         settingsLayoutCache = updated
         positionedSettingsLayout = null
         positionedSettingsRows = null
@@ -2049,7 +2142,8 @@ class ClickGuiScreen @JvmOverloads constructor(
             return
         }
         val modules = visibleModules(selectedCategory)
-        val maxScroll = maxOf(0, gridContentHeight(selectedCategory, modules) - gridViewport(panelX() + categoryWidth(), panelY()).h)
+        val maxScroll = maxOf(0, gridContentHeight(selectedCategory, modules) -
+            gridCardViewport(panelX() + categoryWidth(), panelY(), selectedCategory).h)
         gridScroll = gridScroll.coerceIn(0, maxScroll)
         gridScrollVisual = gridScrollVisual.coerceIn(0.0, maxScroll.toDouble())
     }
@@ -2201,6 +2295,16 @@ class ClickGuiScreen @JvmOverloads constructor(
         val modules = visibleModules(selectedCategory)
         if (settingsModule != null && ModuleManager.contains(selectedCategory, settingsModule)) {
             return settingsClicked(settingsModule, mouseX, mouseY, rightX, panelY, left, right, doubleClick)
+        }
+
+        if (left) {
+            val filters = chipFilters(selectedCategory)
+            val chips = chipRects(selectedCategory, rightX, panelY)
+            for (i in filters.indices) {
+                if (!chips[i].contains(mouseX, mouseY)) continue
+                selectFilterChip(selectedCategory, filters[i])
+                return true
+            }
         }
 
         for (card in cardRects(selectedCategory, modules, rightX, panelY,
@@ -2833,7 +2937,7 @@ class ClickGuiScreen @JvmOverloads constructor(
                 return true
             }
             ClickGuiScrollTarget.GRID -> {
-                val area = gridArea!!
+                val area = gridCardViewport(rightX, panelY, selectedCategory)
                 val maxScroll = maxOf(0, gridContentHeight(selectedCategory, modules) - area.h)
                 val previousScroll = gridScroll
                 gridScroll = (gridScroll - notch).coerceIn(0, maxScroll)
@@ -3063,6 +3167,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         val debugEnabled: Boolean,
         val rows: List<Row>,
         val contentHeight: Int,
+        val query: String,
     )
 
     private data class SettingsLayoutTransition(

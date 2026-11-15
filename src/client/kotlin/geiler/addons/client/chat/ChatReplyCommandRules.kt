@@ -416,7 +416,10 @@ object ChatReplyCommandRules {
     ): Boolean = request != null && request.command() == ChatReplyCommandRules.Command.PARTY_TRANSFER &&
         remotePartyActionAllowed(request, allowlistEnabled, allowlist, blocklistEnabled, blocklist)
 
-    /** Remote party commands that change server state require a deliberately enabled sender allowlist. */
+    /**
+     * Every party action is open to any sender; only an enabled blocklist vetoes. The allowlist arguments are legacy
+     * (the Party Commands allowlist was removed) and are ignored.
+     */
     @JvmStatic
     fun remotePartyActionAllowed(
         request: Request?,
@@ -425,12 +428,8 @@ object ChatReplyCommandRules {
         blocklistEnabled: Boolean,
         blocklist: List<String?>?,
     ): Boolean = request != null && isRemotePartyAction(request.command()) &&
-        ChatChannel.PARTY.equals(request.channel()) && if (request.command() in OPEN_REMOTE_ACTIONS) {
-            // Harmless presets work for any party member; only the blocklist can veto them.
-            ChatReplyConfigRules.senderAllowed(request.sender(), false, allowlist, blocklistEnabled, blocklist)
-        } else {
-            ChatReplyConfigRules.remoteActionAllowed(request.sender(), allowlistEnabled, allowlist, blocklistEnabled, blocklist)
-        }
+        ChatChannel.PARTY.equals(request.channel()) &&
+        ChatReplyConfigRules.senderAllowed(request.sender(), false, allowlist, blocklistEnabled, blocklist)
 
     /** `party invite <sender>` for a private `!inv`; the sender is re-validated as a plain username. */
     @JvmStatic
@@ -488,6 +487,43 @@ object ChatReplyCommandRules {
                     ?.takeIf { it in QUEUE_INSTANCE_COMMANDS }
                 instance?.let { Optional.of("odin $it") } ?: Optional.empty()
             }
+            else -> Optional.empty()
+        }
+    }
+
+    /**
+     * The command for a request that arrived as `Party > name: !cmd`. The prefix is trusted: no fresh roster or roster
+     * membership is needed (Odin does the same). Leader-only actions are skipped only when another player is known to
+     * lead; with an unknown leader the command is sent and Hypixel enforces it.
+     */
+    @JvmStatic
+    fun incomingPartyActionCommand(request: Request?, party: PartySnapshot?, localPlayerName: String?): Optional<String> {
+        if (request == null || !isPartyAction(request.command()) || !ChatChannel.PARTY.equals(request.channel())) {
+            return Optional.empty()
+        }
+        val command = request.command()!!
+        if (requiresPartyLeader(command) && party != null && party.inParty() && party.leaderName() != null &&
+            !party.isLeader(localPlayerName)
+        ) return Optional.empty()
+        val argument = request.argument()
+        val target = if (argument == null) null else {
+            (if (party != null && party.inParty()) resolvePartyTarget(party.members(), argument)?.name() else null)
+                ?: argument.takeIf { USERNAME.matcher(it).matches() }
+        }
+        fun targeted(verb: String): Optional<String> =
+            if (target == null || sameIgnoreCase(target, localPlayerName)) Optional.empty()
+            else Optional.of("party $verb $target")
+        return when (command) {
+            Command.PARTY_TRANSFER -> targeted("transfer")
+            Command.PARTY_KICK -> targeted("kick")
+            Command.PARTY_PROMOTE -> targeted("promote")
+            Command.PARTY_DEMOTE -> targeted("demote")
+            Command.PARTY_WARP -> Optional.of("party warp")
+            Command.PARTY_ALLINVITE -> Optional.of("party settings allinvite")
+            Command.PARTY_KICK_OFFLINE -> Optional.of("party kickoffline")
+            Command.PARTY_BOOP -> target?.let { Optional.of("boop $it") } ?: Optional.empty()
+            Command.PARTY_QUEUE_INSTANCE -> argument?.lowercase(Locale.ROOT)?.takeIf { it in QUEUE_INSTANCE_COMMANDS }
+                ?.let { Optional.of("odin $it") } ?: Optional.empty()
             else -> Optional.empty()
         }
     }
@@ -727,10 +763,6 @@ object ChatReplyCommandRules {
         Command.PARTY_QUEUE_INSTANCE,
     )
     private val REMOTE_PARTY_ACTIONS = PARTY_ACTIONS
-    private val OPEN_REMOTE_ACTIONS = setOf(
-        Command.PARTY_WARP, Command.PARTY_ALLINVITE, Command.PARTY_TRANSFER, Command.PARTY_QUEUE_INSTANCE,
-        Command.PARTY_BOOP,
-    )
     private val LEADER_PARTY_ACTIONS = setOf(
         Command.PARTY_TRANSFER, Command.PARTY_WARP, Command.PARTY_ALLINVITE, Command.PARTY_KICK,
         Command.PARTY_PROMOTE, Command.PARTY_DEMOTE, Command.PARTY_KICK_OFFLINE, Command.PARTY_QUEUE_INSTANCE,

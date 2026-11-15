@@ -36,6 +36,10 @@ public abstract class AbstractContainerScreenMixin {
 
 	@Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
 	private void geileraddons$handleInventoryButtonKeys(KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
+		if (geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.handleKey((AbstractContainerScreen<?>) (Object) this, event)) {
+			cir.setReturnValue(true);
+			return;
+		}
 		if (InventoryButtonOverlay.keyPressed((AbstractContainerScreen<?>) (Object) this, event)) {
 			cir.setReturnValue(true);
 		}
@@ -53,6 +57,7 @@ public abstract class AbstractContainerScreenMixin {
 
 	@Inject(method = "init", at = @At("HEAD"))
 	private void geileraddons$attachExperimentListener(CallbackInfo ci) {
+		geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.onScreenOpened((AbstractContainerScreen<?>) (Object) this);
 		ExperimentSolverModule.INSTANCE.onScreenOpened((AbstractContainerScreen<?>) (Object) this);
 	}
 	/**
@@ -64,6 +69,10 @@ public abstract class AbstractContainerScreenMixin {
 	private void geileraddons$renderExperimentSurface(GuiGraphicsExtractor graphics, int mouseX,
 		int mouseY, float delta, CallbackInfo ci) {
 		AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) (Object) this;
+		if (geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.renderCustomScreen(screen, graphics, mouseX, mouseY)) {
+			ci.cancel();
+			return;
+		}
 		if (ExperimentSolverModule.INSTANCE.renderCustomScreen(screen, graphics, mouseX, mouseY, delta)) {
 			ci.cancel();
 		}
@@ -98,6 +107,10 @@ public abstract class AbstractContainerScreenMixin {
 	private void geileraddons$clickExperimentSurface(MouseButtonEvent event, boolean doubleClick,
 		CallbackInfoReturnable<Boolean> cir) {
 		AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) (Object) this;
+		if (geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.handleMouseClick(screen, event)) {
+			cir.setReturnValue(true);
+			return;
+		}
 		if (ExperimentSolverModule.INSTANCE.handleCustomClick(screen, event,
 			(slot, slotId, button, input) -> {
 				((AbstractContainerScreenAccess) (Object) screen)
@@ -155,6 +168,10 @@ public abstract class AbstractContainerScreenMixin {
 	private void geileraddons$handleInventoryAndDungeonSlotClick(Slot slot, int slotId, int button,
 		ContainerInput input, CallbackInfo ci) {
 		AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) (Object) this;
+		if (geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.onSlotClicked(screen, slotId, button)) {
+			ci.cancel();
+			return;
+		}
 		if (SpiritLeapSurfaceOwner.owns(screen) && !SpiritLeapSurfaceOwner.isDispatchingClick()) {
 			ci.cancel();
 			return;
@@ -181,6 +198,7 @@ public abstract class AbstractContainerScreenMixin {
 
 	@Inject(method = "removed", at = @At("HEAD"))
 	private void geileraddons$resetExperimentSurface(CallbackInfo ci) {
+		geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.onScreenClosed((AbstractContainerScreen<?>) (Object) this);
 		ExperimentSolverModule.INSTANCE.onScreenClosed();
 	}
 }

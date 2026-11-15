@@ -91,6 +91,25 @@ class SpiritLeapSelection private constructor() {
             return targetForMember(selected, menuHeads)
         }
 
+        /** Resolves a teammate picked by name (the dungeon map click) to its current menu head. */
+        @JvmStatic
+        fun targetForPlayerName(
+            menuOpen: Boolean,
+            menuTitle: String?,
+            playerName: String?,
+            cards: List<SpiritLeapRoster.Card?>?,
+            menuHeads: List<MenuHead?>?,
+        ): Optional<Target> {
+            if (!menuOpen || !isLeapMenu(menuTitle) || playerName == null || cards == null || menuHeads == null) {
+                return Optional.empty()
+            }
+            val selected = cards.firstOrNull { card ->
+                val member = card?.member()
+                member != null && !member.empty() && member.name().equals(playerName, ignoreCase = true)
+            }?.member()
+            return targetForMember(selected, menuHeads)
+        }
+
         /** Any mouse button is consumed over a displayed card; the selected phase may resolve a target. */
         @JvmStatic
         fun mouseAction(

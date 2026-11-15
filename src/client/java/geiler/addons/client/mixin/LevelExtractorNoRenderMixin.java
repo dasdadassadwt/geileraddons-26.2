@@ -2,6 +2,7 @@ package geiler.addons.client.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import geiler.addons.client.module.impl.HidePlayersModule;
 import geiler.addons.client.module.impl.NoRenderModule;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.extract.LevelExtractor;
@@ -17,6 +18,7 @@ public abstract class LevelExtractorNoRenderMixin {
 	private boolean geileraddons$noRenderEntity(LevelExtractor instance, Entity entity, Frustum frustum, double x,
 		double y, double z, Operation<Boolean> original) {
 		if (NoRenderModule.INSTANCE.shouldCancelRender(entity)) return false;
+		if (HidePlayersModule.INSTANCE.shouldHide(entity)) return false;
 		return original.call(instance, entity, frustum, x, y, z);
 	}
 }

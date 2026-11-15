@@ -36,6 +36,8 @@ object TargetPlanner {
         @JvmField val y: Double = 0.0,
         /** The walk to it, in blocks, from the map of the ground; NaN when there is no map to say. A walk shorter than the line counts as the line. */
         @JvmField val cost: Double = Double.NaN,
+        /** The stretch of ground it stands on, see [SegmentRules]; -1 when that is not known. */
+        @JvmField val segment: Int = -1,
     )
 
     class Plan<T>(
@@ -67,6 +69,19 @@ object TargetPlanner {
     /** A new tour has to be this much cheaper than the kept one to replace it. */
     const val REPLAN_GAIN = 0.4
 
+    /** A kept plan needs at least this many of its mobs left to be kept (fewer mobs than that: all of them). */
+    private const val KEEP_MIN = 2
+
+    /**
+     * What it costs, in blocks of walk, to leave the stretch of ground the player is on while it still holds a mob: a stretch is cleared before
+     * the next is gone to. Nothing when there is no other mob on it, or when the segments are not known.
+     */
+    const val SEGMENT_LEAVE = 40.0
+
+    /** Whether going for [mob] leaves the segment [now] while another mob of it (not [mob]) is still to be visited. */
+    private fun <T> leaves(mob: Mob<T>, now: Int, others: Iterable<Mob<T>>): Boolean =
+        now >= 0 && mob.segment >= 0 && mob.segment != now && others.any { it !== mob && it.segment == now }
+
     /** Neighbours within this many blocks count toward a mob's crowd. */
     private const val CROWD_RADIUS = 4.0
 
@@ -88,10 +103,13 @@ object TargetPlanner {
 
     /** The [count] mobs that cost least to go for from ([px], [pz]): the walk and the climb less what the neighbours of each are worth. */
     @JvmStatic
-    fun <T> nearestFirst(mobs: List<Mob<T>>, px: Double, pz: Double, py: Double, count: Int): List<Mob<T>> {
+    @JvmOverloads
+    fun <T> nearestFirst(mobs: List<Mob<T>>, px: Double, pz: Double, py: Double, count: Int, segmentNow: Int = -1): List<Mob<T>> {
         val bonus = neighbourBonus(mobs)
-        return mobs.indices.sortedBy { hypot(mobs[it].x - px, mobs[it].z - pz) + heightCost(py, mobs[it].y) + detour(mobs[it], px, pz, py) - bonus[it] }
-            .take(count).map { mobs[it] }
+        return mobs.indices.sortedBy {
+            hypot(mobs[it].x - px, mobs[it].z - pz) + heightCost(py, mobs[it].y) + detour(mobs[it], px, pz, py) - bonus[it] +
+                (if (leaves(mobs[it], segmentNow, mobs)) SEGMENT_LEAVE else 0.0)
+        }.take(count).map { mobs[it] }
     }
 
     /** Below this many degrees a turn is not a change of direction. */
@@ -129,6 +147,7 @@ object TargetPlanner {
         previous: List<T>?,
         coneDegrees: Double = 0.0,
         py: Double = 0.0,
+        segmentNow: Int = -1,
     ): Plan<T> {
         if (mobs.size < 2) return Plan(mobs.toList(), 0.0, 0.0, false, 0)
         val front = if (coneDegrees > 0.0) {
@@ -145,11 +164,14 @@ object TargetPlanner {
             ordered.addAll(chain(mobs.filter { m -> ordered.none { it === m } }, usable.last().x, usable.last().z, usable.last().y))
             return Plan(ordered, 0.0, 0.0, false, 0)
         }
+        val segment = if (segmentNow >= 0) segmentNow else usable.minByOrNull { hypot(it.x - px, it.z - pz) }?.segment ?: -1
         val bonuses = neighbourBonus(usable)
         // What the walk costs over the line, for the first leg: a mob behind a wall is as far as the way round, not as far as it looks.
         val extras = DoubleArray(usable.size) { i -> detour(usable[i], px, pz, py) }
-        val byDistance = usable.indices.sortedBy { hypot(usable[it].x - px, usable[it].z - pz) + heightCost(py, usable[it].y) + extras[it] - bonuses[it] }
-            .map { usable[it] }
+        val byDistance = usable.indices.sortedBy {
+            hypot(usable[it].x - px, usable[it].z - pz) + heightCost(py, usable[it].y) + extras[it] - bonuses[it] +
+                (if (leaves(usable[it], segment, usable)) SEGMENT_LEAVE else 0.0)
+        }.map { usable[it] }
         val pool = byDistance.subList(0, min(POOL, byDistance.size))
         val poolBonus = DoubleArray(pool.size) { i -> bonuses[usable.indexOfFirst { it === pool[i] }] }
         val poolExtra = DoubleArray(pool.size) { i -> extras[usable.indexOfFirst { it === pool[i] }] }
@@ -181,12 +203,12 @@ object TargetPlanner {
                 z = pool[next].z
                 y = pool[next].y
             }
-            best.add(score(pool, chain, px, pz, py, yaw, w, crowd))
+            best.add(score(pool, chain, px, pz, py, yaw, w, crowd, segment))
             evaluations = 1
         } else {
             val picked = IntArray(depth)
             val used = BooleanArray(pool.size)
-            fun search(step: Int, x: Double, z: Double, y: Double, heading: Double, lastSign: Double, cost: Double, turn: Double) {
+            fun search(step: Int, x: Double, z: Double, y: Double, heading: Double, lastSign: Double, cost: Double, turn: Double, at: Int) {
                 if (step == depth) {
                     evaluations++
                     val tour = Tour(picked.copyOf(), cost, turn)
@@ -203,25 +225,32 @@ object TargetPlanner {
                     val leg = legOf(pool[i], x, z, y, heading, lastSign, w)
                     var next = cost + leg.cost
                     if (step == 0) next -= crowd[i]
+                    // The rest of the mobs of the segment still unvisited: those not yet used, in the pool.
+                    if (at >= 0 && pool[i].segment >= 0 && pool[i].segment != at &&
+                        pool.indices.any { !used[it] && it != i && pool[it].segment == at }
+                    ) {
+                        next += SEGMENT_LEAVE
+                    }
                     used[i] = true
                     picked[step] = i
-                    search(step + 1, pool[i].x, pool[i].z, pool[i].y, leg.heading, leg.sign, next, turn + abs(leg.turn))
+                    search(step + 1, pool[i].x, pool[i].z, pool[i].y, leg.heading, leg.sign, next, turn + abs(leg.turn), if (pool[i].segment >= 0) pool[i].segment else at)
                     used[i] = false
                 }
             }
-            search(0, px, pz, py, yaw, 0.0, 0.0, 0.0)
+            search(0, px, pz, py, yaw, 0.0, 0.0, 0.0, segment)
         }
 
         var chosen = if (best.size > 1) best[random.nextInt(best.size)] else best[0]
         var kept = false
-        val before = previous
+        // A mob that died or left is taken out of the kept plan, which goes on with the rest; the plan is not made again for it.
+        val before = previous?.filter { item -> mobs.any { it.item == item } }
         // A kept plan whose first mob is behind the view is dropped while there is one in front to go for.
         val startsInFront = before == null || !gated || before.isEmpty() || usable.any { it.item == before[0] }
-        if (before != null && startsInFront && before.size == mobs.size && mobs.all { m -> before.contains(m.item) }) {
+        if (before != null && startsInFront && before.size >= depth && before.size >= min(mobs.size, KEEP_MIN)) {
             val old = before.map { item -> mobs.first { it.item == item } }
             val oldIndices = oldTour(pool, old, depth)
             if (oldIndices != null) {
-                val scored = score(pool, oldIndices, px, pz, py, yaw, w, crowd)
+                val scored = score(pool, oldIndices, px, pz, py, yaw, w, crowd, segment)
                 if (chosen.cost >= scored.cost - REPLAN_GAIN * abs(scored.cost)) {
                     chosen = scored
                     kept = true
@@ -268,7 +297,11 @@ object TargetPlanner {
         return indices
     }
 
-    private fun <T> score(pool: List<Mob<T>>, tour: IntArray, px: Double, pz: Double, py: Double, yaw: Double, w: Weights, crowd: DoubleArray): Tour {
+    private fun <T> score(
+        pool: List<Mob<T>>, tour: IntArray, px: Double, pz: Double, py: Double, yaw: Double, w: Weights, crowd: DoubleArray, segmentNow: Int,
+    ): Tour {
+        val used = BooleanArray(pool.size)
+        var at = segmentNow
         var x = px
         var z = pz
         var y = py
@@ -280,6 +313,11 @@ object TargetPlanner {
             val leg = legOf(pool[i], x, z, y, heading, sign, w)
             cost += leg.cost
             if (step == 0) cost -= crowd[i]
+            if (at >= 0 && pool[i].segment >= 0 && pool[i].segment != at && pool.indices.any { !used[it] && it != i && pool[it].segment == at }) {
+                cost += SEGMENT_LEAVE
+            }
+            used[i] = true
+            if (pool[i].segment >= 0) at = pool[i].segment
             turn += abs(leg.turn)
             heading = leg.heading
             sign = leg.sign

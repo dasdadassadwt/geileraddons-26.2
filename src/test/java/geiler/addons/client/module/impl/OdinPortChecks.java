@@ -80,6 +80,8 @@ public final class OdinPortChecks {
 			"the label has one decimal and the S glyph");
 		check(!TerracottaTimerModule.INSTANCE.defaultEnabled() && !TerracottaTimerModule.INSTANCE.hasSettings(),
 			"Terracotta Timer is off by default and has no settings");
+		check(TerracottaTimerRules.HUD_SCALE == 1.0f,
+			"the Terracotta label is projected HUD text at the real font scale, like Tiki labels, not vector strokes");
 	}
 
 	private static void checkSpringBoots() {

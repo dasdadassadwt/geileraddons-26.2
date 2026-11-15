@@ -236,7 +236,7 @@ object ModConfigMigrations {
             changed = true
         }
         changed = copyLegacySettings(toggles, oldPrefix, splits,
-            "Local Run Summary" to "Local Run Summary", "Boss Timers" to "Show Boss Timers") || changed
+            "Local Run Summary" to "Local Run Summary") || changed
         changed = copyLegacySettings(toggles, oldPrefix, blood,
             "Blood Camp Position Prediction" to "Blood Camp Assist") || changed
         changed = copyLegacySettings(toggles, oldPrefix, livid,
@@ -442,6 +442,38 @@ object ModConfigMigrations {
         changed = ConfigSettingKeys.copySetting(toggles, oldPrefix + "Use Hosted Sizes", sizePrefix + "Use Hosted Sizes") || changed
         return changed
     }
+
+    /**
+     * Chat waypoints used to be part of Waypoints. Copies their settings (and the enabled state, since they ran
+     * whenever Waypoints did) to Chat Waypoints once; a value that already exists there is never overwritten.
+     */
+    @JvmStatic
+    fun migrateChatWaypointSplit(
+        enabled: MutableMap<String, Boolean?>,
+        toggles: MutableMap<String, Boolean?>,
+        colors: MutableMap<String, IntArray?>,
+        numbers: MutableMap<String, Float?>,
+    ): Boolean {
+        val old = "Waypoints."
+        val new = "Chat Waypoints."
+        var changed = false
+        for (name in listOf("From Party Chat", "From Guild Chat", "From All Chat", "Own Messages", "Show Distance")) {
+            changed = ConfigSettingKeys.copySetting(toggles, old + name, new + name) || changed
+        }
+        for (name in listOf("Duration", "Text Scale", "Max Distance")) {
+            changed = ConfigSettingKeys.copySetting(numbers, old + name, new + name) || changed
+        }
+        changed = ConfigSettingKeys.copySetting(colors, old + "Chat Waypoint Color", new + "Chat Waypoint Color") || changed
+        if (!enabled.containsKey("Chat Waypoints") && enabled["Waypoints"] == true) {
+            enabled["Chat Waypoints"] = true
+            changed = true
+        }
+        return changed
+    }
+
+    /** Reads and removes the former global Waypoints "Show Names" value; it now lives on each group. */
+    @JvmStatic
+    fun takeLegacyWaypointShowNames(toggles: MutableMap<String, Boolean?>): Boolean? = toggles.remove("Waypoints.Show Names")
 
     /** Renamed Secret Waypoint labels keep values under their original module keys. */
     @JvmStatic

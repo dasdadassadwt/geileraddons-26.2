@@ -52,16 +52,14 @@ class Path private constructor(private val steps: List<Step>, private val length
     /** The point this far along the route, clamped to its ends. */
     fun pointAt(distance: Double): Vec3 {
         val clamped = Mth.clamp(distance, 0.0, length)
-        for (i in 1 until steps.size) {
-            val step = steps[i]
-            if (clamped <= step.distance) {
-                val previous = steps[i - 1]
-                val span = step.distance - previous.distance
-                val t = if (span > 1.0E-6) (clamped - previous.distance) / span else 1.0
-                return previous.position.lerp(step.position, t)
-            }
-        }
-        return endPoint()
+        // The first step from the second on that ends at or after the distance: the stretch it falls in.
+        val i = 1 + StepIndex.firstAtLeast(steps.size - 1, { steps[it + 1].distance }, clamped)
+        if (i >= steps.size) return endPoint()
+        val step = steps[i]
+        val previous = steps[i - 1]
+        val span = step.distance - previous.distance
+        val t = if (span > 1.0E-6) (clamped - previous.distance) / span else 1.0
+        return previous.position.lerp(step.position, t)
     }
 
     /**
@@ -78,10 +76,11 @@ class Path private constructor(private val steps: List<Step>, private val length
         var bestDistance = fromDistance
         var bestDeviation = Double.POSITIVE_INFINITY
 
-        for (i in 1 until steps.size) {
+        // Only the steps near the last place are looked at: the first that ends at or after the start of the stretch, by bisection.
+        for (i in max(1, StepIndex.firstAtLeast(steps.size, { steps[it].distance }, low)) until steps.size) {
             val previous = steps[i - 1]
             val step = steps[i]
-            if (step.distance < low || previous.distance > high) continue
+            if (previous.distance > high) break
 
             val from = previous.position
             val delta = step.position.subtract(from)
@@ -206,7 +205,7 @@ class Path private constructor(private val steps: List<Step>, private val length
          * bends gently instead of zig-zagging, and a route planned again moves its points the same way.
          */
         private const val OFF_CENTRE_AMPLITUDE = 0.45
-        private const val OFF_CENTRE_CELL = 5.0
+        private const val OFF_CENTRE_CELL = 14.0
         private val OFF_CENTRE_SCALES = doubleArrayOf(1.0, 0.5, 0.25)
 
         // The constants of the lattice hash, as the original wrote them (unsigned 64-bit hex).
@@ -467,5 +466,20 @@ class Path private constructor(private val steps: List<Step>, private val length
             }
             return true
         }
+    }
+}
+
+/** Finding a place along a route without walking all of it: the distances of the steps only ever grow. */
+object StepIndex {
+    /** The first index in 0 until [size] whose distance is at least [value], or [size] when none is. [distance] must not decrease with the index. */
+    @JvmStatic
+    fun firstAtLeast(size: Int, distance: (Int) -> Double, value: Double): Int {
+        var low = 0
+        var high = size
+        while (low < high) {
+            val middle = (low + high) ushr 1
+            if (distance(middle) >= value) high = middle else low = middle + 1
+        }
+        return low
     }
 }

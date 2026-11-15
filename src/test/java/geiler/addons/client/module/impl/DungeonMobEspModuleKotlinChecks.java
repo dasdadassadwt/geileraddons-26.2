@@ -295,15 +295,15 @@ public final class DungeonMobEspModuleKotlinChecks {
 			"Wither name normalization strips formatting and private-use characters while retaining exact identity");
 		check(DungeonSpecialMobRules.shouldScanF7WitherBoss(true, true, true, false, true)
 			&& !DungeonSpecialMobRules.shouldScanF7WitherBoss(true, true, true, false, false)
-			&& !DungeonSpecialMobRules.shouldScanF7WitherBoss(true, true, true, true, true)
+			&& DungeonSpecialMobRules.shouldScanF7WitherBoss(true, true, true, true, true)
 			&& !DungeonSpecialMobRules.shouldScanF7WitherBoss(true, false, true, false, true),
-			"Wither scanning remains limited to enabled regular F7 after the boss-phase signal");
+			"Wither scanning is limited to enabled F7, regular or Master, after the boss-phase signal");
 		for (boolean enabled : new boolean[] {false, true}) {
 			for (boolean inDungeon : new boolean[] {false, true}) {
 				for (boolean floorSeven : new boolean[] {false, true}) {
 					for (boolean masterMode : new boolean[] {false, true}) {
 						for (boolean phaseObserved : new boolean[] {false, true}) {
-							boolean expected = enabled && inDungeon && floorSeven && !masterMode && phaseObserved;
+							boolean expected = enabled && inDungeon && floorSeven && phaseObserved;
 							check(DungeonSpecialMobRules.shouldScanF7WitherBoss(enabled, inDungeon, floorSeven,
 								masterMode, phaseObserved) == expected,
 								"Wither scanning truth table preserves each independent gate");
@@ -314,15 +314,15 @@ public final class DungeonMobEspModuleKotlinChecks {
 		}
 		check(DungeonSpecialMobRules.isEarlyF7WitherBoss(true, false, true, true)
 			&& !DungeonSpecialMobRules.isEarlyF7WitherBoss(true, false, false, true)
-			&& !DungeonSpecialMobRules.isEarlyF7WitherBoss(true, true, true, true)
+			&& DungeonSpecialMobRules.isEarlyF7WitherBoss(true, true, true, true)
 			&& !DungeonSpecialMobRules.isEarlyF7WitherBoss(true, false, true, false),
-			"early Wither entity detection remains phase-gated and excludes Master Mode");
+			"early Wither entity detection remains phase-gated and includes Master Mode");
 		check(DungeonSpecialMobRules.isF7WitherBoss(true, false, true, "§cWither")
 			&& !DungeonSpecialMobRules.isF7WitherBoss(false, false, true, "Wither")
-			&& !DungeonSpecialMobRules.isF7WitherBoss(true, true, true, "Wither")
+			&& DungeonSpecialMobRules.isF7WitherBoss(true, true, true, "Wither")
 			&& !DungeonSpecialMobRules.isF7WitherBoss(true, false, false, "Wither")
 			&& !DungeonSpecialMobRules.isF7WitherBoss(true, false, true, null),
-			"named Wither bosses retain regular-F7, entity-type, and exact-name gates");
+			"named Wither bosses retain the F7 (regular or Master), entity-type, and exact-name gates");
 		check(DungeonSpecialMobRules.defaultClassColor(DungeonClass.ARCHER) == 0xFFFFAA00
 			&& DungeonSpecialMobRules.defaultClassColor(DungeonClass.BERSERK) == 0xFFAA0000
 			&& DungeonSpecialMobRules.defaultClassColor(DungeonClass.HEALER) == 0xFFFF55FF

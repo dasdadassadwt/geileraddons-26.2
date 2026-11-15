@@ -6,42 +6,33 @@ import net.minecraft.network.chat.TextColor
 import java.util.ArrayList
 import java.util.Optional
 
-/** Highlights only the confirmed option marker while preserving every other chat style. */
+/** Recolors the whole confirmed option line red while preserving every other style (click events, bold, ...). */
 object DungeonQuizChatStyler {
-    private const val CORRECT_MARKER_COLOR = 0x55FF55
+    private const val CORRECT_LINE_COLOR = 0xFF5555
+    private val LEGACY_CODE = Regex("(?i)§[0-9A-FK-OR]")
 
     @JvmStatic
     fun apply(source: Component?, marker: String?, answer: String?): Component? {
         if (source == null || marker.isNullOrEmpty() || answer.isNullOrEmpty()) return source
-        val visibleText = source.string
+        // Live lines are indented and may carry literal legacy codes ("     §6 ⓐ §a7 Fairy Souls").
+        val visibleText = LEGACY_CODE.replace(source.string, "").trim()
         if (!visibleText.startsWith(marker) || !visibleText.endsWith(answer) || visibleText.length <= marker.length) {
             return source
         }
 
         val runs = ArrayList<StyledRun>()
         source.visit({ style, text ->
-            if (text.isNotEmpty()) runs.add(StyledRun(text, style))
+            val clean = LEGACY_CODE.replace(text, "")
+            if (clean.isNotEmpty()) runs.add(StyledRun(clean, style))
             Optional.empty<Void>()
         }, Style.EMPTY)
-        if (runs.isEmpty() || !runs.first().text.startsWith(marker)) return source
+        if (runs.isEmpty()) return source
 
         val output = Component.empty()
-        var markerPending = true
         for (run in runs) {
-            if (markerPending) {
-                if (run.text.length < marker.length) return source
-                output.append(Component.literal(marker).withStyle(
-                    run.style.withColor(TextColor.fromRgb(CORRECT_MARKER_COLOR)),
-                ))
-                if (run.text.length > marker.length) {
-                    output.append(Component.literal(run.text.substring(marker.length)).withStyle(run.style))
-                }
-                markerPending = false
-            } else {
-                output.append(Component.literal(run.text).withStyle(run.style))
-            }
+            output.append(Component.literal(run.text).withStyle(run.style.withColor(TextColor.fromRgb(CORRECT_LINE_COLOR))))
         }
-        return if (markerPending) source else output
+        return output
     }
 
     private data class StyledRun(val text: String, val style: Style)

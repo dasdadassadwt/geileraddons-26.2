@@ -35,7 +35,7 @@ object DetourRule {
 
 /** How long a mob that could not be got to is left alone, by how many times in a row that has happened to it. */
 object IgnoreRule {
-    private val STEPS = longArrayOf(6_000L, 15_000L, 40_000L)
+    private val STEPS = longArrayOf(3_000L, 8_000L, 20_000L, 40_000L)
 
     @JvmStatic
     fun millis(streak: Int): Long = STEPS[streak.coerceIn(0, STEPS.size - 1)]

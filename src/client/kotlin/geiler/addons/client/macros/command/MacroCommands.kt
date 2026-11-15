@@ -159,7 +159,7 @@ object MacroCommands {
                         } else {
                             val at = player.blockPosition()
                             config.restPoint = intArrayOf(at.x, at.y, at.z)
-                            config.restEnabled = true
+                            AreaKillerModule.INSTANCE.setRestEnabled(true)
                             save()
                             context.source.sendFeedback(Component.literal(restStatus()))
                         }
@@ -169,7 +169,7 @@ object MacroCommands {
                 .then(
                     ClientCommands.literal("clear").executes { context ->
                         config.restPoint = IntArray(0)
-                        config.restEnabled = false
+                        AreaKillerModule.INSTANCE.setRestEnabled(false)
                         save()
                         context.source.sendFeedback(Component.literal(restStatus()))
                         1
@@ -177,7 +177,7 @@ object MacroCommands {
                 )
                 .then(
                     ClientCommands.argument("on", BoolArgumentType.bool()).executes { context ->
-                        config.restEnabled = BoolArgumentType.getBool(context, "on")
+                        AreaKillerModule.INSTANCE.setRestEnabled(BoolArgumentType.getBool(context, "on"))
                         save()
                         context.source.sendFeedback(Component.literal(restStatus()))
                         1
@@ -186,7 +186,7 @@ object MacroCommands {
                 .then(
                     ClientCommands.literal("radius").then(
                         ClientCommands.argument("blocks", DoubleArgumentType.doubleArg(1.0, 16.0)).executes { context ->
-                            config.restRadius = DoubleArgumentType.getDouble(context, "blocks")
+                            AreaKillerModule.INSTANCE.setRestRadius(DoubleArgumentType.getDouble(context, "blocks"))
                             save()
                             context.source.sendFeedback(Component.literal(restStatus()))
                             1
@@ -196,7 +196,7 @@ object MacroCommands {
                 .then(
                     ClientCommands.literal("delay").then(
                         ClientCommands.argument("seconds", DoubleArgumentType.doubleArg(1.0, 120.0)).executes { context ->
-                            config.restDelaySeconds = DoubleArgumentType.getDouble(context, "seconds")
+                            AreaKillerModule.INSTANCE.setRestDelay(DoubleArgumentType.getDouble(context, "seconds"))
                             save()
                             context.source.sendFeedback(Component.literal(restStatus()))
                             1

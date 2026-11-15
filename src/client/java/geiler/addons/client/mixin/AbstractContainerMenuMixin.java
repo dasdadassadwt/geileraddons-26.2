@@ -29,11 +29,14 @@ public abstract class AbstractContainerMenuMixin {
 	@Inject(method = "setItem", at = @At("RETURN"))
 	private void geileraddons$slotUpdated(int slot, int stateId, ItemStack stack, CallbackInfo ci) {
 		geileraddons$notifySolver(slot);
+		geiler.addons.client.module.impl.KingRelicModule.INSTANCE.onSetSlot((AbstractContainerMenu) (Object) this, slot, stack);
+		geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.onSlotSet((AbstractContainerMenu) (Object) this, slot, stack);
 	}
 	@Inject(method = "initializeContents", at = @At("RETURN"))
 	private void geileraddons$contentsUpdated(int stateId, List<ItemStack> items, ItemStack carried,
 		CallbackInfo ci) {
 		geileraddons$notifySolver(-1);
+		geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.onContentsSet((AbstractContainerMenu) (Object) this);
 	}
 	@org.spongepowered.asm.mixin.Unique
 	private void geileraddons$notifySolver(int updatedSlotId) {

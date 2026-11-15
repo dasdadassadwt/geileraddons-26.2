@@ -392,6 +392,9 @@ class RouteRunner(private val config: AreaKillerConfig) {
     }
 
     /** Something the player should be told, once: teleporting was given up, say. Null when there is nothing. */
+    private var edgeBrakesSeen = 0
+    private var edgeLogMillis = 0L
+
     fun consumeNote(): String? {
         val pending = note
         note = null
@@ -437,12 +440,23 @@ class RouteRunner(private val config: AreaKillerConfig) {
         return when (walker.tick(player, input, config)) {
             PathWalker.Status.WALKING -> {
                 if (player.onGround()) AreaMemory.walking(level, player.position())
+                val brakes = walker.edgeBrakes()
+                if (brakes != edgeBrakesSeen) {
+                    edgeBrakesSeen = brakes
+                    val now = Util.getMillis()
+                    // One line in two seconds at most: the log is bounded.
+                    if (now - edgeLogMillis > 2000L) {
+                        edgeLogMillis = now
+                        note = "edge guard: keys released, the ground ends within the slide (total=$brakes speed=${String.format(java.util.Locale.ROOT, "%.2f", player.deltaMovement.horizontalDistance())})"
+                    }
+                }
                 Step.WALKING
             }
             PathWalker.Status.ARRIVED -> Step.ARRIVED
             PathWalker.Status.STUCK -> {
                 // Stopped making progress on a route the planner thought was fine: worth remembering, see AreaMemory.
                 AreaMemory.stuck(level, player.position(), walker.path(), walker.progress())
+                walker.stuckReason()?.let { reason -> note = "stuck: $reason" }
                 Step.STUCK
             }
             PathWalker.Status.OFF_PATH -> Step.OFF_PATH

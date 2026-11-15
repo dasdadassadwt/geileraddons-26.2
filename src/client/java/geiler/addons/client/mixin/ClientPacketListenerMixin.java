@@ -2,6 +2,9 @@ package geiler.addons.client.mixin;
 
 import geiler.addons.client.module.impl.I4HelperModule;
 import geiler.addons.client.module.impl.MimicAnnouncerModule;
+import geiler.addons.client.module.impl.BlessingDisplayModule;
+import geiler.addons.client.module.impl.CroesusModule;
+import geiler.addons.client.module.impl.SimonSaysModule;
 import geiler.addons.client.module.impl.RagnarockModule;
 import geiler.addons.client.module.impl.SafariFloorDropsModule;
 import geiler.addons.client.module.impl.SpringBootsModule;
@@ -23,6 +26,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
+import net.minecraft.network.protocol.game.ClientboundTabListPacket;
 import net.minecraft.network.protocol.game.ClientboundBlockEventPacket;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
@@ -113,6 +117,7 @@ public abstract class ClientPacketListenerMixin {
 	private void geileraddons$trackDungeonMinibossProfiles(ClientboundPlayerInfoUpdatePacket packet, CallbackInfo ci) {
 		DungeonMobEspModule.INSTANCE.onPlayerInfoUpdate(packet);
 		OdinDungeonPlayerRoster.onPlayerInfoUpdate(packet);
+		CroesusModule.INSTANCE.onPlayerInfoUpdate(packet);
 	}
 
 	@Inject(method = "handlePlayerInfoRemove", at = @At("TAIL"))
@@ -144,6 +149,8 @@ public abstract class ClientPacketListenerMixin {
 	@Inject(method = "handleAddEntity", at = @At("TAIL"))
 	private void geileraddons$trackDungeonMinibossSpawn(ClientboundAddEntityPacket packet, CallbackInfo ci) {
 		DungeonMobEspModule.INSTANCE.onEntitySpawn(packet);
+		geiler.addons.client.module.impl.WitherDragonsModule.INSTANCE.onEntityAdded(packet);
+		geiler.addons.client.module.impl.DragonStackAimerModule.INSTANCE.onEntityAdded(packet);
 	}
 
 	@Inject(method = "handleRemoveEntities", at = @At("TAIL"))
@@ -157,6 +164,7 @@ public abstract class ClientPacketListenerMixin {
 	@Inject(method = "handleSetEquipment", at = @At("TAIL"))
 	private void geileraddons$observeBloodCampHeadEquipment(ClientboundSetEquipmentPacket packet, CallbackInfo ci) {
 		Minecraft client = Minecraft.getInstance();
+		if (client.isSameThread()) geiler.addons.client.module.impl.WitherDragonsModule.INSTANCE.onEquipment(packet);
 		if (!client.isSameThread() || client.level == null) return;
 		Entity entity = client.level.getEntity(packet.getEntity());
 		if (entity == null) return;
@@ -191,6 +199,11 @@ public abstract class ClientPacketListenerMixin {
 		Minecraft client = Minecraft.getInstance();
 		if (client.isSameThread() && packet != null)
 			DungeonKeyPickupModule.INSTANCE.onEntityMetadataUpdated(packet.id());
+		if (client.isSameThread() && packet != null)
+			geiler.addons.client.module.impl.WitherDragonsModule.INSTANCE.onEntityData(packet);
+		if (client.isSameThread() && packet != null && client.level != null
+			&& client.level.getEntity(packet.id()) instanceof net.minecraft.world.entity.decoration.ArmorStand stand)
+			geiler.addons.client.module.impl.CompactDamageModule.INSTANCE.onArmorStand(stand);
 	}
 
 	/** Track Devonian-style starred ArmorStand labels after Vanilla applies their metadata. */
@@ -220,6 +233,11 @@ public abstract class ClientPacketListenerMixin {
 			? client.level.getBlockState(packet.getPos()) : null;
 	}
 
+	@Inject(method = "handleTabListCustomisation", at = @At("TAIL"))
+	private void geileraddons$onTabFooter(ClientboundTabListPacket packet, CallbackInfo ci) {
+		BlessingDisplayModule.INSTANCE.onTabFooter(packet.footer().getString());
+	}
+
 	@Inject(method = "handleBlockUpdate", at = @At("TAIL"))
 	private void geileraddons$onBlockUpdate(ClientboundBlockUpdatePacket packet, CallbackInfo ci) {
 		Minecraft client = Minecraft.getInstance();
@@ -229,9 +247,12 @@ public abstract class ClientPacketListenerMixin {
 		I4HelperModule.INSTANCE.onBlockChange(packet.getPos(), packet.getBlockState());
 		TikiHelperModule.INSTANCE.onBlockChange(packet.getPos(), packet.getBlockState());
 		DungeonDoorTracker.onBlockChange(packet.getPos());
+		geiler.addons.client.module.impl.WitherDragonsModule.INSTANCE.onBlockUpdate(packet.getPos().getX(),
+			packet.getPos().getY(), packet.getPos().getZ(), packet.getBlockState().isAir());
 		TerracottaTimerModule.INSTANCE.onBlockChange(packet.getPos(), packet.getBlockState());
 		SecretWaypointsModule.INSTANCE.onSecretBlockUpdate(geileraddons$blockUpdatePositionBefore,
 			geileraddons$blockUpdateStateBefore, packet.getBlockState());
+		SimonSaysModule.INSTANCE.onBlockChange(packet.getPos(), geileraddons$blockUpdateStateBefore, packet.getBlockState());
 		DungeonOdinAssistModule.INSTANCE.onPuzzleBlockChange(geileraddons$blockUpdatePositionBefore,
 			geileraddons$blockUpdateStateBefore, packet.getPos(), packet.getBlockState());
 		geileraddons$blockUpdatePositionBefore = null;
@@ -284,9 +305,29 @@ public abstract class ClientPacketListenerMixin {
 		DungeonDoorBlockOverlayController.onChunkUnloaded(client.level, pos.x(), pos.z());
 	}
 
+	/** Round-trip samples for the dragon stack aimer; the response echoes the nanosecond time we sent. */
+	@Inject(method = "handlePongResponse", at = @At("HEAD"))
+	private void geileraddons$onPongResponse(net.minecraft.network.protocol.ping.ClientboundPongResponsePacket packet, CallbackInfo ci) {
+		geiler.addons.client.module.impl.DragonStackAimerModule.INSTANCE.onPong(packet.time());
+	}
+
 	@Inject(method = "handleParticleEvent", at = @At("TAIL"))
 	private void geileraddons$onParticleEvent(ClientboundLevelParticlesPacket packet, CallbackInfo ci) {
 		SafariFloorDropsModule.INSTANCE.onParticle(packet);
+		geiler.addons.client.module.impl.WitherDragonsModule.INSTANCE.onParticle(packet);
+		geiler.addons.client.module.impl.DragonStackAimerModule.INSTANCE.onParticle(packet);
+	}
+
+	/** Terminal Solver replaces the terminal-complete pling while a terminal is open. */
+	@Inject(method = "handleSoundEvent", at = @At("HEAD"), cancellable = true)
+	private void geileraddons$cancelTerminalPling(ClientboundSoundPacket packet, CallbackInfo ci) {
+		if (geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.shouldCancelPling(packet)) ci.cancel();
+	}
+
+	/** Hide F7 Boss Sounds: drops (or caps) the loud boss-room sounds before they are played. */
+	@Inject(method = "handleSoundEvent", at = @At("HEAD"), cancellable = true)
+	private void geileraddons$hideF7BossSounds(ClientboundSoundPacket packet, CallbackInfo ci) {
+		if (geiler.addons.client.module.impl.HideF7BossSoundsModule.INSTANCE.onSound(packet)) ci.cancel();
 	}
 
 	@Inject(method = "handleSoundEvent", at = @At("TAIL"))

@@ -13,7 +13,6 @@ import geiler.addons.client.dungeon.DungeonSplitPersonalBestBook
 import geiler.addons.client.dungeon.DungeonSplitPersonalBestStore
 import geiler.addons.client.dungeon.DungeonSplitTimeMode
 import geiler.addons.client.dungeon.odin.DungeonBoulderRules
-import geiler.addons.client.dungeon.odin.DungeonBossTimers
 import geiler.addons.client.dungeon.odin.DungeonIcePathSolver
 import geiler.addons.client.dungeon.odin.DungeonLividTracker
 import geiler.addons.client.dungeon.odin.DungeonLividOverlayLabel
@@ -45,6 +44,7 @@ import geiler.addons.client.dungeon.odin.SpiritLeapIncomingRules
 import geiler.addons.client.dungeon.odin.SpiritLeapLayout
 import geiler.addons.client.dungeon.odin.SpiritLeapRoster
 import geiler.addons.client.dungeon.odin.SpiritLeapSelection
+import geiler.addons.client.dungeon.odin.SpiritLeapMapLogic
 import geiler.addons.client.dungeon.odin.ThreeWeirdosLogic
 import geiler.addons.client.gui.GuiTheme
 import geiler.addons.client.module.BooleanSetting
@@ -271,7 +271,6 @@ class DungeonOdinAssistModule private constructor() : Module(
     private val showCountValue: BooleanSetting
     private val countSource: ChoiceSetting
     private val localRunSummary: BooleanSetting
-    private val showBossTimers: BooleanSetting
     private val livid: BooleanSetting
     private val showBonzo: BooleanSetting
     private val showSpirit: BooleanSetting
@@ -303,7 +302,6 @@ class DungeonOdinAssistModule private constructor() : Module(
     private val scoreTracker = DungeonScoreAlerts()
     private val splitTracker = DungeonSplitTracker()
     private val splitEntryBuffer = DungeonSplitEntryBuffer()
-    private val bossTimers = DungeonBossTimers()
     private val lividTracker = DungeonLividTracker()
     @Volatile private var publishedLividTarget: DungeonLividTracker.TargetSnapshot? = null
     private var titledLividTargetKey: String? = null
@@ -314,6 +312,8 @@ class DungeonOdinAssistModule private constructor() : Module(
     private var lastLividMarkerSource = "none"
     private var lastLividCandidateDiagnostic = "not-scanned"
     private var lastLividRenderDiagnostic = "not-rendered"
+    private var lividHudAnchor: Vec3? = null
+    private var lividHudLabel: DungeonLividOverlayLabel.Snapshot? = null
     private var lastLividDiagnosticEvent = "startup"
     private var coalescedLividDiagnosticChanges = 0
     private val maskTimers = DungeonMaskProcTimers()
@@ -386,7 +386,6 @@ class DungeonOdinAssistModule private constructor() : Module(
         showCountValue = DungeonRunSplitsModule.showCountValue
         countSource = DungeonRunSplitsModule.countSource
         localRunSummary = DungeonRunSplitsModule.localRunSummary
-        showBossTimers = DungeonRunSplitsModule.showBossTimers
         livid = DungeonLividSolverModule.highlight
         showBonzo = DungeonInvincibilityTimerModule.bonzo
         showSpirit = DungeonInvincibilityTimerModule.spirit
@@ -529,7 +528,6 @@ class DungeonOdinAssistModule private constructor() : Module(
             maskTimers.tick(false)
             pendingProcAlert = null
         }
-        if (bossTimersEnabled()) bossTimers.tick(inBoss && inDungeon) else bossTimers.tick(false)
         if (lividEnabled()) lividTracker.tick(inDungeon && floor != null && floor.number() == 5)
         else lividTracker.tick(false)
         if (!terminalStatsEnabled() && !terminalTitlesEnabled()) terminals.reset()
@@ -733,7 +731,6 @@ class DungeonOdinAssistModule private constructor() : Module(
             }
             if (totalUpdate != null && localRunSummary.value()) showLocalRunSummary(floor, totalUpdate)
         }
-        if (bossTimersEnabled()) bossTimers.onChat(plain)
         if (lividEnabled() && livid.value()) {
             lividTracker.observeChat(plain, floor.number() == 5)
             if (DungeonLividReleaseRules.isRunEnd(plain)) releaseLivid("run-end")
@@ -1034,7 +1031,34 @@ class DungeonOdinAssistModule private constructor() : Module(
         graphics.nextStratum()
         SpiritLeapPovRenderer.INSTANCE.draw(graphics, screenWidth, screenHeight)
         renderSpiritLeapCards(graphics, font, screenWidth, screenHeight, mouseX, mouseY, cards)
+        if (SpiritLeapMenuModule.showMap.value()) {
+            val leapMapOn = leapMapShown()
+            val drawn = leapMapOn && DungeonRoomOverlayModule.INSTANCE.drawLeapMap(
+                graphics, font, screenWidth, leapCardsTop(screenWidth, screenHeight),
+                SpiritLeapMenuModule.mapScale.value(),
+            )
+            val reason = if (!leapMapOn) "hud-map-visible" else if (drawn) "drawn" else "no-live-map"
+            if (drawn != leapMapDrawnLast || reason != leapMapReasonLast) {
+                leapMapDrawnLast = drawn
+                leapMapReasonLast = reason
+                SpiritLeapMenuModule.recordEvent(lastClientTick, "LEAP_MAP drawn=$drawn reason=$reason scale=${SpiritLeapMenuModule.mapScale.display()}")
+            }
+        }
         return true
+    }
+
+    /** Leap copy is on and the normal HUD dungeon map is not already visible (avoids two maps). */
+    private fun leapMapShown(): Boolean = SpiritLeapMapLogic.showsLeapMap(
+        SpiritLeapMenuModule.showMap.value(), DungeonRoomOverlayModule.INSTANCE.visible(),
+    )
+
+    private var leapMapDrawnLast: Boolean? = null
+    private var leapMapReasonLast: String? = null
+
+    /** Top edge of the card group, including hover growth, so the map sits above it. */
+    private fun leapCardsTop(screenWidth: Int, screenHeight: Int): Int {
+        val layout = SpiritLeapLayout.calculate(screenWidth, screenHeight, SpiritLeapMenuModule.cardDistance.value())
+        return (layout.topLeft()?.y() ?: 0) - layout.maxHoverGrowth()
     }
 
     fun shouldRenderSpiritLeapScreen(screen: AbstractContainerScreen<*>?): Boolean {
@@ -1288,6 +1312,34 @@ class DungeonOdinAssistModule private constructor() : Module(
         val cards = leapCards(screen)
         val timing = if (leapOnMouseRelease.value()) SpiritLeapSelection.MouseTiming.RELEASE
             else SpiritLeapSelection.MouseTiming.PRESS
+        if (leapMapShown()) {
+            val scale = SpiritLeapMenuModule.mapScale.value()
+            val cardsTop = leapCardsTop(screen.width, screen.height)
+            val bounds = DungeonRoomOverlayModule.INSTANCE.leapMapBounds(client.font, screen.width, cardsTop, scale)
+            val mx = mouseX.toFloat()
+            val my = mouseY.toFloat()
+            if (bounds != null && SpiritLeapMapLogic.contains(bounds[0], bounds[1], bounds[2], bounds[3], mx, my)) {
+                // Any button is consumed over the map; the configured phase picks the nearest teammate marker.
+                var name: String? = null
+                var target: Optional<SpiritLeapSelection.Target> = Optional.empty()
+                var dispatched = false
+                if (timing.name == phase.name) {
+                    val markers = DungeonRoomOverlayModule.INSTANCE.leapMapMarkers(client.font, screen.width, cardsTop, scale)
+                    name = SpiritLeapMapLogic.nearestName(markers, mx, my, Float.MAX_VALUE)
+                    target = SpiritLeapSelection.targetForPlayerName(
+                        true, menuTitle, name, cards, spiritLeapMenuHeads(screen),
+                    )
+                    dispatched = dispatchSpiritLeapTarget(screen.menu, target, dispatcher)
+                }
+                SpiritLeapMenuModule.recordEvent(
+                    lastClientTick,
+                    "LEAP_INPUT type=map button=$mouseButton phase=${phase.name.lowercase(Locale.ROOT)} " +
+                        "timing=${timing.name.lowercase(Locale.ROOT)} nearest=${diagnosticToken(name, 16)} " +
+                        "mapped=${target.isPresent} slot=${target.map { it.containerSlot }.orElse(-1)} dispatched=$dispatched",
+                )
+                return true
+            }
+        }
         val action = SpiritLeapSelection.mouseAction(
             mouseButton, true, menuTitle, quadrant, cards, spiritLeapMenuHeads(screen), timing, phase,
         )
@@ -1405,7 +1457,6 @@ class DungeonOdinAssistModule private constructor() : Module(
         return if (splitTracker.running()) "running" else "idle"
     }
 
-    private fun bossTimersEnabled(): Boolean = runSplitsEnabled() && showBossTimers.value()
 
     /** Snapshot used by the packet mixin before Vanilla applies a position correction. */
     fun captureTpMazeCorrectionStart(): Vec3? {
@@ -1523,6 +1574,21 @@ class DungeonOdinAssistModule private constructor() : Module(
             setPuzzleScanState(client, guidance.scanStatus().id(), guidance.scanReason())
             setPuzzleLines(guidance.name(), guidance.lines())
         }
+    }
+
+    /** Set by the Livid world pass every frame; a null anchor means no Livid timer this frame. */
+    fun setLividHudLabel(anchor: Vec3?, label: DungeonLividOverlayLabel.Snapshot?) {
+        lividHudAnchor = anchor
+        lividHudLabel = label
+    }
+
+    /** HUD element `livid_timer_labels`: real-font Livid timer projected above the target. */
+    fun renderLividHud(graphics: GuiGraphicsExtractor) {
+        val anchor = lividHudAnchor ?: return
+        val label = lividHudLabel ?: return
+        val mc = Minecraft.getInstance()
+        ProjectedLabelRenderer.draw(graphics, mc.gameRenderer.mainCamera(), mc.font, anchor,
+            label.text, label.colorArgb, DungeonLividOverlayLabel.HUD_SCALE)
     }
 
     /** Draws current Water Board countdown labels at their projected world positions. */
@@ -1944,13 +2010,6 @@ class DungeonOdinAssistModule private constructor() : Module(
         DungeonRunSplitsModule.INSTANCE.publishSplitRows(
             floor, splitRows, lastClientTick, splitTracker.running(), splitTracker.currentId(), serverTickCounter.count(),
         )
-        val bossTimerRows = ArrayList<String>()
-        if (bossTimersEnabled()) for (timer in bossTimers.snapshot()) {
-            if (timer.countUp || timer.ticks > 0) {
-                bossTimerRows.add("${timer.name} · ${DungeonBossTimers.formatTicks(timer.ticks, false, true)}")
-            }
-        }
-        DungeonRunSplitsModule.INSTANCE.publishSupplementalRows(bossTimerRows)
 
         val lividLines = ArrayList<String>()
         var lividTitleColor = 0xFFFFD24A.toInt()
@@ -2288,7 +2347,6 @@ class DungeonOdinAssistModule private constructor() : Module(
         blazeOverlay.reset()
         splitTracker.reset()
         splitEntryBuffer.clear()
-        bossTimers.reset()
         lividTracker.reset()
         lividMissingTicks = 0
         publishedLividTarget = null
@@ -2390,7 +2448,6 @@ class DungeonOdinAssistModule private constructor() : Module(
             "SERVER_PING_PACKETS" to "Odin ping-event proxy (not server ticks)",
         ), "CLIENT_TICKS", "SERVER_PING_PACKETS")
         val localRunSummary = BooleanSetting("Local Run Summary", true)
-        val bossTimers = BooleanSetting("Boss Timers", true)
         val livid = BooleanSetting("Livid Highlight & Timer", true)
         val showBonzo = BooleanSetting("Bonzo Mask Timer", true)
         val showSpirit = BooleanSetting("Spirit Mask Timer", true)

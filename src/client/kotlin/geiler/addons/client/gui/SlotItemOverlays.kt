@@ -18,7 +18,7 @@ object SlotItemOverlays {
     fun beforeSlots(graphics: GuiGraphicsExtractor, slots: List<Slot>) {
         val module = ItemRarityBackgroundsModule.INSTANCE
         if (!module.isEnabled()) return
-        for (slot in slots) if (slot.isActive) module.drawBackground(graphics, slot.item, slot.x, slot.y)
+        for (slot in slots) if (slot.isActive) module.drawSlotBackground(graphics, slot, slot.x, slot.y)
     }
 
     /** Hotbar slots 1..9 are drawn in one burst on the first (seed 1); the offhand slot (seed 10) draws its own. */

@@ -11,8 +11,25 @@ public final class ClickGuiMotionChecks {
 		checkProfile(ClickGuiMotion.EXPRESSIVE, 280, 420, 200, 0.72f);
 		checkOpeningCurves();
 		checkAnimationHelpers();
+		checkCardEntrance();
 		check(closeNear(ClickGuiMotion.EXPRESSIVE.closeEase(0.5f), 0.75f),
 			"closing uses the specified quadratic ease-out");
+	}
+
+	/** Cards enter with a stagger that outlasts the category slide, so the entrance clock must outlive the slide. */
+	private static void checkCardEntrance() {
+		ClickGuiMotion expressive = ClickGuiMotion.EXPRESSIVE;
+		check(expressive.cardEntrance(0, -5L) == 0.0f && expressive.cardEntrance(5, 0L) == 0.0f,
+			"a card waiting for its stagger delay stays at the start of its entrance");
+		check(expressive.cardEntrance(0, expressive.transitionMillis()) == 1.0f,
+			"the first card has finished when the category slide ends");
+		float lateCard = expressive.cardEntrance(5, expressive.transitionMillis());
+		check(lateCard > 0.0f && lateCard < 1.0f,
+			"the last staggered card is still entering when the slide ends, so snapping its clock would make it jump");
+		check(expressive.cardEntrance(9, 10_000L) == 1.0f && expressive.cardEntrance(99, 10_000L) == 1.0f,
+			"every card index finishes, staggering only the first six");
+		check(ClickGuiMotion.NONE.cardEntrance(5, 0L) == 1.0f && ClickGuiMotion.REDUCED.cardEntrance(5, 0L) == 0.0f,
+			"None has no entrance; Reduced has no stagger but still eases in");
 	}
 
 	private static void checkAnimationHelpers() {

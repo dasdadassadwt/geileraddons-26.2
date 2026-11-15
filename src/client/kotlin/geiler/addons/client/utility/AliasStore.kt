@@ -57,7 +57,7 @@ class AliasStore private constructor(private val file: Path) {
         loadIfNeeded()
         val cleanAlias = alias?.trim()?.removePrefix("/") ?: return false
         val cleanCommand = command?.trim()?.removePrefix("/")?.trim() ?: return false
-        if (!valid(cleanAlias, cleanCommand)) return false
+        if (!valid(cleanAlias, cleanCommand) || BuiltInAliases.isBuiltInName(cleanAlias)) return false
         val key = key(cleanAlias)
         if (!entries.containsKey(key) && entries.size >= MAX_ENTRIES) return false
         entries[key] = Entry(cleanAlias, cleanCommand, enabled)
@@ -84,7 +84,7 @@ class AliasStore private constructor(private val file: Path) {
         for (saved in data.aliases ?: return) {
             val alias = saved?.alias?.trim() ?: continue
             val command = saved.command?.trim() ?: continue
-            if (!valid(alias, command) || entries.size >= MAX_ENTRIES) continue
+            if (!valid(alias, command) || BuiltInAliases.isBuiltInName(alias) || entries.size >= MAX_ENTRIES) continue
             entries.putIfAbsent(key(alias), Entry(alias, command, saved.enabled != false))
         }
     }

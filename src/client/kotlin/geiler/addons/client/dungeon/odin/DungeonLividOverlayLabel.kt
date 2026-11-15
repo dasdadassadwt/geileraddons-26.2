@@ -13,6 +13,8 @@ class DungeonLividOverlayLabel private constructor() {
 
     companion object {
         private const val MAX_TIMER_TICKS = 340
+        /** Real-font scale for the projected Livid timer; 1.0 matches Tiki Helper's default text size. */
+        const val HUD_SCALE = 1.0f
 
         @JvmStatic
         fun create(timerEnabled: Boolean, floorFiveBoss: Boolean, remainingTicks: Int): Snapshot? {

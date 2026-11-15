@@ -269,6 +269,19 @@
         { "name": "Click Confirmation", "settings": ["feedbackWindowMillis", "allowSecretBlocksInBoss"] }
       ]
     },
+    "Hide Players": {
+      "settings": [
+        {"id": "onlyInDungeons", "type": "toggle", "name": "Only in Dungeons", "label": "Only Hide In Dungeons", "default": false},
+        {"id": "hideAll", "type": "toggle", "name": "Hide All", "label": "Hide All Players", "default": false},
+        {"id": "distance", "type": "slider", "name": "Distance", "label": "Hide Within (blocks)", "min": 0, "max": 32, "default": 3}
+      ]
+    },
+    "Hide F7 Boss Sounds": {
+      "settings": [
+        {"id": "cancelAboveCap", "type": "toggle", "name": "Cancel Above Cap", "label": "Cancel Sounds Louder Than 1", "default": false},
+        {"id": "capVolume", "type": "toggle", "name": "Cap Volume", "label": "Cap Loud Sounds At 1 (Do Not Cancel)", "default": false}
+      ]
+    },
     "Hide Particles": {
       "settings": [
         {"id": "hideAll", "type": "toggle", "name": "Hide All", "label": "Hide All Particles", "default": true},
@@ -387,6 +400,125 @@
       "groups": [
         {"name": "Navigation", "settings": ["nextPage", "previousPage"]},
         {"name": "Slot Keys", "folded": true, "settings": ["loadout1", "loadout2", "loadout3", "loadout4", "loadout5", "loadout6", "loadout7", "loadout8", "loadout9", "loadout10", "loadout11", "loadout12"]}
+      ]
+    },
+    "Waypoints": {
+      "settings": [
+        {"id": "showDistance", "type": "toggle", "name": "Show Distance", "default": true},
+        {"id": "textScale", "type": "slider", "name": "Text Scale", "min": 0.5, "max": 3.0, "default": 1.0},
+        {"id": "maxDistance", "type": "slider", "name": "Max Distance", "min": 20, "max": 1000, "default": 500, "integer": true},
+        {"id": "activationRadius", "type": "slider", "name": "Activation Radius", "min": 1, "max": 10, "default": 2, "integer": true},
+        {"id": "allowSkipping", "type": "toggle", "name": "Allow Skipping Waypoints", "default": true},
+        {"id": "allowBackwards", "type": "toggle", "name": "Allow Going Backwards", "default": true},
+        {"id": "renderLine", "type": "toggle", "name": "Line To Next Waypoint", "default": true},
+        {"id": "lineColor", "type": "color", "name": "Line Color", "default": [0, 255, 0, 255]},
+        {"id": "lineWidth", "type": "slider", "name": "Line Width", "min": 1, "max": 10, "default": 5, "integer": true}
+      ],
+      "groups": [
+        {"name": "Display", "settings": ["showDistance", "textScale", "maxDistance"]},
+        {"name": "Ordered Routes", "settings": ["activationRadius", "allowSkipping", "allowBackwards", "renderLine", "lineColor", "lineWidth"]}
+      ]
+    },
+    "Chat Waypoints": {
+      "settings": [
+        {"id": "chatParty", "type": "toggle", "name": "From Party Chat", "default": true},
+        {"id": "chatGuild", "type": "toggle", "name": "From Guild Chat", "default": false},
+        {"id": "chatAll", "type": "toggle", "name": "From All Chat", "default": false},
+        {"id": "chatPersonal", "type": "toggle", "name": "Own Messages", "label": "Create Waypoints From Own Messages", "default": false},
+        {"id": "chatSeconds", "type": "slider", "name": "Duration", "label": "Chat Waypoint Duration (s)", "min": 10, "max": 300, "default": 60, "integer": true},
+        {"id": "chatColor", "type": "color", "name": "Chat Waypoint Color", "default": [255, 170, 0, 128]},
+        {"id": "showDistance", "type": "toggle", "name": "Show Distance", "default": true},
+        {"id": "textScale", "type": "slider", "name": "Text Scale", "min": 0.5, "max": 3.0, "default": 1.0},
+        {"id": "maxDistance", "type": "slider", "name": "Max Distance", "min": 20, "max": 1000, "default": 500, "integer": true}
+      ],
+      "groups": [
+        {"name": "Sources", "settings": ["chatParty", "chatGuild", "chatAll", "chatPersonal"]},
+        {"name": "Waypoint", "settings": ["chatSeconds", "chatColor"]},
+        {"name": "Display", "settings": ["showDistance", "textScale", "maxDistance"]}
+      ]
+    },
+    "Blessing Display": {
+      "settings": [
+        {"id": "power", "type": "toggle", "name": "Power Blessing", "default": true},
+        {"id": "time", "type": "toggle", "name": "Time Blessing", "default": true},
+        {"id": "stone", "type": "toggle", "name": "Stone Blessing", "default": false},
+        {"id": "life", "type": "toggle", "name": "Life Blessing", "default": false},
+        {"id": "wisdom", "type": "toggle", "name": "Wisdom Blessing", "default": false}
+      ]
+    },
+    "Terminal ESP": {
+      "settings": [
+        {"id": "style", "name": "Style", "type": "dropdown", "default": "FILLED_OUTLINE", "choices": ["FILLED", "OUTLINE", "FILLED_OUTLINE"], "labels": { "FILLED": "Filled", "OUTLINE": "Outline", "FILLED_OUTLINE": "Filled Outline" }},
+        {"id": "phase", "type": "toggle", "name": "Show Through Walls", "default": false},
+        {"id": "fillColor", "type": "color", "name": "Fill Color", "default": [0, 255, 255, 90]},
+        {"id": "outlineColor", "type": "color", "name": "Outline Color", "default": [0, 255, 255, 255]},
+        {"id": "lineWidth", "type": "slider", "name": "Line Width", "min": 1.0, "max": 10.0, "default": 2.5},
+        {"id": "flashOnHit", "type": "toggle", "name": "Flash On Click", "default": true},
+        {"id": "flashColor", "type": "color", "name": "Flash Color", "default": [255, 0, 0, 255]}
+      ],
+      "groups": [
+        {"name": "Appearance", "settings": ["style", "phase", "fillColor", "outlineColor", "lineWidth"]},
+        {"name": "Flash", "toggle": "flashOnHit", "settings": ["flashColor"]}
+      ]
+    },
+    "Melody Message": {
+      "settings": [
+        {"id": "msg", "type": "text", "name": "Start Message", "default": "/pc Melody Terminal start!", "maxLength": 100},
+        {"id": "progress", "type": "toggle", "name": "Send Progress", "default": false},
+        {"id": "progressMsg", "type": "text", "name": "Progress Message", "default": "/pc Melody {percent}", "maxLength": 100}
+      ],
+      "groups": [
+        {"name": "Start", "settings": ["msg"]},
+        {"name": "Progress", "toggle": "progress", "settings": ["progressMsg"]}
+      ]
+    },
+    "Trapped Chest ESP": {
+      "settings": [
+        {"id": "fillColor", "type": "color", "name": "Fill Color", "default": [255, 170, 0, 70]},
+        {"id": "outlineColor", "type": "color", "name": "Outline Color", "default": [255, 170, 0, 255]},
+        {"id": "lineWidth", "type": "slider", "name": "Line Width", "min": 1.0, "max": 10.0, "default": 2.5},
+        {"id": "range", "type": "slider", "name": "Range", "min": 16, "max": 128, "default": 64, "integer": true},
+        {"id": "depthCheck", "type": "toggle", "name": "Depth Check", "default": false}
+      ]
+    },
+    "Arrow Align": {
+      "settings": [
+        {"id": "blockWrong", "type": "toggle", "name": "Block Wrong Clicks", "default": true},
+        {"id": "invertKey", "type": "toggle", "name": "Invert Shift", "label": "Block While Sneaking Instead", "default": false}
+      ]
+    },
+    "Simon Says": {
+      "settings": [
+        {"id": "firstColor", "type": "color", "name": "First Color", "default": [85, 255, 85, 128]},
+        {"id": "secondColor", "type": "color", "name": "Second Color", "default": [255, 170, 0, 128]},
+        {"id": "thirdColor", "type": "color", "name": "Third Color", "default": [255, 85, 85, 128]},
+        {"id": "style", "name": "Style", "type": "dropdown", "default": "FILLED_OUTLINE", "choices": ["FILLED", "OUTLINE", "FILLED_OUTLINE"], "labels": { "FILLED": "Filled", "OUTLINE": "Outline", "FILLED_OUTLINE": "Filled Outline" }},
+        {"id": "announceProgress", "type": "toggle", "name": "Announce Progress", "label": "Announce Progress In Party", "default": false},
+        {"id": "blockWrong", "type": "toggle", "name": "Block Wrong Clicks", "default": false},
+        {"id": "invertKey", "type": "toggle", "name": "Invert Shift", "label": "Block While Sneaking Instead", "default": false}
+      ]
+    },
+    "Croesus": {
+      "settings": [
+        {"id": "highlightState", "type": "toggle", "name": "Highlight State", "default": true},
+        {"id": "highlightProfitable", "type": "toggle", "name": "Highlight Profitable", "default": true},
+        {"id": "hideClaimed", "type": "toggle", "name": "Hide Claimed", "default": true},
+        {"id": "includeKey", "type": "toggle", "name": "Include Key", "label": "Count Dungeon Chest Key As Unclaimed", "default": false},
+        {"id": "minimized", "type": "toggle", "name": "Minimized", "label": "Only Show Profit", "default": false},
+        {"id": "chestWarning", "type": "slider", "name": "Chest Warning Threshold", "min": 0, "max": 60, "default": 55, "integer": true}
+      ],
+      "groups": [
+        {"name": "Croesus Menu", "settings": ["highlightState", "hideClaimed", "includeKey"]},
+        {"name": "Chest Profit", "settings": ["highlightProfitable", "minimized"]},
+        {"name": "Chest Count", "settings": ["chestWarning"]}
+      ]
+    },
+    "Ghost Vision": {
+      "settings": [
+        {"id": "style", "name": "Style", "type": "dropdown", "default": "FILLED_OUTLINE", "choices": ["FILLED", "OUTLINE", "FILLED_OUTLINE"], "labels": { "FILLED": "Filled", "OUTLINE": "Outline", "FILLED_OUTLINE": "Filled Outline" }},
+        {"id": "fillColor", "type": "color", "name": "Fill Color", "default": [0, 200, 200, 128]},
+        {"id": "outlineColor", "type": "color", "name": "Outline Color", "default": [0, 200, 200, 255]},
+        {"id": "hideCharge", "type": "toggle", "name": "Remove Charge Effect", "default": true}
       ]
     }
   }

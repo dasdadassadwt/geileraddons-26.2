@@ -64,12 +64,30 @@ class AreaKillerModule private constructor(private val c: Carrier) : Module(
                 c.teleportLead, c.hopDrop, c.hopGap, c.useEtherwarp, c.etherRange, c.warpGap, c.etherMinDistance,
             ),
             SettingGroup("Search", c.scanRadius),
+            SettingGroup("Rest", c.restEnabled, c.restDelay, c.restRadius),
             SettingGroup("Display", c.showOverlay, c.showHud, c.showBackground),
         )
         AreaKillerMacro.diagnostics = { diagnostics.event(it) }
         MacroWorkspaceConfig.registerSection(KillList())
         MacroWorkspaceConfig.registerSection(Stats())
         MacroWorkspaceConfig.registerSection(Bounds())
+        MacroWorkspaceConfig.registerSection(RestSection())
+    }
+
+    /** The rest settings go through here so the next tick's copy of the settings does not undo them. */
+    fun setRestEnabled(on: Boolean) {
+        c.restEnabled.setValue(on)
+        pull()
+    }
+
+    fun setRestRadius(blocks: Double) {
+        c.restRadius.setValue(blocks.toFloat())
+        pull()
+    }
+
+    fun setRestDelay(seconds: Double) {
+        c.restDelay.setValue(seconds.toFloat())
+        pull()
     }
 
     /** `/areakiller start`: starts the macro, and starts its session again when it is already running, as the source does. */
@@ -228,6 +246,9 @@ class AreaKillerModule private constructor(private val c: Carrier) : Module(
                 if (player != null) TeleportDetect.apply(player, k)?.let { diagnostics.event(it) }
             }
         }
+        k.restEnabled = c.restEnabled.rawValue()
+        k.restDelaySeconds = c.restDelay.value().toDouble()
+        k.restRadius = c.restRadius.value().toDouble()
         k.targetPattern = TargetPattern.valueOf(c.targetPattern.value())
         k.viewCone = c.viewCone.value().toDouble()
         k.turnFirstDegrees = c.turnFirst.value().toDouble()
@@ -393,6 +414,24 @@ class AreaKillerModule private constructor(private val c: Carrier) : Module(
         }
     }
 
+    /** The one rest point, three block coordinates or none: set by `/ga areakiller rest set`, kept between sessions. */
+    private inner class RestSection : MacroWorkspaceConfig.Section {
+        override fun name(): String = "rest"
+
+        override fun save(): JsonElement {
+            val array = JsonArray()
+            for (value in config.restPoint) array.add(value)
+            return array
+        }
+
+        override fun load(element: JsonElement?) {
+            config.restPoint = IntArray(0)
+            if (element == null || !element.isJsonArray || element.asJsonArray.size() != 3) return
+            if (element.asJsonArray.any { !it.isJsonPrimitive || !it.asJsonPrimitive.isNumber }) return
+            config.restPoint = IntArray(3) { element.asJsonArray[it].asInt }
+        }
+    }
+
     /** All the settings, created before the module so they can be handed to its constructor. */
     private class Carrier {
         val targetPattern = ChoiceSetting(
@@ -453,6 +492,10 @@ class AreaKillerModule private constructor(private val c: Carrier) : Module(
         val etherRange = NumberSetting("Etherwarp range", 20.0f, 60.0f, 60.0f)
         val etherMinDistance = NumberSetting("Etherwarp only longer than", 8.0f, 58.0f, 20.0f)
 
+        val restEnabled = BooleanSetting("Rest point", "Rest at the rest point when idle", false)
+        val restDelay = NumberSetting("Rest delay", "Rest after (seconds)", 1.0f, 120.0f, 4.0f)
+        val restRadius = NumberSetting("Rest radius", 1.0f, 16.0f, 4.0f)
+
         val showOverlay = BooleanSetting("World overlay", "Gate, route and target in the world", true)
         val showHud = BooleanSetting("Stats card", true)
         val showBackground = BooleanSetting("Card background", true)
@@ -466,7 +509,7 @@ class AreaKillerModule private constructor(private val c: Carrier) : Module(
             useBlackHole, blackHoleSlot, finisherHealth, holdBlackHole, rightCps, switchDelay,
             approachDistance, approachVariation, chaseKnockedBack, chaseRange, failsafeSeconds, failsafeDistance, scanRadius,
             useTeleport, autoItem, teleportSlot, teleportDistance, teleportDelay, teleportLead, hopDrop, hopGap, warpGap,
-            useEtherwarp, etherRange, etherMinDistance, showOverlay, showHud, showBackground,
+            useEtherwarp, etherRange, etherMinDistance, restEnabled, restDelay, restRadius, showOverlay, showHud, showBackground,
         )
     }
 
@@ -507,6 +550,8 @@ class AreaKillerModule private constructor(private val c: Carrier) : Module(
             "Fall lead" to "Ticks of lead on top of the ping when working out where the player will be when the jump goes off.",
             "Etherwarp" to "The teleport item's second mode, sneak and right click: a jump onto the block looked at, up to the range. Needs Teleport jumps.",
             "Etherwarp only longer than" to "A route shorter than this is walked or jumped, not warped. Kept at least 2 blocks under the range.",
+            "Rest point" to "With nothing to hit for the rest delay, walk to the rest point set with /ga areakiller rest set and wander within the rest radius of it until a mob comes. Cells painted as rest in the area are used with no rest point and without this switch.",
+            "Rest delay" to "How long nothing may be in reach before the macro goes to rest. A mob that is on the list but cannot be reached counts as nothing.",
             "Stats card" to "A card with the session's time, kills and kills an hour, and the totals of all sessions. Move it with Move Elements.",
         )
 

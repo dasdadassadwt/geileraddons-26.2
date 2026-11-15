@@ -13,6 +13,7 @@ import geiler.addons.client.module.RangeSetting
 import geiler.addons.client.module.Setting
 import geiler.addons.client.module.SettingGroup
 import geiler.addons.client.module.TextSetting
+import java.util.Locale
 
 /** Shared Click GUI row metrics and the recursive settings-panel layout. */
 internal object ClickGuiSettingsLayout {
@@ -60,6 +61,7 @@ internal object ClickGuiSettingsLayout {
 
     /** [startY] is the first row position after any ungrouped preview and applied scroll offset. */
     @JvmStatic
+    @JvmOverloads
     fun layoutRows(
         module: Module,
         x: Int,
@@ -67,13 +69,36 @@ internal object ClickGuiSettingsLayout {
         expandedColor: ColorSetting?,
         moduleWidth: Int,
         availableHeight: Int,
+        query: String = "",
     ): List<Row> {
         val rows = ArrayList<Row>()
         var cursorY = startY
-        for (group in flattenSmallGroups(module.groups())) {
-            cursorY = layoutGroup(module, group, x, cursorY, 0, moduleWidth, availableHeight, rows, expandedColor)
+        val needle = query.trim().lowercase(Locale.ROOT)
+        val searching = needle.isNotEmpty()
+        // Merge small sections first so a search keeps the same section structure as the plain page.
+        val flat = flattenSmallGroups(module.groups())
+        val source = if (searching) flat.mapNotNull { prune(module, it, needle) } else flat
+        for (group in source) {
+            cursorY = layoutGroup(module, group, x, cursorY, 0, moduleWidth, availableHeight, rows, expandedColor, searching)
         }
         return java.util.List.copyOf(rows)
+    }
+
+    private fun matches(module: Module, setting: Setting, needle: String): Boolean =
+        setting.displayName().lowercase(Locale.ROOT).contains(needle) ||
+            setting.name().lowercase(Locale.ROOT).contains(needle) ||
+            module.settingTooltip(setting)?.lowercase(Locale.ROOT)?.contains(needle) == true
+
+    /**
+     * Search filter: keeps a section whose name matches whole, otherwise only the matching settings and the
+     * nested sections that still have a match. Null drops the section.
+     */
+    private fun prune(module: Module, group: SettingGroup, needle: String): SettingGroup? {
+        if (group.name?.lowercase(Locale.ROOT)?.contains(needle) == true) return group
+        val settings = group.settings.filter { matches(module, it, needle) }
+        val children = group.children.mapNotNull { prune(module, it, needle) }
+        if (settings.isEmpty() && children.isEmpty()) return null
+        return SettingGroup(group.name, group.toggle, group.collapsedByDefault, settings, children, group.debugOnly, group.stateKey)
     }
 
     private const val LOOSE_GROUP_MAX_SETTINGS = 3
@@ -141,6 +166,7 @@ internal object ClickGuiSettingsLayout {
         availableHeight: Int,
         rows: MutableList<Row>,
         expandedColor: ColorSetting?,
+        searching: Boolean,
     ): Int {
         if (!visibleGroup(module, group)) return startY
         var cursorY = startY
@@ -154,7 +180,8 @@ internal object ClickGuiSettingsLayout {
                     SWITCH_WIDTH,
                     SWITCH_HEIGHT,
                 )
-            val collapsed = ClickGuiState.isCollapsed(module, group)
+            // A search opens every section it keeps; the saved fold state is untouched.
+            val collapsed = !searching && ClickGuiState.isCollapsed(module, group)
             rows.add(GroupRow(group, bounds, toggle, depth, collapsed))
             cursorY += GROUP_HEADER_HEIGHT
             // Folding a section takes all nested content with it.
@@ -243,7 +270,7 @@ internal object ClickGuiSettingsLayout {
             }
         }
 
-        for (preview in listOfNotNull(module as? ModulePreview) + module.extraPreviews()) {
+        for (preview in if (searching) emptyList() else listOfNotNull(module as? ModulePreview) + module.extraPreviews()) {
             if (preview.previewEnabled() && preview.previewGroupName() != null && preview.previewGroupName() == group.name) {
                 val contentHeight = maxOf(1, preview.previewHeight(moduleWidth, availableHeight))
                 rows.add(PreviewRow(preview, ClickGuiScreen.Rect(x, cursorY, moduleWidth, contentHeight)))
@@ -253,7 +280,7 @@ internal object ClickGuiSettingsLayout {
 
         for (child in group.children) {
             cursorY = layoutGroup(
-                module, child, x, cursorY, depth + 1, moduleWidth, availableHeight, rows, expandedColor,
+                module, child, x, cursorY, depth + 1, moduleWidth, availableHeight, rows, expandedColor, searching,
             )
         }
         return cursorY

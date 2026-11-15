@@ -19,9 +19,15 @@ enum class Paint(val code: Char, val label: String) {
     /** Not walkable at any height of its column: a barrier. */
     WALL('W', "wall"),
 
-    /** Walkable, and where the macro waits when there is nothing to hit: it walks to one of these cells and loiters. */
+    /** Walkable and preferred, and where the macro waits when there is nothing to hit: it walks to one of these cells and loiters. */
     REST('R', "rest"),
     ;
+
+    /** Ground the macro may stand on and that limits it to painted ground: allowed, preferred and rest. */
+    fun walkable(): Boolean = this == ALLOWED || this == PREFERRED || this == REST
+
+    /** Ground that is cheaper to walk: preferred and rest. */
+    fun cheap(): Boolean = this == PREFERRED || this == REST
 
     companion object {
         @JvmStatic
@@ -36,7 +42,7 @@ enum class Paint(val code: Char, val label: String) {
  * Where the macro may walk, set by brush: cells that are the stands of the ground - the block the feet are in - each with a [Paint].
  * Plain data, free of game state so checks can run it.
  *
- * Once any ground is painted allowed or preferred, the macro stands on painted ground only. With none, only what is painted
+ * Once any ground is painted allowed, preferred or rest, the macro stands on painted ground only. With none, only what is painted
  * forbidden or wall is shut and the rest is open. A wall shuts every height of its column. Each cell also remembers how high its
  * floor is above the feet cell (in eighths of a block, so a slab is drawn at its top), for drawing.
  */
@@ -53,8 +59,11 @@ class PaintedArea(val name: String) {
 
     fun size(): Int = cells.size
 
-    /** Whether any ground is painted allowed or preferred, which is what limits the macro to painted ground. */
+    /** Whether any ground is painted allowed, preferred or rest, which is what limits the macro to painted ground. */
     fun restrictive(): Boolean = walkable > 0
+
+    /** How many cells are painted allowed, preferred or rest. */
+    fun walkableCount(): Int = walkable
 
     /** How many cells are painted as places to rest. */
     fun restCount(): Int = rests
@@ -97,7 +106,7 @@ class PaintedArea(val name: String) {
     fun minCostFactor(): Double = if (preferred > 0) PREFERRED_COST else 1.0
 
     /** What a step into this cell costs, relative to the plain cost: preferred ground is cheaper. */
-    fun costFactor(x: Int, y: Int, z: Int): Double = if (typeAt(x, y, z) == Paint.PREFERRED) PREFERRED_COST else 1.0
+    fun costFactor(x: Int, y: Int, z: Int): Double = if (typeAt(x, y, z)?.cheap() == true) PREFERRED_COST else 1.0
 
     /** Paints a cell; [heightEighths] is how far above the feet cell's bottom the floor is. */
     fun put(x: Int, y: Int, z: Int, type: Paint, heightEighths: Int) {
@@ -107,9 +116,9 @@ class PaintedArea(val name: String) {
         if (cells.containsKey(key) && old == value) return
         if (cells.containsKey(key)) forget(key, decode(old)!!)
         cells.put(key, value)
-        if (type == Paint.ALLOWED || type == Paint.PREFERRED) walkable++
+        if (type.walkable()) walkable++
         if (type == Paint.REST) rests++
-        if (type == Paint.PREFERRED) preferred++
+        if (type.cheap()) preferred++
         if (type == Paint.WALL) walls.add(column(x, z))
         revision++
     }
@@ -133,9 +142,9 @@ class PaintedArea(val name: String) {
     }
 
     private fun forget(key: Long, type: Paint) {
-        if (type == Paint.ALLOWED || type == Paint.PREFERRED) walkable--
+        if (type.walkable()) walkable--
         if (type == Paint.REST) rests--
-        if (type == Paint.PREFERRED) preferred--
+        if (type.cheap()) preferred--
         if (type == Paint.WALL) {
             val x = unpackX(key)
             val z = unpackZ(key)

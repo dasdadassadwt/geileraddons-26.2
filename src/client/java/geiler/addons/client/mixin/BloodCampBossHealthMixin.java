@@ -1,5 +1,6 @@
 package geiler.addons.client.mixin;
 
+import geiler.addons.client.module.impl.BossBarPercentModule;
 import geiler.addons.client.module.impl.DungeonBloodCampModule;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.BossHealthOverlay;
@@ -17,5 +18,6 @@ public abstract class BloodCampBossHealthMixin {
 	private void geileraddons$addBloodCampWatcherHealth(GuiGraphicsExtractor graphics, int x, int y,
 		BossEvent event, CallbackInfo ci) {
 		DungeonBloodCampModule.INSTANCE.applyWatcherBossBar(event);
+		BossBarPercentModule.INSTANCE.apply(event);
 	}
 }

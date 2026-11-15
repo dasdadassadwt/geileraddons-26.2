@@ -85,11 +85,32 @@ public final class RegisteredModuleCatalogChecks {
 		"ItemCooldownsModule",
 		"GyroWandModule",
 		"MimicAnnouncerModule",
+		"WaypointsModule",
+		"ChatWaypointsModule",
+		"BlessingDisplayModule",
+		"TerminalEspModule",
+		"MelodyMessageModule",
+		"TrappedChestEspModule",
+		"ArrowAlignModule",
+		"SimonSaysModule",
+		"CroesusModule",
+		"SpeedDisplayModule",
+		"GhostVisionModule",
 		"TerracottaTimerModule",
 		"WardrobeKeybindsModule",
 		"LoadoutKeybindsModule",
 		"SpringBootsModule",
-		"RagnarockModule"
+		"RagnarockModule",
+		"TickTimersModule",
+		"FireFreezeTimerModule",
+		"RelicTimerModule",
+		"WitherDragonsModule",
+		"KingRelicModule",
+		"DragonStackAimerModule",
+		"CompactDamageModule",
+		"TerminalSolverModule",
+		"PriceDisplayModule",
+		"TerminalSimulatorModule"
 	);
 
 	private RegisteredModuleCatalogChecks() { }

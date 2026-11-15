@@ -55,8 +55,8 @@ public final class SelectionChecks {
 	}
 
 	private static void checkIgnore() {
-		check(IgnoreRule.millis(0) == 6000L && IgnoreRule.millis(1) == 15000L && IgnoreRule.millis(2) == 40000L, "6 s, 15 s, 40 s");
-		check(IgnoreRule.millis(9) == 40000L && IgnoreRule.millis(-3) == 6000L, "capped, and never negative");
+		check(IgnoreRule.millis(0) == 3000L && IgnoreRule.millis(1) == 8000L && IgnoreRule.millis(2) == 20000L && IgnoreRule.millis(3) == 40000L, "3 s, 8 s, 20 s, 40 s");
+		check(IgnoreRule.millis(9) == 40000L && IgnoreRule.millis(-3) == 3000L, "capped, and never negative");
 	}
 
 	private static TargetPlanner.Mob<String> at(String name, double x, double z, double cost) {

@@ -90,6 +90,19 @@ class PathWalker {
     private var sidestepTicks = 0
     private var sidestepSign = 1.0f
 
+    /** Hops made at something the route did not know about since the last progress; the planned jump being tried and how often. */
+    private var nudges = 0
+    private var jumpEdge = Double.NaN
+    private var jumpAttempts = 0
+
+    /** How often the keys were let go of because the ground ended within the slide, for the log. */
+    private var edgeBrakes = 0
+
+    fun edgeBrakes(): Int = edgeBrakes
+
+    /** Why the last [Status.STUCK] was given, for the log: a wall above the jump, or a planned jump that does not land. */
+    private var stuckReason: String? = null
+
     /** The speed the gain of jumping was last worked out for, whether it gains, and how far one such jump goes. */
     private var hopSpeed = Double.NaN
     private var hopGains = false
@@ -106,7 +119,18 @@ class PathWalker {
         steerPoint = null
         steerTight = false
         sidestepTicks = 0
+        resetClimb()
     }
+
+    private fun resetClimb() {
+        nudges = 0
+        jumpEdge = Double.NaN
+        jumpAttempts = 0
+        stuckReason = null
+    }
+
+    /** Why the walker said STUCK last, or null when it has not. */
+    fun stuckReason(): String? = stuckReason
 
     /**
      * Carries on from a place further along the route than walking could have got to by now - after a
@@ -138,6 +162,7 @@ class PathWalker {
         stallTicks = 0
         jumpTicks = 0
         sidestepTicks = 0
+        resetClimb()
     }
 
     fun path(): Path? = path
@@ -234,23 +259,38 @@ class PathWalker {
         // A jump is made as the player is moving: the sprint is not taken away in the tick the key goes down, which would
         // mean letting go of forward for that tick - a jump with nothing behind it, that comes down short of the block.
         if (jump && player.onGround() && player.isSprinting && wantSprint) sprint = true
-        if (!jump && player.onGround() && !player.isInWater && sidestepTicks == 0 &&
-            tooFast(player, upcoming, toSpecial, remaining, kept, stride)
+        val edgeHit = !jump && !dropping && player.onGround() && !player.isInWater && edgeUnderfoot(player, yaw, kept, push, upcoming, toSpecial)
+        if (edgeHit) edgeBrakes++
+        if (edgeHit || (!jump && player.onGround() && !player.isInWater && sidestepTicks == 0 &&
+                tooFast(player, upcoming, toSpecial, remaining, kept, stride))
         ) {
-            // Too fast for what is coming: no keys for this tick, which is all the brake there is.
+            // Too fast for what is coming, or the ground ends within the slide: no keys for this tick, which is all the brake there is.
             input.stand(false)
         } else {
+            // On a line with no room to spare the sprint goes, not the keys: a walk along it, not a stop and a go every other tick.
+            if (steerTight && kept > KEPT_WHERE_TIGHT * (1.0 + (stretch - 1.0) * TIGHT_SPEED_SHARE)) sprint = false
             // A line that needs the exact heading - a tight passage, an edge, a jump close ahead - keeps the sideways keys; any other is
             // walked with the view leading and the keys pushing forward, the way a person runs where they look.
-            val precise = steerTight || dropping || (upcoming != null && toSpecial <= PRECISE_NEAR_SPECIAL * stretch)
+            val precise = steerTight || dropping || (upcoming != null && toSpecial <= PRECISE_NEAR_SPECIAL * min(stretch, PRECISE_MAX_STRETCH))
             input.walk(yaw, sprint, jump, stepping, precise)
         }
 
         if (progress > bestProgress + PROGRESS_EPSILON) {
             bestProgress = progress
             stallTicks = 0
+            nudges = 0
         } else {
             stallTicks++
+            // A wall higher than any jump, in the way: hopping at it is all that would be left, and it gets nowhere. Said at once, so the
+            // caller can plan another way or teleport up, and the place is remembered.
+            if (stallTicks >= UNCLIMBABLE_AFTER_TICKS && player.horizontalCollision && wallAboveJump(player, yaw)) {
+                stuckReason = "wall above the jump height ahead jump=${String.format(java.util.Locale.ROOT, "%.2f", path!!.terrain().jumpHeight())}"
+                return Status.STUCK
+            }
+            if (jumpAttempts >= MAX_JUMP_ATTEMPTS && !jumpEdge.isNaN() && progress < jumpEdge + 0.3) {
+                stuckReason = "planned jump failed $jumpAttempts times"
+                return Status.STUCK
+            }
             // Against something and going nowhere: a step to the side at once. Without a touch it may only be a slow
             // stretch, and the step waits.
             val pinned = player.horizontalCollision && stallTicks >= PINNED_TICKS && sidestepTicks == 0 && !jump
@@ -328,9 +368,6 @@ class PathWalker {
         // what keeps a player who is standing a little short of the end from standing there for good.
         val rest = remaining - REST_BEFORE_END
         if (brakeNow(stride, rest + END_GIVE, 0.0) && kept / GROUND_LOST >= remaining - ARRIVAL_DISTANCE + 0.02) return true
-        // A line with no room to spare is not taken faster than about twice a sprint at the plain speed: any faster and
-        // the body is too far off its line for it.
-        if (steerTight && kept > KEPT_WHERE_TIGHT) return true
         // For the rest, only a player who is faster than they should be there is braked: one who is not has to be let
         // go on, or they would stop short of the thing and never reach it.
         if (upcoming != null && upcoming.move == MoveType.DROP && kept > KEPT_AT_DROP &&
@@ -550,10 +587,18 @@ class PathWalker {
         val obstacle = !planned && stepAhead(player, yaw, kept, push, stride * early)
         // Something the route did not know about, and against it for a while: a hop clears a fence post, a mob or a snow
         // layer, and if it does not, the step to the side and then the stall counter take over.
-        val nudge = player.horizontalCollision && stallTicks >= HOP_AFTER_TICKS && stallTicks < SIDESTEP_AFTER_TICKS
+        val nudge = player.horizontalCollision && stallTicks >= HOP_AFTER_TICKS && stallTicks < SIDESTEP_AFTER_TICKS && nudges < MAX_NUDGES
         if (planned || obstacle || nudge || hop) {
             jumpTicks = 1
             jumpGive = ThreadLocalRandom.current().nextDouble(0.0, JUMP_GIVE)
+            if (nudge && !planned && !obstacle && !hop) nudges++
+            if (planned && upcoming != null) {
+                if (jumpEdge.isNaN() || abs(jumpEdge - upcoming.edgeDistance) > 0.5) {
+                    jumpEdge = upcoming.edgeDistance
+                    jumpAttempts = 0
+                }
+                jumpAttempts++
+            }
             return true
         }
         return false
@@ -623,6 +668,40 @@ class PathWalker {
             return terrain.clearBox(onTop) && terrain.clearBox(overHead)
         }
         return false
+    }
+
+    /**
+     * Whether the ground under the player ends within the distance they still get, with the push of this tick and the slide after
+     * (see [EdgeGuard]), in the direction they are moving - or looking, from a standstill - and the route plans no jump or drop there.
+     */
+    private fun edgeUnderfoot(player: LocalPlayer, yaw: Float, kept: Double, push: Double, upcoming: Path.Upcoming?, toSpecial: Double): Boolean {
+        val reach = EdgeGuard.travel(kept, push)
+        val motion = player.deltaMovement
+        val dirX: Double
+        val dirZ: Double
+        if (kept > 0.03) {
+            dirX = motion.x / kept
+            dirZ = motion.z / kept
+        } else {
+            val radians = (yaw * Mth.DEG_TO_RAD).toDouble()
+            dirX = -sin(radians)
+            dirZ = cos(radians)
+        }
+        val special = upcoming != null && toSpecial <= reach + EDGE_SPECIAL_MARGIN
+        if (special) return false
+        val ground = path!!.terrain().groundAhead(player.position(), dirX, dirZ, reach)
+        return EdgeGuard.brake(ground, reach, false)
+    }
+
+    /**
+     * Whether what the player is against reaches higher than any jump of theirs: the body, lifted the height of a jump less a little and
+     * moved a bit on in the direction of the keys, is still in a block.
+     */
+    private fun wallAboveJump(player: LocalPlayer, yaw: Float): Boolean {
+        val terrain = path!!.terrain()
+        val radians = (yaw * Mth.DEG_TO_RAD).toDouble()
+        val box = player.boundingBox.move(-sin(radians) * UNCLIMBABLE_REACH, terrain.jumpHeight() - 0.1, cos(radians) * UNCLIMBABLE_REACH)
+        return !terrain.clearBox(box)
     }
 
     /** Whether the player can walk a little way in the direction of this yaw from where they stand. */
@@ -700,6 +779,12 @@ class PathWalker {
 
         /** Within this many blocks (times the stretch) of a jump or a drop the line is walked exactly. */
         private const val PRECISE_NEAR_SPECIAL = 3.0
+
+        /** The stretch of a fast player counts only this far for that: at four times the speed the whole of twelve blocks was one long sidestep. */
+        private const val PRECISE_MAX_STRETCH = 1.5
+
+        /** How much of the extra speed of a fast player the limit on a tight line allows. */
+        private const val TIGHT_SPEED_SHARE = 0.5
         private const val CAMERA_MIN_LOOKAHEAD = 2.0
         private const val CAMERA_STEP = 0.5
 
@@ -781,6 +866,17 @@ class PathWalker {
         private const val SIDESTEP_TICKS = 9
         private const val SIDESTEP_DEGREES = 70.0f
         private const val STUCK_AFTER_TICKS = 34
+
+        /** Hops at an unknown obstacle before the player stops hopping, and tries of one planned jump before it is given up. */
+        /** A jump or drop of the route this much past the slide still counts as meant: the edge is walked off, not braked for. */
+        private const val EDGE_SPECIAL_MARGIN = 1.5
+
+        private const val MAX_NUDGES = 2
+        private const val MAX_JUMP_ATTEMPTS = 3
+
+        /** Ticks against a wall before it is checked for being higher than a jump, and how far on the body is tried. */
+        private const val UNCLIMBABLE_AFTER_TICKS = 5
+        private const val UNCLIMBABLE_REACH = 0.3
 
         /**
          * How far the player is from the edge of a jump or a drop, on the ground: from the middle of the body to the line

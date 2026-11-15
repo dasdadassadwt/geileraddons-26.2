@@ -20,7 +20,7 @@ public final class CodeStyleChecks {
 		"DungeonFloorPickerScreen", "DungeonGuideEditorScreen", "DungeonGuideStagesScreen", "FolderManagerScreen",
 		"GuiColorPickerScreen", "HotbarBindingCaptureScreen", "InventoryButtonPickerScreen", "InventoryButtonTextScreen", "MacroShareScreen", "MoveUiScreen",
 		"PlayerSizeEditorScreen", "ScoreboardFontImportScreen", "ScratchMacroEditorScreen", "SecretWaypointEditorScreen",
-		"TikiCoordManagerScreen");
+		"TikiCoordManagerScreen", "WaypointManagerScreen");
 	private static final int MAX_FACADE_PAIRS = 62;
 	private static final int MAX_FILE_LINES = 4300;
 	private static final Pattern SCREEN_SUBCLASS = Pattern.compile("class\\s+(\\w+)[^{]*?:\\s*Screen\\(", Pattern.DOTALL);

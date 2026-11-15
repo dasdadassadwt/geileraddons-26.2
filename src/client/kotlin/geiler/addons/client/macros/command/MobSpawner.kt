@@ -1,5 +1,7 @@
 package geiler.addons.client.macros.command
 
+import geiler.addons.client.macros.MacroRuntime
+import geiler.addons.client.macros.area.PaintStore
 import geiler.addons.client.macros.killer.AreaKillerMacro
 import geiler.addons.client.macros.killer.MobIds
 import geiler.addons.client.macros.sim.SimGuard
@@ -9,6 +11,7 @@ import net.minecraft.core.BlockPos
 import net.minecraft.world.phys.Vec3
 import java.util.Locale
 import java.util.concurrent.ThreadLocalRandom
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.sin
@@ -48,17 +51,22 @@ object MobSpawner {
         val random = ThreadLocalRandom.current()
         val spots = ArrayList<Vec3>(count)
         var tries = 0
-        while (spots.size < count && tries < count * TRIES_PER_MOB) {
-            tries++
-            val angle = random.nextDouble() * Math.PI * 2.0
-            val distance = radius * sqrt(random.nextDouble())
-            val x = player.x + cos(angle) * distance
-            val z = player.z + sin(angle) * distance
-            val y = groundY(level, x, z, player.y) ?: continue
-            spots.add(Vec3(x, y, z))
+        val areaSpots = areaSpots(player, radius, count, random)
+        if (areaSpots != null) {
+            for (spot in areaSpots) spots.add(Vec3(spot[0], spot[1], spot[2]))
+        } else {
+            while (spots.size < count && tries < count * TRIES_PER_MOB) {
+                tries++
+                val angle = random.nextDouble() * Math.PI * 2.0
+                val distance = radius * sqrt(random.nextDouble())
+                val x = player.x + cos(angle) * distance
+                val z = player.z + sin(angle) * distance
+                val y = groundY(level, x, z, player.y) ?: continue
+                spots.add(Vec3(x, y, z))
+            }
         }
         if (spots.isEmpty()) {
-            fail("No free ground found within $radius blocks.")
+            fail(if (areaSpots != null) "No walkable cell of the area within $radius blocks." else "No free ground found within $radius blocks.")
             AreaKillerMacro.diagnostics("spawnmob refused mob=$id count=$count radius=$radius reason=no_ground tries=$tries")
             return 0
         }
@@ -76,6 +84,34 @@ object MobSpawner {
         AreaKillerMacro.diagnostics("spawnmob mob=$id requested=$count spawned=$spawned radius=$radius tries=$tries")
         return 1
     }
+
+    /**
+     * Where to put the mobs when the painted area of the macro is in use and the player is in it or within [SpawnPlacement.NEAR_BLOCKS] of its
+     * walkable cells: on those cells within [radius] only, however far the radius reaches past the area. Null when no area is in use or
+     * the player is not near it (the plain disc applies), empty when it is but no cell is within the radius.
+     */
+    private fun areaSpots(player: net.minecraft.client.player.LocalPlayer, radius: Int, count: Int, random: java.util.Random): List<DoubleArray>? {
+        val name = MacroRuntime.config.paintArea
+        if (name.isEmpty()) return null
+        val area = PaintStore.get(name) ?: return null
+        if (area.walkableCount() == 0) return null
+        var near = false
+        area.forEachNear(player.x, player.z, SpawnPlacement.NEAR_BLOCKS, Int.MAX_VALUE) { _, y, _, type, _ ->
+            if (type.walkable() && abs(y - player.y) <= NEAR_HEIGHT) near = true
+        }
+        if (!near) return null
+        val cells = ArrayList<IntArray>()
+        area.forEachNear(player.x, player.z, radius.toDouble(), Int.MAX_VALUE) { x, y, z, type, eighths ->
+            if (type.walkable() && abs(y - player.y) <= AREA_HEIGHT) cells.add(intArrayOf(x, y, z, eighths))
+        }
+        val spots = SpawnPlacement.pick(cells, count, random)
+        AreaKillerMacro.diagnostics("spawnmob area=$name cells=${cells.size} requested=$count radius=$radius")
+        return spots
+    }
+
+    /** How far above or below the player a walkable cell may be to count as near, and to be spawned on. */
+    private const val NEAR_HEIGHT = 24.0
+    private const val AREA_HEIGHT = 48.0
 
     /** The feet height of a free standing place near ([x], [z]) around [aroundY], or null: ground under it, two free cells over it. */
     private fun groundY(level: ClientLevel, x: Double, z: Double, aroundY: Double): Double? {

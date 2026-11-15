@@ -84,7 +84,7 @@ public final class DungeonRunSplitsModuleChecks {
 				"the Kotlin singleton retains a Java-visible static INSTANCE field");
 			for (String setting : List.of(
 				"showSplits", "showCurrentSplit", "secondTimeDisplay", "showTickTime", "showRealTime",
-				"showPbPace", "showCountValue", "countSource", "localRunSummary", "showBossTimers")) {
+				"showPbPace", "showCountValue", "countSource", "localRunSummary")) {
 				var field = DungeonRunSplitsModule.class.getField(setting);
 				require(Modifier.isStatic(field.getModifiers()) && Modifier.isFinal(field.getModifiers()),
 					"the Kotlin settings retain Java static field access: " + setting);
@@ -215,7 +215,6 @@ public final class DungeonRunSplitsModuleChecks {
 		boolean oldShowCountValue = DungeonRunSplitsModule.showCountValue.value();
 		String oldCountSource = DungeonRunSplitsModule.countSource.value();
 		boolean oldLocalRunSummary = DungeonRunSplitsModule.localRunSummary.value();
-		boolean oldShowBossTimers = DungeonRunSplitsModule.showBossTimers.value();
 		try {
 			DungeonRunSplitsModule.showSplits.reset();
 			DungeonRunSplitsModule.showCurrentSplit.reset();
@@ -226,7 +225,6 @@ public final class DungeonRunSplitsModuleChecks {
 			DungeonRunSplitsModule.showCountValue.reset();
 			DungeonRunSplitsModule.countSource.reset();
 			DungeonRunSplitsModule.localRunSummary.reset();
-			DungeonRunSplitsModule.showBossTimers.reset();
 			require(DungeonRunSplitsModule.showSplits.value()
 					&& DungeonRunSplitsModule.showCurrentSplit.value()
 					&& DungeonRunSplitsModule.secondTimeDisplay.value().equals("LOCAL_PB")
@@ -235,8 +233,7 @@ public final class DungeonRunSplitsModuleChecks {
 					&& !DungeonRunSplitsModule.showPbPace.value()
 					&& DungeonRunSplitsModule.showCountValue.value()
 					&& DungeonRunSplitsModule.countSource.value().equals("CLIENT_TICKS")
-					&& DungeonRunSplitsModule.localRunSummary.value()
-					&& DungeonRunSplitsModule.showBossTimers.value(),
+					&& DungeonRunSplitsModule.localRunSummary.value(),
 				"all saved setting defaults remain unchanged");
 			require(DungeonRunSplitsModule.showSplits.name().equals("Show Splits")
 					&& DungeonRunSplitsModule.showCurrentSplit.name().equals("Show Current Split")
@@ -246,8 +243,7 @@ public final class DungeonRunSplitsModuleChecks {
 					&& DungeonRunSplitsModule.showPbPace.name().equals("Show PB Pace")
 					&& DungeonRunSplitsModule.showCountValue.name().equals("Show Count Value")
 					&& DungeonRunSplitsModule.countSource.name().equals("Count Source")
-					&& DungeonRunSplitsModule.localRunSummary.name().equals("Local Run Summary")
-					&& DungeonRunSplitsModule.showBossTimers.name().equals("Show Boss Timers"),
+					&& DungeonRunSplitsModule.localRunSummary.name().equals("Local Run Summary"),
 				"all persisted setting IDs remain stable");
 			require(DungeonRunSplitsModule.secondTimeDisplay.choices().equals(
 					List.of("NONE", "CLIENT_TICK_ESTIMATE", "LOCAL_PB", "TIME_LOST"))
@@ -260,16 +256,14 @@ public final class DungeonRunSplitsModuleChecks {
 			DungeonRunSplitsModule module = DungeonRunSplitsModule.INSTANCE;
 			List<SettingGroup> groups = module.groups();
 			require(groups.stream().map(SettingGroup::name).toList()
-					.equals(List.of("Split Display", "Boss Timers", "Completion Summary")),
+					.equals(List.of("Split Display", "Completion Summary")),
 				"the visible settings group names and order remain stable");
 			require(groups.get(0).toggle() == DungeonRunSplitsModule.showSplits
 					&& groups.get(0).settings().equals(List.of(
 						DungeonRunSplitsModule.showCurrentSplit,
 						DungeonRunSplitsModule.secondTimeDisplay))
-					&& groups.get(1).toggle() == DungeonRunSplitsModule.showBossTimers
-					&& groups.get(1).settings().isEmpty()
-					&& groups.get(2).toggle() == DungeonRunSplitsModule.localRunSummary
-					&& groups.get(2).settings().isEmpty(),
+					&& groups.get(1).toggle() == DungeonRunSplitsModule.localRunSummary
+					&& groups.get(1).settings().isEmpty(),
 				"split, boss timer, and completion summary sections retain their toggles and settings");
 			require(groups.stream().flatMap(group -> group.settings().stream()).noneMatch(setting ->
 					setting == DungeonRunSplitsModule.showTickTime
@@ -280,7 +274,7 @@ public final class DungeonRunSplitsModuleChecks {
 				"legacy completion-summary settings stay persisted but hidden from the Run Splits groups");
 			require(module.booleanSettings().stream().map(Setting::name).toList().equals(List.of(
 					"Show Splits", "Show Current Split", "Show Tick Time", "Show Real Time", "Show PB Pace",
-					"Show Count Value", "Local Run Summary", "Show Boss Timers"))
+					"Show Count Value", "Local Run Summary"))
 					&& module.choiceSettings().stream().map(Setting::name).toList().equals(
 						List.of("Second Time Display", "Count Source")),
 				"the flat persisted setting lists keep their original declaration order");
@@ -296,7 +290,6 @@ public final class DungeonRunSplitsModuleChecks {
 			DungeonRunSplitsModule.showCountValue.setValue(oldShowCountValue);
 			DungeonRunSplitsModule.countSource.setValue(oldCountSource);
 			DungeonRunSplitsModule.localRunSummary.setValue(oldLocalRunSummary);
-			DungeonRunSplitsModule.showBossTimers.setValue(oldShowBossTimers);
 		}
 	}
 

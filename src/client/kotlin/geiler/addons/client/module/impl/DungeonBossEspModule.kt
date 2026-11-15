@@ -137,7 +137,7 @@ class DungeonBossEspModule private constructor(
             emptyList()
         }
         diagnostics.statusOnChange {
-            "active=true witherTargets=${targets.size} mimicChests=${mimicChests.size} " +
+            "active=true witherTargets=${targets.size} mimicChests=${mimicChests.size} master=${floor?.master() ?: false} " +
                 "floor=${floor?.number() ?: -1} clearPhase=${DungeonContextTracker.isClearPhase()}"
         }
     }
