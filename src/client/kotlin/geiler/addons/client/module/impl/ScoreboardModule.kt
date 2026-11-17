@@ -6,6 +6,7 @@ import geiler.addons.client.module.ChoiceSetting
 import geiler.addons.client.module.ColorSetting
 import geiler.addons.client.module.Module
 import geiler.addons.client.module.ModuleAction
+import geiler.addons.client.module.NumberSetting
 import geiler.addons.client.module.Setting
 import geiler.addons.client.module.SettingGroup
 import geiler.addons.client.module.TextSetting
@@ -30,6 +31,7 @@ class ScoreboardModule private constructor(
     private val background = settings.background
     private val backgroundColor = settings.backgroundColor
     private val borderColor = settings.borderColor
+    private val lineSpacing = settings.lineSpacing
     private val importFont = settings.importFont
     private val customRows = settings.customRows
     private var fontChoices: List<ScoreboardFontService.FontChoice> = emptyList()
@@ -39,7 +41,7 @@ class ScoreboardModule private constructor(
 
     init {
         group(
-            SettingGroup("Appearance", font, importFont, background, backgroundColor, borderColor),
+            SettingGroup("Appearance", font, importFont, background, backgroundColor, borderColor, lineSpacing),
             SettingGroup.folded("Custom Rows", *customRows),
         )
         ClientTickEvents.END_CLIENT_TICK.register { _ -> synchronizeSettings() }
@@ -107,6 +109,7 @@ class ScoreboardModule private constructor(
         background.setValue(layout.background()?.name ?: ScoreboardLayout.BackgroundStyle.GLASS_ROUNDED.name)
         backgroundColor.setArgb(layout.backgroundColor())
         borderColor.setArgb(layout.borderColor())
+        lineSpacing.setValue(layout.lineSpacing().toFloat())
         val lines = layout.lines().filter { it.type() == ScoreboardLine.Type.CUSTOM_TEXT }
         for (index in customRows.indices) {
             customRows[index].setValue(lines.getOrNull(index)?.text().orEmpty())
@@ -119,6 +122,7 @@ class ScoreboardModule private constructor(
             .getOrDefault(ScoreboardLayout.BackgroundStyle.GLASS_ROUNDED))
         layout.setBackgroundColor(backgroundColor.argb())
         layout.setBorderColor(borderColor.argb())
+        layout.setLineSpacing(lineSpacing.intValue())
 
         val existingCustomRows = layout.lines().filter { it.type() == ScoreboardLine.Type.CUSTOM_TEXT }
         val otherLineCount = layout.lines().size - existingCustomRows.size
@@ -148,6 +152,7 @@ class ScoreboardModule private constructor(
         layout.background()?.name ?: ScoreboardLayout.BackgroundStyle.GLASS_ROUNDED.name,
         layout.backgroundColor(),
         layout.borderColor(),
+        layout.lineSpacing(),
         layout.lines().asSequence()
             .filter { it.type() == ScoreboardLine.Type.CUSTOM_TEXT }
             .map { it.text().orEmpty() }
@@ -159,6 +164,7 @@ class ScoreboardModule private constructor(
         background.value(),
         backgroundColor.argb(),
         borderColor.argb(),
+        lineSpacing.intValue(),
         customRows.map { it.value().take(256) }.filter { it.isNotBlank() },
     )
 
@@ -167,6 +173,7 @@ class ScoreboardModule private constructor(
         val background: String,
         val backgroundColor: Int,
         val borderColor: Int,
+        val lineSpacing: Int,
         val customRows: List<String>,
     )
 
@@ -191,6 +198,7 @@ class ScoreboardModule private constructor(
         )
         val backgroundColor = ColorSetting("Background Color", 0, 0, 0, 170)
         val borderColor = ColorSetting("Border Color", 0, 0, 0, 102)
+        val lineSpacing = NumberSetting("Line Spacing", 0f, 16f, 1f, true)
         val importFont = ModuleAction(
             "Import Font",
             "Import a local font for the scoreboard.",
@@ -203,6 +211,7 @@ class ScoreboardModule private constructor(
             background,
             backgroundColor,
             borderColor,
+            lineSpacing,
             importFont,
             *customRows,
         )

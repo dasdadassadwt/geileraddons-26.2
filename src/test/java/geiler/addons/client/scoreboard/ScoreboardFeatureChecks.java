@@ -201,9 +201,12 @@ public final class ScoreboardFeatureChecks {
 
 		if (module.actions().size() != 1 || !module.actions().get(0).label().equals("Import Font")
 			|| module.actions().get(0).onClick() == null || module.choiceSettings().size() != 2
-			|| module.colorSettings().size() != 2 || !module.numberSettings().isEmpty()
+			|| module.colorSettings().size() != 2 || module.numberSettings().size() != 1
+				|| !module.numberSettings().get(0).name().equals("Line Spacing")
+				|| module.numberSettings().get(0).min() != 0f || module.numberSettings().get(0).max() != 16f
+				|| !module.numberSettings().get(0).isInteger()
 			|| !module.booleanSettings().isEmpty() || module.textSettings().size() != 64) {
-			throw new AssertionError("Click GUI settings should expose only font/background/border controls and custom row text.");
+			throw new AssertionError("Click GUI settings should expose only font/background/border/line spacing controls and custom row text.");
 		}
 		for (int index = 0; index < module.textSettings().size(); index++) {
 			if (!module.textSettings().get(index).name().equals("Custom Row " + (index + 1))) {

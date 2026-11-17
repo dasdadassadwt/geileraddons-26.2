@@ -177,13 +177,6 @@ public final class HudFeatureChecks {
 			&& !SlayerTrackerModule.shouldDisplayForQuestState(false, lastActive, lastActive + 30_000_000_000L)
 			&& !SlayerTrackerModule.shouldDisplayForQuestState(false, 0L, lastActive),
 			"the Slayer HUD hides exactly 30 seconds after an idle quest and stays hidden without session activity");
-		require(!SlayerTrackerModule.shouldScanMinibosses(false, true, true, true)
-			&& !SlayerTrackerModule.shouldScanMinibosses(true, false, true, true)
-			&& !SlayerTrackerModule.shouldScanMinibosses(true, true, false, true)
-			&& !SlayerTrackerModule.shouldScanMinibosses(true, true, true, false)
-			&& SlayerTrackerModule.shouldScanMinibosses(true, true, true, true),
-			"Slayer miniboss tracking requires an active quest, enabled alert, world, and player");
-
 		SlayerHourlyStats stats = new SlayerHourlyStats();
 		stats.tick(true, 1_000_000_000L);
 		stats.tick(true, 2_000_000_000L);
@@ -199,62 +192,26 @@ public final class HudFeatureChecks {
 		SlayerTrackerModule module = SlayerTrackerModule.INSTANCE;
 		require(module.name().equals("Slayer Tracker") && module.displayName().equals("Slayer Tracker")
 			&& module.configName().equals("Slayer Tracker")
-			&& module.description().equals("Counts Slayer bosses per hour, times spawns and kills, and configures spawn alerts.")
+			&& module.description().equals("Counts Slayer bosses per hour.")
 			&& module.id().equals("slayer_tracker") && module.category() == Category.SLAYER
-			&& !module.defaultEnabled() && module.isWorkInProgress(),
-			"Slayer Tracker keeps its registered identity, category, default-off state, and WIP marker");
+			&& !module.defaultEnabled() && !module.isWorkInProgress(),
+			"Slayer Tracker keeps its registered identity, category and default-off state and is no longer marked work in progress");
 
-		List<String> expectedBooleanSettings = List.of(
-			"Show Totals", "Background", "Boss Spawn Alert", "Miniboss Spawn Alert",
-			"Unclassified Boss Alert", "Chat Alert", "Title Alert", "Sound Alert",
-			"Revenant Horror Alert", "Atoned Horror Alert", "Tarantula Broodfather Alert",
-			"Sven Packmaster Alert", "Voidgloom Seraph Alert", "Inferno Demonlord Alert",
-			"Riftstalker Bloodfiend Alert");
-		require(module.booleanSettings().stream().map(BooleanSetting::name).toList().equals(expectedBooleanSettings),
-			"Slayer Tracker preserves every persisted toggle name and declaration order");
-		require(module.booleanSettings().stream().allMatch(setting -> switch (setting.name()) {
-			case "Background", "Chat Alert", "Unclassified Boss Alert", "Revenant Horror Alert",
-				"Atoned Horror Alert", "Tarantula Broodfather Alert", "Sven Packmaster Alert",
-				"Voidgloom Seraph Alert", "Inferno Demonlord Alert", "Riftstalker Bloodfiend Alert" -> setting.rawValue();
-			default -> !setting.rawValue();
-		}), "Slayer Tracker keeps all persisted toggle defaults");
-
-		require(module.choiceSettings().size() == 1, "Slayer Tracker keeps one time-display choice");
-		ChoiceSetting timeDisplay = module.choiceSettings().getFirst();
-		require(timeDisplay.name().equals("Time Display") && timeDisplay.value().equals("Both")
-			&& timeDisplay.choices().equals(List.of("Spawn", "Kill", "Both")),
-			"Slayer Tracker preserves the time-display saved values and default");
-
-		require(module.numberSettings().size() == 1, "Slayer Tracker keeps its title-duration setting");
-		NumberSetting duration = module.numberSettings().getFirst();
-		require(duration.name().equals("Title Duration (ticks)") && duration.min() == 1.0f
-			&& duration.max() == 600.0f && duration.value() == 40.0f && duration.isInteger(),
-			"Slayer Tracker preserves its bounded integer title duration and default");
-
-		require(module.textSettings().size() == 2, "Slayer Tracker keeps both alert-template settings");
-		TextSetting bossText = module.textSettings().get(0);
-		TextSetting minibossText = module.textSettings().get(1);
-		require(bossText.name().equals("Boss Alert Text") && bossText.value().equals("Slayer boss spawned.")
-			&& bossText.maxLength() == 192
-			&& minibossText.name().equals("Miniboss Alert Text")
-			&& minibossText.value().equals("Slayer miniboss: {miniboss}.") && minibossText.maxLength() == 192,
-			"Slayer Tracker preserves both persisted alert templates and text limits");
+		require(module.booleanSettings().stream().map(BooleanSetting::name).toList()
+			.equals(List.of("Show Totals", "Background")),
+			"Slayer Tracker keeps only its stats and display toggles; alerts moved to Slayer Alerts");
+		require(module.booleanSettings().stream().allMatch(setting -> setting.name().equals("Background") == setting.rawValue()),
+			"Slayer Tracker keeps its toggle defaults");
+		require(module.choiceSettings().isEmpty() && module.numberSettings().isEmpty() && module.textSettings().isEmpty(),
+			"Slayer Tracker has no time display, title or alert text settings any more");
 		require(module.actions().size() == 1
 			&& module.actions().getFirst().name().equals("Reset Session Stats"),
 			"Slayer Tracker keeps the session-reset action");
 
 		List<String> groupNames = module.groups().stream().map(SettingGroup::name).toList();
-		require(groupNames.equals(List.of("Stats", "Display", "Alerts", "Alert Text")),
-			"Slayer Tracker keeps its four settings sections and their order");
+		require(groupNames.equals(List.of("Stats", "Display")), "Slayer Tracker keeps its two settings sections");
 		require(groupSettings(module, "Stats").equals(List.of("Show Totals", "Reset Session Stats"))
-			&& groupSettings(module, "Display").equals(List.of("Background", "Time Display"))
-			&& groupSettings(module, "Alerts").equals(List.of(
-				"Boss Spawn Alert", "Miniboss Spawn Alert", "Unclassified Boss Alert",
-				"Revenant Horror Alert", "Atoned Horror Alert", "Tarantula Broodfather Alert",
-				"Sven Packmaster Alert", "Voidgloom Seraph Alert", "Inferno Demonlord Alert",
-				"Riftstalker Bloodfiend Alert", "Chat Alert", "Title Alert", "Sound Alert",
-				"Title Duration (ticks)"))
-			&& groupSettings(module, "Alert Text").equals(List.of("Boss Alert Text", "Miniboss Alert Text")),
+			&& groupSettings(module, "Display").equals(List.of("Background")),
 			"Slayer Tracker keeps each setting in the same visible section and order");
 	}
 

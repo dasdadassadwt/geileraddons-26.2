@@ -15,6 +15,10 @@ import java.time.Duration
  */
 object CroesusPrices {
     const val URL = "https://lb.odtheking.com/averages/7day"
+
+    /** The Dungeon Chest Key is priced from the shorter 3-day average, which follows the market more closely. */
+    const val KEY_URL = "https://lb.odtheking.com/averages/3day"
+    const val KEY_ID = "DUNGEON_CHEST_KEY"
     const val MAX_ENTRIES = 20_000
     private const val MAX_BYTES = 2_097_152
     private val TIMEOUT: Duration = Duration.ofSeconds(15)
@@ -25,12 +29,43 @@ object CroesusPrices {
     var prices: Map<String, Double> = emptyMap()
         private set
 
+    /** 3-day average price of one Dungeon Chest Key; 0 while unknown, so the second chest is then not reduced. */
+    @Volatile
+    var keyPrice: Double = 0.0
+        private set
+
     @Volatile
     var status: String = "not loaded"
         private set
 
     @Volatile
     private var fetching = false
+
+    /** The key price of a 3-day file, or null when the file is broken or has no key entry. */
+    @JvmStatic
+    fun parseKey(json: String?): Double? = parse(json).prices[KEY_ID]
+
+    private fun download(client: HttpClient, url: String): java.net.http.HttpResponse<ByteArray> {
+        val request = HttpRequest.newBuilder(URI.create(url))
+            .timeout(TIMEOUT)
+            .header("User-Agent", GeilerAddons.MOD_ID)
+            .GET()
+            .build()
+        return BoundedHttpBodyReader.send(client, request, MAX_BYTES, TIMEOUT)
+    }
+
+    /** One extra bounded request; a failure leaves the last known key price in place. */
+    private fun fetchKey(client: HttpClient): String {
+        return try {
+            val response = download(client, KEY_URL)
+            if (response.statusCode() != 200) return "key HTTP ${response.statusCode()}"
+            val key = parseKey(String(response.body(), StandardCharsets.UTF_8)) ?: return "key missing"
+            keyPrice = key
+            "key ${"%,.0f".format(java.util.Locale.US, key)}"
+        } catch (exception: Exception) {
+            "key failed: ${exception.javaClass.simpleName}"
+        }
+    }
 
     @JvmStatic
     fun parse(json: String?): Parsed {
@@ -59,19 +94,14 @@ object CroesusPrices {
         Thread({
             try {
                 val client = HttpClient.newBuilder().connectTimeout(TIMEOUT).build()
-                val request = HttpRequest.newBuilder(URI.create(URL))
-                    .timeout(TIMEOUT)
-                    .header("User-Agent", GeilerAddons.MOD_ID)
-                    .GET()
-                    .build()
-                val response = BoundedHttpBodyReader.send(client, request, MAX_BYTES, TIMEOUT)
+                val response = download(client, URL)
                 if (response.statusCode() != 200) {
                     status = "HTTP ${response.statusCode()}"
                 } else {
                     val parsed = parse(String(response.body(), StandardCharsets.UTF_8))
                     if (parsed.error == null) {
                         prices = parsed.prices
-                        status = "${parsed.prices.size} prices"
+                        status = "${parsed.prices.size} prices, ${fetchKey(client)}"
                     } else {
                         status = "failed: ${parsed.error}"
                     }

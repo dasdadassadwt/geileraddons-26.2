@@ -111,10 +111,12 @@
 		"LevelExtractorNoRenderMixin",
 		"StuckInBodyLayerNoRenderMixin",
 		"ClientPacketListenerNoRenderMixin",
+		"MobEffectFogEnvironmentNoRenderMixin",
 		"ClientPacketListenerTweaksMixin",
 		"MinecraftDoubleUseFixMixin",
 		"MinecraftItemCooldownMixin",
-		"ClientLevelGyroWandMixin"
+		"ClientLevelGyroWandMixin",
+		"FluidStateModelSetMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

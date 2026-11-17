@@ -250,6 +250,9 @@ public abstract class ClientPacketListenerMixin {
 		geiler.addons.client.module.impl.WitherDragonsModule.INSTANCE.onBlockUpdate(packet.getPos().getX(),
 			packet.getPos().getY(), packet.getPos().getZ(), packet.getBlockState().isAir());
 		TerracottaTimerModule.INSTANCE.onBlockChange(packet.getPos(), packet.getBlockState());
+		geiler.addons.client.module.impl.PowderChestModule.INSTANCE.onBlockChange(packet.getPos(),
+			geileraddons$blockUpdateStateBefore, packet.getBlockState());
+		geiler.addons.client.module.impl.CrystalHollowsHelperModule.INSTANCE.onBlockChange(packet.getPos(), packet.getBlockState());
 		SecretWaypointsModule.INSTANCE.onSecretBlockUpdate(geileraddons$blockUpdatePositionBefore,
 			geileraddons$blockUpdateStateBefore, packet.getBlockState());
 		SimonSaysModule.INSTANCE.onBlockChange(packet.getPos(), geileraddons$blockUpdateStateBefore, packet.getBlockState());
@@ -282,6 +285,9 @@ public abstract class ClientPacketListenerMixin {
 			DungeonDoorTracker.onBlockChange(change.position());
 			SecretWaypointsModule.INSTANCE.onSecretBlockUpdate(change.position(), change.oldState(), change.state());
 			TerracottaTimerModule.INSTANCE.onBlockChange(change.position(), change.state());
+			geiler.addons.client.module.impl.PowderChestModule.INSTANCE.onBlockChange(change.position(), change.oldState(),
+				change.state());
+			geiler.addons.client.module.impl.CrystalHollowsHelperModule.INSTANCE.onBlockChange(change.position(), change.state());
 			DungeonOdinAssistModule.INSTANCE.onPuzzleBlockChange(change.position(), change.oldState(),
 				change.position(), change.state());
 		}
@@ -316,6 +322,7 @@ public abstract class ClientPacketListenerMixin {
 		SafariFloorDropsModule.INSTANCE.onParticle(packet);
 		geiler.addons.client.module.impl.WitherDragonsModule.INSTANCE.onParticle(packet);
 		geiler.addons.client.module.impl.DragonStackAimerModule.INSTANCE.onParticle(packet);
+		geiler.addons.client.module.impl.HotspotRadarModule.INSTANCE.onParticle(packet);
 	}
 
 	/** Terminal Solver replaces the terminal-complete pling while a terminal is open. */
@@ -327,7 +334,8 @@ public abstract class ClientPacketListenerMixin {
 	/** Hide F7 Boss Sounds: drops (or caps) the loud boss-room sounds before they are played. */
 	@Inject(method = "handleSoundEvent", at = @At("HEAD"), cancellable = true)
 	private void geileraddons$hideF7BossSounds(ClientboundSoundPacket packet, CallbackInfo ci) {
-		if (geiler.addons.client.module.impl.HideF7BossSoundsModule.INSTANCE.onSound(packet)) ci.cancel();
+		if (geiler.addons.client.module.impl.HideF7BossSoundsModule.INSTANCE.onSound(packet)
+			|| geiler.addons.client.module.impl.HeatAndColdModule.INSTANCE.onSound(packet)) ci.cancel();
 	}
 
 	@Inject(method = "handleSoundEvent", at = @At("TAIL"))
@@ -337,6 +345,7 @@ public abstract class ClientPacketListenerMixin {
 		String soundId = packet.getSound().unwrapKey().map(key -> key.identifier().toString())
 			.orElseGet(() -> packet.getSound().value().location().toString());
 		SecretWaypointsModule.INSTANCE.onBatDeathSound(soundId, packet.getX(), packet.getY(), packet.getZ());
+		geiler.addons.client.module.impl.PowderChestModule.INSTANCE.onSound(soundId, packet.getVolume(), packet.getPitch());
 		SpringBootsModule.INSTANCE.onSound("minecraft:block.note_block.pling".equals(soundId),
 			"minecraft:entity.firework_rocket.launch".equals(soundId), packet.getPitch());
 		RagnarockModule.INSTANCE.onSound(packet.getPitch(), packet.getSound().value().location());

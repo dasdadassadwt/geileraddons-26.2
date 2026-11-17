@@ -31,6 +31,44 @@ public final class CroesusChecks {
 		checkPriceFile();
 		checkFormat();
 		checkChestCountText();
+		checkEssenceToggle();
+		checkKeyCost();
+	}
+
+	private static void checkEssenceToggle() {
+		List<String> lore = List.of("Contents", "Wither Essence x10", "Wither Catalyst", "", "Cost", "1,500,000 Coins", "");
+		CroesusRules.ChestResult with = CroesusRules.previewChest(0, "Gold", lore, PRICES, true);
+		CroesusRules.ChestResult without = CroesusRules.previewChest(0, "Gold", lore, PRICES, false);
+		require(with != null && with.getItems().size() == 2 && with.getProfit() == 20_000.0 + 12_000_000.0 - 1_500_000.0,
+			"essence counts by default");
+		require(without != null && without.getItems().size() == 1 && without.getProfit() == 12_000_000.0 - 1_500_000.0,
+			"Include Essence off removes the essence line and its value: " + (without == null ? "null" : without.getProfit()));
+		require(CroesusRules.previewChest(0, "Gold", lore, PRICES).getProfit() == with.getProfit(), "the short overload keeps essence on");
+		require(CroesusRules.parseItemValue("Wither Essence x10", PRICES, false) == null, "an excluded essence line has no price");
+		List<CroesusRules.OpenedSlot> slots = List.of(
+			CroesusRules.OpenedSlot.chest(List.of("Cost", "1,000,000 Coins")),
+			CroesusRules.OpenedSlot.item("Wither Essence x10", null),
+			CroesusRules.OpenedSlot.item("Wither Catalyst", "WITHER_CATALYST"));
+		require(CroesusRules.openedChest(slots, PRICES, false).getProfit() == 12_000_000.0 - 1_000_000.0,
+			"an opened chest leaves essence out when Include Essence is off");
+		require(CroesusRules.openedChest(slots, PRICES).getProfit() == 20_000.0 + 12_000_000.0 - 1_000_000.0,
+			"an opened chest counts essence by default");
+	}
+
+	private static void checkKeyCost() {
+		CroesusRules.ChestResult a = new CroesusRules.ChestResult("A", List.of(), 100.0, 1);
+		CroesusRules.ChestResult b = new CroesusRules.ChestResult("B", List.of(), 90.0, 2);
+		CroesusRules.ChestResult c = new CroesusRules.ChestResult("C", List.of(), 60.0, 3);
+		require(CroesusRules.topSlots(List.of(a, b, c), 0.0).equals(List.of(1, 2)), "no key price keeps the old ranking");
+		require(CroesusRules.topSlots(List.of(a, b, c), 20.0).equals(List.of(1, 2)), "second still wins after the key: 90-20 > 60-20");
+		require(CroesusRules.topSlots(List.of(a, b, c), 50.0).equals(List.of(1, 2)), "ordering by profit minus the same key never swaps the runners-up");
+		require(CroesusRules.topSlots(List.of(a, b, c), 95.0).equals(List.of(1)), "no second pick when profit minus key is not above zero");
+		require(CroesusRules.topSlots(List.of(a), 10.0).equals(List.of(1)), "a lone chest is still the best pick");
+		require(CroesusRules.topSlots(List.of(a, new CroesusRules.ChestResult("N", List.of(), -5.0, 4)), 10.0).equals(List.of(1)),
+			"an unprofitable chest is never highlighted");
+		require(CroesusPrices.parseKey("{\"DUNGEON_CHEST_KEY\":233624.5,\"X\":1}") == 233624.5, "the key price is read from the 3-day file");
+		require(CroesusPrices.parseKey("{\"X\":1}") == null && CroesusPrices.parseKey("nope") == null && CroesusPrices.parseKey(null) == null,
+			"a missing or broken key price is null");
 	}
 
 	private static void checkChestCountText() {

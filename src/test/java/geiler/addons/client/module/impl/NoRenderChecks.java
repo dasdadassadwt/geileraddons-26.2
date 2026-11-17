@@ -31,10 +31,13 @@ public final class NoRenderChecks {
 		check(NoRenderRules.isBonePlatingDrop(true, "Bone Meal") && !NoRenderRules.isBonePlatingDrop(true, "Bone Meal x2")
 			&& !NoRenderRules.isBonePlatingDrop(false, "Bone Meal"), "bone plating hides only the plain bone meal item");
 
-		// Module declaration: nineteen switches, all off, one per flag.
+		// Module declaration: twenty switches, all off, one per flag.
 		NoRenderModule module = NoRenderModule.INSTANCE;
-		check("No Render".equals(module.name()) && !module.defaultEnabled() && module.booleanSettings().size() == 19
-			&& NoRenderModule.Flag.values().length == 19, "No Render declares nineteen switches and is off by default");
+		check("No Render".equals(module.name()) && !module.defaultEnabled() && module.booleanSettings().size() == 20
+			&& NoRenderModule.Flag.values().length == 20, "No Render declares twenty switches and is off by default");
+		check(module.booleanSettings().stream().anyMatch(setting -> setting.name().equals("Blindness"))
+			&& NoRenderModule.Flag.BLINDNESS.getId().equals("blindness"), "No Render has a Blindness switch");
+		check(!module.active(NoRenderModule.Flag.BLINDNESS), "a disabled No Render module never hides blindness");
 		check(module.booleanSettings().stream().noneMatch(setting -> setting.value()), "every No Render switch is off by default");
 		check(!module.active(NoRenderModule.Flag.FIRE_OVERLAY), "a disabled No Render module never reports a switch as active");
 	}

@@ -18,6 +18,8 @@ public final class TerminalChecks {
 		checkRubix();
 		checkStartsWithAndSelect();
 		checkMelody();
+		checkAimAssist();
+		checkEspBoard();
 		checkPredictionAndProtection();
 		checkRegistryIds();
 	}
@@ -28,7 +30,9 @@ public final class TerminalChecks {
 		boolean replace = false;
 		int ms = 0;
 		boolean ticks = false;
+		boolean melodyBlock = false;
 		int tickCount = 8;
+		public boolean getMelodyBlockWrongClicks() { return melodyBlock; }
 		public boolean getClickPrediction() { return prediction; }
 		public boolean getRubixLeftClicksOnly() { return leftOnly; }
 		public boolean getRubixReplaceClicks() { return replace; }
@@ -188,6 +192,62 @@ public final class TerminalChecks {
 		require(h.canClick(16, 0) && h.canClick(25, 0) && h.canClick(34, 0) && !h.canClick(21, 0), "melody buttons are fixed");
 		require(h.visual(4).getColor() == ColorKey.MELODY_COLUMN && h.visual(21).getColor() == ColorKey.MELODY_POINTER,
 			"column color on the top row, pointer color elsewhere");
+
+		// Block Wrong Melody Clicks: only the row whose pointer is lined up with the column may be clicked.
+		Cfg block = new Cfg();
+		block.melodyBlock = true;
+		TerminalHandler b = open("Click the button on time!", block);
+		List<TermSlot> lined = blank(54);
+		lined.set(4, pane("magenta", 1));
+		lined.set(13, pane("lime", 1)); // same column (4) as the magenta pane, row 1
+		lined.set(16, new TermSlot("lime_terracotta", 1, "", false, false));
+		b.updateSlot(4, false, lined);
+		require(b.canClick(16, 0) && !b.canClick(25, 0) && !b.canClick(34, 0),
+			"block wrong clicks: only the lit row is clickable when lined up " + b.getSolution());
+		TerminalHandler off = open("Click the button on time!", new Cfg());
+		off.updateSlot(4, false, lined);
+		require(off.canClick(25, 0), "with the setting off every melody button stays clickable");
+		TerminalHandler apart = open("Click the button on time!", block);
+		apart.updateSlot(4, false, slots);
+		require(!apart.canClick(16, 0) && !apart.canClick(25, 0) && !apart.canClick(34, 0),
+			"block wrong clicks: nothing is clickable while the pointer is not lined up");
+	}
+
+	private static void checkEspBoard() {
+		geiler.addons.client.dungeon.f7.TerminalMarkerBoard board = new geiler.addons.client.dungeon.f7.TerminalMarkerBoard();
+		require(board.getMarkers().size() == 17, "the board lists the 4 + 5 + 4 + 4 known terminals");
+		int first = board.anchorAt(110.5, 113.0, 73.4);
+		require(first >= 0 && board.getMarkers().get(first).getSection() == 0 && board.anchorAt(300, 100, 300) == -1,
+			"a stand next to an anchor resolves to that marker, a far one to none");
+		require(board.markDoneNear(300, 100, 300) == -1, "a completion with nobody near a terminal marks nothing");
+		// Standing beside (110,113,73) while (110,119,79) is farther: the nearest marker is the one that finishes.
+		int done = board.markDoneNear(110.5, 113.0, 74.0);
+		require(done == first && board.getMarkers().get(first).getDone(), "the nearest terminal to the player is marked done");
+		int second = board.markDoneNear(110.5, 113.0, 74.0);
+		require(second != first && second >= 0 && board.getMarkers().get(second).getSection() == 0,
+			"a second completion at the same spot takes the next nearest terminal, never the finished one");
+		board.reset();
+		require(board.getMarkers().stream().noneMatch(m -> m.getDone()), "a reset brings every terminal back");
+		require(geiler.addons.client.dungeon.f7.TerminalMarkerBoard.terminalPlayer("Cora activated a terminal! (1/7)").equals("Cora")
+			&& geiler.addons.client.dungeon.f7.TerminalMarkerBoard.terminalPlayer("Cora activated a lever! (1/2)") == null
+			&& geiler.addons.client.dungeon.f7.TerminalMarkerBoard.terminalPlayer("[MVP+] Cora activated a terminal! (1/7)") == null,
+			"only the plain terminal line names a player");
+	}
+
+	private static void checkAimAssist() {
+		// Two 24-wide slots at x 0 and x 24, one 24-wide slot at x 60.
+		List<TerminalAim.Box> boxes = List.of(
+			new TerminalAim.Box(10, 0, 0, 24), new TerminalAim.Box(11, 24, 0, 24), new TerminalAim.Box(12, 60, 0, 24));
+		require(TerminalAim.pick(5, 5, boxes, s -> s == 10, 6) == 10, "a click inside a clickable slot picks it");
+		require(TerminalAim.pick(27, 5, boxes, s -> s == 10, 6) == 10, "a click 3 inside the neighbor snaps to the clickable slot");
+		require(TerminalAim.pick(31, 5, boxes, s -> s == 10, 6) == null, "a click further than the margin picks nothing");
+		require(TerminalAim.pick(5, 5, boxes, s -> false, 6) == null, "no clickable slot picks nothing");
+		require(TerminalAim.pick(27, 5, boxes, s -> s == 10 || s == 11, 6) == 11, "inside a clickable slot beats a near one");
+		require(TerminalAim.pick(48, 5, boxes, s -> s == 11 || s == 12, 14) == null,
+			"two clickable slots both within the margin pick nothing");
+		require(TerminalAim.pick(48, 5, boxes, s -> s == 11 || s == 12, 11) == 11,
+			"only one clickable slot within the margin picks it");
+		require(TerminalAim.pick(27, 5, boxes, s -> s == 10, 0) == null, "margin 0 means exact clicks only");
 	}
 
 	private static void checkPredictionAndProtection() {

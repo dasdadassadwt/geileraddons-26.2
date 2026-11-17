@@ -58,7 +58,12 @@ class WitherDragonTracker(private val listener: Listener) {
     private val statuesBroken = java.util.EnumSet.noneOf(WitherDragon::class.java)
     var currentTick = 0L
         private set
-    private var lastDeath: WitherDragon? = null
+    /** Deaths still waiting for their Wither King count line, oldest first (the line lags each death ~3.5 s). */
+    private val pendingCounts = ArrayDeque<WitherDragon>()
+    val pendingCountList: List<WitherDragon> get() = pendingCounts.toList()
+    /** Where the last count line was attributed: queue, alive or none (diagnostics). */
+    var lastCountSource = "none"
+        private set
 
     val priority: WitherDragon? get() = spawnOrder.firstOrNull()
 
@@ -123,11 +128,14 @@ class WitherDragonTracker(private val listener: Listener) {
     /** False once the dragon's statue block has been seen turning to air. */
     fun statueIntact(dragon: WitherDragon): Boolean = dragon !in statuesBroken
 
+    /** Never falls back to a SPAWNING dragon: that killed its box while the countdown still ran. */
     fun onWitherKingLine() {
-        val dragon = lastDeath ?: WitherDragon.entries.find { entry(it).state != WitherDragonState.DEAD } ?: return
+        val queued = pendingCounts.removeFirstOrNull()
+        val dragon = queued ?: spawnOrder.firstOrNull { entry(it).state == WitherDragonState.ALIVE }
+        lastCountSource = if (queued != null) "queue" else if (dragon != null) "alive" else "none"
+        if (dragon == null) return
         listener.counts(dragon)
-        if (entry(dragon).state != WitherDragonState.DEAD) setDead(dragon, false)
-        lastDeath = null
+        if (queued == null) setDead(dragon, false, queueCount = false)
     }
 
     /** [distanceTo] gives the distance from the sprayed armor stand to a tracked dragon entity, or null if unknown. */
@@ -154,7 +162,8 @@ class WitherDragonTracker(private val listener: Listener) {
         spawnOrder.clear()
         ignoredBursts = 0
         statuesBroken.clear()
-        lastDeath = null
+        pendingCounts.clear()
+        lastCountSource = "none"
     }
 
     private fun setAlive(dragon: WitherDragon, uuid: UUID?) {
@@ -168,11 +177,12 @@ class WitherDragonTracker(private val listener: Listener) {
         listener.spawned(dragon, e.timesSpawned)
     }
 
-    private fun setDead(dragon: WitherDragon, realTime: Boolean) {
+    private fun setDead(dragon: WitherDragon, realTime: Boolean, queueCount: Boolean = true) {
         val e = entry(dragon)
+        // A later statue break on an already dead dragon must not queue a second count.
+        if (queueCount && e.state != WitherDragonState.DEAD && dragon !in pendingCounts) pendingCounts.addLast(dragon)
         e.state = WitherDragonState.DEAD
         e.entityUuid = null
-        lastDeath = dragon
         spawnOrder.remove(dragon)
         listener.died(dragon, currentTick - e.spawnedTime, realTime)
     }

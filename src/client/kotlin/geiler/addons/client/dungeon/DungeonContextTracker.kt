@@ -40,6 +40,12 @@ object DungeonContextTracker {
     private var mapOverlayPixelsLevel: Any? = null
     private var mapOverlayPixelsSeenNanos = 0L
     private var mapOverlayPixelsActive = false
+    /** Level where a boss stage was seen; sidebar loss on this level does not end the run. */
+    private var bossLevel: Any? = null
+    private var lastSidebarText = ""
+    private var lastSignalInDungeon = false
+    private var sidebarLossCount = 0
+    private var lastSidebarLossText = "none"
 
     /** Call every client tick. Map geometry is gated by Catacombs context and an active consumer. */
     @JvmStatic
@@ -71,15 +77,26 @@ object DungeonContextTracker {
         }
         val mapEntryCandidate = DungeonMapRoomDetector.hasEntryCandidate(currentClient)
         val wasInDungeon = inDungeon
+        if (wasInDungeon && lastSignalInDungeon && !signal.inDungeon) {
+            sidebarLossCount++
+            lastSidebarLossText = lastSidebarText.replace('\n', '|').take(160)
+        }
+        lastSignalInDungeon = signal.inDungeon
         if (signal.inDungeon || wasInDungeon && mapEntryCandidate) {
             inDungeon = true
             if (!wasInDungeon) clearPhase = shouldBeginClearPhase(clearEspClosedForRun)
             lastDungeonSignal = now
             if (signal.floor != null) detectedFloor = signal.floor
-        } else if (inDungeon && lastDungeonSignal != 0L && now - lastDungeonSignal > EXIT_GRACE_NANOS) {
+        } else if (inDungeon && DungeonContextLifecycleRules.shouldExitOnSidebarLoss(
+                mobEspBossPhase,
+                bossLevel === currentLevel,
+                lastDungeonSignal != 0L && now - lastDungeonSignal > EXIT_GRACE_NANOS,
+            )
+        ) {
             inDungeon = false
             clearPhase = false
             mobEspBossPhase = false
+            bossLevel = null
             manualFloor = null
             detectedFloor = null
         }
@@ -327,6 +344,7 @@ object DungeonContextTracker {
             clearPhase = inDungeon
             clearEspClosedForRun = false
             mobEspBossPhase = false
+            bossLevel = null
             return
         }
         val floor = currentFloor()
@@ -338,6 +356,7 @@ object DungeonContextTracker {
             event.segmentId,
         )
         mobEspBossPhase = mobEspBossPhaseAfter(mobEspBossPhase, event.segmentId)
+        bossLevel = if (mobEspBossPhase) bossLevel ?: level else null
         when (event.segmentId) {
             "ENTRY", "CLEAR" -> clearPhase = inDungeon
             "BLOOD_OPEN", "BLOOD_CLEAR", "BOSS_ENTRY", "COMPLETE", "BONZO_SIKE", "BONZO", "SCARF_MINIONS",
@@ -368,7 +387,14 @@ object DungeonContextTracker {
         val floor = currentFloor()
         return "dungeon=$inDungeon, floor=${floor?.displayName() ?: "unknown"} [${floorSource()}], " +
             "detectedFloor=${detectedFloor?.displayName() ?: "unknown"}, " +
-            "manualFloor=${manualFloor?.displayName() ?: "none"}, ${DungeonMapRoomDetector.diagnostics()}"
+            "manualFloor=${manualFloor?.displayName() ?: "none"}, ${sidebarDiagnostics()}, ${DungeonMapRoomDetector.diagnostics()}"
+    }
+
+    /** Boss latch state and the sidebar text seen on the last tick before the dungeon signal dropped. */
+    @JvmStatic
+    fun sidebarDiagnostics(): String {
+        return "bossLatch=${bossLevel != null && bossLevel === level} sidebarLosses=$sidebarLossCount " +
+            "lastSidebarLoss=[$lastSidebarLossText]"
     }
 
     @JvmStatic
@@ -414,7 +440,8 @@ object DungeonContextTracker {
             val line: String? = lineComponent.string
             if (!line.isNullOrBlank()) text.append('\n').append(ChatText.plain(line))
         }
-        return readSidebarText(text.toString())
+        lastSidebarText = text.toString()
+        return readSidebarText(lastSidebarText)
     }
 
     @JvmStatic
@@ -453,6 +480,8 @@ object DungeonContextTracker {
         clearPhase = false
         clearEspClosedForRun = false
         mobEspBossPhase = false
+        bossLevel = null
+        lastSignalInDungeon = false
         lastDungeonSignal = 0L
         detectedFloor = null
         manualFloor = null

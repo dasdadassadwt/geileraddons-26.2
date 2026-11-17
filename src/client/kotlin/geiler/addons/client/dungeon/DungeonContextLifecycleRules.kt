@@ -12,6 +12,11 @@ class DungeonContextLifecycleRules private constructor() {
         fun clearEspClosedForRunAfterExit(closed: Boolean, confirmedExit: Boolean): Boolean =
             DungeonContextLifecycleRulesLogic.clearEspClosedForRunAfterExit(closed, confirmedExit)
 
+        /** Sidebar loss ends the run after the grace, except in boss phase on the level where the boss was seen. */
+        @JvmStatic
+        fun shouldExitOnSidebarLoss(bossPhase: Boolean, sameLevelAsBoss: Boolean, graceExpired: Boolean): Boolean =
+            DungeonContextLifecycleRulesLogic.shouldExitOnSidebarLoss(bossPhase, sameLevelAsBoss, graceExpired)
+
         @JvmStatic
         fun shouldBeginClearPhase(closedByObservedBloodOrBossSignal: Boolean): Boolean =
             DungeonContextLifecycleRulesLogic.shouldBeginClearPhase(closedByObservedBloodOrBossSignal)

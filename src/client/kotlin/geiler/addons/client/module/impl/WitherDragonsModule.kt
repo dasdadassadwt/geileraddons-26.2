@@ -1,6 +1,7 @@
 package geiler.addons.client.module.impl
 
 import com.mojang.blaze3d.vertex.PoseStack
+import geiler.addons.client.dungeon.DungeonContextTracker
 import geiler.addons.client.dungeon.f7.F7Support
 import geiler.addons.client.dungeon.f7.PersonalBestFile
 import geiler.addons.client.dungeon.f7.WitherDragon
@@ -75,7 +76,9 @@ class WitherDragonsModule private constructor(private val s: Settings) : Module(
         }
 
         override fun counts(dragon: WitherDragon) {
-            diagnostics.event("COUNTS dragon=${dragon.name}")
+            diagnostics.event(
+                "COUNTS dragon=${dragon.name} source=${tracker.lastCountSource} pending=${tracker.pendingCountList.map { it.name }}",
+            )
             if (s.sendConfirmation.value()) F7Support.message("§${dragon.colorCode}${dragon.name} dragon counts.")
         }
 
@@ -173,7 +176,9 @@ class WitherDragonsModule private constructor(private val s: Settings) : Module(
     }
 
     fun onChatMessage(plain: String) {
-        if (active() && WITHER_KING.matches(plain)) tracker.onWitherKingLine()
+        if (!active() || !WITHER_KING.matches(plain)) return
+        tracker.onWitherKingLine()
+        if (tracker.lastCountSource == "none") diagnostics.event("COUNT_LINE_UNMATCHED order=${tracker.spawnOrder.map { it.name }}")
     }
 
     fun tick() {
@@ -190,7 +195,9 @@ class WitherDragonsModule private constructor(private val s: Settings) : Module(
         lastServerTicks = now
         for (i in 0 until delta) tracker.onServerTick()
         diagnostics.status {
-            "phase5=${F7Support.inPhase5()} tick=${tracker.currentTick} order=${tracker.spawnOrder.map { it.name }} ignoredBursts=${tracker.ignoredBursts} " +
+            "phase5=${F7Support.inPhase5()} inDungeon=${DungeonContextTracker.inDungeon()} " +
+                "floor=${DungeonContextTracker.currentFloor()?.displayName() ?: "unknown"} " +
+                "${DungeonContextTracker.sidebarDiagnostics()} tick=${tracker.currentTick} order=${tracker.spawnOrder.map { it.name }} pendingCounts=${tracker.pendingCountList.map { it.name }} ignoredBursts=${tracker.ignoredBursts} " +
                 "tracked=${health.size} labels=$labelsDrawn statueBoxFrames=$statuesDrawn intact=${WitherDragon.entries.count { d -> tracker.statueIntact(d) }} suppressedEvents=$it"
         }
     }

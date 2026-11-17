@@ -17,6 +17,7 @@ public final class F7FeatureChecks {
 		checkMelody();
 		checkArrowAlign();
 		checkSimonSays();
+		checkSimonSaysFirstPhase();
 	}
 
 	private static void checkBlessings() {
@@ -98,6 +99,8 @@ public final class F7FeatureChecks {
 	private static void checkSimonSays() {
 		SimonSaysState s = new SimonSaysState();
 		require(s.next() == null && s.remaining().isEmpty(), "a fresh state has no solution");
+		require(s.getFirstPhase(), "a fresh state starts in the first (skip) phase");
+		s.endFirstPhase();
 		s.lanternLit(111, 121, 93);
 		s.lanternLit(111, 121, 93);
 		s.lanternLit(111, 122, 94);
@@ -123,6 +126,56 @@ public final class F7FeatureChecks {
 			&& Math.abs(open[1] - (121.375 - e)) < 1e-9 && Math.abs(open[5] - (93.6875 + e)) < 1e-9,
 			"the highlight is the button shape placed at its block, inflated by a hair");
 		require(pressed[3] < open[3] && Math.abs(pressed[3] - (110.0625 + e)) < 1e-9, "a pressed button gets a shallower box");
+	}
+
+	/** SS skip: in the first phase the lit order is not the click order (adapted from Odin's Simon Says). */
+	private static void checkSimonSaysFirstPhase() {
+		SimonSaysState s = new SimonSaysState();
+		long a = SimonSaysState.pack(110, 120, 92);
+		long b = SimonSaysState.pack(110, 121, 93);
+		long c = SimonSaysState.pack(110, 122, 94);
+		s.lanternLit(111, 120, 92);
+		require(s.remaining().equals(java.util.List.of(a)), "the first lantern is recorded as is");
+		s.lanternLit(111, 121, 93);
+		require(s.remaining().equals(java.util.List.of(b, a)), "the second lantern reverses the list in the first phase");
+		s.lanternLit(111, 122, 94);
+		require(s.remaining().equals(java.util.List.of(b, c)), "the third lantern drops the one before it in the first phase: " + s.remaining());
+
+		SimonSaysState later = new SimonSaysState();
+		later.endFirstPhase();
+		later.lanternLit(111, 120, 92);
+		later.lanternLit(111, 121, 93);
+		later.lanternLit(111, 122, 94);
+		require(later.remaining().equals(java.util.List.of(a, b, c)), "after the first phase lanterns are kept in lit order");
+
+		SimonSaysState done = new SimonSaysState();
+		done.lanternLit(111, 120, 92);
+		require(done.getFirstPhase() && done.buttonClicked(110, 120, 92) == SimonSaysState.CORRECT && !done.getFirstPhase(),
+			"finishing the sequence ends the first phase");
+		done.restart();
+		require(done.getFirstPhase() && done.remaining().isEmpty(), "a start-button press restarts the first phase");
+
+		// Grid reset: no lantern for more than ten ticks while the stone buttons are back ends the first phase.
+		SimonSaysState grid = new SimonSaysState();
+		for (int i = 0; i < 12; i++) grid.tick(0);
+		require(grid.getFirstPhase(), "no buttons on the grid never ends the first phase");
+		grid.tick(16);
+		require(!grid.getFirstPhase(), "buttons back after ten idle ticks end the first phase");
+		SimonSaysState lit = new SimonSaysState();
+		for (int i = 0; i < 8; i++) lit.tick(16);
+		lit.lanternLit(111, 120, 92);
+		for (int i = 0; i < 8; i++) lit.tick(16);
+		require(lit.getFirstPhase(), "a lantern lighting restarts the idle count");
+
+		// Start button: clicks past the limit are blocked in the first phase unless sneaking.
+		SimonSaysState start = new SimonSaysState();
+		require(!start.startClicked(2, false) && !start.startClicked(2, false), "the allowed start clicks pass");
+		require(start.startClicked(2, false), "a click past the limit is blocked");
+		require(!start.startClicked(2, true), "sneaking overrides the block");
+		start.endFirstPhase();
+		require(!start.startClicked(2, false), "outside the first phase start clicks are never blocked");
+		start.restart();
+		require(!start.startClicked(2, false), "ending the first phase clears the start click count");
 	}
 
 	private static void require(boolean condition, String message) {

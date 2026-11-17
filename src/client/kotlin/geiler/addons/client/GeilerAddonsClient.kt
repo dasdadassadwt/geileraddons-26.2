@@ -105,6 +105,26 @@ import geiler.addons.client.module.impl.TerminalEspModule
 import geiler.addons.client.module.impl.TickTimersModule
 import geiler.addons.client.module.impl.RelicTimerModule
 import geiler.addons.client.module.impl.FireFreezeTimerModule
+import geiler.addons.client.module.impl.FishingBaitModule
+import geiler.addons.client.module.impl.FishingBobberTimerModule
+import geiler.addons.client.module.impl.FishingHookDisplayModule
+import geiler.addons.client.module.impl.CorpseFinderModule
+import geiler.addons.client.module.impl.GeyserFishingModule
+import geiler.addons.client.module.impl.CrystalHollowsHelperModule
+import geiler.addons.client.module.impl.GlaciteGuideModule
+import geiler.addons.client.module.impl.GoblinHighlighterModule
+import geiler.addons.client.module.impl.HeatAndColdModule
+import geiler.addons.client.module.impl.MiningEventsModule
+import geiler.addons.client.module.impl.MiningSolversModule
+import geiler.addons.client.module.impl.HotspotRadarModule
+import geiler.addons.client.module.impl.HotmTreeHelperModule
+import geiler.addons.client.module.impl.MiningCommissionsModule
+import geiler.addons.client.module.impl.MetalDetectorModule
+import geiler.addons.client.module.impl.MineshaftTimerModule
+import geiler.addons.client.module.impl.MiningPowderModule
+import geiler.addons.client.module.impl.PowderChestModule
+import geiler.addons.client.module.impl.LavaReplacementModule
+import geiler.addons.client.module.impl.SeaCreatureAlertModule
 import geiler.addons.client.module.impl.WitherDragonsModule
 import geiler.addons.client.module.impl.KingRelicModule
 import geiler.addons.client.module.impl.DragonStackAimerModule
@@ -145,6 +165,12 @@ import geiler.addons.client.module.impl.ScoreboardModule
 import geiler.addons.client.module.impl.SecretClickedModule
 import geiler.addons.client.module.impl.SecretWaypointsModule
 import geiler.addons.client.module.impl.SlayerTrackerModule
+import geiler.addons.client.module.impl.SlayerAlertsModule
+import geiler.addons.client.module.impl.SlayerBossHighlightModule
+import geiler.addons.client.module.impl.EndermanSlayerModule
+import geiler.addons.client.module.impl.BlazeSlayerModule
+import geiler.addons.client.module.impl.VampireSlayerModule
+import geiler.addons.client.slayer.SlayerBossTracker
 import geiler.addons.client.module.impl.SlotIdsModule
 import geiler.addons.client.module.impl.SparklingCritterModule
 import geiler.addons.client.module.impl.SpiritLeapMenuModule
@@ -211,6 +237,14 @@ class GeilerAddonsClient : ClientModInitializer {
         HudManager.register(CroesusModule.INSTANCE, 0.0f, 0.05f)
         HudManager.setScale(CroesusModule.INSTANCE, 0.75f)
         HudManager.register(SpeedDisplayModule.INSTANCE, 0.01f, 0.08f)
+        HudManager.register(FishingBobberTimerModule.INSTANCE, 0.45f, 0.55f)
+        HudManager.register(FishingBaitModule.INSTANCE, 0.45f, 0.60f)
+        HudManager.register(MiningCommissionsModule.INSTANCE, Category.MINING, 0.02f, 0.30f)
+        HudManager.register(MiningPowderModule.INSTANCE, Category.MINING, 0.02f, 0.45f)
+        HudManager.register(PowderChestModule.INSTANCE, Category.MINING, 0.45f, 0.50f)
+        HudManager.register(MineshaftTimerModule.INSTANCE, Category.MINING, 0.02f, 0.60f)
+        HudManager.register(MiningEventsModule.INSTANCE, Category.MINING, 0.02f, 0.68f)
+        HudManager.register(MiningSolversModule.INSTANCE, Category.MINING, 0.02f, 0.76f)
         HudManager.register(CroesusModule.INSTANCE.chestCountHud, 0.03f, 0.52f)
         F7DeviceCallbacks.register()
         HudManager.register(PestTrackerModule.INSTANCE, 0.02f, 0.55f)
@@ -282,6 +316,15 @@ class GeilerAddonsClient : ClientModInitializer {
             WitherDragonsModule.INSTANCE.onChatMessage(content)
             DragonStackAimerModule.INSTANCE.onChatMessage(content)
             TerminalSolverModule.INSTANCE.onChatMessage(content)
+            TerminalEspModule.INSTANCE.onChatMessage(content)
+            if (!overlay) SeaCreatureAlertModule.INSTANCE.onChatMessage(content)
+            MetalDetectorModule.INSTANCE.onMessage(content, overlay)
+            if (!overlay) {
+                GoblinHighlighterModule.INSTANCE.onChatMessage(content)
+                CrystalHollowsHelperModule.INSTANCE.onChatMessage(content)
+                MiningEventsModule.INSTANCE.onChatMessage(content)
+                MiningSolversModule.INSTANCE.onChatMessage(content)
+            }
             val odin = DungeonOdinAssistModule.INSTANCE
             odin.onChat(content, System.nanoTime(), clientTick)
             val proc = odin.takeProcAlert()
@@ -388,6 +431,19 @@ class GeilerAddonsClient : ClientModInitializer {
             GardenPlotBordersModule.INSTANCE.tick()
             PestTrackerModule.INSTANCE.tick()
             SlayerTrackerModule.INSTANCE.tick()
+            if (SlayerBossHighlightModule.INSTANCE.isEnabled() || EndermanSlayerModule.INSTANCE.isEnabled() ||
+                BlazeSlayerModule.INSTANCE.isEnabled() || VampireSlayerModule.INSTANCE.isEnabled() ||
+                SlayerAlertsModule.INSTANCE.isEnabled()
+            ) {
+                SlayerBossTracker.tick(
+                    if (SlayerBossHighlightModule.INSTANCE.isEnabled()) SlayerBossHighlightModule.INSTANCE.trackerRange() else 48.0,
+                )
+            }
+            SlayerBossHighlightModule.INSTANCE.tick()
+            EndermanSlayerModule.INSTANCE.tick()
+            BlazeSlayerModule.INSTANCE.tick()
+            VampireSlayerModule.INSTANCE.tick()
+            SlayerAlertsModule.INSTANCE.tick()
             CropFeverTimerModule.INSTANCE.tick()
             HideAllParticlesModule.INSTANCE.tick(clientTick)
             HidePlayersModule.INSTANCE.tick()
@@ -417,6 +473,26 @@ class GeilerAddonsClient : ClientModInitializer {
             SimonSaysModule.INSTANCE.tick()
             CroesusModule.INSTANCE.tick()
             SpeedDisplayModule.INSTANCE.tick()
+            FishingBobberTimerModule.INSTANCE.tick()
+            FishingHookDisplayModule.INSTANCE.tick()
+            FishingBaitModule.INSTANCE.tick()
+            SeaCreatureAlertModule.INSTANCE.tick()
+            GeyserFishingModule.INSTANCE.tick()
+            HotspotRadarModule.INSTANCE.tick()
+            MiningCommissionsModule.INSTANCE.tick()
+            MiningPowderModule.INSTANCE.tick()
+            HotmTreeHelperModule.INSTANCE.tick()
+            PowderChestModule.INSTANCE.tick()
+            MineshaftTimerModule.INSTANCE.tick()
+            MetalDetectorModule.INSTANCE.tick()
+            GlaciteGuideModule.INSTANCE.tick()
+            HeatAndColdModule.INSTANCE.tick()
+            CrystalHollowsHelperModule.INSTANCE.tick()
+            GoblinHighlighterModule.INSTANCE.tick()
+            MiningEventsModule.INSTANCE.tick()
+            MiningSolversModule.INSTANCE.tick()
+            CorpseFinderModule.INSTANCE.tick()
+            LavaReplacementModule.INSTANCE.tick()
             GhostVisionModule.INSTANCE.tick()
             TerracottaTimerModule.INSTANCE.tick()
             WardrobeKeybindsModule.INSTANCE.tick()
@@ -477,6 +553,7 @@ class GeilerAddonsClient : ClientModInitializer {
             GardenPlotBordersModule.INSTANCE.onWorldChanged()
             PestTrackerModule.INSTANCE.onDisconnect()
             SlayerTrackerModule.INSTANCE.onWorldChanged()
+            SlayerBossTracker.reset()
             CropFeverTimerModule.INSTANCE.onWorldChanged()
             LobbyTargetWatchModule.INSTANCE.onWorldChanged()
             ScoreboardBackend.tick(null)
@@ -492,6 +569,16 @@ class GeilerAddonsClient : ClientModInitializer {
                 SafariFloorDropsModule.INSTANCE.render(context)
                 HideyhoFinderModule.INSTANCE.render(context)
                 SparklingCritterModule.INSTANCE.render(context)
+                SeaCreatureAlertModule.INSTANCE.render(context)
+                GeyserFishingModule.INSTANCE.render(context)
+                HotspotRadarModule.INSTANCE.render(context)
+                PowderChestModule.INSTANCE.render(context)
+                CorpseFinderModule.INSTANCE.render(context)
+                MetalDetectorModule.INSTANCE.render(context)
+                GlaciteGuideModule.INSTANCE.render(context)
+                GoblinHighlighterModule.INSTANCE.render(context)
+                CrystalHollowsHelperModule.INSTANCE.render(context)
+                MiningSolversModule.INSTANCE.render(context)
                 PestHighlighterModule.INSTANCE.render(context)
                 GardenPlotBordersModule.INSTANCE.render(context)
                 DungeonHelperModule.INSTANCE.render(context)
@@ -508,6 +595,10 @@ class GeilerAddonsClient : ClientModInitializer {
                 MobHighlightModule.INSTANCE.render(context)
                 DungeonMobEspModule.INSTANCE.render(context)
                 DungeonBossEspModule.INSTANCE.render(context)
+                SlayerBossHighlightModule.INSTANCE.render(context)
+                EndermanSlayerModule.INSTANCE.render(context)
+                BlazeSlayerModule.INSTANCE.render(context)
+                VampireSlayerModule.INSTANCE.render(context)
                 DungeonClassEspModule.INSTANCE.render(context)
                 TrailModule.INSTANCE.render(context)
                 BlockEspModule.INSTANCE.render(context)
@@ -549,6 +640,9 @@ class GeilerAddonsClient : ClientModInitializer {
         HudElementRegistry.addLast(GeilerAddons.id("dungeon_mob_esp")) { graphics, _ ->
             DungeonMobEspModule.INSTANCE.renderHud(graphics)
         }
+        HudElementRegistry.addLast(GeilerAddons.id("enderman_slayer_labels")) { graphics, _ ->
+            EndermanSlayerModule.INSTANCE.renderHud(graphics)
+        }
         HudElementRegistry.addLast(GeilerAddons.id("dungeon_class_esp_titles")) { graphics, _ ->
             DungeonClassEspModule.INSTANCE.renderHud(graphics)
         }
@@ -557,6 +651,33 @@ class GeilerAddonsClient : ClientModInitializer {
         }
         HudElementRegistry.addLast(GeilerAddons.id("sparkling_labels")) { graphics, _ ->
             SparklingCritterModule.INSTANCE.renderHud(graphics)
+        }
+        HudElementRegistry.addLast(GeilerAddons.id("fishing_hook_display")) { graphics, _ ->
+            FishingHookDisplayModule.INSTANCE.renderHud(graphics)
+        }
+        HudElementRegistry.addLast(GeilerAddons.id("hotspot_radar_labels")) { graphics, _ ->
+            HotspotRadarModule.INSTANCE.renderHud(graphics)
+        }
+        HudElementRegistry.addLast(GeilerAddons.id("powder_chest_labels")) { graphics, _ ->
+            PowderChestModule.INSTANCE.renderHud(graphics)
+        }
+        HudElementRegistry.addLast(GeilerAddons.id("corpse_finder_labels")) { graphics, _ ->
+            CorpseFinderModule.INSTANCE.renderHud(graphics)
+        }
+        HudElementRegistry.addLast(GeilerAddons.id("metal_detector_labels")) { graphics, _ ->
+            MetalDetectorModule.INSTANCE.renderHud(graphics)
+        }
+        HudElementRegistry.addLast(GeilerAddons.id("glacite_guide_labels")) { graphics, _ ->
+            GlaciteGuideModule.INSTANCE.renderHud(graphics)
+        }
+        HudElementRegistry.addLast(GeilerAddons.id("mining_solver_labels")) { graphics, _ ->
+            MiningSolversModule.INSTANCE.renderHud(graphics)
+        }
+        HudElementRegistry.addLast(GeilerAddons.id("crystal_hollows_labels")) { graphics, _ ->
+            CrystalHollowsHelperModule.INSTANCE.renderHud(graphics)
+        }
+        HudElementRegistry.addLast(GeilerAddons.id("heat_and_cold_overlay")) { graphics, _ ->
+            HeatAndColdModule.INSTANCE.renderHud(graphics)
         }
         HudElementRegistry.addLast(GeilerAddons.id("pest_highlighter_labels")) { graphics, _ ->
             PestHighlighterModule.INSTANCE.renderHud(graphics)
@@ -621,6 +742,11 @@ class GeilerAddonsClient : ClientModInitializer {
             registerModule(GardenPlotBordersModule.INSTANCE)
             registerModule(PestTrackerModule.INSTANCE)
             registerModule(SlayerTrackerModule.INSTANCE)
+            registerModule(SlayerAlertsModule.INSTANCE)
+            registerModule(SlayerBossHighlightModule.INSTANCE)
+            registerModule(EndermanSlayerModule.INSTANCE)
+            registerModule(BlazeSlayerModule.INSTANCE)
+            registerModule(VampireSlayerModule.INSTANCE)
             registerModule(CropFeverTimerModule.INSTANCE)
             registerModule(ChatChannelsModule.INSTANCE)
             registerModule(ChatModule.INSTANCE)
@@ -693,6 +819,26 @@ class GeilerAddonsClient : ClientModInitializer {
             registerModule(TerminalSolverModule.INSTANCE)
             registerModule(PriceDisplayModule.INSTANCE)
             registerModule(TerminalSimulatorModule.INSTANCE)
+            registerModule(FishingBobberTimerModule.INSTANCE)
+            registerModule(FishingHookDisplayModule.INSTANCE)
+            registerModule(FishingBaitModule.INSTANCE)
+            registerModule(SeaCreatureAlertModule.INSTANCE)
+            registerModule(GeyserFishingModule.INSTANCE)
+            registerModule(HotspotRadarModule.INSTANCE)
+            registerModule(LavaReplacementModule.INSTANCE)
+            registerModule(MiningCommissionsModule.INSTANCE)
+            registerModule(MiningPowderModule.INSTANCE)
+            registerModule(HotmTreeHelperModule.INSTANCE)
+            registerModule(PowderChestModule.INSTANCE)
+            registerModule(MineshaftTimerModule.INSTANCE)
+            registerModule(CorpseFinderModule.INSTANCE)
+            registerModule(MetalDetectorModule.INSTANCE)
+            registerModule(GlaciteGuideModule.INSTANCE)
+            registerModule(GoblinHighlighterModule.INSTANCE)
+            registerModule(CrystalHollowsHelperModule.INSTANCE)
+            registerModule(MiningSolversModule.INSTANCE)
+            registerModule(MiningEventsModule.INSTANCE)
+            registerModule(HeatAndColdModule.INSTANCE)
             // The Macros workspace: its modules live in their own categories and their own config file.
             registerModule(SpeedSimModule.INSTANCE)
             registerModule(JumpBoostModule.INSTANCE)

@@ -26,6 +26,14 @@ public abstract class ClientPacketListenerNoRenderMixin {
 		if (NoRenderModule.INSTANCE.shouldCancelParticlePacket(packet)) ci.cancel();
 	}
 
+	/** Geyser Fishing: records the geyser and drops its particles next to the bobber. */
+	@Inject(method = "handleParticleEvent", at = @At(value = "INVOKE", target =
+		"Lnet/minecraft/network/protocol/PacketUtils;ensureRunningOnSameThread(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketListener;Lnet/minecraft/network/PacketProcessor;)V",
+		shift = At.Shift.AFTER), cancellable = true)
+	private void geileraddons$geyserParticles(ClientboundLevelParticlesPacket packet, CallbackInfo ci) {
+		if (geiler.addons.client.module.impl.GeyserFishingModule.INSTANCE.onParticle(packet)) ci.cancel();
+	}
+
 	@SuppressWarnings("unchecked")
 	@Inject(method = "handleSetEntityData", at = @At("TAIL"))
 	private void geileraddons$hideDeadNameTags(ClientboundSetEntityDataPacket packet, CallbackInfo ci) {

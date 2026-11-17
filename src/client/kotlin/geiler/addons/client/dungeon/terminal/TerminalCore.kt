@@ -50,6 +50,9 @@ interface TerminalConfig {
 
     /** Rubix: a wrong-button click on a solution slot is sent as the button the slot needs. */
     val rubixReplaceClicks: Boolean
+
+    /** Melody: only the button row that is lined up with the column can be clicked. */
+    val melodyBlockWrongClicks: Boolean
     val firstClickProtectionMillis: Int
     val protectWithServerTicks: Boolean
     val protectionTicks: Int
@@ -274,7 +277,11 @@ class MelodyHandler(config: TerminalConfig, clock: () -> Long) : TerminalHandler
         }
     }
 
-    override fun canClick(slotIndex: Int, button: Int): Boolean = slotIndex == 16 || slotIndex == 25 || slotIndex == 34
+    override fun canClick(slotIndex: Int, button: Int): Boolean {
+        if (slotIndex != 16 && slotIndex != 25 && slotIndex != 34) return false
+        // solve() appends the lit button only while the pointer is lined up with the column.
+        return !config.melodyBlockWrongClicks || (solution.size > 3 && solution[3] == slotIndex)
+    }
 
     override fun renderSlot(slotIndex: Int): SlotVisual =
         SlotVisual(if (slotIndex / 9 == 0 || slotIndex / 9 == 4) ColorKey.MELODY_COLUMN else ColorKey.MELODY_POINTER, null)

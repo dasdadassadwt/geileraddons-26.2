@@ -15,6 +15,7 @@ public final class DungeonContextDoorChecks {
 		checkClearPhaseEspGate();
 		checkClearLatchResetsAfterConfirmedExit();
 		checkMobEspPhaseGate();
+		checkBossSidebarLossKeepsContext();
 		checkEntryProbe();
 		checkEntryScanInterval();
 		checkMapOverlayCountdownPreload();
@@ -327,6 +328,18 @@ public final class DungeonContextDoorChecks {
 		assertTrue(state.blood(), "the inventory scan adds Blood-key ownership to the same snapshot");
 		DungeonKeyRules.KeyOwnership none = DungeonKeyRules.combineOwnership(false, false, false, false);
 		assertFalse(none.wither() || none.blood(), "no observed or carried key leaves both palettes unchanged");
+	}
+
+	/** Hypixel's sidebar can drop the Catacombs line mid boss (seen at M7 P5); only a world change ends the run there. */
+	private static void checkBossSidebarLossKeepsContext() {
+		assertTrue(!DungeonContextLifecycleRules.shouldExitOnSidebarLoss(true, true, true),
+			"boss phase on the same level must survive sidebar loss");
+		assertTrue(DungeonContextLifecycleRules.shouldExitOnSidebarLoss(true, false, true),
+			"boss phase after a world change must exit once the grace expires");
+		assertTrue(DungeonContextLifecycleRules.shouldExitOnSidebarLoss(false, true, true),
+			"outside boss phase sidebar loss must still exit after the grace");
+		assertTrue(!DungeonContextLifecycleRules.shouldExitOnSidebarLoss(false, false, false),
+			"sidebar loss inside the grace must not exit");
 	}
 
 	private static void assertTrue(boolean value, String message) {

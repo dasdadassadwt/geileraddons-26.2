@@ -1,5 +1,6 @@
 package geiler.addons.client.module.impl
 
+import geiler.addons.client.dungeon.DungeonContextTracker
 import geiler.addons.client.dungeon.odin.DungeonMaskProcTimers
 import geiler.addons.client.hud.TitleAlertStack
 import geiler.addons.client.inventory.ItemBackgrounds
@@ -49,6 +50,8 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
     soundVolume,
     soundPitch,
     showOnItem,
+    alwaysShow,
+    partyAnnounce,
 ), ModulePreview {
     @Volatile
     private var readings: List<DungeonMaskProcTimers.Reading> = emptyList()
@@ -66,15 +69,19 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
     init {
         group(
             SettingGroup.switched("Tracked Procs", bonzo, spirit, phoenix),
-            SettingGroup("Display", display, showCooldowns, titleDurationTicks),
+            SettingGroup("Display", display, showCooldowns, titleDurationTicks, alwaysShow),
             SettingGroup.switched("Sound", playProcSound, soundId, soundVolume, soundPitch),
             SettingGroup("Item Overlay", showOnItem),
+            SettingGroup("Party Chat", partyAnnounce),
         )
     }
 
     override fun isSettingVisible(setting: Setting): Boolean {
         if (setting === titleDurationTicks) {
             return display.value() == "CENTERED" || display.value() == "BOTH"
+        }
+        if (setting === alwaysShow) {
+            return display.value() == "HUD" || display.value() == "BOTH"
         }
         if (setting === soundId || setting === soundVolume || setting === soundPitch) {
             return playProcSound.value()
@@ -94,6 +101,7 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
             diagnostics.advance()
             diagnostics.status { suppressed ->
                 "readings=${readings.size},display=${display.value()},showCooldowns=${showCooldowns.value()}" +
+                    ",alwaysShow=${alwaysShow.value()},partyAnnounce=${partyAnnounce.value()}" +
                     ",refreshTicks=${titleDurationTicks.intValue()},suppressedEvents=$suppressed"
             }
         }
@@ -103,6 +111,12 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
     /** Called for the exact proc chat event; this does not infer procs from health changes. */
     fun onProc(proc: DungeonMaskProcTimers.Proc?) {
         if (!isEnabled() || proc == null) return
+
+        if (partyAnnounce.value() && procEnabled(proc)) {
+            val player = Minecraft.getInstance().player
+            player?.connection?.sendCommand("pc ${partyMessage(proc)}")
+            diagnostics.event("ANNOUNCE proc=${proc.name},result=${if (player != null) "sent" else "no_player"}")
+        }
 
         val configuredSoundId = soundId.value()
         val volume = soundVolume.value()
@@ -186,7 +200,10 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
     }
 
     override fun onEnable() {
-        diagnostics.enable("display=${display.value()},showCooldowns=${showCooldowns.value()}")
+        diagnostics.enable(
+            "display=${display.value()},showCooldowns=${showCooldowns.value()}" +
+                ",alwaysShow=${alwaysShow.value()},partyAnnounce=${partyAnnounce.value()}",
+        )
         clearSnapshots()
     }
 
@@ -243,14 +260,14 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
             }
         }
 
-        if (hud && hudLines.isNotEmpty()) {
+        if (shouldShowHud(hud, hudLines.isNotEmpty(), alwaysShow.value(), DungeonContextTracker.inDungeon())) {
             // Once any proc is in use, tracked procs that are ready show a check mark beside their icon.
             for (proc in DungeonMaskProcTimers.Proc.values()) {
                 if (procEnabled(proc) && iconRows.none { it.proc == proc }) iconRows.add(TimerRow(proc, "✔", READY_COLOR))
             }
             iconRows.sortBy { it.proc.ordinal }
             rows = iconRows
-            publishHudLines(hudLines)
+            if (hudLines.isNotEmpty()) publishHudLines(hudLines) else clearHudLines()
         } else {
             rows = emptyList()
             clearHudLines()
@@ -268,6 +285,11 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
     )
 
     private fun displayRows(): List<TimerRow> = rows.ifEmpty { sampleRows() }
+
+    /** The base class keys these off text lines, which are empty while an always-shown HUD has only ready checks. */
+    override fun visible(): Boolean = isEnabled() && rows.isNotEmpty()
+
+    override fun previewMode(): String = if (rows.isEmpty()) "sample" else "live"
 
     override fun width(font: Font?): Int =
         ICON_SIZE + ICON_GAP + (displayRows().maxOfOrNull { font!!.width(it.text) } ?: 1)
@@ -396,9 +418,24 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
         private val soundVolume = NumberSetting("Sound Volume", 0f, 1f, 0.8f)
         private val soundPitch = NumberSetting("Sound Pitch", 0.5f, 2f, 1f)
         private val showOnItem = BooleanSetting("Show On Item", false)
+        private val alwaysShow = BooleanSetting("Always Show In Dungeon", false)
+        private val partyAnnounce = BooleanSetting("Party Announce", false)
 
         @JvmField
         val INSTANCE = DungeonInvincibilityTimerModule()
+
+        /** Party chat text for a proc, e.g. "Bonzo proc". */
+        @JvmStatic
+        fun partyMessage(proc: DungeonMaskProcTimers.Proc): String = when (proc) {
+            DungeonMaskProcTimers.Proc.BONZO -> "Bonzo proc"
+            DungeonMaskProcTimers.Proc.SPIRIT -> "Spirit proc"
+            DungeonMaskProcTimers.Proc.PHOENIX -> "Phoenix proc"
+        }
+
+        /** The HUD shows with live lines, or in a dungeon while Always Show is on; never when HUD display is off. */
+        @JvmStatic
+        fun shouldShowHud(hudEnabled: Boolean, hasLines: Boolean, alwaysShow: Boolean, inDungeon: Boolean): Boolean =
+            hudEnabled && (hasLines || (alwaysShow && inDungeon))
 
         /** Height of the green cooldown fill on a 16px slot: full at the proc, shrinking to nothing when ready. */
         @JvmStatic

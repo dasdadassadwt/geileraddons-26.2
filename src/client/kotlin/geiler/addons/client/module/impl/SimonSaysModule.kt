@@ -30,6 +30,8 @@ class SimonSaysModule private constructor() : Module(
     private val announceProgress = spec.toggle("announceProgress")
     private val blockWrong = spec.toggle("blockWrong")
     private val invertKey = spec.toggle("invertKey")
+    private val blockWrongStart = spec.toggle("blockWrongStart")
+    private val maxStartClicks = spec.slider("maxStartClicks")
 
     private val state = SimonSaysState()
     private var clicksThisRound = 0
@@ -44,7 +46,10 @@ class SimonSaysModule private constructor() : Module(
         clicksThisRound = 0
         blocked = 0
         missing = 0
-        diagnostics.enable("blockWrong=${blockWrong.value()} announce=${announceProgress.value()} style=${style.value()}")
+        diagnostics.enable(
+            "blockWrong=${blockWrong.value()} blockWrongStart=${blockWrongStart.value()} maxStartClicks=${maxStartClicks.intValue()} " +
+                "announce=${announceProgress.value()} style=${style.value()}",
+        )
     }
 
     override fun onDisable() {
@@ -76,7 +81,24 @@ class SimonSaysModule private constructor() : Module(
             state.reset()
             clicksThisRound = 0
         }
-        diagnostics.status { "enabled=true near=${nearDevice()} sequence=${state.remaining().size} blocked=$blocked buttonMissing=$missing suppressedEvents=$it" }
+        // shortcut: client ticks stand in for Odin's server ticks (both 20/s); a lag spike can end the first phase early.
+        val wasFirstPhase = state.firstPhase
+        if (wasFirstPhase && nearDevice()) state.tick(stoneButtonCount(level))
+        if (wasFirstPhase && !state.firstPhase) diagnostics.event("FIRST_PHASE end=GRID_RESET sequence=${state.remaining().size}")
+        diagnostics.status {
+            "enabled=true near=${nearDevice()} firstPhase=${state.firstPhase} sequence=${state.remaining().size} blocked=$blocked buttonMissing=$missing suppressedEvents=$it"
+        }
+    }
+
+    /** Stone buttons currently on the 4x4 button grid (the device shows them only while it waits for input). */
+    private fun stoneButtonCount(level: net.minecraft.world.level.Level): Int {
+        var count = 0
+        val pos = BlockPos.MutableBlockPos()
+        for (y in 120..123) for (z in 92..95) {
+            pos.set(110, y, z)
+            if (level.getBlockState(pos).`is`(Blocks.STONE_BUTTON)) count++
+        }
+        return count
     }
 
     /** A server block change; [old] is the state before it, if the chunk was loaded. */
@@ -88,9 +110,9 @@ class SimonSaysModule private constructor() : Module(
         val z = pos.z
         if (x == START_X && y == START_Y && z == START_Z) {
             if (new.`is`(Blocks.STONE_BUTTON) && new.getValue(BlockStateProperties.POWERED)) {
-                state.reset()
+                state.restart()
                 clicksThisRound = 0
-                diagnostics.event("START_BUTTON reset")
+                diagnostics.event("START_BUTTON reset firstPhase=true")
             }
             return
         }
@@ -116,6 +138,15 @@ class SimonSaysModule private constructor() : Module(
     /** A right click on a block; returns true when it must be cancelled. */
     fun onBlockUse(pos: BlockPos): Boolean {
         if (!isEnabled() || !onFloor7() || !nearDevice()) return false
+        if (pos.x == START_X && pos.y == START_Y && pos.z == START_Z) {
+            val sneaking = Minecraft.getInstance().player?.isShiftKeyDown == true
+            if (blockWrongStart.value() && state.startClicked(maxStartClicks.intValue(), sneaking)) {
+                blocked++
+                diagnostics.event("START_BLOCKED blocked=$blocked max=${maxStartClicks.intValue()}")
+                return true
+            }
+            return false
+        }
         if (!SimonSaysState.inButtons(pos.x, pos.y, pos.z)) return false
         when (state.buttonClicked(pos.x, pos.y, pos.z)) {
             SimonSaysState.CORRECT -> {

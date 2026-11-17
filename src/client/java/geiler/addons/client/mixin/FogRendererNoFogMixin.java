@@ -11,21 +11,18 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/** Pushes the underwater and lava fog out to the render distance after vanilla has set the fog up. */
+/** Pushes the enabled fog parts out of sight after vanilla has set the fog up. */
 @Mixin(FogRenderer.class)
 public abstract class FogRendererNoFogMixin {
 	@Shadow
 	protected abstract FogType getFogType(Camera camera);
 
 	@Inject(method = "setupFog", at = @At("RETURN"))
-	private void geileraddons$clearFluidFog(Camera camera, int renderDistance,
+	private void geileraddons$clearFog(Camera camera, int renderDistance,
 		net.minecraft.client.DeltaTracker deltaTracker, float darkness,
 		net.minecraft.client.multiplayer.ClientLevel level, CallbackInfoReturnable<FogData> cir) {
 		FogData data = cir.getReturnValue();
-		if (data == null || !NoFogModule.INSTANCE.shouldClear(this.getFogType(camera))) return;
-		data.environmentalStart = NoFogModule.FAR_START;
-		data.environmentalEnd = NoFogModule.FAR_END;
-		data.skyEnd = Math.max(data.skyEnd, data.renderDistanceEnd);
-		data.cloudEnd = Math.max(data.cloudEnd, data.renderDistanceEnd);
+		if (data == null) return;
+		NoFogModule.INSTANCE.apply(this.getFogType(camera), data);
 	}
 }

@@ -17,17 +17,25 @@ public final class ModuleIconTexturesChecks {
 			"Human Recorder", "Etherwarp", "Etherwarp Sim", "Area Killer", "Rotation Engine", "Speed Sim",
 			"Jump Boost", "Pathfinder", "Secret Waypoints", "Item Cooldowns", "No Render", "Animation Fix", "Double Use Fix",
 			"Disconnect Fix", "Gyro Wand", "Mimic Announcer", "Terracotta Timer", "Wardrobe Keybinds", "Loadout Keybinds",
-			"Spring Boots", "Ragnarock");
+			"Spring Boots", "Ragnarock",
+			"Tick Timers", "Fire Freeze Timer", "Relic Timer", "King Relic", "Fishing Bobber Timer", "Fishing Hook Display", "Wither Dragons",
+			"Sea Creature Alerts", "Dragon Stack Aimer", "Compact Damage", "Terminal Solver", "Terminal Simulator",
+			"Price Display", "Chat Waypoints", "Hotspot Radar", "Fishing Bait", "Geyser Fishing", "Lava Replacement",
+			"Waypoints", "Terminal ESP", "Arrow Align", "Croesus", "Mob Highlight", "Dungeon Mob ESP", "Block ESP",
+			"Item Rarity Backgrounds", "Crop Fever Timer");
 
 	public static void run() throws Exception {
 		Path root = Path.of("src", "main", "resources", "assets", "geileraddons");
-		for (String module : MODULES) {
+		java.util.Map<String, String> owners = new java.util.HashMap<>();
+		for (String module : new java.util.LinkedHashSet<>(MODULES)) {
 			var id = ModuleIconTextures.forModule(module);
 			check(id != null, "module has an icon entry: " + module);
 			Path png = root.resolve(id.getPath());
 			check(Files.size(png) > 200, "icon PNG exists and is not empty: " + id.getPath());
 			check(ModuleIconTextures.isTintable(module), "icon follows the theme tint: " + module);
 			check(ModuleIconTextures.sourceSize(module) > 0, "icon has a source size: " + module);
+			String other = owners.put(id.getPath(), module);
+			check(other == null, "icon is not shared: " + module + " and " + other + " use " + id.getPath());
 		}
 	}
 

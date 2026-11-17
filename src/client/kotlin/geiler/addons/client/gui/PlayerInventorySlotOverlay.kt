@@ -8,7 +8,9 @@ import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.inventory.Slot
-import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.ceil
+import kotlin.math.hypot
 
 /** Bounded in-screen overlay for locked slots and current-profile slot links. */
 object PlayerInventorySlotOverlay {
@@ -98,32 +100,18 @@ object PlayerInventorySlotOverlay {
         color: Int,
         width: Int,
     ) {
-        var x0 = startX
-        var y0 = startY
-        val dx = abs(endX - x0)
-        val sx = if (x0 < endX) 1 else -1
-        val dy = -abs(endY - y0)
-        val sy = if (y0 < endY) 1 else -1
-        var error = dx + dy
+        val dx = (endX - startX).toFloat()
+        val dy = (endY - startY).toFloat()
+        val length = hypot(dx, dy)
+        if (length < 0.5f) return
         val size = maxOf(1, minOf(width, 6))
-        while (true) {
-            graphics.fill(
-                x0 - size / 2,
-                y0 - size / 2,
-                x0 + (size + 1) / 2,
-                y0 + (size + 1) / 2,
-                color,
-            )
-            if (x0 == endX && y0 == endY) break
-            val doubled = 2 * error
-            if (doubled >= dy) {
-                error += dy
-                x0 += sx
-            }
-            if (doubled <= dx) {
-                error += dx
-                y0 += sy
-            }
-        }
+        // One rotated quad is rasterized at screen resolution; per-GUI-pixel stamps looked chunky at high GUI scales.
+        val pose = graphics.pose()
+        pose.pushMatrix()
+        pose.translate(startX + 0.5f, startY + 0.5f)
+        pose.rotate(atan2(dy, dx))
+        pose.translate(-size / 2f, -size / 2f)
+        graphics.fill(0, 0, ceil(length).toInt() + size, size, color)
+        pose.popMatrix()
     }
 }

@@ -3,87 +3,50 @@ package geiler.addons.client.module.impl
 import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.dungeon.DungeonContextTracker
 import geiler.addons.client.farming.PersistentHourlyStatsStore
-import geiler.addons.client.farming.SlayerAlertRules
-import geiler.addons.client.farming.SlayerAlertRules.BossObservation
-import geiler.addons.client.farming.SlayerAlertRules.BossType
 import geiler.addons.client.farming.SlayerChatParser
 import geiler.addons.client.farming.SlayerHourlyStats
-import geiler.addons.client.farming.SlayerQuestKillTimeAverage
-import geiler.addons.client.farming.SlayerMobClassifier
 import geiler.addons.client.farming.SlayerQuestSidebarLifecycle
 import geiler.addons.client.farming.SlayerScoreboardParser
-import geiler.addons.client.farming.SlayerTimerState
-import geiler.addons.client.farming.SlayerTimeDisplay
 import geiler.addons.client.gui.GuiTheme
 import geiler.addons.client.hud.HudElement
-import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
-import geiler.addons.client.module.ChoiceSetting
 import geiler.addons.client.module.Module
 import geiler.addons.client.module.ModuleAction
-import geiler.addons.client.module.NumberSetting
 import geiler.addons.client.module.Setting
 import geiler.addons.client.module.SettingGroup
-import geiler.addons.client.module.TextSetting
-import geiler.addons.client.tree.ChatText
+import geiler.addons.client.module.BooleanSetting
+import geiler.addons.client.slayer.SlayerSidebar
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.multiplayer.ClientLevel
-import net.minecraft.client.resources.sounds.SimpleSoundInstance
-import net.minecraft.network.chat.Component
-import net.minecraft.sounds.SoundEvents
-import net.minecraft.world.entity.LivingEntity
-import net.minecraft.world.scores.DisplaySlot
-import net.minecraft.world.scores.Objective
-import net.minecraft.world.scores.PlayerTeam
-import net.minecraft.world.scores.Scoreboard
 import java.util.ArrayList
-import java.util.EnumMap
-import java.util.HashSet
 import java.util.Locale
-import java.util.UUID
 
-/** Slayer boss rate/timer HUD with filtered, configurable boss and miniboss spawn alerts. */
+/** Slayer boss rate HUD. Spawn alerts live in the Slayer Alerts module. */
 class SlayerTrackerModule private constructor(settings: Settings) : Module(
     "Slayer Tracker",
-    "Counts Slayer bosses per hour, times spawns and kills, and configures spawn alerts.",
+    "Counts Slayer bosses per hour.",
     Category.SLAYER,
     false,
     *settings.allSettings.toTypedArray(),
 ), HudElement {
     private val totalMode = settings.totalMode
     private val showBackground = settings.showBackground
-    private val timeDisplay = settings.timeDisplay
-    private val bossSpawnAlert = settings.bossSpawnAlert
-    private val minibossSpawnAlert = settings.minibossSpawnAlert
-    private val unclassifiedBossAlert = settings.unclassifiedBossAlert
-    private val alertChat = settings.alertChat
-    private val alertTitle = settings.alertTitle
-    private val alertSound = settings.alertSound
-    private val alertTitleDuration = settings.alertTitleDuration
-    private val bossAlertText = settings.bossAlertText
-    private val minibossAlertText = settings.minibossAlertText
-    private val bossTypeAlerts = EnumMap<BossType, BooleanSetting>(settings.bossTypeAlerts)
-
     private val stats = SlayerHourlyStats()
-    private val timers = SlayerTimerState()
-    private val killTimeAverage = SlayerQuestKillTimeAverage()
     private val sidebarLifecycle = SlayerQuestSidebarLifecycle()
-    private val visibleMinibosses: MutableSet<UUID> = HashSet()
     private var lastLevel: ClientLevel? = null
     private var scoreboardPollTicks = 0
-    private var minibossScanTicks = 0
     private var questActive = false
     private var lastQuestActiveNanos = 0L
     private var bossCountedForQuest = false
+    private var bossSeenForQuest = false
     private var lastStatsSaveNanos = 0L
     private var lastSavedTotalNanos = -1L
     private var lastSavedTotalKills = -1
     private var cachedLines: Array<String>? = null
     private var cachedSecond = -1L
     private var cachedTotals = false
-    private var cachedTimeDisplay: String? = null
 
     // Diagnostics are bounded and contain only local state. Raw chat, names, UUIDs, and alert text
     // are deliberately omitted.
@@ -93,18 +56,12 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
     private var eventsThisTick = 0
     private var suppressedEvents = 0
     private var lastObservedBoardState: SlayerScoreboardParser.State? = null
-    private var bossSpawnTransitions = 0
     private var bossCompletions = 0
     private var failedQuests = 0
     private var questStartMessages = 0
     private var questCompleteMessages = 0
     private var questFailMessages = 0
     private var ignoredChatMessages = 0
-    private var bossAlertsFiltered = 0
-    private var bossAlertDecisions = 0
-    private var minibossAlertDecisions = 0
-    private var minibossScans = 0
-    private var minibossCandidates = 0
     private var liveHudRenderCalls = 0
     private var lastHudX = 0
     private var lastHudY = 0
@@ -113,28 +70,14 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
     private var lastHudText = "none"
 
     init {
-        val alertSettings = ArrayList<Setting>(3 + settings.bossTypeAlerts.size + 4)
-        alertSettings.add(settings.bossSpawnAlert)
-        alertSettings.add(settings.minibossSpawnAlert)
-        alertSettings.add(settings.unclassifiedBossAlert)
-        settings.bossTypeAlerts.values.forEach { alertSettings.add(it) }
-        alertSettings.add(settings.alertChat)
-        alertSettings.add(settings.alertTitle)
-        alertSettings.add(settings.alertSound)
-        alertSettings.add(settings.alertTitleDuration)
-
         val saved = PersistentHourlyStatsStore.loadSlayer()
         stats.restoreTotal(saved.kills, saved.activeNanos)
 
         group(
             SettingGroup("Stats", settings.totalMode, settings.resetSessionAction),
-            SettingGroup("Display", settings.showBackground, settings.timeDisplay),
-            SettingGroup("Alerts", *alertSettings.toTypedArray()),
-            SettingGroup("Alert Text", settings.bossAlertText, settings.minibossAlertText),
+            SettingGroup("Display", settings.showBackground),
         )
     }
-
-    override fun isWorkInProgress(): Boolean = true
 
     /** Client END tick hook. Scoreboard reads and entity scans are deliberately throttled. */
     fun tick() {
@@ -153,12 +96,9 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
             lastQuestActiveNanos = 0L
             sidebarLifecycle.reset()
             bossCountedForQuest = false
-            timers.reset()
-            killTimeAverage.reset()
-            visibleMinibosses.clear()
+            bossSeenForQuest = false
             stats.stop()
             scoreboardPollTicks = 0
-            minibossScanTicks = 0
             lastObservedBoardState = null
             diagnosticEvent("WORLD_CHANGED previousWorldPresent=$previousLevelPresent currentWorldPresent=${level != null}")
         }
@@ -171,45 +111,34 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
 
         if (scoreboardPollTicks++ >= SCOREBOARD_POLL_TICKS) {
             scoreboardPollTicks = 0
-            val board = SlayerScoreboardParser.parse(readSidebar(level.scoreboard))
+            val board = SlayerScoreboardParser.parse(SlayerSidebar.read(level.scoreboard))
             if (board != lastObservedBoardState) {
                 diagnosticEvent("SIDEBAR state=${board.name} previous=${lastObservedBoardState?.name ?: "none"}")
                 lastObservedBoardState = board
             }
             when (board) {
                 SlayerScoreboardParser.State.BOSS_ACTIVE -> {
-                    val wasQuestActive = questActive
                     questActive = sidebarLifecycle.observe(board).questActive
-                    if (questActive && !wasQuestActive) beginKillTimeQuest("scoreboard")
-                    if (timers.onBossSpawn(now)) {
+                    if (!bossSeenForQuest) {
+                        bossSeenForQuest = true
                         bossCountedForQuest = false
-                        bossSpawnTransitions = saturatedIncrement(bossSpawnTransitions)
-                        diagnosticEvent("BOSS_SPAWN questActive=$questActive alertsEnabled=${bossSpawnAlert.value()}")
-                        if (bossSpawnAlert.value()) alertBossSpawn(mc)
+                        diagnosticEvent("BOSS_SPAWN questActive=$questActive")
                     }
                 }
                 SlayerScoreboardParser.State.QUEST_ACTIVE -> {
-                    val wasQuestActive = questActive
                     questActive = sidebarLifecycle.observe(board).questActive
-                    if (questActive && !wasQuestActive) beginKillTimeQuest("scoreboard")
                 }
                 SlayerScoreboardParser.State.BOSS_SLAIN -> {
                     val update = sidebarLifecycle.observe(board)
-                    if (update.bossSlain) {
-                        completeBoss(now)
-                        killTimeAverage.completeQuest()
-                    }
+                    if (update.bossSlain) completeBoss(now)
                     questActive = update.questActive
-                    visibleMinibosses.clear()
                 }
                 SlayerScoreboardParser.State.NO_QUEST -> {
                     val update = sidebarLifecycle.observe(board)
                     questActive = update.questActive
                     if (update.questFailed) {
                         bossCountedForQuest = false
-                        timers.onQuestFailed()
-                        failKillTimeQuest("scoreboard")
-                        visibleMinibosses.clear()
+                        bossSeenForQuest = false
                         failedQuests = saturatedIncrement(failedQuests)
                         diagnosticEvent("QUEST_FAILED source=sidebar")
                     }
@@ -222,10 +151,6 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
         stats.tick(questActive, now)
         if (questActive) lastQuestActiveNanos = now
 
-        if (minibossScanTicks++ >= MINIBOSS_SCAN_TICKS) {
-            minibossScanTicks = 0
-            scanMinibosses(mc)
-        }
         persistTotalsIfDue(now)
         tickDiagnostics(now)
     }
@@ -244,18 +169,14 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
             SlayerChatParser.Event.QUEST_STARTED -> {
                 questStartMessages = saturatedIncrement(questStartMessages)
                 questActive = sidebarLifecycle.onQuestStarted().questActive
-                beginKillTimeQuest("chat")
                 bossCountedForQuest = false
-                timers.onQuestFailed()
+                bossSeenForQuest = false
                 diagnosticEvent("QUEST_STARTED source=chat")
             }
             SlayerChatParser.Event.QUEST_COMPLETE -> {
                 questCompleteMessages = saturatedIncrement(questCompleteMessages)
                 val update = sidebarLifecycle.onQuestCompleted()
-                if (update.bossSlain) {
-                    completeBoss(now)
-                    killTimeAverage.completeQuest()
-                }
+                if (update.bossSlain) completeBoss(now)
                 questActive = update.questActive
                 diagnosticEvent("QUEST_COMPLETED source=chat bossSlain=${update.bossSlain}")
             }
@@ -263,8 +184,7 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
                 questFailMessages = saturatedIncrement(questFailMessages)
                 questActive = sidebarLifecycle.onQuestFailed().questActive
                 bossCountedForQuest = false
-                timers.onQuestFailed()
-                failKillTimeQuest("chat")
+                bossSeenForQuest = false
                 diagnosticEvent("QUEST_FAILED source=chat")
             }
             SlayerChatParser.Event.NONE -> {
@@ -283,9 +203,7 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
         questActive = false
         sidebarLifecycle.reset()
         bossCountedForQuest = false
-        timers.reset()
-        killTimeAverage.reset()
-        visibleMinibosses.clear()
+        bossSeenForQuest = false
         stats.stop()
         diagnosticEvent("WORLD_CHANGE_HOOK")
     }
@@ -308,18 +226,12 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
         eventsThisTick = 0
         suppressedEvents = 0
         eventBudgetTick = Long.MIN_VALUE
-        bossSpawnTransitions = 0
         bossCompletions = 0
         failedQuests = 0
         questStartMessages = 0
         questCompleteMessages = 0
         questFailMessages = 0
         ignoredChatMessages = 0
-        bossAlertsFiltered = 0
-        bossAlertDecisions = 0
-        minibossAlertDecisions = 0
-        minibossScans = 0
-        minibossCandidates = 0
         liveHudRenderCalls = 0
         lastHudX = 0
         lastHudY = 0
@@ -343,9 +255,7 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
         questActive = false
         sidebarLifecycle.reset()
         bossCountedForQuest = false
-        timers.reset()
-        killTimeAverage.reset()
-        visibleMinibosses.clear()
+        bossSeenForQuest = false
         stats.tick(false, System.nanoTime())
         persistTotalsNow()
         GeilerAddonsLog.setModuleDiagnosticsEnabled(Category.SLAYER, name(), false)
@@ -365,8 +275,6 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
     }
 
     fun stats(): SlayerHourlyStats = stats
-
-    fun timers(): SlayerTimerState = timers
 
     override fun configName(): String = "Slayer Tracker"
 
@@ -437,104 +345,35 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
 
     private fun previewLines(): Array<String> {
         if (visible()) return lines()
-        val timeLines = displayMode().lines("00:18", "01:12")
-        val result = ArrayList<String>(2 + timeLines.size)
-        result.add("Slayer ${if (totalMode.value()) "total" else "session"}")
-        result.add("4.2/h  18 bosses")
-        result.addAll(timeLines)
-        return result.toTypedArray()
+        return arrayOf("Slayer ${if (totalMode.value()) "total" else "session"}", "4.2/h  18 bosses")
     }
 
     private fun completeBoss(nowNanos: Long) {
         if (bossCountedForQuest) return
-        val duration = timers.onBossKill(nowNanos)
-        if (duration < 0L && !questActive) return
-        if (duration >= 0L) {
-            if (killTimeAverage.record(duration)) {
-                cachedLines = null
-                diagnosticEvent(
-                    "KILL_TIME_SAMPLE samples=${killTimeAverage.sampleCount()} " +
-                        "averageSeconds=${killTimeAverage.averageNanos() / SECOND_NANOS}",
-                )
-            } else {
-                diagnosticEvent("KILL_TIME_SAMPLE_IGNORED reason=no-current-quest durationSeconds=${duration / SECOND_NANOS}")
-            }
-        }
+        if (!bossSeenForQuest && !questActive) return
         stats.recordKill(nowNanos)
         bossCountedForQuest = true
+        bossSeenForQuest = false
+        cachedLines = null
         bossCompletions = saturatedIncrement(bossCompletions)
-        diagnosticEvent("BOSS_COMPLETED durationSeconds=${duration / SECOND_NANOS} questActive=$questActive")
+        diagnosticEvent("BOSS_COMPLETED questActive=$questActive")
         persistTotalsNow()
     }
 
-    private fun beginKillTimeQuest(source: String) {
-        if (!killTimeAverage.beginQuest()) return
-        cachedLines = null
-        diagnosticEvent("KILL_TIME_WINDOW_STARTED source=$source")
-    }
-
-    private fun failKillTimeQuest(source: String) {
-        killTimeAverage.failQuest()
-        cachedLines = null
-        diagnosticEvent("KILL_TIME_WINDOW_CLEARED source=$source")
-    }
-
-    private fun scanMinibosses(mc: Minecraft) {
-        if (!shouldScanMinibosses(questActive, minibossSpawnAlert.value(), mc.level != null, mc.player != null)) {
-            visibleMinibosses.clear()
-            return
-        }
-        val level = mc.level ?: return
-        val player = mc.player ?: return
-        val found = HashSet<UUID>()
-        var candidateCount = 0
-        for (entity in level.getEntitiesOfClass(LivingEntity::class.java, player.boundingBox.inflate(MINIBOSS_RANGE))) {
-            if (entity === player || entity.distanceToSqr(player) > MINIBOSS_RANGE * MINIBOSS_RANGE) continue
-            val name = entity.customName?.string ?: entity.name.string
-            if (SlayerMobClassifier.classify(name) != SlayerMobClassifier.Kind.MINIBOSS) continue
-            candidateCount = saturatedIncrement(candidateCount)
-            val id = entity.uuid
-            found.add(id)
-            if (!visibleMinibosses.contains(id)) alertMiniboss(name)
-        }
-        minibossScans = saturatedIncrement(minibossScans)
-        minibossCandidates = saturatedAdd(minibossCandidates, candidateCount)
-        diagnosticEvent("MINIBOSS_SCAN candidates=$candidateCount newlyVisible=${found.count { it !in visibleMinibosses }} " +
-            "tracked=${found.size}")
-        visibleMinibosses.clear()
-        visibleMinibosses.addAll(found)
-    }
-
     private fun lines(): Array<String> {
-        val now = System.nanoTime()
-        val second = now / SECOND_NANOS
+        val second = System.nanoTime() / SECOND_NANOS
         val totals = totalMode.value()
-        val selectedTimeDisplay = timeDisplay.value()
-        if (cachedLines == null || cachedSecond != second || cachedTotals != totals
-            || selectedTimeDisplay != cachedTimeDisplay) {
+        if (cachedLines == null || cachedSecond != second || cachedTotals != totals) {
             cachedSecond = second
             cachedTotals = totals
-            cachedTimeDisplay = selectedTimeDisplay
             val kills = if (totals) stats.totalKills() else stats.sessionKills()
             val rate = if (totals) stats.totalPerHour() else stats.sessionPerHour()
-            val spawn = if (timers.bossActive()) formatDuration(timers.secondsSinceSpawn(now).toLong()) else "-"
-            val averageKill = if (killTimeAverage.sampleCount() == 0) "-"
-                else formatDuration((killTimeAverage.averageNanos() + SECOND_NANOS / 2) / SECOND_NANOS)
-            val displayLines = displayMode().lines(spawn, averageKill)
-            val result = ArrayList<String>(2 + displayLines.size)
-            result.add("Slayer ${if (totals) "total" else "session"}")
-            result.add(String.format(Locale.ROOT, "%.1f/h  %d bosses", rate, kills))
-            result.addAll(displayLines)
-            cachedLines = result.toTypedArray()
+            cachedLines = arrayOf(
+                "Slayer ${if (totals) "total" else "session"}",
+                String.format(Locale.ROOT, "%.1f/h  %d bosses", rate, kills),
+            )
         }
         return checkNotNull(cachedLines)
-    }
-
-    private fun displayMode(): SlayerTimeDisplay = SlayerTimeDisplay.valueOf(timeDisplay.value().uppercase(Locale.ROOT))
-
-    private fun formatDuration(seconds: Long): String {
-        val safe = maxOf(0L, seconds)
-        return String.format(Locale.ROOT, "%02d:%02d", safe / 60, safe % 60)
     }
 
     private fun persistTotalsIfDue(now: Long) {
@@ -549,106 +388,17 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
         lastStatsSaveNanos = System.nanoTime()
     }
 
-    private fun alertBossSpawn(mc: Minecraft) {
-        val observation = observedBossType(mc)
-        if (!SlayerAlertRules.bossFilterAllows(observation, enabledBossFilters(), unclassifiedBossAlert.value())) {
-            bossAlertsFiltered = saturatedIncrement(bossAlertsFiltered)
-            diagnosticEvent("BOSS_ALERT_FILTERED type=${observation.type?.name ?: "none"} ambiguous=${observation.ambiguous}")
-            return
-        }
-        val bossName = observation.type?.displayName()
-        val presentation = SlayerAlertRules.presentation(alertChat.value(), alertTitle.value(), alertSound.value(),
-            alertTitleDuration.intValue(), bossAlertText.value(), observation.type, bossName, null)
-        bossAlertDecisions = saturatedIncrement(bossAlertDecisions)
-        recordAlertDecision("boss", presentation, mc.gui != null)
-        emitAlert(presentation)
-    }
-
-    private fun alertMiniboss(rawName: String) {
-        val presentation = SlayerAlertRules.presentation(alertChat.value(), alertTitle.value(), alertSound.value(),
-            alertTitleDuration.intValue(), minibossAlertText.value(), null, null, rawName)
-        minibossAlertDecisions = saturatedIncrement(minibossAlertDecisions)
-        recordAlertDecision("miniboss", presentation, Minecraft.getInstance().gui != null)
-        emitAlert(presentation)
-    }
-
-    private fun recordAlertDecision(kind: String, presentation: SlayerAlertRules.Presentation, guiAvailable: Boolean) {
-        diagnosticEvent("ALERT kind=$kind guiAvailable=$guiAvailable chat=${presentation.showChat} " +
-            "title=${presentation.showTitle} sound=${presentation.playSound} " +
-            "durationTicks=${presentation.durationTicks} messageChars=${presentation.message?.length ?: 0}")
-    }
-
-    private fun observedBossType(mc: Minecraft): BossObservation {
-        val level = mc.level
-        val player = mc.player
-        if (level == null || player == null) return SlayerAlertRules.observeBossNames(emptyList())
-        val names = ArrayList<String>()
-        for (entity in level.getEntitiesOfClass(LivingEntity::class.java,
-            player.boundingBox.inflate(MINIBOSS_RANGE))) {
-            if (entity === player || entity.distanceToSqr(player) > MINIBOSS_RANGE * MINIBOSS_RANGE) continue
-            val name = entity.customName?.string ?: entity.name.string
-            if (SlayerAlertRules.classifyBossName(name) != null) names.add(name)
-        }
-        return SlayerAlertRules.observeBossNames(names)
-    }
-
-    private fun enabledBossFilters(): EnumMap<BossType, Boolean> {
-        val enabled = EnumMap<BossType, Boolean>(BossType::class.java)
-        for ((type, setting) in bossTypeAlerts) enabled[type] = setting.value()
-        return enabled
-    }
-
-    private fun readSidebar(scoreboard: Scoreboard?): String {
-        if (scoreboard == null) return ""
-        val sidebar: Objective = scoreboard.getDisplayObjective(DisplaySlot.SIDEBAR) ?: return ""
-        val text = StringBuilder(ChatText.plain(sidebar.displayName.string))
-        for (entry in scoreboard.listPlayerScores(sidebar)) {
-            if (entry == null || entry.isHidden()) continue
-            val display = entry.display()
-            val line = display ?: run {
-                val team: PlayerTeam? = scoreboard.getPlayersTeam(entry.owner())
-                team?.getFormattedName(entry.ownerName()) ?: entry.ownerName()
-            }
-            text.append('\n').append(ChatText.plain(line.string))
-        }
-        return text.toString()
-    }
-
-    private fun emitAlert(presentation: SlayerAlertRules.Presentation) {
-        val mc = Minecraft.getInstance()
-        val gui = mc.gui
-        val message = presentation.message ?: ""
-        if (gui != null) {
-            if (presentation.showChat) {
-                gui.hud.chat.addClientSystemMessage(Component.literal("[Slayer] $message"))
-            }
-            if (presentation.showTitle) {
-                gui.hud.setTimes(0, presentation.durationTicks, 0)
-                gui.hud.setTitle(Component.literal(message))
-            }
-        }
-        if (presentation.playSound) {
-            mc.soundManager.play(SimpleSoundInstance.forUI(SoundEvents.EXPERIENCE_ORB_PICKUP, 1f, 1f))
-        }
-    }
-
     private fun tickDiagnostics(nowNanos: Long) {
         if (!isEnabled() || diagnosticTick - lastStatusTick < STATUS_INTERVAL_TICKS) return
         recordDiagnostic("STATUS intervalTicks=$STATUS_INTERVAL_TICKS ${diagnosticState(nowNanos)} " +
             "suppressedEvents=$suppressedEvents")
         lastStatusTick = diagnosticTick
-        bossSpawnTransitions = 0
         bossCompletions = 0
         failedQuests = 0
         questStartMessages = 0
         questCompleteMessages = 0
         questFailMessages = 0
         ignoredChatMessages = 0
-        bossAlertsFiltered = 0
-        bossAlertDecisions = 0
-        minibossAlertDecisions = 0
-        minibossScans = 0
-        minibossCandidates = 0
         liveHudRenderCalls = 0
         suppressedEvents = 0
     }
@@ -671,37 +421,20 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
         val mc = Minecraft.getInstance()
         val idleAgeSeconds = if (lastQuestActiveNanos <= 0L) -1L
             else maxOf(0L, nowNanos - lastQuestActiveNanos) / SECOND_NANOS
-        val spawnSeconds = if (timers.bossActive()) timers.secondsSinceSpawn(nowNanos).toLong() else -1L
-        val killSeconds = if (timers.hasLastKill()) timers.lastKillDurationNanos() / SECOND_NANOS else -1L
-        val averageKillSeconds = if (killTimeAverage.sampleCount() == 0) -1L
-            else killTimeAverage.averageNanos() / SECOND_NANOS
-        val bossFilters = bossTypeAlerts.entries.joinToString(",") { (type, setting) ->
-            "${type.name}=${setting.value()}"
-        }
         return "enabled=${isEnabled()} active=${isActive()} worldPresent=${mc.level != null} " +
             "playerPresent=${mc.player != null} inDungeon=${DungeonContextTracker.inDungeon()} " +
             "hudVisible=${visible()} questActive=$questActive idleAgeSeconds=$idleAgeSeconds " +
             "sidebar=${lastObservedBoardState?.name ?: "none"} sidebarPollTicks=$scoreboardPollTicks " +
-            "minibossScanTicks=$minibossScanTicks visibleMinibossCount=${visibleMinibosses.size} " +
-            "bossTimerActive=${timers.bossActive()} spawnSeconds=$spawnSeconds lastMeasuredKillSeconds=$killSeconds " +
-            "killAverageQuestActive=${killTimeAverage.questActive()} " +
-            "averageKillSamples=${killTimeAverage.sampleCount()} averageKillSeconds=$averageKillSeconds " +
+            "bossSeenForQuest=$bossSeenForQuest bossCounted=$bossCountedForQuest " +
             "sessionKills=${stats.sessionKills()} sessionActiveSeconds=${stats.sessionActiveNanos() / SECOND_NANOS} " +
             "sessionPerHour=${String.format(Locale.ROOT, "%.1f", stats.sessionPerHour())} " +
             "totalKills=${stats.totalKills()} totalActiveSeconds=${stats.totalActiveNanos() / SECOND_NANOS} " +
             "totalPerHour=${String.format(Locale.ROOT, "%.1f", stats.totalPerHour())} " +
-            "showTotals=${totalMode.value()} background=${showBackground.value()} timeDisplay=${timeDisplay.value()} " +
-            "bossSpawnAlert=${bossSpawnAlert.value()} minibossSpawnAlert=${minibossSpawnAlert.value()} " +
-            "unclassifiedBossAlert=${unclassifiedBossAlert.value()} bossTypeFilters=[$bossFilters] " +
-            "chatAlert=${alertChat.value()} " +
-            "titleAlert=${alertTitle.value()} soundAlert=${alertSound.value()} " +
-            "titleDurationTicks=${alertTitleDuration.intValue()} " +
-            "bossSpawnTransitions=$bossSpawnTransitions bossCompletions=$bossCompletions failedQuests=$failedQuests " +
+            "showTotals=${totalMode.value()} background=${showBackground.value()} " +
+            "bossCompletions=$bossCompletions failedQuests=$failedQuests " +
             "questStartMessages=$questStartMessages questCompleteMessages=$questCompleteMessages " +
             "questFailMessages=$questFailMessages ignoredChatMessages=$ignoredChatMessages " +
-            "bossAlertsFiltered=$bossAlertsFiltered bossAlertDecisions=$bossAlertDecisions " +
-            "minibossAlertDecisions=$minibossAlertDecisions minibossScans=$minibossScans " +
-            "minibossCandidates=$minibossCandidates liveHudRenderCalls=$liveHudRenderCalls " +
+            "liveHudRenderCalls=$liveHudRenderCalls " +
             "lastHud=${lastHudX},${lastHudY},${lastHudWidth}x$lastHudHeight hudText=$lastHudText"
     }
 
@@ -712,15 +445,10 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
 
     private fun saturatedIncrement(value: Int): Int = if (value >= MAX_DIAGNOSTIC_COUNT) MAX_DIAGNOSTIC_COUNT else value + 1
 
-    private fun saturatedAdd(left: Int, right: Int): Int =
-        if (MAX_DIAGNOSTIC_COUNT - left < right) MAX_DIAGNOSTIC_COUNT else left + right
-
     companion object {
         private const val SECOND_NANOS = 1_000_000_000L
         private const val STATS_SAVE_INTERVAL_NANOS = 5_000_000_000L
         private const val SCOREBOARD_POLL_TICKS = 5
-        private const val MINIBOSS_SCAN_TICKS = 10
-        private const val MINIBOSS_RANGE = 64.0
         private const val IDLE_HIDE_NANOS = 30_000_000_000L
         private const val STATUS_INTERVAL_TICKS = 100L
         private const val MAX_DIAGNOSTIC_COUNT = 1_000_000
@@ -747,14 +475,6 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
             nowNanos: Long,
         ): Boolean = active && !inDungeon && shouldDisplayForQuestState(questActive, lastQuestActiveNanos, nowNanos)
 
-        @JvmStatic
-        fun shouldScanMinibosses(
-            questActive: Boolean,
-            alertEnabled: Boolean,
-            levelPresent: Boolean,
-            playerPresent: Boolean,
-        ): Boolean = questActive && alertEnabled && levelPresent && playerPresent
-
         private fun resetSession() {
             INSTANCE.resetSessionStats()
         }
@@ -773,50 +493,12 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
 
     private class Settings {
         val allSettings = ArrayList<Setting>()
-        val bossTypeAlerts = EnumMap<BossType, BooleanSetting>(BossType::class.java)
         val totalMode = BooleanSetting("Show Totals", false)
         val showBackground = BooleanSetting("Background", true)
-        val timeDisplay = ChoiceSetting("Time Display", "Both", "Spawn", "Kill", "Both")
-        val bossSpawnAlert = BooleanSetting("Boss Spawn Alert", SlayerAlertRules.DEFAULT_BOSS_ALERT)
-        val minibossSpawnAlert = BooleanSetting("Miniboss Spawn Alert", SlayerAlertRules.DEFAULT_MINIBOSS_ALERT)
-        val unclassifiedBossAlert = BooleanSetting(
-            "Unclassified Boss Alert", SlayerAlertRules.DEFAULT_UNCLASSIFIED_BOSS_ALERT,
-        )
-        val alertChat = BooleanSetting("Chat Alert", SlayerAlertRules.DEFAULT_CHAT_ALERT)
-        val alertTitle = BooleanSetting("Title Alert", SlayerAlertRules.DEFAULT_TITLE_ALERT)
-        val alertSound = BooleanSetting("Sound Alert", SlayerAlertRules.DEFAULT_SOUND_ALERT)
-        val alertTitleDuration = NumberSetting(
-            "Title Duration (ticks)",
-            SlayerAlertRules.MIN_TITLE_DURATION_TICKS.toFloat(),
-            SlayerAlertRules.MAX_TITLE_DURATION_TICKS.toFloat(),
-            SlayerAlertRules.DEFAULT_TITLE_DURATION_TICKS.toFloat(),
-            true,
-        )
-        val bossAlertText = TextSetting("Boss Alert Text", SlayerAlertRules.DEFAULT_BOSS_TEXT, 192)
-        val minibossAlertText = TextSetting("Miniboss Alert Text", SlayerAlertRules.DEFAULT_MINIBOSS_TEXT, 192)
         val resetSessionAction = ModuleAction("Reset Session Stats", Runnable { SlayerTrackerModule.resetSession() })
 
         init {
-            allSettings.addAll(listOf(
-                totalMode,
-                showBackground,
-                timeDisplay,
-                bossSpawnAlert,
-                minibossSpawnAlert,
-                resetSessionAction,
-                unclassifiedBossAlert,
-                alertChat,
-                alertTitle,
-                alertSound,
-                alertTitleDuration,
-                bossAlertText,
-                minibossAlertText,
-            ))
-            for (type in BossType.values()) {
-                val filter = BooleanSetting(type.settingName() + " Alert", SlayerAlertRules.DEFAULT_BOSS_TYPE_FILTER)
-                bossTypeAlerts[type] = filter
-                allSettings.add(filter)
-            }
+            allSettings.addAll(listOf(totalMode, showBackground, resetSessionAction))
         }
     }
 }

@@ -24,6 +24,7 @@ public final class InvincibilityTimerModuleChecks {
 		checkTimerText();
 		checkPublishedHudBehavior();
 		checkProcSoundOutcomeClassification();
+		checkPartyMessageAndAlwaysShow();
 		checkAutomaticDiagnosticsLifecycle();
 	}
 
@@ -91,7 +92,8 @@ public final class InvincibilityTimerModuleChecks {
 				&& module.id().equals("dungeon_invincibility_timer")
 				&& module.displayName().equals("Invincibility Timers")
 				&& !module.defaultEnabled(), "module and HUD retain their names, category, ID, and off default");
-			require(List.of("Bonzo Mask", "Spirit Mask", "Phoenix", "Play Proc Sound", "Show Cooldowns", "Show On Item").equals(
+			require(List.of("Bonzo Mask", "Spirit Mask", "Phoenix", "Play Proc Sound", "Show Cooldowns", "Show On Item",
+					"Always Show In Dungeon", "Party Announce").equals(
 				module.booleanSettings().stream().map(Setting::name).toList()),
 				"Java-visible boolean settings keep their IDs and declaration order");
 			require(List.of("Display").equals(module.choiceSettings().stream().map(Setting::name).toList())
@@ -116,13 +118,19 @@ public final class InvincibilityTimerModuleChecks {
 			SettingGroup tracked = groups.get(0);
 			SettingGroup presentation = groups.get(1);
 			SettingGroup sound = groups.get(2);
-			require(groups.size() == 4 && "Item Overlay".equals(groups.get(3).name())
+			BooleanSetting alwaysShow = (BooleanSetting) findSetting(module, "Always Show In Dungeon");
+			BooleanSetting partyAnnounce = (BooleanSetting) findSetting(module, "Party Announce");
+			require(!alwaysShow.rawValue() && !partyAnnounce.rawValue(),
+				"Always Show In Dungeon and Party Announce default off");
+			require(groups.size() == 5 && "Item Overlay".equals(groups.get(3).name())
+				&& "Party Chat".equals(groups.get(4).name())
+				&& groups.get(4).settings().contains(partyAnnounce)
 				&& List.of(tracked.name(), presentation.name(), sound.name())
 					.equals(List.of("Tracked Procs", "Display", "Sound"))
 				&& tracked.toggle() == DungeonInvincibilityTimerModule.bonzo
 				&& tracked.settings().equals(List.of(DungeonInvincibilityTimerModule.spirit,
 					DungeonInvincibilityTimerModule.phoenix))
-				&& presentation.settings().equals(List.of(display, showCooldowns, titleDuration))
+				&& presentation.settings().equals(List.of(display, showCooldowns, titleDuration, alwaysShow))
 				&& sound.toggle() == DungeonInvincibilityTimerModule.playProcSound
 				&& sound.settings().equals(List.of(soundId, soundVolume, soundPitch)),
 				"settings remain in their original groups and switched sections");
@@ -231,6 +239,20 @@ public final class InvincibilityTimerModuleChecks {
 			module.setEnabled(wasEnabled);
 			if (wasEnabled) module.publishReadings(List.of());
 		}
+	}
+
+	private static void checkPartyMessageAndAlwaysShow() {
+		require(DungeonInvincibilityTimerModule.partyMessage(DungeonMaskProcTimers.Proc.BONZO).equals("Bonzo proc")
+				&& DungeonInvincibilityTimerModule.partyMessage(DungeonMaskProcTimers.Proc.SPIRIT).equals("Spirit proc")
+				&& DungeonInvincibilityTimerModule.partyMessage(DungeonMaskProcTimers.Proc.PHOENIX).equals("Phoenix proc"),
+			"party announce names the proc and says proc");
+		require(DungeonInvincibilityTimerModule.shouldShowHud(true, false, true, true)
+				&& !DungeonInvincibilityTimerModule.shouldShowHud(true, false, true, false)
+				&& !DungeonInvincibilityTimerModule.shouldShowHud(true, false, false, true)
+				&& !DungeonInvincibilityTimerModule.shouldShowHud(false, false, true, true)
+				&& DungeonInvincibilityTimerModule.shouldShowHud(true, true, false, false)
+				&& !DungeonInvincibilityTimerModule.shouldShowHud(false, true, true, true),
+			"always show keeps the HUD up only in a dungeon with a HUD display; live lines still show");
 	}
 
 	private static void checkProcSoundOutcomeClassification() {

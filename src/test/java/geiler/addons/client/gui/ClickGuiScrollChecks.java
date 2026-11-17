@@ -436,11 +436,11 @@ public final class ClickGuiScrollChecks {
 				== Category.Companion.of(geiler.addons.client.module.Workspace.NORMAL).size() * 22,
 			"the compatibility helper still reports its baseline row height");
 		int compactContent = ClickGuiScreen.categoryContentHeightForPanelHeight(367);
-		check(compactContent == 228, "the compact rail fits all nine categories below its header gap");
+		check(compactContent == 276, "the compact rail fits all eleven categories below its header gap");
 		check(ClickGuiScreen.categoryMaxScroll(367, 298) == 0,
 			"the compact rail needs no scroll when all category rows fit");
 		int referenceContent = ClickGuiScreen.categoryContentHeightForPanelHeight(783);
-		check(referenceContent == 378, "the reference rail uses compact responsive row spacing");
+		check(referenceContent == 456, "the reference rail uses compact responsive row spacing");
 		check(ClickGuiScreen.categoryMaxScroll(783, 637) == 0,
 			"the full-height reference rail fits every category without scrolling");
 		check(ClickGuiScreen.categoryMaxScroll(referenceContent) == 0,

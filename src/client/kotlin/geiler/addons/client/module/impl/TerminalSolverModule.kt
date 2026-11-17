@@ -1,6 +1,8 @@
 package geiler.addons.client.module.impl
 
 import geiler.addons.client.dungeon.DungeonContextTracker
+import org.lwjgl.glfw.GLFW
+import geiler.addons.client.dungeon.terminal.TerminalAim
 import geiler.addons.client.dungeon.terminal.ColorKey
 import geiler.addons.client.dungeon.terminal.TermSlot
 import geiler.addons.client.dungeon.terminal.TerminalConfig
@@ -44,6 +46,7 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
     false,
     s.termSize, s.roundness, s.slotGap,
     s.clickPrediction, s.resolveTimeout, s.stopMelody, s.melodySize, s.rubixMode, s.rubixReplaceClicks,
+    s.aimAssist, s.aimRange, s.melodyBlockWrong, s.melodyAutoCursor,
     s.firstClickProt, s.serverLag, s.lagTicks,
     s.background, s.panes, s.rubixText, s.rubix1, s.rubix2, s.rubixNeg1, s.rubixNeg2,
     s.numbersText, s.numbers1, s.numbers2, s.numbers3, s.numbers4, s.startsWith, s.select,
@@ -55,6 +58,7 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
         override val clickPrediction get() = s.clickPrediction.value()
         override val rubixLeftClicksOnly get() = s.rubixMode.value() == "LEFT_CLICKS_ONLY"
         override val rubixReplaceClicks get() = s.rubixReplaceClicks.value()
+        override val melodyBlockWrongClicks get() = s.melodyBlockWrong.value()
         override val firstClickProtectionMillis get() = if (simProtectionOff()) 0 else s.firstClickProt.intValue()
         override val protectWithServerTicks get() = !simProtectionOff() && s.serverLag.value()
         override val protectionTicks get() = s.lagTicks.intValue()
@@ -74,6 +78,7 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
     private var clicks = 0
     private var blockedClicks = 0
     private var hovered: Int? = null
+    private var cursorPending = false
     private var grid: Grid? = null
     private val diagnostics = ModuleDiagnostics(Category.F7, { name() }, 10, 100L, 320)
 
@@ -82,7 +87,7 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
             SettingGroup("Display", s.termSize, s.roundness, s.slotGap),
             SettingGroup(
                 "Solver Functionality", s.clickPrediction, s.resolveTimeout, s.stopMelody, s.melodySize, s.rubixMode,
-                s.rubixReplaceClicks,
+                s.rubixReplaceClicks, s.aimAssist, s.aimRange, s.melodyBlockWrong, s.melodyAutoCursor,
             ),
             SettingGroup("Click Protection", s.firstClickProt, s.serverLag, s.lagTicks),
             SettingGroup.folded(
@@ -100,6 +105,8 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
     override fun isSettingVisible(setting: Setting): Boolean = when (setting) {
         s.resolveTimeout -> s.clickPrediction.value()
         s.melodySize -> !s.stopMelody.value()
+        s.aimRange -> s.aimAssist.value()
+        s.melodyAutoCursor -> !s.stopMelody.value()
         s.lagTicks -> s.serverLag.value()
         s.melodyColumn, s.melodyPointer, s.melodyBackground -> !s.stopMelody.value()
         else -> true
@@ -110,7 +117,9 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
         diagnostics.enable(
             "size=${s.termSize.value()} round=${s.roundness.value()} gap=${s.slotGap.intValue()} " +
                 "prediction=${s.clickPrediction.value()} timeout=${s.resolveTimeout.intValue()} " +
-                "rubix=${s.rubixMode.value()} replaceClicks=${s.rubixReplaceClicks.value()} protMs=${s.firstClickProt.intValue()} lag=${s.serverLag.value()} " +
+                "rubix=${s.rubixMode.value()} replaceClicks=${s.rubixReplaceClicks.value()} " +
+                "aim=${s.aimAssist.value()} aimRange=${s.aimRange.value()} melodyBlock=${s.melodyBlockWrong.value()} " +
+                "melodyCursor=${s.melodyAutoCursor.value()} protMs=${s.firstClickProt.intValue()} lag=${s.serverLag.value()} " +
                 "clickSounds=${s.clickSounds.value()} completeSounds=${s.completeSounds.value()}",
         )
     }
@@ -137,6 +146,7 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
         current = handler
         currentScreen = screen
         lastOpened = handler
+        cursorPending = true
         clicks = 0
         blockedClicks = 0
         diagnostics.event("OPEN type=${handler.type} title=${screen.title.string.take(40)} floor7=${floor7()}")
@@ -316,6 +326,10 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
         val mc = Minecraft.getInstance()
         val built = buildGrid(screen, handler.type)
         grid = built
+        if (cursorPending) {
+            cursorPending = false
+            if (handler.type == TerminalType.MELODY && s.melodyAutoCursor.value()) moveCursorToMelodyButtons(built)
+        }
         val (baseX, baseY) = built.toBase(mouseX.toDouble(), mouseY.toDouble())
         hovered = null
         val pose = graphics.pose()
@@ -363,6 +377,20 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
         return true
     }
 
+    /** Puts the cursor on the middle melody button (slot 25) once, so the long trip to the right is saved. */
+    private fun moveCursorToMelodyButtons(built: Grid) {
+        val box = built.boxes.firstOrNull { it.slot == MELODY_MIDDLE_BUTTON } ?: return
+        val window = Minecraft.getInstance().window
+        if (window.guiScaledWidth <= 0 || window.guiScaledHeight <= 0) return
+        val guiX = built.originX + (box.x + box.size / 2f) * built.scale
+        val guiY = built.originY + (box.y + box.size / 2f) * built.scale
+        GLFW.glfwSetCursorPos(
+            window.handle(), (guiX * window.screenWidth / window.guiScaledWidth).toDouble(),
+            (guiY * window.screenHeight / window.guiScaledHeight).toDouble(),
+        )
+        diagnostics.event("AUTO_CURSOR slot=$MELODY_MIDDLE_BUTTON gui=${guiX.toInt()},${guiY.toInt()}")
+    }
+
     private fun renderDebug(graphics: GuiGraphicsExtractor, handler: TerminalHandler, screen: AbstractContainerScreen<*>) {
         val font = Minecraft.getInstance().font
         val lines = listOf(
@@ -383,8 +411,17 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
         val built = grid ?: return true
         val (baseX, baseY) = built.toBase(event.x(), event.y())
         val box = built.boxes.firstOrNull { baseX >= it.x && baseY >= it.y && baseX < it.x + it.size && baseY < it.y + it.size }
-        hovered = box?.slot
-        box?.let { clickSlot(it.slot, event.button(), "mouse") }
+        val handler = current
+        val aimed = if (s.aimAssist.value() && handler != null) {
+            TerminalAim.pick(
+                baseX.toDouble(), baseY.toDouble(), built.boxes.map { TerminalAim.Box(it.slot, it.x, it.y, it.size) },
+                { handler.canClick(it, event.button()) }, s.aimRange.value().toDouble(),
+            )
+        } else null
+        val slot = aimed ?: box?.slot
+        if (aimed != null && aimed != box?.slot) diagnostics.event("AIM_ASSIST from=${box?.slot} to=$aimed")
+        hovered = slot
+        slot?.let { clickSlot(it, event.button(), "mouse") }
         return true
     }
 
@@ -438,6 +475,10 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
         val stopMelody = BooleanSetting("Stop Melody Solver", false)
         val melodySize = NumberSetting("Melody Size", 1f, 3f, 1.5f)
         val rubixReplaceClicks = BooleanSetting("Rubix Replace Clicks", false)
+        val aimAssist = BooleanSetting("Aim Assist", false)
+        val aimRange = NumberSetting("Aim Assist Range", 1f, 12f, 6f)
+        val melodyBlockWrong = BooleanSetting("Block Wrong Melody Clicks", false)
+        val melodyAutoCursor = BooleanSetting("Melody Auto Cursor", false)
         val rubixMode = ChoiceSetting(
             "Rubix Mode", "LEFT_CLICKS_ONLY",
             mapOf("FEWEST_CLICKS" to "Fewest Clicks", "LEFT_CLICKS_ONLY" to "Left Clicks Only"),
@@ -483,6 +524,7 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
     companion object {
         private const val SLOT_SIZE = 24
         private const val PADDING = 2
+        private const val MELODY_MIDDLE_BUTTON = 25
         private val GATE = Regex("^The gate has been destroyed!$")
         private val CORE = Regex("^The Core entrance is opening!$")
 

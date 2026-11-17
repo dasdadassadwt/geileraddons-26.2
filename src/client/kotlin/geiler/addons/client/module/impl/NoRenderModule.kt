@@ -40,7 +40,7 @@ class NoRenderModule private constructor(private val settings: Settings) : Modul
         DEAD_POOF("deadPoof"), LIGHTNING("lightning"), FALLING_BLOCKS("fallingBlocks"), ENTITY_FIRE("entityFire"),
         MAGE_BEAM("mageBeam"), POWDER_COATING("powderCoating"), GUIDED_SHEEP("guidedSheep"),
         BONE_PLATING("bonePlating"), TREE_BITS("treeBits"), NAUSEA("nausea"), EXP_ORBS("expOrbs"),
-        STUCK_ARROWS("stuckArrows"),
+        STUCK_ARROWS("stuckArrows"), BLINDNESS("blindness"),
     }
 
     private val hits = LongArray(Flag.values().size)

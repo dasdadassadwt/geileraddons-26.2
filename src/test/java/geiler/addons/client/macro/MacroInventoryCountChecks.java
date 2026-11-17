@@ -31,6 +31,13 @@ public final class MacroInventoryCountChecks {
 			"CustomData[{ExtraAttributes:{id:\"ENCHANTED_CARROT\",rarity:\"RARE\"}}]")
 			.equals("ENCHANTED_CARROT"), "SkyBlock id parser reads only the ExtraAttributes item id");
 
+		check(MacroItemCountRules.skyBlockIdFromCustomData(
+			"CustomData[{id:\"HOTSPOT_RADAR\",uuid:\"abc\",ability:{id:\"NESTED\"}}]").equals("HOTSPOT_RADAR"),
+			"26.x custom data keeps the id at the top level and a nested id is ignored");
+		check(MacroItemCountRules.skyBlockIdFromCustomData(
+			"CustomData[{ability:{id:\"NESTED\"},uuid:\"abc\"}]").isEmpty(),
+			"a nested id alone is not an item id");
+
 		MacroValue value = MacroValue.itemCount("ENCHANTED_CARROT", "minecraft:carrot");
 		check(value.type() == MacroValue.Type.ITEM_COUNT && value.skyblockItemId().equals("ENCHANTED_CARROT"),
 			"item count value retains its preferred and fallback ids");

@@ -233,47 +233,6 @@ public final class GardenFeatureChecks {
 		equals(SlayerScoreboardParser.State.BOSS_ACTIVE, SlayerScoreboardParser.parse("Slay the boss!"), "Slayer active objective");
 		equals(SlayerScoreboardParser.State.BOSS_SLAIN, SlayerScoreboardParser.parse("Boss slain!"), "Slayer slain objective");
 		equals(SlayerChatParser.Event.QUEST_STARTED, SlayerChatParser.parse("SLAYER QUEST STARTED!"), "Slayer quest start");
-		SlayerTimerState timers = new SlayerTimerState();
-		check(timers.onBossSpawn(10_000_000_000L), "Slayer first spawn transition");
-		check(!timers.onBossSpawn(11_000_000_000L), "duplicate scoreboard spawn is ignored");
-		equals(List.of("Boss spawned  00:10"), SlayerTimeDisplay.SPAWN.lines("00:10", "00:05"),
-			"Slayer spawn-only timer display");
-		equals(List.of("Average kill time  00:05"), SlayerTimeDisplay.KILL.lines("00:10", "00:05"),
-			"Slayer kill-only timer display");
-		equals(List.of("Boss spawned  00:10", "Average kill time  00:05"),
-			SlayerTimeDisplay.BOTH.lines("00:10", "00:05"), "Slayer both timer display");
-		equals(5_000_000_000L, timers.onBossKill(15_000_000_000L), "Slayer boss duration");
-		SlayerKillTimeAverage average = new SlayerKillTimeAverage(2);
-		check(!average.record(-1L) && average.sampleCount() == 0,
-			"negative or untimed Slayer kills are excluded from the average");
-		check(average.record(5_000_000_000L) && average.record(15_000_000_000L)
-			&& average.averageNanos() == 10_000_000_000L,
-			"Slayer average kill time uses all currently retained valid durations");
-		average.record(25_000_000_000L);
-		check(average.sampleCount() == 2 && average.averageNanos() == 20_000_000_000L,
-			"Slayer average retains only the bounded latest sample window");
-		average.reset();
-		check(average.sampleCount() == 0 && average.averageNanos() == -1L,
-			"world/session reset clears the Slayer average sample window");
-		SlayerQuestKillTimeAverage currentQuest = new SlayerQuestKillTimeAverage(4);
-		check(currentQuest.beginQuest() && !currentQuest.beginQuest(),
-			"duplicate Slayer start signals keep one current-quest sample window");
-		check(currentQuest.record(5_000_000_000L) && currentQuest.record(15_000_000_000L)
-			&& currentQuest.averageNanos() == 10_000_000_000L,
-			"the active Slayer quest averages its valid kill durations");
-		currentQuest.completeQuest();
-		check(!currentQuest.questActive() && currentQuest.averageNanos() == 10_000_000_000L,
-			"a completed quest keeps its average visible during the HUD grace period");
-		check(currentQuest.beginQuest() && currentQuest.sampleCount() == 0
-			&& currentQuest.averageNanos() == -1L && currentQuest.record(9_000_000_000L)
-			&& currentQuest.averageNanos() == 9_000_000_000L,
-			"a new Slayer quest starts a clean average window");
-		currentQuest.failQuest();
-		check(!currentQuest.questActive() && currentQuest.sampleCount() == 0
-			&& currentQuest.averageNanos() == -1L && !currentQuest.record(3_000_000_000L),
-			"a failed or inactive quest clears and rejects kill-time samples");
-		equals(SlayerMobClassifier.Kind.MINIBOSS, SlayerMobClassifier.classify("§cVoidling Devotee"), "miniboss classifier");
-		equals(SlayerMobClassifier.Kind.BOSS, SlayerMobClassifier.classify("§cRiftstalker Bloodfiend"), "boss classifier wins over suffix");
 		SlayerHourlyStats stats = new SlayerHourlyStats();
 		stats.tick(true, 1_000_000_000L);
 		stats.tick(true, 3_601_000_000_000L);

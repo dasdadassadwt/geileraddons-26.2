@@ -17,8 +17,8 @@ public final class ClickGuiWorkspaceChecks {
 
 	private static void checkCategorySplit() {
 		check(Category.Companion.of(Workspace.NORMAL).equals(List.of(
-			Category.F7, Category.ENCHANTING, Category.SLAYER, Category.HUNTING, Category.FARMING,
-			Category.FORAGING, Category.MISCELLANEOUS, Category.VISUAL, Category.DEV)),
+			Category.F7, Category.ENCHANTING, Category.SLAYER, Category.HUNTING, Category.FISHING, Category.FARMING,
+			Category.FORAGING, Category.MINING, Category.MISCELLANEOUS, Category.VISUAL, Category.DEV)),
 			"the Normal workspace keeps the original categories in their original order");
 		check(Category.Companion.of(Workspace.MACROS).equals(List.of(
 			Category.ENGINE, Category.AREA_KILLER, Category.SIM)),

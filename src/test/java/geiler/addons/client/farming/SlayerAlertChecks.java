@@ -24,7 +24,6 @@ public final class SlayerAlertChecks {
 		checkTypeObservationAndFilters();
 		checkPresentation();
 		checkRecordFormattingAndNullableComponents();
-		checkDuplicateGate();
 		checkQuestSidebarLifecycle();
 	}
 
@@ -210,13 +209,6 @@ public final class SlayerAlertChecks {
 		equals(SlayerAlertRules.MAX_TITLE_DURATION_TICKS,
 			SlayerAlertRules.presentation(true, false, false, 900, "ok", null, null, null).durationTicks(),
 			"title duration is clamped to the supported maximum");
-	}
-
-	private static void checkDuplicateGate() {
-		SlayerTimerState timers = new SlayerTimerState();
-		check(timers.onBossSpawn(10_000_000_000L), "the first observed boss transition can alert");
-		check(!timers.onBossSpawn(11_000_000_000L),
-			"repeated active scoreboard polls do not duplicate boss alerts");
 	}
 
 	private static void checkRecordFormattingAndNullableComponents() {

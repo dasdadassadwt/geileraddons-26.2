@@ -38,6 +38,7 @@ class CroesusModule private constructor() : DungeonTextHudModule(
     private val hideClaimed = spec.toggle("hideClaimed")
     private val includeKey = spec.toggle("includeKey")
     private val minimized = spec.toggle("minimized")
+    private val includeEssence = spec.toggle("includeEssence")
     private val chestWarning = spec.slider("chestWarning")
 
     private var trackedScreen: Screen? = null
@@ -87,7 +88,7 @@ class CroesusModule private constructor() : DungeonTextHudModule(
     }
 
     override fun onEnable() {
-        diagnostics.enable("hide=${hideClaimed.value()} state=${highlightState.value()} profitable=${highlightProfitable.value()} warning=${chestWarning.intValue()}")
+        diagnostics.enable("hide=${hideClaimed.value()} state=${highlightState.value()} profitable=${highlightProfitable.value()} essence=${includeEssence.value()} warning=${chestWarning.intValue()}")
         if (CroesusPrices.prices.isEmpty()) fetchPrices()
     }
 
@@ -211,9 +212,11 @@ class CroesusModule private constructor() : DungeonTextHudModule(
             if (index > MAX_PREVIEW_SLOT) break
             val stack = slot.item
             if (stack.isEmpty || stack.item != Items.PLAYER_HEAD) continue
-            CroesusRules.previewChest(index, stack.hoverName.string, lore(stack), prices)?.let { chests.add(it) }
+            CroesusRules.previewChest(index, stack.hoverName.string, lore(stack), prices, includeEssence.value())?.let { chests.add(it) }
         }
-        val top = if (highlightProfitable.value()) CroesusRules.topSlots(chests) else emptyList()
+        val keyPrice = CroesusPrices.keyPrice
+        val top = if (highlightProfitable.value()) CroesusRules.topSlots(chests, keyPrice) else emptyList()
+        diagnostics.statusOnChange { "PREVIEW chests=${chests.size} top=$top essence=${includeEssence.value()} keyPrice=${"%,.0f".format(keyPrice)}" }
         val newTint = HashMap<Int, Int>()
         top.getOrNull(0)?.let { newTint[it] = CroesusRules.COLOR_BEST }
         top.getOrNull(1)?.let { newTint[it] = CroesusRules.COLOR_SECOND }
@@ -238,7 +241,7 @@ class CroesusModule private constructor() : DungeonTextHudModule(
                 },
             )
         }
-        val result = CroesusRules.openedChest(slots, CroesusPrices.prices)
+        val result = CroesusRules.openedChest(slots, CroesusPrices.prices, includeEssence.value())
         publishFitted(listOf(result))
     }
 
@@ -324,7 +327,7 @@ class CroesusModule private constructor() : DungeonTextHudModule(
 
         private val refreshPrices = ModuleAction(
             "Refresh Prices",
-            "Downloads Odin's 7-day average prices again.",
+            "Downloads Odin's 7-day average prices and the 3-day Dungeon Chest Key price again.",
             Runnable { INSTANCE.refreshNow() },
         )
 

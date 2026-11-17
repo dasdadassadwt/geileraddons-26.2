@@ -56,7 +56,9 @@ object CroesusRules {
 
     /** The price of a preview-lore line (book, essence, shard, or an item name turned into a SkyBlock id). */
     @JvmStatic
-    fun parseItemValue(item: String, prices: Map<String, Double>): Double? {
+    @JvmOverloads
+    fun parseItemValue(item: String, prices: Map<String, Double>, includeEssence: Boolean = true): Double? {
+        if (!includeEssence && ESSENCE.matches(item)) return null
         BOOK.find(item)?.destructured?.let { (name, level) ->
             val ultimate = if (name in ULTIMATE) "ULTIMATE_" else ""
             return prices["ENCHANTED_BOOK-$ultimate${name.uppercase(Locale.ROOT).replace(" ", "_")}-${BlessingRules.roman(level)}"]
@@ -74,7 +76,8 @@ object CroesusRules {
 
     /** A chest of the Croesus preview screen (a player head whose lore lists Contents and Cost), or null. */
     @JvmStatic
-    fun previewChest(slot: Int, name: String, lore: List<String>, prices: Map<String, Double>): ChestResult? {
+    @JvmOverloads
+    fun previewChest(slot: Int, name: String, lore: List<String>, prices: Map<String, Double>, includeEssence: Boolean = true): ChestResult? {
         val start = lore.indexOfFirst { it == "Contents" } + 1
         if (start == 0) return null
         val end = lore.indexOfFirst { it.isEmpty() }
@@ -83,7 +86,8 @@ object CroesusRules {
         val items = ArrayList<ChestItem>()
         var total = 0.0
         for (line in lore.subList(start, end)) {
-            val price = parseItemValue(line, prices) ?: 0.0
+            if (!includeEssence && ESSENCE.matches(line)) continue
+            val price = parseItemValue(line, prices, includeEssence) ?: 0.0
             total += price
             items.add(ChestItem(line, price))
         }
@@ -93,9 +97,18 @@ object CroesusRules {
     @JvmStatic
     fun sorted(chests: List<ChestResult>): List<ChestResult> = chests.sortedByDescending { it.profit }
 
-    /** Slots of the two most profitable chests with a profit above zero, best first. */
+    /**
+     * Slots of the best chest (profit above zero) and the second-best buy, best first. The second chest is opened with a
+     * Dungeon Chest Key, so its profit counts [keyPrice] against it and it is only picked while that stays above zero.
+     */
     @JvmStatic
-    fun topSlots(chests: List<ChestResult>): List<Int> = sorted(chests).filter { it.profit > 0 }.take(2).map { it.slot }
+    @JvmOverloads
+    fun topSlots(chests: List<ChestResult>, keyPrice: Double = 0.0): List<Int> {
+        val ranked = sorted(chests).filter { it.profit > 0 }
+        val best = ranked.firstOrNull() ?: return emptyList()
+        val second = ranked.drop(1).firstOrNull { it.profit - keyPrice > 0 } ?: return listOf(best.slot)
+        return listOf(best.slot, second.slot)
+    }
 
     /** Whether a Croesus menu run is hidden and how it is tinted ([COLOR_FRESH], [COLOR_OPENED], [COLOR_NONE], 0 for none). */
     @JvmStatic
@@ -131,21 +144,23 @@ object CroesusRules {
 
     /** Profit of the chest being looked at: priced contents minus the cost shown by the chest item. */
     @JvmStatic
-    fun openedChest(slots: List<OpenedSlot>, prices: Map<String, Double>): ChestResult {
+    @JvmOverloads
+    fun openedChest(slots: List<OpenedSlot>, prices: Map<String, Double>, includeEssence: Boolean = true): ChestResult {
         val items = ArrayList<ChestItem>()
         var cost = 0.0
         for (slot in slots) {
             when (slot.kind) {
                 1 -> for (line in slot.lore) COST.find(line)?.groupValues?.get(1)?.replace(",", "")?.toDoubleOrNull()?.let { cost += it }
                 2 -> prices["ENCHANTED_BOOK-${slot.enchant?.uppercase(Locale.ROOT)}-${slot.level}"]?.let { items.add(ChestItem(slot.name, it)) }
-                3 -> openedItem(slot, prices)?.let { items.add(it) }
+                3 -> openedItem(slot, prices, includeEssence)?.let { items.add(it) }
             }
         }
         return ChestResult("§eChest", items, items.sumOf { it.price } - cost, -1)
     }
 
-    private fun openedItem(slot: OpenedSlot, prices: Map<String, Double>): ChestItem? {
+    private fun openedItem(slot: OpenedSlot, prices: Map<String, Double>, includeEssence: Boolean): ChestItem? {
         ESSENCE.find(slot.name)?.destructured?.let { (name, quantity) ->
+            if (!includeEssence) return null
             val price = prices["ESSENCE_${name.uppercase(Locale.ROOT)}"] ?: return null
             return ChestItem(slot.name, price * quantity.toDouble())
         }

@@ -20,6 +20,45 @@ public final class WitherDragonChecks {
 		checkPersonalBest();
 		checkStatues();
 		checkRunningTimerKept();
+		checkCountLineOrder();
+	}
+
+	/** Wither King count lines arrive ~3.5 s after each death; they must never kill a dragon that is still spawning. */
+	private static void checkCountLineOrder() {
+		Log log = new Log();
+		WitherDragonTracker t = new WitherDragonTracker(log);
+		burst(t, 27, 59);
+		burst(t, 85, 94);
+		for (int i = 0; i < 101; i++) t.onServerTick();
+		UUID red = UUID.randomUUID();
+		UUID blue = UUID.randomUUID();
+		t.onEntityAdded(red, 30.0, 20.0, 60.0);
+		t.onEntityAdded(blue, 85.0, 20.0, 95.0);
+		t.onHealth(red, 0f);
+		t.onHealth(blue, 0f);
+		require(burst(t, 85, 56), "orange burst accepted");
+		t.onWitherKingLine();
+		require(log.events.contains("counts:Red") && !log.events.contains("counts:Blue"),
+			"first count line belongs to the first death: " + log.events);
+		t.onWitherKingLine();
+		require(log.events.contains("counts:Blue"), "second count line belongs to the second death: " + log.events);
+		require(t.entry(WitherDragon.Orange).getState() == WitherDragonState.SPAWNING
+			&& t.entry(WitherDragon.Orange).getTimeToSpawn() > 0, "orange keeps spawning");
+		int before = log.events.size();
+		t.onWitherKingLine();
+		require(log.events.size() == before && t.entry(WitherDragon.Orange).getState() == WitherDragonState.SPAWNING,
+			"a count line with nothing queued never touches a spawning dragon: " + log.events);
+
+		Log aliveLog = new Log();
+		WitherDragonTracker u = new WitherDragonTracker(aliveLog);
+		burst(u, 56, 125);
+		for (int i = 0; i < 101; i++) u.onServerTick();
+		require(u.entry(WitherDragon.Purple).getState() == WitherDragonState.ALIVE, "purple alive");
+		u.onWitherKingLine();
+		require(aliveLog.events.contains("counts:Purple") && u.entry(WitherDragon.Purple).getState() == WitherDragonState.DEAD,
+			"an alive dragon with a missed death is counted and marked dead: " + aliveLog.events);
+		u.onWitherKingLine();
+		require(aliveLog.events.stream().filter(e -> e.equals("counts:Purple")).count() == 1, "the fallback is not queued again");
 	}
 
 	/** A burst for a dragon whose countdown still runs must not restart it, even after its statue broke. */

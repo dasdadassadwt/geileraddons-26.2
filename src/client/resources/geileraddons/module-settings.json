@@ -15,6 +15,160 @@
         { "id": "backgroundColor", "type": "color", "name": "Background Color", "default": [0, 0, 0, 128] }
       ]
     },
+    "Fishing Bobber Timer": {
+      "settings": [
+        { "id": "startOnLiquidTouch", "type": "toggle", "name": "Start On Liquid Touch", "default": false }
+      ]
+    },
+    "Fishing Hook Display": {
+      "settings": [
+        { "id": "atCrosshair", "type": "toggle", "name": "Show At Crosshair", "default": false },
+        { "id": "scale", "type": "slider", "name": "Text Scale", "min": 1, "max": 4, "default": 2, "integer": true },
+        { "id": "sound", "type": "toggle", "name": "Bite Sound", "default": true }
+      ]
+    },
+    "Fishing Bait": {
+      "settings": [
+        { "id": "showDisplay", "type": "toggle", "name": "Show Bait Display", "default": true },
+        { "id": "showIcon", "type": "toggle", "name": "Show Bait Icon", "default": true },
+        { "id": "baitChangeWarning", "type": "toggle", "name": "Bait Change Warning", "default": true },
+        { "id": "noBaitWarning", "type": "toggle", "name": "No Bait Warning", "default": true }
+      ]
+    },
+    "Sea Creature Alerts": {
+      "settings": [
+        { "id": "alertOwnCatches", "type": "toggle", "name": "Alert On Own Catch", "default": true },
+        { "id": "alertOtherCatches", "type": "toggle", "name": "Alert On Nearby Catch", "default": true },
+        { "id": "creatureName", "type": "toggle", "name": "Show Creature Name", "default": true },
+        { "id": "playSound", "type": "toggle", "name": "Play Sound", "default": true },
+        { "id": "announceRareInParty", "type": "toggle", "name": "Announce In Party", "default": false },
+        { "id": "highlight", "type": "toggle", "name": "Highlight Creatures", "default": true },
+        { "id": "highlightColor", "type": "color", "name": "Highlight Color", "default": [85, 255, 85, 255] }
+      ],
+      "groups": [
+        { "name": "Alerts", "settings": ["alertOwnCatches", "alertOtherCatches", "creatureName", "playSound", "announceRareInParty"] },
+        { "name": "Highlight", "toggle": "highlight", "settings": ["highlightColor"] }
+      ]
+    },
+    "Slayer Boss Highlight": {
+      "settings": [
+        { "id": "ownBoss", "type": "toggle", "name": "Highlight Own Boss", "default": true },
+        { "id": "otherBosses", "type": "toggle", "name": "Highlight Other Bosses", "default": false },
+        { "id": "bossFill", "type": "color", "name": "Boss Fill", "default": [255, 60, 60, 48] },
+        { "id": "bossOutline", "type": "color", "name": "Boss Outline", "default": [255, 60, 60, 255] },
+        { "id": "minibosses", "type": "toggle", "name": "Highlight Minibosses", "default": true },
+        { "id": "minibossFill", "type": "color", "name": "Miniboss Fill", "default": [255, 170, 0, 48] },
+        { "id": "minibossOutline", "type": "color", "name": "Miniboss Outline", "default": [255, 170, 0, 255] },
+        { "id": "hidePupNames", "type": "toggle", "name": "Hide Sven Pup Name Tags", "default": false },
+        { "id": "range", "type": "slider", "name": "Highlight Range", "min": 8, "max": 64, "default": 48, "integer": true },
+        { "id": "depthCheck", "type": "toggle", "name": "Depth Check", "default": false }
+      ],
+      "groups": [
+        { "name": "Bosses", "settings": ["ownBoss", "otherBosses", "bossFill", "bossOutline"] },
+        { "name": "Minibosses", "toggle": "minibosses", "settings": ["minibossFill", "minibossOutline"] },
+        { "name": "Name Tags", "settings": ["hidePupNames"] },
+        { "name": "Visibility", "settings": ["range", "depthCheck"] }
+      ]
+    },
+    "Enderman Slayer": {
+      "settings": [
+        { "id": "yangNotify", "type": "toggle", "name": "Yang Glyph Notification", "default": true },
+        { "id": "yangSound", "type": "toggle", "name": "Yang Glyph Sound", "default": true },
+        { "id": "beacons", "type": "toggle", "name": "Highlight Beacons", "default": true },
+        { "id": "beaconColor", "type": "color", "name": "Beacon Color", "default": [255, 60, 60, 90] },
+        { "id": "beaconTracer", "type": "toggle", "name": "Beacon Tracer", "default": true },
+        { "id": "nukekubi", "type": "toggle", "name": "Highlight Nukekubi Heads", "default": true },
+        { "id": "nukekubiColor", "type": "color", "name": "Nukekubi Head Color", "default": [85, 255, 85, 255] },
+        { "id": "laserTimer", "type": "toggle", "name": "Laser Phase Timer", "default": true },
+        { "id": "depthCheck", "type": "toggle", "name": "Depth Check", "default": false }
+      ],
+      "groups": [
+        { "name": "Yang Glyph", "settings": ["yangNotify", "yangSound"] },
+        { "name": "Beacons", "toggle": "beacons", "settings": ["beaconColor", "beaconTracer"] },
+        { "name": "Nukekubi Heads", "toggle": "nukekubi", "settings": ["nukekubiColor"] },
+        { "name": "Laser Phase", "settings": ["laserTimer"] },
+        { "name": "Visibility", "settings": ["depthCheck"] }
+      ]
+    },
+    "Blaze Slayer": {
+      "settings": [
+        { "id": "attunement", "type": "toggle", "name": "Attunement Highlight", "default": true },
+        { "id": "firePillar", "type": "toggle", "name": "Fire Pillar Countdown", "default": true },
+        { "id": "pillarSound", "type": "toggle", "name": "Fire Pillar Sound", "default": true },
+        { "id": "depthCheck", "type": "toggle", "name": "Depth Check", "default": false }
+      ],
+      "groups": [
+        { "name": "Attunement", "settings": ["attunement", "depthCheck"] },
+        { "name": "Fire Pillar", "toggle": "firePillar", "settings": ["pillarSound"] }
+      ]
+    },
+    "Vampire Slayer": {
+      "settings": [
+        { "id": "twinclaws", "type": "toggle", "name": "Twinclaws Ice Warning", "default": true },
+        { "id": "twinclawsDelay", "type": "slider", "name": "Ice Warning Delay Ticks", "min": 0, "max": 60, "default": 0, "integer": true },
+        { "id": "steakStake", "type": "toggle", "name": "Steak Stake Warning", "default": true },
+        { "id": "ichorWarning", "type": "toggle", "name": "Blood Ichor Warning", "default": true },
+        { "id": "springWarning", "type": "toggle", "name": "Killer Spring Warning", "default": true },
+        { "id": "ichorColor", "type": "color", "name": "Blood Ichor Color", "default": [170, 0, 0, 255] },
+        { "id": "springColor", "type": "color", "name": "Killer Spring Color", "default": [255, 170, 0, 255] },
+        { "id": "standTracers", "type": "toggle", "name": "Tracer To Ichor And Springs", "default": true },
+        { "id": "bossTracer", "type": "toggle", "name": "Tracer To Boss", "default": false },
+        { "id": "bossTracerColor", "type": "color", "name": "Boss Tracer Color", "default": [255, 60, 60, 255] },
+        { "id": "sound", "type": "toggle", "name": "Play Sound", "default": true }
+      ],
+      "groups": [
+        { "name": "Warnings", "settings": ["twinclaws", "twinclawsDelay", "steakStake", "ichorWarning", "springWarning", "sound"] },
+        { "name": "Tracers", "settings": ["standTracers", "ichorColor", "springColor", "bossTracer", "bossTracerColor"] }
+      ]
+    },
+    "Slayer Alerts": {
+      "settings": [
+        { "id": "bossAlert", "type": "toggle", "name": "Boss Spawn Alert", "default": true },
+        { "id": "unclassified", "type": "toggle", "name": "Unclassified Boss Alert", "default": true },
+        { "id": "filterREVENANT_HORROR", "type": "toggle", "name": "Revenant Horror Alert", "default": true },
+        { "id": "filterATONED_HORROR", "type": "toggle", "name": "Atoned Horror Alert", "default": true },
+        { "id": "filterTARANTULA_BROODFATHER", "type": "toggle", "name": "Tarantula Broodfather Alert", "default": true },
+        { "id": "filterSVEN_PACKMASTER", "type": "toggle", "name": "Sven Packmaster Alert", "default": true },
+        { "id": "filterVOIDGLOOM_SERAPH", "type": "toggle", "name": "Voidgloom Seraph Alert", "default": true },
+        { "id": "filterINFERNO_DEMONLORD", "type": "toggle", "name": "Inferno Demonlord Alert", "default": true },
+        { "id": "filterRIFTSTALKER_BLOODFIEND", "type": "toggle", "name": "Riftstalker Bloodfiend Alert", "default": true },
+        { "id": "bossText", "type": "text", "name": "Boss Alert Text", "default": "Slayer boss spawned.", "maxLength": 192 },
+        { "id": "minibossAlert", "type": "toggle", "name": "Miniboss Spawn Alert", "default": true },
+        { "id": "minibossText", "type": "text", "name": "Miniboss Alert Text", "default": "{miniboss}", "maxLength": 192 },
+        { "id": "chat", "type": "toggle", "name": "Chat Alert", "default": true },
+        { "id": "title", "type": "toggle", "name": "Title Alert", "default": true },
+        { "id": "sound", "type": "toggle", "name": "Sound Alert", "default": true },
+        { "id": "titleTicks", "type": "slider", "name": "Title Duration (ticks)", "min": 1, "max": 600, "default": 40, "integer": true }
+      ],
+      "groups": [
+        { "name": "Boss Spawn", "toggle": "bossAlert", "settings": ["bossText", "unclassified", "filterREVENANT_HORROR", "filterATONED_HORROR", "filterTARANTULA_BROODFATHER", "filterSVEN_PACKMASTER", "filterVOIDGLOOM_SERAPH", "filterINFERNO_DEMONLORD", "filterRIFTSTALKER_BLOODFIEND"] },
+        { "name": "Miniboss Spawn", "toggle": "minibossAlert", "settings": ["minibossText"] },
+        { "name": "Output", "settings": ["chat", "title", "sound", "titleTicks"] }
+      ]
+    },
+    "Geyser Fishing": {
+      "settings": [
+        { "id": "drawBox", "type": "toggle", "name": "Draw Geyser Box", "default": true },
+        { "id": "boxColor", "type": "color", "name": "Box Color", "default": [255, 170, 0, 140] },
+        { "id": "onlyWithRod", "type": "toggle", "name": "Only With Rod", "default": true },
+        { "id": "hideParticles", "type": "toggle", "name": "Hide Particles Near Bobber", "default": true }
+      ],
+      "groups": [ { "name": "Geyser Box", "toggle": "drawBox", "settings": ["boxColor", "onlyWithRod"] } ]
+    },
+    "Lava Replacement": {
+      "settings": [
+        { "id": "everywhere", "type": "toggle", "name": "Everywhere", "default": false },
+        { "id": "crimsonIsle", "type": "toggle", "name": "Crimson Isle", "default": true },
+        { "id": "kuudra", "type": "toggle", "name": "Kuudra", "default": true },
+        { "id": "dungeons", "type": "toggle", "name": "Dungeons", "default": false }
+      ],
+      "groups": [ { "name": "Islands", "settings": ["crimsonIsle", "kuudra", "dungeons"] } ]
+    },
+    "Hotspot Radar": {
+      "settings": [
+        { "id": "lineToHotspot", "type": "toggle", "name": "Line To Hotspot", "default": true }
+      ]
+    },
     "Terminal Stats": {
       "settings": [
         { "id": "breakdown", "type": "toggle", "name": "Show Breakdown", "default": true },
@@ -215,7 +369,9 @@
     "No Fog": {
       "settings": [
         { "id": "underwater", "type": "toggle", "name": "Underwater", "label": "Remove Underwater Fog", "default": true },
-        { "id": "lava", "type": "toggle", "name": "Lava", "label": "Remove Lava Fog", "default": true }
+        { "id": "lava", "type": "toggle", "name": "Lava", "label": "Remove Lava Fog", "default": true },
+        { "id": "air", "type": "toggle", "name": "Air", "label": "Remove Nether, World And Effect Fog", "default": true },
+        { "id": "distance", "type": "toggle", "name": "Distance", "label": "Remove Render Distance Fog", "default": true }
       ]
     },
     "Freecam": {
@@ -309,10 +465,11 @@
         {"id": "treeBits", "type": "toggle", "name": "Tree Bits", "default": false},
         {"id": "nausea", "type": "toggle", "name": "Nausea", "default": false},
         {"id": "expOrbs", "type": "toggle", "name": "Exp Orbs", "default": false},
-        {"id": "stuckArrows", "type": "toggle", "name": "Stuck Arrows", "default": false}
+        {"id": "stuckArrows", "type": "toggle", "name": "Stuck Arrows", "default": false},
+        {"id": "blindness", "type": "toggle", "name": "Blindness", "label": "Remove The Blindness Effect", "default": false}
       ],
       "groups": [
-        {"name": "Overlays & HUD", "settings": ["fireOverlay", "foodBar", "armorBar", "bossBar", "effectDisplay", "recipeBook", "nausea"]},
+        {"name": "Overlays & HUD", "settings": ["fireOverlay", "foodBar", "armorBar", "bossBar", "effectDisplay", "recipeBook", "nausea", "blindness"]},
         {"name": "Entities", "settings": ["deadEntities", "lightning", "fallingBlocks", "entityFire", "guidedSheep", "bonePlating", "treeBits", "expOrbs", "stuckArrows"]},
         {"name": "Particles", "settings": ["deadPoof", "mageBeam", "powderCoating"]}
       ]
@@ -454,11 +611,15 @@
         {"id": "outlineColor", "type": "color", "name": "Outline Color", "default": [0, 255, 255, 255]},
         {"id": "lineWidth", "type": "slider", "name": "Line Width", "min": 1.0, "max": 10.0, "default": 2.5},
         {"id": "flashOnHit", "type": "toggle", "name": "Flash On Click", "default": true},
-        {"id": "flashColor", "type": "color", "name": "Flash Color", "default": [255, 0, 0, 255]}
+        {"id": "flashColor", "type": "color", "name": "Flash Color", "default": [255, 0, 0, 255]},
+        {"id": "showAll", "type": "toggle", "name": "Show All Terminals", "default": true},
+        {"id": "farFillColor", "type": "color", "name": "Unloaded Fill Color", "default": [255, 200, 0, 60]},
+        {"id": "farOutlineColor", "type": "color", "name": "Unloaded Outline Color", "default": [255, 200, 0, 255]}
       ],
       "groups": [
         {"name": "Appearance", "settings": ["style", "phase", "fillColor", "outlineColor", "lineWidth"]},
-        {"name": "Flash", "toggle": "flashOnHit", "settings": ["flashColor"]}
+        {"name": "Flash", "toggle": "flashOnHit", "settings": ["flashColor"]},
+        {"name": "All Terminals", "toggle": "showAll", "settings": ["farFillColor", "farOutlineColor"]}
       ]
     },
     "Melody Message": {
@@ -495,7 +656,9 @@
         {"id": "style", "name": "Style", "type": "dropdown", "default": "FILLED_OUTLINE", "choices": ["FILLED", "OUTLINE", "FILLED_OUTLINE"], "labels": { "FILLED": "Filled", "OUTLINE": "Outline", "FILLED_OUTLINE": "Filled Outline" }},
         {"id": "announceProgress", "type": "toggle", "name": "Announce Progress", "label": "Announce Progress In Party", "default": false},
         {"id": "blockWrong", "type": "toggle", "name": "Block Wrong Clicks", "default": false},
-        {"id": "invertKey", "type": "toggle", "name": "Invert Shift", "label": "Block While Sneaking Instead", "default": false}
+        {"id": "invertKey", "type": "toggle", "name": "Invert Shift", "label": "Block While Sneaking Instead", "default": false},
+        {"id": "blockWrongStart", "type": "toggle", "name": "Block Wrong On Start", "label": "Limit Start Button Clicks In The First Phase", "default": false},
+        {"id": "maxStartClicks", "type": "slider", "name": "Max Start Clicks", "min": 1, "max": 10, "default": 4, "integer": true}
       ]
     },
     "Croesus": {
@@ -505,11 +668,12 @@
         {"id": "hideClaimed", "type": "toggle", "name": "Hide Claimed", "default": true},
         {"id": "includeKey", "type": "toggle", "name": "Include Key", "label": "Count Dungeon Chest Key As Unclaimed", "default": false},
         {"id": "minimized", "type": "toggle", "name": "Minimized", "label": "Only Show Profit", "default": false},
+        {"id": "includeEssence", "type": "toggle", "name": "Include Essence", "label": "Count Essence In Chest Profit", "default": true},
         {"id": "chestWarning", "type": "slider", "name": "Chest Warning Threshold", "min": 0, "max": 60, "default": 55, "integer": true}
       ],
       "groups": [
         {"name": "Croesus Menu", "settings": ["highlightState", "hideClaimed", "includeKey"]},
-        {"name": "Chest Profit", "settings": ["highlightProfitable", "minimized"]},
+        {"name": "Chest Profit", "settings": ["highlightProfitable", "includeEssence", "minimized"]},
         {"name": "Chest Count", "settings": ["chestWarning"]}
       ]
     },

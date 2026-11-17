@@ -22,6 +22,11 @@ object DungeonContextLifecycleRulesLogic {
     fun clearEspClosedForRunAfterExit(closed: Boolean, confirmedExit: Boolean): Boolean =
         if (confirmedExit) false else closed
 
+    /** Hypixel's sidebar can drop its Catacombs line mid boss (M7 P5); leaving a dungeon always changes level. */
+    @JvmStatic
+    fun shouldExitOnSidebarLoss(bossPhase: Boolean, sameLevelAsBoss: Boolean, graceExpired: Boolean): Boolean =
+        graceExpired && !(bossPhase && sameLevelAsBoss)
+
     @JvmStatic
     fun shouldBeginClearPhase(closedByObservedBloodOrBossSignal: Boolean): Boolean =
         !closedByObservedBloodOrBossSignal
