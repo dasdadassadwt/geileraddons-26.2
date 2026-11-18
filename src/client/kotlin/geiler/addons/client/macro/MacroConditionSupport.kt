@@ -81,6 +81,9 @@ object MacroConditionSupport {
     fun hypixelArgument(value: String?): String = value?.substring(0, minOf(32, value.length)) ?: ""
 
     @JvmStatic
+    fun playerArgument(value: String?): String = value?.substring(0, minOf(64, value.length)) ?: ""
+
+    @JvmStatic
     fun hypixelPlotId(value: Int): Int = if (value < -1 || value > 24) -1 else value
 
     @JvmStatic

@@ -1,5 +1,6 @@
 package geiler.addons.client.module.impl
 
+import geiler.addons.client.location.Island
 import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.config.ModConfig
 import geiler.addons.client.gui.GuiTheme
@@ -192,6 +193,8 @@ class TreeTrackerModule private constructor(settings: Settings) : Module(
     }
 
     // ---- HUD --------------------------------------------------------------------------
+
+    override fun hudIslands(): Set<Island> = setOf(Island.THE_PARK, Island.GALATEA, Island.TORRHUS_CANYON)
 
     override fun id(): String = HUD_ID
 

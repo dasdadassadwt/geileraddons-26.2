@@ -3,6 +3,7 @@ package geiler.addons.client.chat
 import geiler.addons.client.party.PartyMember
 import geiler.addons.client.party.PartySnapshot
 import geiler.addons.client.tree.ChatText
+import geiler.addons.client.utility.BuiltInAliases
 import java.util.ArrayList
 import java.util.Locale
 import java.util.Optional
@@ -33,6 +34,9 @@ object ChatReplyCommandRules {
         PARTY_KICK_OFFLINE,
         PARTY_QUEUE_INSTANCE,
         PRIVATE_INVITE,
+        PARTY_DOWNTIME,
+        PARTY_UNDOWNTIME,
+        PARTY_REINVITE,
         CUSTOM_REPLY,
     }
 
@@ -118,7 +122,7 @@ object ChatReplyCommandRules {
     private const val MAX_HELP_LENGTH = 170
 
     private val CHANNEL_LINE = Pattern.compile(
-        "(?i)^(party|guild|co-?op)\\s*>\\s*(?:\\[[^]]+]\\s*)*([a-z0-9_]{1,16})\\s*:\\s*(.*)$",
+        "(?i)^(party|guild|co-?op)\\s*>\\s*(?:\\[[^]]+]\\s*)*([a-z0-9_]{1,16})(?:\\s+[\u1243\u2692]|\\s+\\[[^]]*])?\\s*:\\s*(.*)$",
     )
     private val PRIVATE_LINE = Pattern.compile(
         "(?i)^from\\s+(?:\\[[^]]+]\\s*)*([a-z0-9_]{1,16})\\s*:\\s*(.*)$",
@@ -250,6 +254,11 @@ object ChatReplyCommandRules {
                 "demote" -> return partyTargetRequest(parts, channel, replyChannel, sender, Command.PARTY_DEMOTE)
                 "kickoffline", "ko" ->
                     return noArgument(parts, channel, replyChannel, sender, Command.PARTY_KICK_OFFLINE)
+                "reinv", "reinvite" -> return noArgument(parts, channel, replyChannel, sender, Command.PARTY_REINVITE)
+                "undt", "undowntime" -> return noArgument(parts, channel, replyChannel, sender, Command.PARTY_UNDOWNTIME)
+                "dt", "downtime" -> return Optional.of(
+                    Request(channel, sender, Command.PARTY_DOWNTIME, downtimeReason(remainder, parts[0]), null, replyChannel),
+                )
                 else -> if (name in QUEUE_INSTANCE_COMMANDS && parts.size == 1) {
                     return Optional.of(Request(channel, sender, Command.PARTY_QUEUE_INSTANCE, name, null, replyChannel))
                 }
@@ -485,7 +494,7 @@ object ChatReplyCommandRules {
             Command.PARTY_QUEUE_INSTANCE -> {
                 val instance = request.argument()?.lowercase(Locale.ROOT)
                     ?.takeIf { it in QUEUE_INSTANCE_COMMANDS }
-                instance?.let { Optional.of("odin $it") } ?: Optional.empty()
+                instance?.let { BuiltInAliases.command(it) }?.let { Optional.of(it) } ?: Optional.empty()
             }
             else -> Optional.empty()
         }
@@ -493,8 +502,8 @@ object ChatReplyCommandRules {
 
     /**
      * The command for a request that arrived as `Party > name: !cmd`. The prefix is trusted: no fresh roster or roster
-     * membership is needed (Odin does the same). Leader-only actions are skipped only when another player is known to
-     * lead; with an unknown leader the command is sent and Hypixel enforces it.
+     * membership is needed (Odin does the same). Leader-only actions run only when the local player is the known leader;
+     * with an unknown leader they do nothing, as in Odin.
      */
     @JvmStatic
     fun incomingPartyActionCommand(request: Request?, party: PartySnapshot?, localPlayerName: String?): Optional<String> {
@@ -502,8 +511,8 @@ object ChatReplyCommandRules {
             return Optional.empty()
         }
         val command = request.command()!!
-        if (requiresPartyLeader(command) && party != null && party.inParty() && party.leaderName() != null &&
-            !party.isLeader(localPlayerName)
+        if (requiresPartyLeader(command) &&
+            !(party != null && party.inParty() && party.leaderName() != null && party.isLeader(localPlayerName))
         ) return Optional.empty()
         val argument = request.argument()
         val target = if (argument == null) null else {
@@ -523,9 +532,15 @@ object ChatReplyCommandRules {
             Command.PARTY_KICK_OFFLINE -> Optional.of("party kickoffline")
             Command.PARTY_BOOP -> target?.let { Optional.of("boop $it") } ?: Optional.empty()
             Command.PARTY_QUEUE_INSTANCE -> argument?.lowercase(Locale.ROOT)?.takeIf { it in QUEUE_INSTANCE_COMMANDS }
-                ?.let { Optional.of("odin $it") } ?: Optional.empty()
+                ?.let { BuiltInAliases.command(it) }?.let { Optional.of(it) } ?: Optional.empty()
             else -> Optional.empty()
         }
+    }
+
+    /** The words after `!dt`, kept as typed but limited to printable text and 60 characters; null when empty. */
+    private fun downtimeReason(remainder: String, commandWord: String): String? {
+        val printable = remainder.substring(commandWord.length).filter { it.code >= 0x20 && !Character.isISOControl(it) && it != '\u00a7' }
+        return javaTrim(javaTrim(printable).take(60)).ifEmpty { null }
     }
 
     private fun noArgument(
@@ -635,9 +650,9 @@ object ChatReplyCommandRules {
                     safePrefix + "time",
                     safePrefix + "lobby",
                     safePrefix + "holding",
-                    safePrefix + "pt [username] (Party leader + allowlist)",
-                    safePrefix + "ptme [username] (Party leader + allowlist)",
-                    safePrefix + "transfer [username] (Party leader + allowlist)",
+                    safePrefix + "pt [username] (Party leader)",
+                    safePrefix + "ptme [username] (Party leader)",
+                    safePrefix + "transfer [username] (Party leader)",
                     safePrefix + "warp (Party leader)",
                     safePrefix + "allinvite (Party leader)",
                     safePrefix + "boop [username] (Party only)",
@@ -645,7 +660,10 @@ object ChatReplyCommandRules {
                     safePrefix + "promote [username] (Party leader)",
                     safePrefix + "demote [username] (Party leader)",
                     safePrefix + "kickoffline (Party leader)",
-                    safePrefix + "f1-f7/m1-m7/t1-t5 (Odin queue, Party leader)",
+                    safePrefix + "f1-f7/m1-m7/t1-t5 (queue, Party leader)",
+                    safePrefix + "dt [reason]/" + safePrefix + "undt (Party, downtime reminder)",
+                    safePrefix + "reinvite (Party)",
+                    safePrefix + "inv (Private)",
                 ),
             )
         }

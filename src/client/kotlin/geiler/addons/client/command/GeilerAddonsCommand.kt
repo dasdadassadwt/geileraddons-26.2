@@ -28,6 +28,10 @@ object GeilerAddonsCommand {
                         .executes { openResetScreen() },
                 )
                 .then(
+                    ClientCommands.literal("mouselock")
+                        .executes { toggleMouseLock() },
+                )
+                .then(
                     ClientCommands.literal("config")
                         .then(
                             ClientCommands.literal("export")
@@ -46,6 +50,10 @@ object GeilerAddonsCommand {
                         .then(
                             ClientCommands.literal("save")
                                 .executes { saveConfig() },
+                        )
+                        .then(
+                            ClientCommands.literal("reload")
+                                .executes { reloadConfig() },
                         )
                         .then(
                             ClientCommands.literal("folder")
@@ -159,6 +167,21 @@ object GeilerAddonsCommand {
         Minecraft.getInstance().gui.hud.getChat()
             .addClientSystemMessage(Component.literal("[GeilerAddons] Saving configuration…"))
         ConfigTransferService.saveCurrent(::reportResult)
+        return 1
+    }
+
+    private fun toggleMouseLock(): Int {
+        val module = geiler.addons.client.module.impl.MouseLockModule.INSTANCE
+        module.toggle()
+        Minecraft.getInstance().gui.hud.getChat().addClientSystemMessage(
+            Component.literal("[GeilerAddons] Mouse lock ${if (module.isEnabled()) "on" else "off"}."),
+        )
+        return 1
+    }
+
+    private fun reloadConfig(): Int {
+        if (ConfigTransferService.isBusy()) return busyNotice()
+        ConfigTransferService.reloadFromDisk(::reportResult)
         return 1
     }
 

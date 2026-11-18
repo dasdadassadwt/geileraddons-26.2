@@ -62,6 +62,9 @@ class NoCursorResetModule private constructor(
         if (keep) {
             kept++
             diagnostics.event("kept cursor sinceMs=$since screen=${screen?.javaClass?.simpleName}")
+        } else {
+            // Every release the game makes is recorded, so a menu that still recentres shows why (not a container, or too long since the last screen).
+            diagnostics.event("cursor reset sinceMs=$since timeoutMs=${timeout.intValue()} screen=${screen?.javaClass?.simpleName ?: "none"} container=${screen is AbstractContainerScreen<*>}")
         }
         return keep
     }

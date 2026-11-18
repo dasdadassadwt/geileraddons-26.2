@@ -19,7 +19,7 @@ public final class ModuleIconTexturesChecks {
 			"Disconnect Fix", "Gyro Wand", "Mimic Announcer", "Terracotta Timer", "Wardrobe Keybinds", "Loadout Keybinds",
 			"Spring Boots", "Ragnarock",
 			"Tick Timers", "Fire Freeze Timer", "Relic Timer", "King Relic", "Fishing Bobber Timer", "Fishing Hook Display", "Wither Dragons",
-			"Sea Creature Alerts", "Dragon Stack Aimer", "Compact Damage", "Terminal Solver", "Terminal Simulator",
+			"Sea Creature Alerts", "Dragon Stack Aimer", "Compact Damage", "Storage Overlay", "Terminal Solver", "Terminal Simulator",
 			"Price Display", "Chat Waypoints", "Hotspot Radar", "Fishing Bait", "Geyser Fishing", "Lava Replacement",
 			"Waypoints", "Terminal ESP", "Arrow Align", "Croesus", "Mob Highlight", "Dungeon Mob ESP", "Block ESP",
 			"Item Rarity Backgrounds", "Crop Fever Timer");

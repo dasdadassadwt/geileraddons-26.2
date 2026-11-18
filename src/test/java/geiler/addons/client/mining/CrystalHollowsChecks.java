@@ -47,6 +47,15 @@ public final class CrystalHollowsChecks {
 		require(back != null && back[0] == 300 && back[1] == 64 && back[2] == 701, "shared text parses back to the coordinates");
 		require(rules.structureIn(shared) == CrystalHollowsRules.Structure.MINES_OF_DIVAN, "shared text names the structure");
 
+		require(rules.structureIn("king yolkar 400 80 500") == CrystalHollowsRules.Structure.KING, "king by name");
+		require(rules.structureIn("odawa 300 70 300") == CrystalHollowsRules.Structure.ODAWA, "odawa by name");
+		require(rules.npcStructure("King Yolkar") == CrystalHollowsRules.Structure.KING, "the king's name tag");
+		require(rules.npcStructure("§6Odawa") == CrystalHollowsRules.Structure.ODAWA, "a coloured Odawa name tag");
+		require(rules.npcStructure("Xalx") == null, "other NPCs are not structures");
+		require(rules.npcStructure(null) == null, "no name names nothing");
+		require(rules.mapPixel(202, 100) == 0 && rules.mapPixel(823, 100) == 99, "the Hollows' edges are the map's edges");
+		require(Math.abs(rules.mapPixel(513, 100) - 50) <= 1, "the Nucleus is mid-map");
+		require(rules.mapPixel(0, 100) == 0 && rules.mapPixel(2000, 100) == 99, "outside points clamp to the edge");
 		System.out.println("Crystal Hollows checks passed");
 	}
 

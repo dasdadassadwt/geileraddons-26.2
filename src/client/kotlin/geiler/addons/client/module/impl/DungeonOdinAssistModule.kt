@@ -613,6 +613,15 @@ class DungeonOdinAssistModule private constructor() : Module(
         val scoreFloor = floor ?: teamSignals.floor
         val score = DungeonOdinScoreCalculator.calculate(scoreFloor, tabStats, scoreBloodDone, inBoss)
         mapRunInfo = DungeonMapInfoLogic.RunSnapshot(scoreFloor, tabStats, score, inBoss)
+        DungeonScorerModule.INSTANCE.traceInputs(
+            { "$tabStats|${score.minimum()}|${score.maximum()}|$scoreBloodDone|$inBoss" },
+            {
+                "SCORE_INPUTS tick=$clientTick range=${score.minimum()}..${score.maximum()} secrets=${tabStats.secretsFound} " +
+                    "rooms=${tabStats.completedRooms} cleared=${tabStats.clearedPercent} deaths=${tabStats.deaths} " +
+                    "crypts=${tabStats.crypts} puzzles=${tabStats.completedPuzzles}/${tabStats.puzzleCount} " +
+                    "bloodDone=$scoreBloodDone boss=$inBoss"
+            },
+        )
         if (!scorerEnabled()) return
         val crossed = scoreTracker.update(
             score, scoreThresholdOne.intValue(), scoreThresholdTwo.intValue(), scoreAlertsEnabled.value(),
@@ -1061,16 +1070,36 @@ class DungeonOdinAssistModule private constructor() : Module(
         return (layout.topLeft()?.y() ?: 0) - layout.maxHoverGrowth()
     }
 
+    private var leapSkipReasonLast: String? = null
+
+    /** Writes why a leap-titled menu got no cards (once per reason), with the head slots, so a ghost-form leap can be read from a log. */
+    private fun leapSkipped(reason: String, screen: AbstractContainerScreen<*>): Boolean {
+        if (reason != leapSkipReasonLast) {
+            leapSkipReasonLast = reason
+            val player = Minecraft.getInstance().player
+            val heads = spiritLeapMenuHeads(screen).filter { it.playerHead }
+                .joinToString(",", limit = 12) { "${it.containerSlot}:${it.displayName?.take(20)}" }
+            SpiritLeapMenuModule.recordEvent(
+                lastClientTick,
+                "CARDS_SKIPPED reason=$reason title=\"${screen.title.string.take(32)}\" inDungeon=${DungeonContextTracker.inDungeon()} " +
+                    "dying=${player?.isDeadOrDying} spectator=${player?.isSpectator} heads=[$heads]",
+            )
+        }
+        return false
+    }
+
     fun shouldRenderSpiritLeapScreen(screen: AbstractContainerScreen<*>?): Boolean {
-        if (screen == null || !spiritLeapEnabled() || !DungeonContextTracker.inDungeon() ||
-            !SpiritLeapSelection.isLeapMenu(screen.title.string)
-        ) return false
+        if (screen == null || !SpiritLeapSelection.isLeapMenu(screen.title.string)) return false
+        if (!spiritLeapEnabled()) return false
+        if (!DungeonContextTracker.inDungeon()) return leapSkipped("not-in-dungeon", screen)
         val client = Minecraft.getInstance()
         if (!client.isSameThread || client.gui.screen() != screen || client.player == null) return false
         val player = client.player ?: return false
         val localName = player.gameProfile.name
         val hasValidMenuHead = SpiritLeapRoster.resolveMenuHeads(spiritLeapMenuHeads(screen), emptyList(), localName)
             .isNotEmpty()
+        if (!hasValidMenuHead) return leapSkipped("no-valid-head", screen)
+        leapSkipReasonLast = null
         return SpiritLeapMenuModule.shouldRenderLeapCards(true, true, hasValidMenuHead, true)
     }
 

@@ -340,6 +340,7 @@ public abstract class ClientPacketListenerMixin {
 
 	@Inject(method = "handleSoundEvent", at = @At("TAIL"))
 	private void geileraddons$onSoundEvent(ClientboundSoundPacket packet, CallbackInfo ci) {
+		geiler.addons.client.module.impl.TunerSolverModule.INSTANCE.onSound(packet.getSound(), packet.getPitch());
 		TikiHelperModule.INSTANCE.onSound(packet.getSound(), packet.getX(), packet.getY(), packet.getZ(),
 			packet.getVolume(), packet.getPitch());
 		String soundId = packet.getSound().unwrapKey().map(key -> key.identifier().toString())

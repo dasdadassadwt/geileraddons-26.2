@@ -75,6 +75,11 @@ class DungeonScorerModule private constructor() : Module(
         notice = null
     }
 
+    /** Bounded trace written on every score input change, so a log shows which input (tab, team, bonus) arrives late. */
+    fun traceInputs(signature: () -> String, line: () -> String) {
+        if (isEnabled()) diagnostics.statusOnChangeBy(10L, signature, line)
+    }
+
     @Suppress("UNUSED_PARAMETER")
     override fun previewLines(font: Font, width: Int): List<Component> = listOf(
         Component.literal("Milestones: ${firstThreshold.intValue()} / ${secondThreshold.intValue()}"),

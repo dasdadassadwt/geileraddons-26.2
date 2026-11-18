@@ -88,6 +88,10 @@ public final class DragonAimerChecks {
 		require(DragonAimerLogic.hudText(0, 20, 0, 0) == null, "no text once spawned");
 		require("§bNOW".equals(DragonAimerLogic.hudText(30, 29.5, 100, 0)), "negative window shows NOW");
 		require(DragonAimerLogic.hudText(30, 0, 0, -5000) == null, "far past the window hides");
+		require(DragonAimerLogic.hudText(80_000, 20, 50, 0) == null,
+			"a restarted tick clock (spawn tick far ahead of the clock) shows no millions timer");
+		require(DragonAimerLogic.hudText(DragonAimerLogic.MAX_REMAINING_TICKS, 20, 0, 0) != null,
+			"a dragon spawning within the spawn delay still shows");
 		require("§61500".equals(DragonAimerLogic.hudText(40, 10, 0, 0)), "1500 ms is gold of 5000: "
 			+ DragonAimerLogic.hudText(40, 10, 0, 0));
 	}

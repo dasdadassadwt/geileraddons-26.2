@@ -38,6 +38,10 @@ class MiningPowderModule private constructor(settings: Settings) : MiningHudModu
     private var readings = 0L
     private var missing = 0L
 
+    /** Per-hour figures drift with the clock, so only the gained powder counts as use. */
+    override fun activitySignature(): Any? =
+        if (lines.isEmpty()) null else Triple(session.gainMithril(), session.gainGemstone(), session.gainGlacite())
+
     override fun diagnosticSettings(): String =
         "gain=${showGain.value()};perHour=${showPerHour.value()};glacite=${showGlacite.value()};fuelBar=${drillFuelBar.value()}"
 

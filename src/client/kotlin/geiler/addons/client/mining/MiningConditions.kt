@@ -107,7 +107,7 @@ object MiningConditions {
     /** A mining event named in the tab list, with the seconds left when the next row says so. */
     class Event(val name: String, val secondsLeft: Long?)
 
-    private val EVENT_NAMES = listOf("GONE WITH THE WIND", "2X POWDER", "GOBLIN RAID", "BETTER TOGETHER", "RAFFLE", "MITHRIL GOURMAND")
+    private val EVENT_NAMES = listOf("GONE WITH THE WIND", "2X POWDER", "DOUBLE POWDER", "GOBLIN RAID", "BETTER TOGETHER", "RAFFLE", "MITHRIL GOURMAND")
     private val ENDS_IN = Regex("(?i)ends in:?\\s*(.+)")
     private val CLOCK = Regex("^(\\d{1,2}):(\\d{2})$")
     private val UNITS = Regex("(\\d+)\\s*([hms])")

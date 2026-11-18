@@ -17,7 +17,7 @@ object ChatReplyConfigRules {
     private val RESERVED_COMMANDS = setOf(
         "help", "h", "coords", "co", "odin", "od", "cf", "8ball", "dice", "ping", "tps", "fps", "time",
         "lobby", "location", "inv", "invite", "holding", "pt", "ptme", "transfer", "warp", "w", "allinvite", "allinv", "boop",
-        "kick", "k", "promote", "demote", "kickoffline", "ko",
+        "kick", "k", "promote", "demote", "kickoffline", "ko", "dt", "downtime", "undt", "undowntime", "reinv", "reinvite",
         "f1", "f2", "f3", "f4", "f5", "f6", "f7",
         "m1", "m2", "m3", "m4", "m5", "m6", "m7",
         "t1", "t2", "t3", "t4", "t5",
@@ -50,7 +50,7 @@ object ChatReplyConfigRules {
                 type == Character.LINE_SEPARATOR.toInt() || type == Character.PARAGRAPH_SEPARATOR.toInt()
             ) return false
         }
-        return true
+        return ChatReplyTags.validate(trimmed)
     }
 
     /** Why a new or edited reply draft cannot be saved, or null when it is valid. */
@@ -60,7 +60,7 @@ object ChatReplyConfigRules {
         val value = ChatStringSemantics.trim(payload ?: "")
         val valid = if (localAction) ChatActionTemplateRules.isValid(ChatActionTemplateRules.normalize(value)) else validResponse(value)
         if (name.isEmpty() || !valid) {
-            return if (localAction) "Enter one /command with exactly one {args} placeholder." else "Enter one line of plain reply text."
+            return if (localAction) "Enter one /command with exactly one {args} placeholder." else "Enter one line of reply text. ${ChatReplyTags.HELP}"
         }
         if (ChatReplyCommandRules.isBuiltInName(name) && (!localAction || !isPartyTransferName(name))) {
             return "That name belongs to a built-in command; only pt/ptme/transfer can be locally customized."

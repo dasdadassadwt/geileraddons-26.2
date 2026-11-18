@@ -132,6 +132,32 @@ object ConfigTransferServiceCore {
         )
     }
 
+    /**
+     * Re-reads the configuration files from disk into the running game. Nothing is saved first: the point is to pick up
+     * a file swapped in while the game runs, so unsaved in-game edits are dropped.
+     */
+    @JvmStatic
+    fun reloadFromDisk(callback: Consumer<ConfigTransferService.Result>?) {
+        if (!beginTransfer(callback)) return
+        beginRuntimeStoreTransaction()
+        val result = try {
+            reloadInstalledProfile()
+            ConfigTransferService.Result(true, "Configuration reloaded from disk.", null, null)
+        } catch (error: Throwable) {
+            GeilerAddons.LOGGER.error("Configuration reload failed", error)
+            ConfigTransferService.Result(
+                false,
+                "Configuration reload failed: ${message(error)}. Some settings may be partly loaded; fix the file and reload again, or restart.",
+                null,
+                null,
+            )
+        } finally {
+            endRuntimeStoreTransaction()
+            BUSY.set(false)
+        }
+        callback!!.accept(result)
+    }
+
     @JvmStatic
     fun exportProfile(requestedName: String?, callback: Consumer<ConfigTransferService.Result>?) {
         if (!beginTransfer(callback)) return

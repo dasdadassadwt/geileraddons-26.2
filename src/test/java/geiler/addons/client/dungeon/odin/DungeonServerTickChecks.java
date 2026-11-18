@@ -36,6 +36,9 @@ public final class DungeonServerTickChecks {
 		require(counter.count() == 90L, "extra ping packets no longer inflate the count once anchored");
 		counter.observeGameTime(900L);
 		require(counter.count() >= 90L, "a backwards world-time packet never lowers the count");
+		long beforeLeap = counter.count();
+		counter.observeGameTime(2_000_000_000L);
+		require(counter.count() - beforeLeap < 100L, "a world swap into a clock billions of ticks ahead does not add them to the count");
 		counter.reset();
 		require(counter.count() == 0L, "reset returns to the unanchored ping fallback");
 	}

@@ -5,6 +5,9 @@ import geiler.addons.client.module.ModuleKeybindManager;
 import geiler.addons.client.access.AbstractContainerScreenAccess;
 import geiler.addons.client.module.impl.DungeonOdinAssistModule;
 import geiler.addons.client.module.impl.LoadoutKeybindsModule;
+import geiler.addons.client.module.impl.CommandKeybindsModule;
+import geiler.addons.client.module.impl.InventoryCaptureModule;
+import geiler.addons.client.module.impl.PetKeybindsModule;
 import geiler.addons.client.module.impl.WardrobeKeybindsModule;
 import geiler.addons.client.module.impl.SpiritLeapSurfaceOwner;
 import geiler.addons.client.inventory.PlayerInventoryControls;
@@ -31,9 +34,16 @@ public abstract class KeyboardHandlerMixin {
 			ci.cancel();
 			return;
 		}
+		if (action == InputConstants.PRESS && client.gui.screen() == null && client.player != null
+			&& CommandKeybindsModule.INSTANCE.onKey(InputConstants.getKey(event).getName())) {
+			ci.cancel();
+			return;
+		}
 		if (action == InputConstants.PRESS && client.gui.screen() instanceof AbstractContainerScreen<?> menu) {
 			String keyName = InputConstants.getKey(event).getName();
-			if (WardrobeKeybindsModule.INSTANCE.onKey(menu, keyName) || LoadoutKeybindsModule.INSTANCE.onKey(menu, keyName)) {
+			if (WardrobeKeybindsModule.INSTANCE.onKey(menu, keyName) || LoadoutKeybindsModule.INSTANCE.onKey(menu, keyName)
+				|| PetKeybindsModule.INSTANCE.onKey(menu, keyName)
+				|| InventoryCaptureModule.INSTANCE.onKey(menu, keyName)) {
 				ci.cancel();
 				return;
 			}

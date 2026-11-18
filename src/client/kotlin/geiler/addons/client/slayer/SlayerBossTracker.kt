@@ -68,6 +68,8 @@ object SlayerBossTracker {
         val ownerLabelsSeen: Int,
         /** True when no owner label was found at all and the only boss in range was taken as the player's. */
         val ownerUnverified: Boolean,
+        /** True while the sidebar says "Boss slain!". */
+        val bossSlain: Boolean = false,
     ) {
         fun hasFamily(family: SlayerRules.Family): Boolean = bosses.any { it.family == family }
 
@@ -224,6 +226,7 @@ object SlayerBossTracker {
             java.util.List.copyOf(labels), java.util.List.copyOf(bodies), java.util.Map.copyOf(glyphs),
             java.util.List.copyOf(skulls), java.util.List.copyOf(ichors), java.util.List.copyOf(springs), bossActive,
             sidebarState == SlayerScoreboardParser.State.QUEST_ACTIVE, owners.size, unverified,
+            sidebarState == SlayerScoreboardParser.State.BOSS_SLAIN,
         )
     }
 

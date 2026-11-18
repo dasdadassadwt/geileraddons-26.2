@@ -1,5 +1,10 @@
 {
   "modules": {
+    "Inventory Capture": {
+      "settings": [
+        { "id": "captureKey", "type": "text", "name": "Capture Key", "default": "", "maxLength": 64, "keybind": true }
+      ]
+    },
     "Slot IDs": {
       "settings": [
         { "id": "labelTextColor", "type": "color", "name": "Label Text Color", "default": [255, 77, 90, 255] }
@@ -22,7 +27,6 @@
     },
     "Fishing Hook Display": {
       "settings": [
-        { "id": "atCrosshair", "type": "toggle", "name": "Show At Crosshair", "default": false },
         { "id": "scale", "type": "slider", "name": "Text Scale", "min": 1, "max": 4, "default": 2, "integer": true },
         { "id": "sound", "type": "toggle", "name": "Bite Sound", "default": true }
       ]
@@ -466,10 +470,11 @@
         {"id": "nausea", "type": "toggle", "name": "Nausea", "default": false},
         {"id": "expOrbs", "type": "toggle", "name": "Exp Orbs", "default": false},
         {"id": "stuckArrows", "type": "toggle", "name": "Stuck Arrows", "default": false},
-        {"id": "blindness", "type": "toggle", "name": "Blindness", "label": "Remove The Blindness Effect", "default": false}
+        {"id": "blindness", "type": "toggle", "name": "Blindness", "label": "Remove The Blindness Effect", "default": false},
+        {"id": "darkness", "type": "toggle", "name": "Warden Darkness", "label": "Remove The Darkness Effect", "default": false}
       ],
       "groups": [
-        {"name": "Overlays & HUD", "settings": ["fireOverlay", "foodBar", "armorBar", "bossBar", "effectDisplay", "recipeBook", "nausea", "blindness"]},
+        {"name": "Overlays & HUD", "settings": ["fireOverlay", "foodBar", "armorBar", "bossBar", "effectDisplay", "recipeBook", "nausea", "blindness", "darkness"]},
         {"name": "Entities", "settings": ["deadEntities", "lightning", "fallingBlocks", "entityFire", "guidedSheep", "bonePlating", "treeBits", "expOrbs", "stuckArrows"]},
         {"name": "Particles", "settings": ["deadPoof", "mageBeam", "powderCoating"]}
       ]
@@ -535,6 +540,104 @@
       "groups": [
         {"name": "Navigation", "settings": ["nextPage", "previousPage", "unequip", "disableUnequip"]},
         {"name": "Slot Keys", "folded": true, "settings": ["wardrobe1", "wardrobe2", "wardrobe3", "wardrobe4", "wardrobe5", "wardrobe6", "wardrobe7", "wardrobe8", "wardrobe9"]}
+      ]
+    },
+    "Command Keybinds": {
+      "settings": [
+        {"id": "pets", "type": "text", "name": "Pets", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "storage", "type": "text", "name": "Storage", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "wardrobe", "type": "text", "name": "Armor Wardrobe", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "equipment", "type": "text", "name": "Equip Wardrobe", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "loadouts", "type": "text", "name": "Loadouts", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "stats", "type": "text", "name": "Stats", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "dungeonHub", "type": "text", "name": "Dungeon Hub", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "potionBag", "type": "text", "name": "Potion Bag", "default": "", "maxLength": 64, "keybind": true}
+      ]
+    },
+    "Kuudra Info": {
+      "settings": [
+        {"id": "highlightKuudra", "type": "toggle", "name": "Highlight Kuudra", "default": true},
+        {"id": "kuudraColor", "type": "color", "name": "Kuudra Color", "default": [255, 85, 85, 255]},
+        {"id": "kuudraHp", "type": "toggle", "name": "Kuudra HP", "label": "Show Health", "default": true},
+        {"id": "healthSize", "type": "slider", "name": "Health Size", "min": 3.0, "max": 8.0, "default": 4.0},
+        {"id": "useScaled", "type": "toggle", "name": "Use Scaled", "label": "Show 240M Scale On T5 Below 25k", "default": true}
+      ]
+    },
+    "Pearl Waypoints": {
+      "settings": [
+        {"id": "showLabels", "type": "toggle", "name": "Show Labels", "label": "Show When To Throw Above Each Landing", "default": true}
+      ]
+    },
+    "Supply Helper": {
+      "settings": [
+        {"id": "supplyWaypoints", "type": "toggle", "name": "Supply Crates", "label": "Mark Supply Crates To Pick Up", "default": true},
+        {"id": "pileWaypoints", "type": "toggle", "name": "Pile Waypoints", "label": "Mark Piles To Deliver To", "default": true},
+        {"id": "supplyColor", "type": "color", "name": "Supply Waypoint Color", "default": [255, 255, 85, 255]},
+        {"id": "sendSupplyTime", "type": "toggle", "name": "Show Supply Time", "label": "Show When Each Supply Was Collected", "default": true}
+      ]
+    },
+    "Kuudra Waypoints": {
+      "settings": [
+        {"id": "safeSpots", "type": "toggle", "name": "Safe Spots", "label": "Show Safe Spots In The Supplies Phase", "default": true},
+        {"id": "dpsSkipSpots", "type": "toggle", "name": "DPS And Skip Spots", "label": "Show DPS And Skip Spots", "default": true}
+      ]
+    },
+    "Danger Zone Alert": {
+      "settings": []
+    },
+    "Build Helper": {
+      "settings": [
+        {"id": "unfinishedWaypoints", "type": "toggle", "name": "Unfinished Waypoints", "default": true},
+        {"id": "stunPercent", "type": "slider", "name": "Stun Percent", "min": 0, "max": 100, "default": 93, "integer": true}
+      ]
+    },
+    "Composter Display": {
+      "settings": [
+        {"id": "lowOrganicMatter", "type": "slider", "name": "Low Organic Matter", "label": "Warn Below (0 = Off)", "min": 0, "max": 100000, "default": 20000, "integer": true},
+        {"id": "lowFuel", "type": "slider", "name": "Low Fuel", "label": "Warn Below (0 = Off)", "min": 0, "max": 100000, "default": 3000, "integer": true}
+      ]
+    },
+    "Garden Keybinds": {
+      "settings": [
+        {"id": "attack", "type": "text", "name": "Attack", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "useItem", "type": "text", "name": "Use Item", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "left", "type": "text", "name": "Left", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "right", "type": "text", "name": "Right", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "forward", "type": "text", "name": "Forward", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "back", "type": "text", "name": "Back", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "jump", "type": "text", "name": "Jump", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "sneak", "type": "text", "name": "Sneak", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "excludeBarn", "type": "toggle", "name": "Exclude Barn", "label": "Keep Normal Keys In The Barn And Greenhouse", "default": true},
+        {"id": "requireTool", "type": "toggle", "name": "Require Farming Tool", "label": "Only While Holding A Farming Tool", "default": true}
+      ]
+    },
+    "Greenhouse Helper": {
+      "settings": [
+        {"id": "highlightHarvestable", "type": "toggle", "name": "Highlight Harvestable", "label": "Colour The Status Slot", "default": true},
+        {"id": "highlightWater", "type": "toggle", "name": "Highlight Water", "label": "Colour The Water Slot When Watered", "default": true},
+        {"id": "growthTimer", "type": "toggle", "name": "Growth Timer", "label": "Count Down To The Next Growth Stage", "default": true}
+      ]
+    },
+    "Pet Keybinds": {
+      "settings": [
+        {"id": "nextPage", "type": "text", "name": "Next Page", "default": "key.keyboard.right", "maxLength": 64, "keybind": true},
+        {"id": "previousPage", "type": "text", "name": "Previous Page", "default": "key.keyboard.left", "maxLength": 64, "keybind": true},
+        {"id": "unequip", "type": "text", "name": "Unequip", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "disableUnequip", "type": "toggle", "name": "Disable Unequip", "label": "Prevent Unequipping Equipped Pet", "default": false},
+        {"id": "closeIfEquipped", "type": "toggle", "name": "Close If Equipped", "label": "Close Menu If Pet Is Equipped", "default": false},
+        {"id": "pet1", "type": "text", "name": "Pet 1", "default": "key.keyboard.1", "maxLength": 64, "keybind": true},
+        {"id": "pet2", "type": "text", "name": "Pet 2", "default": "key.keyboard.2", "maxLength": 64, "keybind": true},
+        {"id": "pet3", "type": "text", "name": "Pet 3", "default": "key.keyboard.3", "maxLength": 64, "keybind": true},
+        {"id": "pet4", "type": "text", "name": "Pet 4", "default": "key.keyboard.4", "maxLength": 64, "keybind": true},
+        {"id": "pet5", "type": "text", "name": "Pet 5", "default": "key.keyboard.5", "maxLength": 64, "keybind": true},
+        {"id": "pet6", "type": "text", "name": "Pet 6", "default": "key.keyboard.6", "maxLength": 64, "keybind": true},
+        {"id": "pet7", "type": "text", "name": "Pet 7", "default": "key.keyboard.7", "maxLength": 64, "keybind": true},
+        {"id": "pet8", "type": "text", "name": "Pet 8", "default": "key.keyboard.8", "maxLength": 64, "keybind": true},
+        {"id": "pet9", "type": "text", "name": "Pet 9", "default": "key.keyboard.9", "maxLength": 64, "keybind": true}
+      ],
+      "groups": [
+        {"name": "Navigation", "settings": ["nextPage", "previousPage", "unequip", "disableUnequip", "closeIfEquipped"]},
+        {"name": "Pet Keys", "folded": true, "settings": ["pet1", "pet2", "pet3", "pet4", "pet5", "pet6", "pet7", "pet8", "pet9"]}
       ]
     },
     "Loadout Keybinds": {
@@ -622,6 +725,24 @@
         {"name": "All Terminals", "toggle": "showAll", "settings": ["farFillColor", "farOutlineColor"]}
       ]
     },
+    "Lever Aim Assist": {
+      "settings": [
+        {"id": "pull", "type": "toggle", "name": "Pull", "label": "Pull Toward Levers", "default": true},
+        {"id": "pullStrength", "type": "slider", "name": "Pull Strength", "min": 5, "max": 100, "default": 35, "integer": true},
+        {"id": "pullSpeed", "type": "slider", "name": "Pull Speed", "min": 1, "max": 20, "default": 6, "integer": true},
+        {"id": "pullFov", "type": "slider", "name": "Pull FOV", "min": 5, "max": 60, "default": 25, "integer": true},
+        {"id": "trigger", "type": "toggle", "name": "Trigger", "label": "Trigger Bot", "default": true},
+        {"id": "triggerFov", "type": "slider", "name": "Trigger FOV", "min": 1, "max": 30, "default": 6, "integer": true},
+        {"id": "delayMin", "type": "slider", "name": "Delay Min", "min": 0, "max": 500, "default": 60, "integer": true},
+        {"id": "delayMax", "type": "slider", "name": "Delay Max", "min": 0, "max": 500, "default": 140, "integer": true},
+        {"id": "reach", "type": "slider", "name": "Max Reach", "min": 2, "max": 6, "default": 4.5}
+      ],
+      "groups": [
+        {"name": "Pull", "toggle": "pull", "settings": ["pullStrength", "pullSpeed", "pullFov"]},
+        {"name": "Trigger", "toggle": "trigger", "settings": ["triggerFov", "delayMin", "delayMax"]},
+        {"name": "Targeting", "settings": ["reach"]}
+      ]
+    },
     "Melody Message": {
       "settings": [
         {"id": "msg", "type": "text", "name": "Start Message", "default": "/pc Melody Terminal start!", "maxLength": 100},
@@ -675,6 +796,23 @@
         {"name": "Croesus Menu", "settings": ["highlightState", "hideClaimed", "includeKey"]},
         {"name": "Chest Profit", "settings": ["highlightProfitable", "includeEssence", "minimized"]},
         {"name": "Chest Count", "settings": ["chestWarning"]}
+      ]
+    },
+    "Chest Roll": {
+      "settings": [
+        {"id": "wood", "type": "toggle", "name": "Wood Chest", "default": false},
+        {"id": "gold", "type": "toggle", "name": "Gold Chest", "default": false},
+        {"id": "diamond", "type": "toggle", "name": "Diamond Chest", "default": false},
+        {"id": "emerald", "type": "toggle", "name": "Emerald Chest", "default": true},
+        {"id": "obsidian", "type": "toggle", "name": "Obsidian Chest", "default": true},
+        {"id": "bedrock", "type": "toggle", "name": "Bedrock Chest", "default": true},
+        {"id": "spinSeconds", "type": "slider", "name": "Spin Seconds", "min": 2, "max": 8, "default": 5, "integer": true},
+        {"id": "playSound", "type": "toggle", "name": "Play Sound", "default": true},
+        {"id": "volume", "type": "slider", "name": "Volume", "min": 0, "max": 100, "default": 60, "integer": true}
+      ],
+      "groups": [
+        {"name": "Chests", "settings": ["wood", "gold", "diamond", "emerald", "obsidian", "bedrock"]},
+        {"name": "Animation", "settings": ["spinSeconds", "playSound", "volume"]}
       ]
     },
     "Ghost Vision": {

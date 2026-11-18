@@ -55,6 +55,9 @@ public final class ContainerKeybindChecks {
 			"loadout slot keys map onto the twelve menu slots");
 		check(!ContainerKeybindRules.loadout("Chest", "key.keyboard.1", NEXT, PREVIOUS, keys).getHandled(), "other menus are left alone");
 
+		checkPets();
+		checkCommandKeybinds();
+
 		WardrobeKeybindsModule wardrobe = WardrobeKeybindsModule.INSTANCE;
 		check(!wardrobe.defaultEnabled() && wardrobe.textSettings().size() == 12 && wardrobe.booleanSettings().size() == 1
 			&& NEXT.equals(wardrobe.textSettings().get(0).value()) && PREVIOUS.equals(wardrobe.textSettings().get(1).value())
@@ -66,6 +69,56 @@ public final class ContainerKeybindChecks {
 			&& "key.keyboard.equal".equals(loadoutModule.textSettings().get(13).value())
 			&& loadoutModule.textSettings().stream().allMatch(setting -> setting.keybindCapture()),
 			"Loadout Keybinds declares its page keys and twelve loadout keys as key-capture settings");
+	}
+
+	private static void checkCommandKeybinds() {
+		List<String> ids = ContainerKeybindRules.COMMAND_PRESETS.stream().map(preset -> preset.getId()).toList();
+		check(ids.equals(List.of("pets", "storage", "wardrobe", "equipment", "loadouts", "stats", "dungeonHub", "potionBag")),
+			"Command Keybinds has Odin's eight presets");
+		check("warp dungeon_hub".equals(ContainerKeybindRules.commandFor("key.keyboard.k", List.of("", "", "", "", "", "", "key.keyboard.k", "")))
+			&& "pets".equals(ContainerKeybindRules.commandFor("key.keyboard.p", List.of("key.keyboard.p", "", "", "", "", "", "", "")))
+			&& ContainerKeybindRules.commandFor("key.keyboard.x", List.of("key.keyboard.p", "", "", "", "", "", "", "")) == null
+			&& ContainerKeybindRules.commandFor("", List.of("", "", "", "", "", "", "", "")) == null,
+			"a pressed key maps to its preset command; an empty key never matches an unbound preset");
+		CommandKeybindsModule module = CommandKeybindsModule.INSTANCE;
+		check(!module.defaultEnabled() && module.textSettings().size() == 8 && module.textSettings().stream().allMatch(setting -> setting.keybindCapture() && setting.value().isEmpty()),
+			"Command Keybinds declares eight unbound key-capture settings");
+	}
+
+	private static void checkPets() {
+		check(ContainerKeybindRules.isPetsTitle("(1/3) Pets") && !ContainerKeybindRules.isPetsTitle("Pets") && !ContainerKeybindRules.isPetsTitle("(1/3) Loadout"),
+			"the pets menu is recognised by its page counter");
+		String pets = "(2/3) Pets";
+		List<String> keys = List.of("key.keyboard.1", "key.keyboard.2", "key.keyboard.3", "key.keyboard.4", "key.keyboard.5",
+			"key.keyboard.6", "key.keyboard.7", "key.keyboard.8", "key.keyboard.9");
+		check(pet(pets, NEXT, keys, null, false, false).getSlot() == 53 && pet(pets, PREVIOUS, keys, null, false, false).getSlot() == 45,
+			"pet page keys click slots 53 and 45");
+		check(!pet("(3/3) Pets", NEXT, keys, null, false, false).getHandled() && !pet("(1/3) Pets", PREVIOUS, keys, null, false, false).getHandled(),
+			"pet page keys stop at the ends");
+		check(pet(pets, "key.keyboard.1", keys, null, false, false).getSlot() == 10 && pet(pets, "key.keyboard.7", keys, null, false, false).getSlot() == 16
+			&& pet(pets, "key.keyboard.8", keys, null, false, false).getSlot() == 19 && pet(pets, "key.keyboard.9", keys, null, false, false).getSlot() == 20,
+			"pet keys map onto the first nine pet slots");
+		check(!pet(pets, "key.keyboard.x", keys, null, false, false).getHandled(), "an unbound key is ignored in the pets menu");
+		ContainerKeybindRules.Outcome again = pet(pets, "key.keyboard.2", keys, 11, true, false);
+		check(again.getHandled() && again.getSlot() == -1 && ContainerKeybindRules.PET_ALREADY_EQUIPPED.equals(again.getMessage()) && !again.getClose(),
+			"with Disable Unequip, the equipped pet's key only shows a message");
+		check(pet(pets, "key.keyboard.2", keys, 11, true, true).getClose(), "Close If Equipped closes the menu");
+		check(pet(pets, "key.keyboard.2", keys, 11, false, false).getSlot() == 11, "without Disable Unequip, the equipped pet's key clicks it");
+		check(ContainerKeybindRules.pets(pets, "key.keyboard.u", NEXT, PREVIOUS, "key.keyboard.u", keys, 12, false, false).getSlot() == 12
+			&& !ContainerKeybindRules.pets(pets, "key.keyboard.u", NEXT, PREVIOUS, "key.keyboard.u", keys, null, false, false).getHandled()
+			&& !ContainerKeybindRules.pets(pets, "key.keyboard.u", NEXT, PREVIOUS, "key.keyboard.u", keys, 12, true, false).getHandled(),
+			"the Unequip key clicks the equipped pet, and does nothing without one or with Disable Unequip");
+		check(ContainerKeybindRules.equippedPetSlot(List.of(new Pair<>(10, List.of("Click to summon!")), new Pair<>(14, List.of("x", "Click to despawn!")))).equals(14)
+			&& ContainerKeybindRules.equippedPetSlot(List.of(new Pair<>(9, List.of("Click to despawn!")), new Pair<>(43, List.of("Click to despawn!")))) == null,
+			"the equipped pet is the slot 10-42 whose lore says Click to despawn!");
+		PetKeybindsModule module = PetKeybindsModule.INSTANCE;
+		check(!module.defaultEnabled() && module.textSettings().size() == 12 && module.booleanSettings().size() == 2
+			&& module.textSettings().stream().allMatch(setting -> setting.keybindCapture()),
+			"Pet Keybinds declares its navigation and nine pet keys as key-capture settings");
+	}
+
+	private static ContainerKeybindRules.Outcome pet(String title, String key, List<String> keys, Integer equipped, boolean disallow, boolean close) {
+		return ContainerKeybindRules.pets(title, key, NEXT, PREVIOUS, "", keys, equipped, disallow, close);
 	}
 
 	private static ContainerKeybindRules.Outcome wardrobe(String title, String key, Integer equipped, boolean disallow) {

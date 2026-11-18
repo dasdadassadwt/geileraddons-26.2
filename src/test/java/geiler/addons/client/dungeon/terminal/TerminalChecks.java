@@ -1,7 +1,9 @@
 package geiler.addons.client.dungeon.terminal;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /** Offline checks for the Terminal Solver rules (Odin port): detection, the six solvers, prediction and protection. */
 public final class TerminalChecks {
@@ -243,8 +245,13 @@ public final class TerminalChecks {
 		require(TerminalAim.pick(31, 5, boxes, s -> s == 10, 6) == null, "a click further than the margin picks nothing");
 		require(TerminalAim.pick(5, 5, boxes, s -> false, 6) == null, "no clickable slot picks nothing");
 		require(TerminalAim.pick(27, 5, boxes, s -> s == 10 || s == 11, 6) == 11, "inside a clickable slot beats a near one");
-		require(TerminalAim.pick(48, 5, boxes, s -> s == 11 || s == 12, 14) == null,
-			"two clickable slots both within the margin pick nothing");
+		require(TerminalAim.pick(48, 5, boxes, s -> s == 11 || s == 12, 14) == 11,
+			"two clickable slots within the margin pick the nearer one");
+		Set<Integer> tied = new HashSet<>();
+		for (int seed = 0; seed < 40; seed++) {
+			tied.add(TerminalAim.pick(54, 5, boxes, s -> s == 11 || s == 12, 14, new java.util.Random(seed * 0x9E3779B97F4A7C15L)));
+		}
+		require(tied.equals(Set.of(11, 12)), "slots equally near are chosen between at random: " + tied);
 		require(TerminalAim.pick(48, 5, boxes, s -> s == 11 || s == 12, 11) == 11,
 			"only one clickable slot within the margin picks it");
 		require(TerminalAim.pick(27, 5, boxes, s -> s == 10, 0) == null, "margin 0 means exact clicks only");

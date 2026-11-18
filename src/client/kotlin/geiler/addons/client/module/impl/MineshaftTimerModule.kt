@@ -29,6 +29,8 @@ class MineshaftTimerModule private constructor(settings: Settings) : MiningHudMo
     private val timer = MineshaftTimerState()
     private var visits = 0L
 
+    override fun hudIslands(): Set<Island> = setOf(Island.MINESHAFT)
+
     override fun diagnosticSettings(): String =
         "best=${showBest.value()};last=${showLast.value()};chat=${chatSummary.value()}"
 

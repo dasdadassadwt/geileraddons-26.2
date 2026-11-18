@@ -1,5 +1,6 @@
 package geiler.addons.client.module.impl
 
+import geiler.addons.client.location.Island
 import com.mojang.blaze3d.platform.NativeImage
 import geiler.addons.GeilerAddons
 import geiler.addons.client.access.PlayerTabOverlayAccess
@@ -1104,6 +1105,8 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
         val roster: List<OdinDungeonPlayerMap.TabPlayer>,
         val puzzleCount: Int,
     )
+
+    override fun hudIslands(): kotlin.collections.Set<Island> = setOf(Island.CATACOMBS)
 
     override fun id(): String = "dungeon_room_map"
     override fun displayName(): String = "Dungeon Map"

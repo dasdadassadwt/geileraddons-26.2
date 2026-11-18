@@ -132,6 +132,29 @@ public final class MacroChecks {
 			"disabling the macro system cancels a running workflow");
 		assertTrue(MacroFlowRules.contextEnded(true, false, false, true),
 			"losing the level cancels even a workflow waiting for a world switch");
+		assertEquals(MacroFlowRules.LevelChange.RESUME,
+			MacroFlowRules.levelChangeWithoutSwitch(true, true, Island.HUB, 0L),
+			"a plain Wait survives /hub: the run resumes in the hub");
+		assertEquals(MacroFlowRules.LevelChange.WAIT,
+			MacroFlowRules.levelChangeWithoutSwitch(true, true, Island.NONE, 1_000_000_000L),
+			"the run waits while the new island is still loading");
+		assertEquals(MacroFlowRules.LevelChange.ABORT,
+			MacroFlowRules.levelChangeWithoutSwitch(true, true, Island.NONE, 16_000_000_000L),
+			"the wait for an unreported island is bounded");
+		assertEquals(MacroFlowRules.LevelChange.RESUME,
+			MacroFlowRules.levelChangeWithoutSwitch(false, true, Island.NONE, 0L),
+			"no island detection resumes at once");
+		assertEquals(MacroFlowRules.LevelChange.RESUME,
+			MacroFlowRules.levelChangeWithoutSwitch(true, false, Island.NONE, 0L),
+			"an unrestricted macro resumes at once");
+		assertTrue(MacroFlowRules.runEndsOnIsland(false, false, false, Island.HUB),
+			"an island-restricted run that never changed world ends on a disallowed island");
+		assertFalse(MacroFlowRules.runEndsOnIsland(true, false, false, Island.HUB),
+			"an allowed island never ends the run");
+		assertFalse(MacroFlowRules.runEndsOnIsland(false, true, false, Island.HUB),
+			"/is then /warp: a run that already changed world is not ended by the island list");
+		assertFalse(MacroFlowRules.runEndsOnIsland(false, false, true, Island.NONE),
+			"a run waiting for a world switch survives an unreported island");
 		assertTrue(MacroFlowRules.itemNameMatches("Confirm Entry", "confirm", true),
 			"partial item matching ignores case after formatting normalization");
 		assertFalse(MacroFlowRules.itemNameMatches("Confirm Entry", "Confirm", false),
@@ -528,6 +551,7 @@ public final class MacroChecks {
 
 		assertEquals("None", ModuleKeybind.NONE.displayName(), "macro keybind uses the shared display format");
 		MacroRuntimeChecks.run();
+		MacroViewChecks.run();
 		MacroChatTriggerChecks.run();
 		MacroInventoryCountChecks.run();
 		MacroPersistenceChecks.run();

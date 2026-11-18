@@ -18,6 +18,7 @@ class WorldToScreen private constructor() {
         /** Anything nearer than this along the view axis is level with or behind the eye. */
         private const val MIN_DEPTH = 0.05
 
+        private val viewScratch = DoubleArray(3)
         private var cachedCamera: Camera? = null
         private var cachedFov = Float.NaN
         private var cachedWidth = 0
@@ -46,12 +47,22 @@ class WorldToScreen private constructor() {
             val up: Vector3fc = camera.upVector()
             val left: Vector3fc = camera.leftVector()
 
-            val depth = relativeX * forward.x() + relativeY * forward.y() + relativeZ * forward.z()
-            if (depth < MIN_DEPTH) return false
+            val straightDepth = relativeX * forward.x() + relativeY * forward.y() + relativeZ * forward.z()
+            if (straightDepth < MIN_DEPTH) return false
 
-            val vertical = relativeX * up.x() + relativeY * up.y() + relativeZ * up.z()
+            var vertical = relativeX * up.x() + relativeY * up.y() + relativeZ * up.z()
             // leftVector points left, so negating it gives the screen-right axis.
-            val horizontal = -(relativeX * left.x() + relativeY * left.y() + relativeZ * left.z())
+            var horizontal = -(relativeX * left.x() + relativeY * left.y() + relativeZ * left.z())
+            // The world pass bobs the view while walking; follow it so a label stays on the box it names.
+            val view = viewScratch
+            view[0] = horizontal
+            view[1] = vertical
+            view[2] = -straightDepth
+            ViewBob.apply(view)
+            horizontal = view[0]
+            vertical = view[1]
+            val depth = -view[2]
+            if (depth < MIN_DEPTH) return false
             val window = minecraft.window
             val framebufferWidth = window.width
             val framebufferHeight = window.height

@@ -1,10 +1,12 @@
 package geiler.addons.client.gui
 
+import geiler.addons.client.config.ClickGuiState
 import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.config.ModConfig
 import geiler.addons.client.hud.HudElement
 import geiler.addons.client.hud.HudManager
 import geiler.addons.client.module.Category
+import geiler.addons.client.module.Module
 import geiler.addons.client.module.impl.VisualModule
 import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphicsExtractor
@@ -77,9 +79,11 @@ open class MoveUiScreen(private val parent: Screen?) : Screen(Component.literal(
             HudManager.renderElement(element, graphics, currentFont, x, y, true)
         }
         graphics.disableScissor()
+        // Element previews draw items and text in later strata than plain fills; a new stratum keeps the selector above them.
+        graphics.nextStratum()
         renderCategorySelector(graphics, mouseX, mouseY)
         graphics.centeredText(
-            currentFont, "Drag to move; scroll panels to resize or the selector list to browse.",
+            currentFont, "Drag to move; right-click for settings; scroll panels to resize or the selector list to browse.",
             width / 2, 8, GuiTheme.TEXT_SECONDARY,
         )
     }
@@ -92,6 +96,14 @@ open class MoveUiScreen(private val parent: Screen?) : Screen(Component.literal(
             if (categoryPopupOpen && !selector.containsButton(mouseX, mouseY) && !selector.containsPopup(mouseX, mouseY)) {
                 categoryPopupOpen = false
                 logInteraction("CATEGORY_MENU state=closed,reason=outside,selected=${selectedCategoryName()}")
+            }
+            if (event.button() == 1 && !selector.containsButton(mouseX, mouseY) && !selector.containsPopup(mouseX, mouseY)) {
+                val element = elementAt(mouseX, mouseY)
+                val module = element?.module()
+                if (element != null && module != null && module.hasSettings()) {
+                    openModulePage(element, module)
+                    return true
+                }
             }
             return super.mouseClicked(event, doubleClick)
         }
@@ -114,23 +126,40 @@ open class MoveUiScreen(private val parent: Screen?) : Screen(Component.literal(
             categoryPopupOpen = false
             logInteraction("CATEGORY_MENU state=closed,reason=outside,selected=${selectedCategoryName()}")
         }
-        val currentFont = font
-
-        // Traverse back to front so the topmost panel receives the drag.
-        val elements = visibleElements()
-        for (index in elements.indices.reversed()) {
-            val element = elements[index]
-            val x = HudManager.previewX(element, currentFont, width)
-            val y = HudManager.previewY(element, currentFont, height)
-            if (mouseX < x || mouseX >= x + HudManager.scaledPreviewWidth(element, currentFont) ||
-                mouseY < y || mouseY >= y + HudManager.scaledPreviewHeight(element, currentFont)
-            ) continue
+        val element = elementAt(mouseX, mouseY)
+        if (element != null) {
             dragging = element
-            grabX = mouseX - x
-            grabY = mouseY - y
+            grabX = mouseX - HudManager.previewX(element, font, width)
+            grabY = mouseY - HudManager.previewY(element, font, height)
             return true
         }
         return super.mouseClicked(event, doubleClick)
+    }
+
+    /** Topmost visible element under the pointer; elements draw back to front. */
+    private fun elementAt(mouseX: Int, mouseY: Int): HudElement? {
+        val elements = visibleElements()
+        for (index in elements.indices.reversed()) {
+            val element = elements[index]
+            val x = HudManager.previewX(element, font, width)
+            val y = HudManager.previewY(element, font, height)
+            if (mouseX >= x && mouseX < x + HudManager.scaledPreviewWidth(element, font) &&
+                mouseY >= y && mouseY < y + HudManager.scaledPreviewHeight(element, font)
+            ) return element
+        }
+        return null
+    }
+
+    /** Same state hand-off the classic menu uses to land on a module's settings page. */
+    private fun openModulePage(element: HudElement, module: Module) {
+        logInteraction("OPEN_MODULE element=${element.id()},module=${module.configName()},category=${module.category()}")
+        ClickGuiState.setWorkspace(module.category().workspace)
+        ClickGuiState.setCategory(module.category())
+        ClickGuiState.setOpenModule(module)
+        ClickGuiState.setExpandedColor(null)
+        ClickGuiState.setSettingsScroll(0)
+        ModConfig.markDirty()
+        minecraft.gui.setScreen(ClickGuiScreen())
     }
 
     override fun mouseDragged(event: MouseButtonEvent, dragX: Double, dragY: Double): Boolean {
@@ -160,18 +189,11 @@ open class MoveUiScreen(private val parent: Screen?) : Screen(Component.literal(
             }
             return true
         }
-        val currentFont = font
-        val elements = visibleElements()
-        for (index in elements.indices.reversed()) {
-            val element = elements[index]
-            val x = HudManager.previewX(element, currentFont, width)
-            val y = HudManager.previewY(element, currentFont, height)
-            if (mouseX < x || mouseX >= x + HudManager.scaledPreviewWidth(element, currentFont) ||
-                mouseY < y || mouseY >= y + HudManager.scaledPreviewHeight(element, currentFont)
-            ) continue
+        val element = elementAt(mouseX.toInt(), mouseY.toInt())
+        if (element != null) {
             HudManager.setPreviewScalePreservingTopLeft(
                 element, HudManager.scale(element) + (if (scrollY > 0) 0.1f else -0.1f),
-                currentFont, width, height,
+                font, width, height,
             )
             logInteraction("RESIZE element=${element.id()},category=${HudManager.category(element)},scale=${HudManager.scale(element)}")
             ModConfig.markDirty()
@@ -181,7 +203,7 @@ open class MoveUiScreen(private val parent: Screen?) : Screen(Component.literal(
     }
 
     private fun visibleElements(): List<HudElement> = HudManager.elements().filter { element ->
-        selectedCategory == null || HudManager.category(element) == selectedCategory
+        HudManager.editorVisible(element) && (selectedCategory == null || HudManager.category(element) == selectedCategory)
     }
 
     private fun setCategoryPopupOpen(open: Boolean, reason: String) {

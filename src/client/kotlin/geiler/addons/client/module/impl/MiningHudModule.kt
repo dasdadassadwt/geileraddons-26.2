@@ -2,6 +2,7 @@ package geiler.addons.client.module.impl
 
 import geiler.addons.client.gui.GuiTheme
 import geiler.addons.client.hud.HudElement
+import geiler.addons.client.location.Island
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.ColorSetting
@@ -67,6 +68,12 @@ abstract class MiningHudModule(
 
     override fun visible(): Boolean = isEnabled() && lines.isNotEmpty()
 
+    /** The islands whose mining content this panel reads; subclasses narrow it. */
+    override fun hudIslands(): Set<Island> = MINING_ISLANDS
+
+    /** The shown lines: a panel whose lines stop changing for 30 s is not in use and hides. */
+    override fun activitySignature(): Any? = lines.ifEmpty { null }
+
     override fun previewMode(): String = if (lines.isEmpty()) "sample" else "live"
 
     override fun width(font: Font?): Int = widthOf(font!!, lines.ifEmpty { sample })
@@ -103,5 +110,8 @@ abstract class MiningHudModule(
 
     private companion object {
         const val PAD = 4
+        val MINING_ISLANDS = setOf(
+            Island.DWARVEN_MINES, Island.CRYSTAL_HOLLOWS, Island.MINESHAFT, Island.DEEP_CAVERNS, Island.GOLD_MINE,
+        )
     }
 }

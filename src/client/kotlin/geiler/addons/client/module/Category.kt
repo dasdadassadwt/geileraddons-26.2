@@ -29,6 +29,7 @@ enum class Category(private val label: String, val workspace: Workspace = Worksp
     FARMING("Farming"),
     FORAGING("Foraging"),
     MINING("Mining"),
+    KUUDRA("Kuudra"),
     MISCELLANEOUS("Miscellaneous"),
     VISUAL("Visual"),
     DEV("Dev"),

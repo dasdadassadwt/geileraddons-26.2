@@ -191,6 +191,38 @@ sealed interface MacroCondition {
         )
     }
 
+    /**
+     * Facts about the local player: where the view points, which block the player is in, and which block is where.
+     * [argument] is the angle tolerance (YAW, PITCH) or the `x y z` position (BLOCK_AT).
+     */
+    data class Player private constructor(
+        private val fieldValue: Field,
+        private val operatorValue: Hypixel.Operator,
+        private val expectedValue: String,
+        private val argumentValue: String,
+        @Suppress("unused") private val normalizedMarker: Unit,
+    ) : MacroCondition {
+        enum class Field { YAW, PITCH, X, Y, Z, STANDING_BLOCK, BLOCK_AT }
+
+        constructor(field: Field?, operator: Hypixel.Operator?, expected: String?, argument: String?) : this(
+            field ?: Field.YAW,
+            operator ?: Hypixel.Operator.EQUALS,
+            MacroConditionSupport.hypixelExpected(expected),
+            MacroConditionSupport.playerArgument(argument),
+            Unit,
+        )
+
+        fun field(): Field = fieldValue
+        fun operator(): Hypixel.Operator = operatorValue
+        fun expected(): String = expectedValue
+        fun argument(): String = argumentValue
+
+        override fun toString(): String = macroRecordString(
+            "Player", "field" to field(), "operator" to operator(), "expected" to expected(),
+            "argument" to argument(),
+        )
+    }
+
     data class All private constructor(
         private val childrenValue: List<MacroCondition>,
         @Suppress("unused") private val normalizedMarker: Unit,

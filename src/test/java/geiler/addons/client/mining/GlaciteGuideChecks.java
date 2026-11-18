@@ -55,6 +55,21 @@ public final class GlaciteGuideChecks {
 		require("Tungsten".equals(GlaciteGraph.targetForCommission("Tungsten Collector", targets)), "an ore collector maps to the ore");
 		require(GlaciteGraph.targetForCommission("Glacite Collector", targets) == null, "glacite has no spot");
 		require(GlaciteGraph.targetForCommission("Goblin Raid Slayer", targets) == null, "a slayer commission is not a collector");
+		require(GlaciteGraph.targetColor("Peridot Gemstone") == 0x55FF55, "peridot is green");
+		require(GlaciteGraph.targetColor("Citrine Gemstone") == 0x8B5A2B, "citrine is brown");
+		require(GlaciteGraph.targetColor("Onyx Gemstone") == 0x111111, "onyx is black");
+		require(GlaciteGraph.targetColor("Aquamarine Gemstone") == 0x3355FF, "aquamarine is blue");
+		require(GlaciteGraph.targetColor("Tungsten") == 0x9A9A9A, "tungsten is gray");
+		require(GlaciteGraph.targetColor("Umber") == 0xFF8800, "umber is orange");
+		require(GlaciteGraph.targetColor("Campfire") == null, "a target without a colour keeps the chosen path colour");
+		require(GlaciteGraph.targetColor(null) == null, "no target keeps the chosen path colour");
+		List<double[]> bent = List.of(new double[] {0, 0, 0}, new double[] {10, 0, 0}, new double[] {10, 0, 10});
+		List<double[]> smooth = PathSmoothing.smooth(bent);
+		require(smooth.size() == 2 * PathSmoothing.STEPS + 1, "smoothing adds points between the nodes");
+		require(smooth.get(0)[0] == 0 && smooth.get(smooth.size() - 1)[2] == 10, "smoothing keeps the end points");
+		require(smooth.get(PathSmoothing.STEPS)[0] == 10 && smooth.get(PathSmoothing.STEPS)[2] == 0, "smoothing passes through each node");
+		require(smooth.get(PathSmoothing.STEPS - 1)[2] != 0 && smooth.get(PathSmoothing.STEPS - 1)[0] < 10, "the corner is rounded, not cut sharply");
+		require(PathSmoothing.smooth(bent.subList(0, 2)).size() == 2, "two points stay a straight line");
 		System.out.println("Glacite guide checks passed");
 	}
 

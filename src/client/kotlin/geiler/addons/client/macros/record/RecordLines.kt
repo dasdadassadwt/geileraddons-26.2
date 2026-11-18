@@ -71,7 +71,8 @@ object RecordLines {
         return sb.toString()
     }
 
-    private fun quote(text: String): String {
+    @JvmStatic
+    fun quote(text: String): String {
         val sb = StringBuilder(text.length + 2)
         sb.append('"')
         for (ch in text) {

@@ -2,6 +2,7 @@ package geiler.addons.client.module.impl
 
 import geiler.addons.client.hud.TitleAlertStack
 import geiler.addons.client.location.HypixelModApi
+import geiler.addons.client.location.Island
 import geiler.addons.client.mining.MiningConditions
 import geiler.addons.client.mining.MiningContext
 import geiler.addons.client.mining.MineshaftRules
@@ -31,8 +32,11 @@ class MiningEventsModule private constructor(settings: Settings) : MiningHudModu
     private val donExpresso = settings.donExpresso
 
     private var activeEvent: String? = null
+    private var lastUnmatchedRows = ""
     private var tickCount = 0L
     private var alerts = 0L
+
+    override fun hudIslands(): Set<Island> = setOf(Island.DWARVEN_MINES, Island.CRYSTAL_HOLLOWS)
 
     override fun diagnosticSettings(): String =
         "panel=${eventPanel.value()};eventAlert=${eventAlert.value()};goblinAlert=${goblinAlert.value()};donExpresso=${donExpresso.value()}"
@@ -60,7 +64,17 @@ class MiningEventsModule private constructor(settings: Settings) : MiningHudModu
             return
         }
         if (tickCount % READ_TICKS != 0L) return
-        val event = MiningConditions.miningEvent(MiningContext.tabLines())
+        val tab = MiningContext.tabLines()
+        val event = MiningConditions.miningEvent(tab)
+        if (event == null) {
+            // Evidence for the next log: what the tab list says about events when none was recognised.
+            val rows = tab.filter { it.contains("event", true) || it.contains("ends in", true) }.take(4)
+                .joinToString(" | ") { it.take(60) }
+            if (rows != lastUnmatchedRows) {
+                lastUnmatchedRows = rows
+                if (rows.isNotEmpty()) diagnostics.event("EVENT_ROWS_UNMATCHED rows=$rows")
+            }
+        }
         if (event?.name != activeEvent) {
             if (event != null) {
                 diagnostics.event("EVENT_STARTED name=${event.name} seconds=${event.secondsLeft}")

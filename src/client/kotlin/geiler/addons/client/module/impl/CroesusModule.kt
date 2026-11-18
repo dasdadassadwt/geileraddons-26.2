@@ -1,11 +1,13 @@
 package geiler.addons.client.module.impl
 
+import geiler.addons.client.location.Island
 import geiler.addons.client.dungeon.DungeonContextTracker
 import geiler.addons.client.dungeon.f7.CroesusPrices
 import geiler.addons.client.dungeon.f7.CroesusRules
 import geiler.addons.client.hud.HudElement
 import geiler.addons.client.hud.HudManager
 import geiler.addons.client.module.Category
+import geiler.addons.client.module.Module
 import geiler.addons.client.module.ModuleAction
 import geiler.addons.client.module.ModuleSettingsSpec
 import geiler.addons.client.utility.PlayerAlerts
@@ -33,6 +35,8 @@ class CroesusModule private constructor() : DungeonTextHudModule(
     *spec.settings.toTypedArray(),
     refreshPrices,
 ) {
+    override fun hudIslands(): Set<Island> = setOf(Island.DUNGEON_HUB, Island.CATACOMBS)
+
     private val highlightState = spec.toggle("highlightState")
     private val highlightProfitable = spec.toggle("highlightProfitable")
     private val hideClaimed = spec.toggle("hideClaimed")
@@ -303,7 +307,10 @@ class CroesusModule private constructor() : DungeonTextHudModule(
 
     /** The separate "Chest Count" HUD element. */
     val chestCountHud = object : HudElement {
+        override fun hudIslands(): Set<Island> = setOf(Island.DUNGEON_HUB)
+
         override fun id(): String = "croesus_chest_count"
+        override fun module(): Module = this@CroesusModule
         override fun displayName(): String = "Chest Count"
         override fun width(font: Font?): Int = font!!.width("Chests: 00")
         override fun height(font: Font?): Int = font!!.lineHeight

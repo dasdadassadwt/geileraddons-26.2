@@ -91,7 +91,8 @@ public abstract class ScreenMixin {
 		int mouseX, int mouseY, float delta) {
 		if (screen instanceof AbstractContainerScreen<?> container
 			&& (ExperimentSolverModule.INSTANCE.ownsScreen(container)
-				|| geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.ownsScreen(container))) return;
+				|| geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.ownsScreen(container)
+				|| geiler.addons.client.module.impl.StorageOverlayModule.INSTANCE.ownsScreen(container))) return;
 		screen.extractBackground(graphics, mouseX, mouseY, delta);
 	}
 
@@ -101,6 +102,7 @@ public abstract class ScreenMixin {
 		int mouseY, float delta, CallbackInfo ci) {
 		Screen screen = (Screen) (Object) this;
 		if (screen instanceof AbstractContainerScreen<?> container
-			&& ExperimentSolverModule.INSTANCE.ownsScreen(container)) ci.cancel();
+			&& (ExperimentSolverModule.INSTANCE.ownsScreen(container)
+				|| geiler.addons.client.module.impl.StorageOverlayModule.INSTANCE.ownsScreen(container))) ci.cancel();
 	}
 }

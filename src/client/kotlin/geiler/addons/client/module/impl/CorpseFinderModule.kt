@@ -1,6 +1,7 @@
 package geiler.addons.client.module.impl
 
 import geiler.addons.client.location.Island
+import geiler.addons.client.mining.CorpseTracker
 import geiler.addons.client.mining.MineshaftRules
 import geiler.addons.client.mining.MiningContext
 import geiler.addons.client.mining.MiningTabText
@@ -36,13 +37,10 @@ class CorpseFinderModule private constructor(settings: Settings) : Module(
     private val hideLooted = settings.hideLooted
     private val lineToCorpse = settings.lineToCorpse
 
-    private class Found(val id: Int, val corpse: MineshaftRules.Corpse, val x: Double, val y: Double, val z: Double)
-
     private val diagnostics = ModuleDiagnostics(Category.MINING, { name() }, 8, 100L, 400)
-    private var found: List<Found> = emptyList()
-    private var looted: Map<String, Boolean> = emptyMap()
+    private val tracker = CorpseTracker()
+    private var tabRows: Map<String, Boolean> = emptyMap()
     private var tickCount = 0L
-    private var seenIds = HashSet<Int>()
 
     init {
         group(geiler.addons.client.module.SettingGroup("Display", esp, labels, hideLooted, lineToCorpse))
@@ -52,14 +50,13 @@ class CorpseFinderModule private constructor(settings: Settings) : Module(
         "esp=${esp.value()};labels=${labels.value()};hideLooted=${hideLooted.value()};line=${lineToCorpse.value()}"
 
     override fun onEnable() {
-        found = emptyList()
-        looted = emptyMap()
-        seenIds = HashSet()
+        tracker.clear()
+        tabRows = emptyMap()
         diagnostics.enable(settingsText())
     }
 
     override fun onDisable() {
-        found = emptyList()
+        tracker.clear()
         diagnostics.disable()
     }
 
@@ -74,47 +71,45 @@ class CorpseFinderModule private constructor(settings: Settings) : Module(
         tickCount++
         val level = mc.level
         if (level == null || mc.player == null || !MiningContext.on(Island.MINESHAFT)) {
-            if (found.isNotEmpty()) diagnostics.event("LEFT_SHAFT corpses=${found.size}")
-            found = emptyList()
-            seenIds.clear()
+            if (tracker.entries().isNotEmpty()) diagnostics.event("LEFT_SHAFT corpses=${tracker.entries().size}")
+            tracker.clear()
             report("outside-mineshaft")
             return
         }
         if (tickCount % SCAN_TICKS != 0L) return
-        val scanned = ArrayList<Found>(4)
         for (entity in level.entitiesForRendering()) {
             if (entity !is ArmorStand || !entity.hasItemInSlot(EquipmentSlot.HEAD)) continue
             val corpse = MineshaftRules.corpseForHelmet(SkyblockItems.skyBlockId(entity.getItemBySlot(EquipmentSlot.HEAD))) ?: continue
-            scanned.add(Found(entity.id, corpse, entity.x, entity.y, entity.z))
-            if (seenIds.add(entity.id)) {
+            if (tracker.see(corpse.label, entity.x, entity.y, entity.z)) {
                 diagnostics.event("CORPSE_SEEN type=${corpse.label} x=${entity.x.toInt()} y=${entity.y.toInt()} z=${entity.z.toInt()}")
             }
         }
-        found = scanned
-        looted = MiningTabText.corpses(MiningContext.tabLines())
+        tabRows = MiningTabText.corpses(MiningContext.tabLines())
+        val player = mc.player!!
+        for (done in tracker.update(tabRows, player.x, player.y, player.z)) {
+            diagnostics.event("CORPSE_LOOTED type=${done.type} x=${done.x.toInt()} y=${done.y.toInt()} z=${done.z.toInt()} tab=$tabRows")
+        }
         report("ready")
     }
 
-    private fun isLooted(corpse: MineshaftRules.Corpse): Boolean = looted[corpse.label] == true
-
     private fun report(state: String) {
         diagnostics.statusOnChange {
-            "state=$state corpses=${found.size} looted=${found.count { isLooted(it.corpse) }} tabRows=${looted.size} seen=${seenIds.size}"
+            "state=$state corpses=${tracker.entries().size} looted=${tracker.entries().count { it.looted }} tabRows=${tabRows.size}"
         }
     }
 
     fun render(context: LevelRenderContext) {
-        if (!isEnabled() || found.isEmpty() || !MiningContext.on(Island.MINESHAFT)) return
+        if (!isEnabled() || tracker.entries().isEmpty() || !MiningContext.on(Island.MINESHAFT)) return
         val client = Minecraft.getInstance()
         val camera = client.gameRenderer.mainCamera()
         val cam = camera.position()
         val buffer = WorldRenderBuffer.current()
         val pose = context.poseStack()
         val forward = camera.forwardVector()
-        for (item in found) {
-            val done = isLooted(item.corpse)
+        for (item in tracker.entries()) {
+            val done = item.looted
             if (done && hideLooted.value()) continue
-            val color = if (done) LOOTED_COLOR else item.corpse.argb
+            val color = if (done) LOOTED_COLOR else corpseColor(item)
             if (esp.value()) {
                 EspRenderer.renderBox(
                     pose, buffer, item.x - 0.4 - cam.x, item.y - cam.y, item.z - 0.4 - cam.z, 0.8, 1.6, 0.8,
@@ -132,19 +127,22 @@ class CorpseFinderModule private constructor(settings: Settings) : Module(
     }
 
     fun renderHud(graphics: GuiGraphicsExtractor) {
-        if (!isEnabled() || !labels.value() || found.isEmpty() || !MiningContext.on(Island.MINESHAFT)) return
+        if (!isEnabled() || !labels.value() || tracker.entries().isEmpty() || !MiningContext.on(Island.MINESHAFT)) return
         val client = Minecraft.getInstance()
         val camera = client.gameRenderer.mainCamera()
-        for (item in found) {
-            val done = isLooted(item.corpse)
+        for (item in tracker.entries()) {
+            val done = item.looted
             if (done && hideLooted.value()) continue
-            val text = "${item.corpse.label} Corpse" + if (done) " (Looted)" else ""
+            val text = "${item.type} Corpse" + if (done) " (Looted)" else ""
             ProjectedLabelRenderer.draw(
                 graphics, camera, client.font, Vec3(item.x, item.y + 2.2, item.z), text,
-                if (done) LOOTED_COLOR else item.corpse.argb, 1.4f,
+                if (done) LOOTED_COLOR else corpseColor(item), 1.4f,
             )
         }
     }
+
+    private fun corpseColor(item: CorpseTracker.Entry): Int =
+        (MineshaftRules.corpseByLabel(item.type)?.argb ?: LOOTED_COLOR)
 
     private class Settings {
         val esp = BooleanSetting("Corpse ESP", true)

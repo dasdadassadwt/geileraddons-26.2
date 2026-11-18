@@ -1,11 +1,14 @@
 package geiler.addons.client.module.impl
 
+import geiler.addons.client.gui.GuiTheme
+import geiler.addons.client.hud.HudElement
 import geiler.addons.client.location.Island
 import geiler.addons.client.mining.CrystalHollowsRules
 import geiler.addons.client.mining.MiningContext
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.ColorSetting
+import geiler.addons.client.module.NumberSetting
 import geiler.addons.client.module.Module
 import geiler.addons.client.module.SettingGroup
 import geiler.addons.client.render.EspRenderer
@@ -14,6 +17,7 @@ import geiler.addons.client.render.ProjectedLabelRenderer
 import geiler.addons.client.render.WorldRenderBuffer
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext
 import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.ChatFormatting
 import net.minecraft.core.BlockPos
@@ -45,7 +49,8 @@ class CrystalHollowsHelperModule private constructor(settings: Settings) : Modul
     Category.MINING,
     false,
     settings.structures, settings.scan, settings.chatCoordinates, settings.nucleus, settings.labels, settings.chests, settings.chestColor,
-) {
+    settings.map, settings.mapSize,
+), HudElement {
     private val scan = settings.scan
     private val structures = settings.structures
     private val chatCoordinates = settings.chatCoordinates
@@ -53,6 +58,8 @@ class CrystalHollowsHelperModule private constructor(settings: Settings) : Modul
     private val labels = settings.labels
     private val chests = settings.chests
     private val chestColor = settings.chestColor
+    private val map = settings.map
+    private val mapSize = settings.mapSize
 
     private class Waypoint(val name: String, val argb: Int, val x: Int, val y: Int, val z: Int, val structure: CrystalHollowsRules.Structure?)
 
@@ -71,6 +78,7 @@ class CrystalHollowsHelperModule private constructor(settings: Settings) : Modul
     private val scanTries = CrystalHollowsScan.ChunkTries()
     private var scanLevel: Level? = null
     private var scannedChunks = 0L
+    private val bestDepth = HashMap<CrystalHollowsRules.Structure, Int>()
     private var scanNanos = 0L
     private var scanWorstNanos = 0L
     private val candidates: Map<Block, List<Candidate>> by lazy {
@@ -83,13 +91,13 @@ class CrystalHollowsHelperModule private constructor(settings: Settings) : Modul
     }
 
     init {
-        group(SettingGroup("Waypoints", structures, scan, chatCoordinates, nucleus, labels), SettingGroup("Treasure Chests", chests, chestColor))
+        group(SettingGroup("Waypoints", structures, scan, chatCoordinates, nucleus, labels), SettingGroup("Treasure Chests", chests, chestColor), SettingGroup("Map", map, mapSize))
     }
 
     private fun block(id: String?): Block? = id?.let { Identifier.tryParse(it) }?.let(BuiltInRegistries.BLOCK::getValue)
 
     private fun settingsText(): String =
-        "structures=${structures.value()};scan=${scan.value()};chat=${chatCoordinates.value()};nucleus=${nucleus.value()};chests=${chests.value()}"
+        "structures=${structures.value()};map=${map.value()}@${mapSize.intValue()};scan=${scan.value()};chat=${chatCoordinates.value()};nucleus=${nucleus.value()};chests=${chests.value()}"
 
     override fun onEnable() {
         reset()
@@ -107,6 +115,7 @@ class CrystalHollowsHelperModule private constructor(settings: Settings) : Modul
         prompted.clear()
         scanTries.clear()
         scannedChunks = 0L
+        bestDepth.clear()
         scanNanos = 0L
         scanWorstNanos = 0L
         waitingForChest = 0
@@ -244,10 +253,21 @@ class CrystalHollowsHelperModule private constructor(settings: Settings) : Modul
                 waypoints.keys.removeIf { it.startsWith(UNKNOWN) && close(waypoints[it]!!, player.blockX, player.blockY, player.blockZ) }
             }
         }
+        if (tickCount % NPC_TICKS == 0L && structures.value()) scanNpcs(level)
         if (tickCount % SCAN_TICKS == 0L && scan.value() && structures.value()) scanVisible(mc, level, player.blockX shr 4, player.blockZ shr 4)
         diagnostics.statusOnChange {
             "state=ready waypoints=${waypoints.size} chests=${chestSpots.size} waiting=$waitingForChest chatHits=$chatHits " +
                 "scanned=$scannedChunks scanMs=${scanNanos / 1_000_000} worstMs=${scanWorstNanos / 1_000_000}"
+        }
+    }
+
+    /** King Yolkar and Odawa are NPCs, not block structures: their name tag in view marks the spot. */
+    private fun scanNpcs(level: net.minecraft.client.multiplayer.ClientLevel) {
+        for (entity in level.entitiesForRendering()) {
+            val structure = CrystalHollowsRules.npcStructure(entity.customName?.string) ?: continue
+            if (waypoints.containsKey(structure.label) || waypoints.size >= MAX_WAYPOINTS) continue
+            add(Waypoint(structure.label, structure.argb, entity.blockX, entity.blockY, entity.blockZ, structure), "npc")
+            PlayerAlerts.chat("§6[GeilerAddons] §fFound §e${structure.label}§f at §6${entity.blockX}§r, §3${entity.blockY}§r, §d${entity.blockZ}")
         }
     }
 
@@ -258,6 +278,7 @@ class CrystalHollowsHelperModule private constructor(settings: Settings) : Modul
     private fun scanVisible(mc: Minecraft, level: Level, pcx: Int, pcz: Int) {
         val radius = mc.options.effectiveRenderDistance
         var budget = CHUNKS_PER_SCAN
+        val deadline = System.nanoTime() + SCAN_BUDGET_NANOS
         for (ring in 0..radius) {
             for (dx in -ring..ring) {
                 for (dz in -ring..ring) {
@@ -274,7 +295,7 @@ class CrystalHollowsHelperModule private constructor(settings: Settings) : Modul
                     scannedChunks++
                     scanNanos += spent
                     if (spent > scanWorstNanos) scanWorstNanos = spent
-                    if (--budget <= 0) return
+                    if (--budget <= 0 || System.nanoTime() > deadline) return
                 }
             }
         }
@@ -300,10 +321,22 @@ class CrystalHollowsHelperModule private constructor(settings: Settings) : Modul
                         if (!CrystalHollowsScan.quarterAllows(signature, wx, y, wz)) continue
                         if (candidate.second != null && chunk.getBlockState(pos.set(wx, y + 1, wz)).block !== candidate.second) continue
                         if (CrystalHollowsScan.matches(signature, wx, y, wz, lookup)) found(signature, wx, y, wz)
+                        else noteNearMiss(signature, wx, y, wz, lookup)
                     }
                 }
             }
         }
+    }
+
+    /** Records the deepest partial column match per structure, so a log shows which block stopped a structure from matching. */
+    private fun noteNearMiss(signature: CrystalHollowsScan.Signature, x: Int, y: Int, z: Int, lookup: CrystalHollowsScan.BlockLookup) {
+        val depth = CrystalHollowsScan.prefixDepth(signature, x, y, z, lookup)
+        if (depth < 2 || depth <= (bestDepth[signature.structure] ?: 0)) return
+        bestDepth[signature.structure] = depth
+        diagnostics.event(
+            "NEAR_MISS structure=${signature.structure.label} depth=$depth/${signature.column.size} x=$x y=$y z=$z " +
+                "want=${signature.column.getOrNull(depth)} got=${lookup.at(x, y + depth, z)}",
+        )
     }
 
     private fun found(signature: CrystalHollowsScan.Signature, x: Int, y: Int, z: Int) {
@@ -366,6 +399,41 @@ class CrystalHollowsHelperModule private constructor(settings: Settings) : Modul
         GeilerAddonsRenderTypes.endBatches(buffer)
     }
 
+    override fun id(): String = "crystal_hollows_map"
+
+    override fun displayName(): String = "Crystal Hollows Map"
+
+    override fun module(): Module = this
+
+    override fun hudIslands(): Set<Island> = setOf(Island.CRYSTAL_HOLLOWS)
+
+    override fun visible(): Boolean = isEnabled() && map.value()
+
+    override fun width(font: Font?): Int = mapSize.intValue()
+
+    override fun height(font: Font?): Int = mapSize.intValue()
+
+    override fun renderPreview(graphics: GuiGraphicsExtractor, font: Font, x: Int, y: Int) = render(graphics, font, x, y)
+
+    /** A top-down map of the whole Hollows: the Nucleus, every marker found so far, and you. */
+    override fun render(graphics: GuiGraphicsExtractor, font: Font, x: Int, y: Int) {
+        val size = mapSize.intValue()
+        GuiTheme.roundedRectBordered(graphics, x - 1, y - 1, size + 2, size + 2, GuiTheme.RADIUS_SMALL, MAP_BG, MAP_BG, GuiTheme.CARD_BORDER)
+        // The Nucleus crosshair, so the quarters read at a glance.
+        val mid = CrystalHollowsRules.mapPixel(CrystalHollowsRules.NUCLEUS_X, size)
+        graphics.fill(x + mid, y, x + mid + 1, y + size, MAP_GRID)
+        graphics.fill(x, y + mid, x + size, y + mid + 1, MAP_GRID)
+        for (w in waypoints.values) dot(graphics, x, y, size, w.x, w.z, w.argb, 2)
+        dot(graphics, x, y, size, CrystalHollowsRules.NUCLEUS_X, CrystalHollowsRules.NUCLEUS_Z, NUCLEUS_COLOR, 2)
+        Minecraft.getInstance().player?.let { dot(graphics, x, y, size, it.blockX, it.blockZ, WHITE, 1) }
+    }
+
+    private fun dot(graphics: GuiGraphicsExtractor, x: Int, y: Int, size: Int, wx: Int, wz: Int, argb: Int, radius: Int) {
+        val px = x + CrystalHollowsRules.mapPixel(wx, size)
+        val py = y + CrystalHollowsRules.mapPixel(wz, size)
+        graphics.fill(px - radius, py - radius, px + radius + 1, py + radius + 1, argb)
+    }
+
     fun renderHud(graphics: GuiGraphicsExtractor) {
         if (!isEnabled() || !labels.value() || !MiningContext.on(Island.CRYSTAL_HOLLOWS)) return
         val client = Minecraft.getInstance()
@@ -396,12 +464,18 @@ class CrystalHollowsHelperModule private constructor(settings: Settings) : Modul
         val labels = BooleanSetting("Labels", true)
         val chests = BooleanSetting("Highlight Treasure Chests", true)
         val chestColor = ColorSetting("Chest Color", 255, 170, 0, 255)
+        val map = BooleanSetting("Show Map", true)
+        val mapSize = NumberSetting("Map Size", 60f, 200f, 110f, true)
     }
 
     companion object {
         private const val AREA_TICKS = 20L
-        private const val SCAN_TICKS = 10L
-        private const val CHUNKS_PER_SCAN = 2
+        // Logs showed 657 chunks in about 3 minutes at 1.8 ms each; 2 chunks every 4 ticks is about 10 chunks a second.
+        // Now every 2 ticks, up to 6 chunks but never more than 3 ms of one tick, so a big view still finishes a ring quickly.
+        private const val SCAN_TICKS = 2L
+        private const val CHUNKS_PER_SCAN = 6
+        private const val SCAN_BUDGET_NANOS = 3_000_000L
+        private const val NPC_TICKS = 20L
         private const val MAX_WAYPOINTS = 12
         private const val MAX_PROMPTED = 20
         private const val CHEST_RANGE_SQ = 100.0
@@ -410,6 +484,8 @@ class CrystalHollowsHelperModule private constructor(settings: Settings) : Modul
         private const val WHITE = 0xFFFFFFFF.toInt()
         private const val NUCLEUS_COLOR = 0xFF55FFFF.toInt()
         private const val UNKNOWN = "Shared Location"
+        private const val MAP_BG = 0xB0101418.toInt()
+        private const val MAP_GRID = 0x40FFFFFF
 
         @JvmField
         val INSTANCE = CrystalHollowsHelperModule(Settings())

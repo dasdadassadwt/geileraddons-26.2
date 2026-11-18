@@ -25,8 +25,9 @@ class DungeonServerTickCounter {
         if (anchorGameTime < 0L) {
             baseCount = pingTicks
             baseGameTime = gameTime
-        } else if (gameTime < anchorGameTime) {
-            // World-time went backwards (world swap): rebase so the count stays monotonic.
+        } else if (gameTime < anchorGameTime || gameTime - anchorGameTime > MAX_PACKET_GAP_TICKS) {
+            // World-time went backwards or leapt (world swap into a world with another clock): rebase so the count
+            // stays monotonic and a swap cannot add millions of ticks to every timer.
             baseCount = count()
             baseGameTime = gameTime
         }
@@ -57,6 +58,7 @@ class DungeonServerTickCounter {
 
     companion object {
         private const val MAX_EXTRAPOLATION_TICKS = 20L
+        private const val MAX_PACKET_GAP_TICKS = 6_000L
 
         @JvmStatic
         fun isServerTickPacket(packetId: Long): Boolean = packetId < 0L

@@ -1,5 +1,6 @@
 package geiler.addons.client.module.impl
 
+import geiler.addons.client.location.Island
 import geiler.addons.client.dungeon.DungeonClass
 import geiler.addons.client.dungeon.f7.AimDragon
 import geiler.addons.client.dungeon.f7.DragonAimerLogic
@@ -146,6 +147,13 @@ class DragonStackAimerModule private constructor(private val s: Settings) : Modu
             diagnostics.event("WORLD_CHANGED aimerReset=true")
         }
         val now = DungeonOdinAssistModule.INSTANCE.serverTicks()
+        if (lastServerTicks >= 0L && now < lastServerTicks) {
+            // The run clock restarted (dungeon context blip): stored spawn ticks belong to the old clock.
+            diagnostics.event("TICK_CLOCK_RESTARTED was=$lastServerTicks now=$now queued=${queue.queued.size}")
+            queue.reset()
+            spawned = null
+            data = null
+        }
         val delta = if (lastServerTicks < 0L || now < lastServerTicks) 0L else now - lastServerTicks
         lastServerTicks = now
         val enabledHere = active()
@@ -178,7 +186,7 @@ class DragonStackAimerModule private constructor(private val s: Settings) : Modu
     private fun solve(serverTicks: Long) {
         val spawn = spawned ?: return
         var ttl = (spawn.spawnTick - serverTicks).toDouble()
-        if (ttl < -30.0) {
+        if (ttl < -30.0 || ttl > DragonAimerLogic.MAX_REMAINING_TICKS) {
             data = null
             return
         }
@@ -227,7 +235,10 @@ class DragonStackAimerModule private constructor(private val s: Settings) : Modu
     }
 
     val hudElement: HudElement = object : HudElement {
+        override fun hudIslands(): Set<Island> = setOf(Island.CATACOMBS)
+
         override fun id(): String = "dragon_stack_aimer"
+        override fun module(): Module = this@DragonStackAimerModule
         override fun displayName(): String = "Dragon Stack Aimer"
         override fun width(font: Font?): Int = font!!.width(hudText ?: SAMPLE)
         override fun height(font: Font?): Int = font!!.lineHeight

@@ -8,7 +8,11 @@ import java.util.Locale
  * Abilities and the one-level perks have no powder cost.
  */
 object HotmPerks {
-    class Perk(val name: String, val maxLevel: Int, val offset: Double, val power: Double, val powder: String?) {
+    /** [powder] is the currency (also "Whispers" for the Heart of the Forest); [levelCost] replaces the power formula. */
+    class Perk(
+        val name: String, val maxLevel: Int, val offset: Double, val power: Double, val powder: String?,
+        val levelCost: ((Int) -> Int)? = null,
+    ) {
         fun hasCost(): Boolean = powder != null
     }
 
@@ -69,7 +73,7 @@ object HotmPerks {
     /** Powder to buy [level] (level 1 is free). Zero for perks without a powder cost. */
     @JvmStatic
     fun cost(perk: Perk, level: Int): Int =
-        if (!perk.hasCost() || level < 2) 0 else Math.pow(level + perk.offset, perk.power).toInt()
+        if (!perk.hasCost() || level < 2) 0 else perk.levelCost?.invoke(level) ?: Math.pow(level + perk.offset, perk.power).toInt()
 
     /** Powder spent to be at [level]: every purchase from level 2 up. */
     @JvmStatic

@@ -3,6 +3,7 @@ package geiler.addons.client.module.impl
 import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.hud.HudElement
 import geiler.addons.client.module.Category
+import geiler.addons.client.module.Module
 import geiler.addons.client.utility.CountdownTimerState
 import geiler.addons.client.utility.TimerCompletionPresentation
 import geiler.addons.client.utility.TimerDurationParser
@@ -83,6 +84,8 @@ class UtilityTimerModule private constructor() : HudElement {
     }
 
     override fun id(): String = "utility_timer"
+
+    override fun module(): Module = GeneralModule.INSTANCE
 
     override fun displayName(): String = "Timer"
 

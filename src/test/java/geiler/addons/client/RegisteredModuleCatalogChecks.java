@@ -13,11 +13,28 @@ public final class RegisteredModuleCatalogChecks {
 		"DebugModule",
 		"GeneralModule",
 		"SlotIdsModule",
+		"CursorTrackerModule",
+		"InventoryCaptureModule",
+		"KuudraInfoModule",
+		"PearlWaypointsModule",
+		"SupplyHelperModule",
+		"KuudraWaypointsModule",
+		"BuildHelperModule",
+		"DangerZoneAlertModule",
+		"CommandKeybindsModule",
+		"MouseLockModule",
+		"RareCropTitleModule",
+		"ComposterDisplayModule",
+		"GardenKeybindsModule",
+		"VisitorShoppingListModule",
+		"GreenhouseHelperModule",
+		"VisitorMessageHiderModule",
 		"I4HelperModule",
 		"ExperimentSolverModule",
 		"AutoExperimentsModule",
 		"AutoKickModule",
 		"PartyFinderStatsModule",
+		"PartyFinderListingsModule",
 		"DungeonHelperModule",
 		"BoxDoorsModule",
 		"DungeonDoorBlockReplacementModule",
@@ -38,11 +55,16 @@ public final class RegisteredModuleCatalogChecks {
 		"SafariFloorDropsModule",
 		"HideyhoFinderModule",
 		"SparklingCritterModule",
+		"CritterTrackerModule",
+		"CritterMarkersModule",
+		"CritterAlertsModule",
+		"HideonwallEspModule",
 		"PestHighlighterModule",
 		"GardenPlotBordersModule",
 		"PestTrackerModule",
 		"SlayerTrackerModule",
 		"SlayerAlertsModule",
+		"SlayerHudModule",
 		"SlayerBossHighlightModule",
 		"EndermanSlayerModule",
 		"BlazeSlayerModule",
@@ -52,6 +74,9 @@ public final class RegisteredModuleCatalogChecks {
 		"ChatModule",
 		"PartyCommandsModule",
 		"HideAllParticlesModule",
+		"HidePlayersModule",
+		"HideF7BossSoundsModule",
+		"BossBarPercentModule",
 		"ItemAnimationsModule",
 		"LobbyTargetWatchModule",
 		"PlayerInventoryControlsModule",
@@ -62,6 +87,11 @@ public final class RegisteredModuleCatalogChecks {
 		"ThirdPersonCameraModule",
 		"TreeTrackerModule",
 		"TreeNotifierModule",
+		"ForagingHighlightsModule",
+		"TemplePuzzlesModule",
+		"TunerSolverModule",
+		"SweepOverlayModule",
+		"ContestTimerHudModule",
 		"MacrosModule",
 		"VisualModule",
 		"MobHighlightModule",
@@ -99,23 +129,30 @@ public final class RegisteredModuleCatalogChecks {
 		"ArrowAlignModule",
 		"SimonSaysModule",
 		"CroesusModule",
+		"ChestRollModule",
 		"SpeedDisplayModule",
+		"QuiverDisplayModule",
 		"GhostVisionModule",
 		"TerracottaTimerModule",
 		"WardrobeKeybindsModule",
 		"LoadoutKeybindsModule",
+		"PetKeybindsModule",
 		"SpringBootsModule",
 		"RagnarockModule",
 		"TickTimersModule",
-		"FireFreezeTimerModule",
 		"RelicTimerModule",
+		"FireFreezeTimerModule",
 		"WitherDragonsModule",
 		"KingRelicModule",
 		"DragonStackAimerModule",
 		"CompactDamageModule",
+		"StorageOverlayModule",
 		"TerminalSolverModule",
+		"AutoTermsModule",
+		"LeverAimAssistModule",
 		"PriceDisplayModule",
 		"TerminalSimulatorModule",
+		"TerminalTimesModule",
 		"FishingBobberTimerModule",
 		"FishingHookDisplayModule",
 		"FishingBaitModule",
@@ -126,16 +163,26 @@ public final class RegisteredModuleCatalogChecks {
 		"MiningCommissionsModule",
 		"MiningPowderModule",
 		"HotmTreeHelperModule",
+		"HotfTreeHelperModule",
 		"PowderChestModule",
 		"MineshaftTimerModule",
 		"CorpseFinderModule",
 		"MetalDetectorModule",
 		"GlaciteGuideModule",
 		"GoblinHighlighterModule",
+		"CrystalHollowsHelperModule",
 		"MiningSolversModule",
 		"MiningEventsModule",
 		"HeatAndColdModule",
-		"CrystalHollowsHelperModule"
+		"SpeedSimModule",
+		"JumpBoostModule",
+		"OneTapModule",
+		"EtherwarpSimModule",
+		"EtherwarpModule",
+		"RotationEngineModule",
+		"HumanRecorderModule",
+		"PathfinderModule",
+		"AreaKillerModule"
 	);
 
 	private RegisteredModuleCatalogChecks() { }
@@ -156,6 +203,30 @@ public final class RegisteredModuleCatalogChecks {
 			.collect(Collectors.toList());
 		if (!withoutIcon.isEmpty()) {
 			throw new AssertionError("Every registered module needs a bundled icon; missing: " + withoutIcon);
+		}
+		checkEverySettingIsShown();
+	}
+
+	/** A module with settings but no shown group would give the Click GUI nothing to draw (an empty group() call did that). */
+	private static void checkEverySettingIsShown() {
+		List<String> hidden = new java.util.ArrayList<>();
+		for (geiler.addons.client.module.Module module : ModuleManager.modules()) {
+			java.util.Set<Object> shown = new java.util.HashSet<>();
+			collect(module.groups(), shown);
+			boolean hasSettings = !module.colorSettings().isEmpty() || !module.numberSettings().isEmpty()
+				|| !module.booleanSettings().isEmpty() || !module.choiceSettings().isEmpty() || !module.textSettings().isEmpty();
+			if (hasSettings && shown.isEmpty()) hidden.add(module.name());
+		}
+		if (!hidden.isEmpty()) {
+			throw new AssertionError("Modules whose settings are all hidden by an empty group list: " + hidden);
+		}
+	}
+
+	private static void collect(List<SettingGroup> groups, java.util.Set<Object> into) {
+		for (SettingGroup group : groups) {
+			into.addAll(group.settings());
+			if (group.toggle() != null) into.add(group.toggle());
+			collect(group.children(), into);
 		}
 	}
 

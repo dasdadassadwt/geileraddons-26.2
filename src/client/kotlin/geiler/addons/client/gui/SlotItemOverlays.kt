@@ -19,7 +19,9 @@ object SlotItemOverlays {
     @JvmStatic
     fun beforeSlots(graphics: GuiGraphicsExtractor, slots: List<Slot>) {
         HotmTreeHelperModule.INSTANCE.drawSlotHighlights(graphics, slots)
+        geiler.addons.client.module.impl.HotfTreeHelperModule.INSTANCE.drawSlotHighlights(graphics, slots)
         geiler.addons.client.module.impl.MiningSolversModule.INSTANCE.drawFossilOverlay(graphics, slots)
+        geiler.addons.client.module.impl.GreenhouseHelperModule.INSTANCE.drawSlotHighlights(graphics, slots)
         val module = ItemRarityBackgroundsModule.INSTANCE
         if (!module.isEnabled()) return
         for (slot in slots) if (slot.isActive) module.drawSlotBackground(graphics, slot, slot.x, slot.y)
@@ -43,5 +45,8 @@ object SlotItemOverlays {
         ItemCooldownsModule.INSTANCE.drawOnItem(graphics, stack, x, y)
         MiningPowderModule.INSTANCE.drawOnItem(graphics, stack, x, y)
         HotmTreeHelperModule.INSTANCE.drawOnItem(graphics, stack, x, y)
+        geiler.addons.client.module.impl.HotfTreeHelperModule.INSTANCE.drawOnItem(graphics, stack, x, y)
+        geiler.addons.client.module.impl.TunerSolverModule.INSTANCE.drawOnItem(graphics, stack, x, y)
+        geiler.addons.client.module.impl.PartyFinderListingsModule.INSTANCE.drawOnItem(graphics, stack, x, y)
     }
 }

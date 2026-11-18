@@ -105,6 +105,11 @@ public final class DungeonOdinAcceptanceChecks {
 			&& unavailable.unknownInputs().contains(DungeonOdinScoreCalculator.Input.DEATHS)
 			&& sidebarOnlyAlerts.update(unavailable, 270, 300, true).isEmpty(),
 			"a final sidebar total alone leaves core inputs unavailable and cannot trigger score alerts");
+		var bloodUnknown = DungeonOdinScoreCalculator.calculate(DungeonFloor.F5, scoreTab, null, false);
+		var bloodPending = DungeonOdinScoreCalculator.calculate(DungeonFloor.F5, scoreTab, false, false);
+		require(bloodUnknown.available() && bloodUnknown.equals(bloodPending)
+			&& !bloodUnknown.unknownInputs().contains(DungeonOdinScoreCalculator.Input.BLOOD_STATUS),
+			"a blood room not yet seen counts as pending blood, so the score shows before blood is done");
 		DungeonOdinScoreCalculator.TabStats paulUnknown = new DungeonOdinScoreCalculator.TabStats(
 			scoreTab.secretsFound(), scoreTab.secretsPercent(), scoreTab.completedRooms(), scoreTab.clearedPercent(),
 			scoreTab.puzzleCount(), scoreTab.completedPuzzles(), scoreTab.observedPuzzleStatusRows(),

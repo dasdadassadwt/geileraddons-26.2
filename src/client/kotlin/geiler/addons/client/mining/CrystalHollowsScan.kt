@@ -78,6 +78,15 @@ object CrystalHollowsScan {
         return true
     }
 
+    /** How many blocks of the column match from the bottom up (for near-miss diagnostics); [Signature.column] size when whole. */
+    @JvmStatic
+    fun prefixDepth(signature: Signature, x: Int, y: Int, z: Int, blocks: BlockLookup): Int {
+        for ((i, want) in signature.column.withIndex()) {
+            if (want != null && blocks.at(x, y + i, z) != want) return i
+        }
+        return signature.column.size
+    }
+
     @JvmStatic
     fun markAt(signature: Signature, x: Int, y: Int, z: Int): IntArray = intArrayOf(x + signature.dx, y + signature.dy, z + signature.dz)
 

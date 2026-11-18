@@ -171,7 +171,7 @@ public final class ChatReplyCommandChecks {
 				"HELP", "COORDS", "ODIN_LINK", "COIN_FLIP", "EIGHT_BALL", "DICE", "PING", "TPS", "FPS",
 				"TIME", "LOBBY", "HOLDING", "PARTY_TRANSFER", "PARTY_WARP", "PARTY_ALLINVITE", "PARTY_BOOP",
 				"PARTY_KICK", "PARTY_PROMOTE", "PARTY_DEMOTE", "PARTY_KICK_OFFLINE", "PARTY_QUEUE_INSTANCE",
-				"PRIVATE_INVITE", "CUSTOM_REPLY")),
+				"PRIVATE_INVITE", "PARTY_DOWNTIME", "PARTY_UNDOWNTIME", "PARTY_REINVITE", "CUSTOM_REPLY")),
 				"reply command enum names and declaration order remain stable");
 			check(!ChatReplyCommandRules.LocalPartyTransfer.class.isRecord()
 				&& !ChatReplyCommandRules.LocalActionRequest.class.isRecord()
@@ -483,11 +483,11 @@ public final class ChatReplyCommandChecks {
 
 		String partyHelp = ChatReplyCommandRules.helpText("!", ChatChannel.PARTY);
 		check(partyHelp.contains("!help/!h") && partyHelp.contains("!coords/!co") && partyHelp.contains("!lobby")
-			&& partyHelp.contains("!pt [username] (Party leader + allowlist)")
-			&& partyHelp.contains("!ptme [username] (Party leader + allowlist)")
-			&& partyHelp.contains("!transfer [username] (Party leader + allowlist)"),
+			&& partyHelp.contains("!pt [username] (Party leader)")
+			&& partyHelp.contains("!ptme [username] (Party leader)")
+			&& partyHelp.contains("!transfer [username] (Party leader)"),
 			"help lists all transfer aliases and describes their leader and allowlist gates");
-		check(ChatReplyCommandRules.helpText("!", ChatChannel.GUILD).contains("!pt [username] (Party leader + allowlist)"),
+		check(ChatReplyCommandRules.helpText("!", ChatChannel.GUILD).contains("!pt [username] (Party leader)"),
 			"the shared help listing advertises Party-only commands consistently in every channel");
 		equals("pc hello", ChatReplyCommandRules.replyCommand(ChatChannel.PARTY, "hello"), "party reply route");
 		equals("gc hello", ChatReplyCommandRules.replyCommand(ChatChannel.GUILD, "hello"), "guild reply route");
@@ -506,8 +506,7 @@ public final class ChatReplyCommandChecks {
 			check(ChatReplyCommandRules.parse("Guild > Alice: !" + command, "!").isPresent(),
 				"supported low-risk Odin chat reply parses: " + command);
 		}
-		for (String excluded : List.of("racism", "reinvite", "reinv", "downtime", "dt",
-			"undowntime", "undt", "invite", "inv")) {
+		for (String excluded : List.of("racism", "invite", "inv")) {
 			check(ChatReplyCommandRules.parse("Party > Alice: !" + excluded, "!").isEmpty(),
 				"unported or unrelated Odin command stays excluded: " + excluded);
 			if (excluded.equals("invite") || excluded.equals("inv")) continue; // private-only presets now exist
@@ -570,7 +569,7 @@ public final class ChatReplyCommandChecks {
 		String help = ChatReplyCommandRules.helpText("!", ChatChannel.PARTY, List.of(custom));
 		check(help.contains("!hello") && help.contains("!tps"), "dynamic help includes active custom entries and TPS");
 		check(ChatReplyCommandRules.helpText("!", ChatChannel.ALL, List.of(custom))
-			.contains("!pt [username] (Party leader + allowlist)")
+			.contains("!pt [username] (Party leader)")
 			&& ChatReplyCommandRules.helpText("!", ChatChannel.ALL, List.of(custom)).contains("!hello"),
 			"local All help includes enabled custom commands and the Party-only built-in action");
 		check(!ChatReplyCommandRules.helpText("!", ChatChannel.PARTY,
@@ -1480,37 +1479,44 @@ public final class ChatReplyCommandChecks {
 		check(ChatReplyCommandRules.partyActionCommand(kickOffline, party, true, "Self")
 			.equals(Optional.of("party kickoffline")), "offline kick is resolved as a fixed leader command");
 		var queue = ChatReplyCommandRules.parse("Party > Alice: !m7", "!").orElseThrow();
-		check(ChatReplyCommandRules.partyActionCommand(queue, party, true, "Self").equals(Optional.of("odin m7")),
-			"dungeon queue actions forward only the recognized Odin command after leader validation");
+		check(ChatReplyCommandRules.partyActionCommand(queue, party, true, "Self").equals(Optional.of("joininstance MASTER_CATACOMBS_FLOOR_SEVEN")),
+			"dungeon queue actions send the same joininstance command as the built-in aliases after leader validation");
 		check(ChatReplyCommandRules.partyActionCommand(
 			new ChatReplyCommandRules.Request(ChatChannel.PARTY, "Alice",
 				ChatReplyCommandRules.Command.PARTY_QUEUE_INSTANCE, "bogus", null), party, true, "Self").isEmpty(),
 			"queue action execution validates its command code independently of chat parsing");
 	}
 
-	/** The incoming party path trusts the `Party >` prefix: no fresh roster, membership or known leader is required. */
+	/** The incoming party path trusts the `Party >` prefix: no fresh roster or membership is required, but leader-only actions need the local player to be the known leader. */
 	private static void incomingPartyActionsTrustThePartyPrefix() {
 		PartySnapshot none = new PartySnapshot(List.of(), null, false, 0L);
+		PartySnapshot selfLeads = new PartySnapshot(List.of(new PartyMember("Self", null, DungeonClass.ARCHER)), "Self", true, 5L);
 		var warp = ChatReplyCommandRules.parse("Party > Alice: !warp", "!").orElseThrow();
-		check(ChatReplyCommandRules.incomingPartyActionCommand(warp, none, "Self").equals(Optional.of("party warp")),
-			"warp runs without any party list when the leader is unknown");
+		check(ChatReplyCommandRules.incomingPartyActionCommand(warp, selfLeads, "Self").equals(Optional.of("party warp")),
+			"warp runs without a fresh roster when the local player is the known leader");
+		check(ChatReplyCommandRules.incomingPartyActionCommand(warp, none, "Self").isEmpty()
+			&& ChatReplyCommandRules.incomingPartyActionCommand(warp, null, "Self").isEmpty(),
+			"leader-only actions do nothing while the leader is unknown (Odin does the same)");
 		var allinv = ChatReplyCommandRules.parse("Party > Alice: !allinv", "!").orElseThrow();
-		check(ChatReplyCommandRules.incomingPartyActionCommand(allinv, null, "Self")
-			.equals(Optional.of("party settings allinvite")), "allinvite runs without a party snapshot");
+		check(ChatReplyCommandRules.incomingPartyActionCommand(allinv, selfLeads, "Self")
+			.equals(Optional.of("party settings allinvite")), "allinvite runs for the known leader");
 		var queue = ChatReplyCommandRules.parse("Party > Alice: !f7", "!").orElseThrow();
-		check(ChatReplyCommandRules.incomingPartyActionCommand(queue, none, "Self").equals(Optional.of("odin f7")),
-			"dungeon queue runs without a party list");
+		check(ChatReplyCommandRules.incomingPartyActionCommand(queue, selfLeads, "Self")
+			.equals(Optional.of("joininstance CATACOMBS_FLOOR_SEVEN")), "dungeon queue sends joininstance for the known leader");
+		check(ChatReplyCommandRules.incomingPartyActionCommand(
+			ChatReplyCommandRules.parse("Party > Alice: !t5", "!").orElseThrow(), selfLeads, "Self")
+			.equals(Optional.of("joininstance KUUDRA_INFERNAL")), "Kuudra tiers use the Kuudra joininstance name");
 		var kick = ChatReplyCommandRules.parse("Party > Alice: !kick Bob", "!").orElseThrow();
-		check(ChatReplyCommandRules.incomingPartyActionCommand(kick, none, "Self").equals(Optional.of("party kick Bob")),
-			"kick uses the typed username when no roster is known");
+		check(ChatReplyCommandRules.incomingPartyActionCommand(kick, selfLeads, "Self").equals(Optional.of("party kick Bob")),
+			"kick uses the typed username when the roster does not know the target");
 		var kickSender = ChatReplyCommandRules.parse("Party > Alice: !kick", "!").orElseThrow();
-		check(ChatReplyCommandRules.incomingPartyActionCommand(kickSender, none, "Self").equals(Optional.of("party kick Alice")),
+		check(ChatReplyCommandRules.incomingPartyActionCommand(kickSender, selfLeads, "Self").equals(Optional.of("party kick Alice")),
 			"a targetless kick uses the sender");
 		var promoteSelf = ChatReplyCommandRules.parse("Party > Alice: !promote Self", "!").orElseThrow();
-		check(ChatReplyCommandRules.incomingPartyActionCommand(promoteSelf, none, "Self").isEmpty(),
+		check(ChatReplyCommandRules.incomingPartyActionCommand(promoteSelf, selfLeads, "Self").isEmpty(),
 			"the local player is never a target");
 		var transfer = ChatReplyCommandRules.parse("Party > Alice: !pt", "!").orElseThrow();
-		check(ChatReplyCommandRules.incomingPartyActionCommand(transfer, none, "Self").equals(Optional.of("party transfer Alice")),
+		check(ChatReplyCommandRules.incomingPartyActionCommand(transfer, selfLeads, "Self").equals(Optional.of("party transfer Alice")),
 			"a targetless transfer hands the party to the sender");
 		PartySnapshot otherLeader = new PartySnapshot(List.of(
 			new PartyMember("Self", null, DungeonClass.ARCHER),

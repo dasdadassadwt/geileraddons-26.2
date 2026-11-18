@@ -36,6 +36,8 @@ class PingTracker {
 
 /** HUD text rules of the dragon stack aimer. */
 object DragonAimerLogic {
+    const val MAX_REMAINING_TICKS = 120
+
     /** Green when far from the run window, red when it is close; [max] is the full range. */
     @JvmStatic
     fun colorForNumber(num: Double, max: Double): String = when {
@@ -51,7 +53,8 @@ object DragonAimerLogic {
      */
     @JvmStatic
     fun hudText(remainingTicks: Int, flightTicks: Double, pingMillis: Double, offsetMillis: Int): String? {
-        if (remainingTicks <= 0) return null
+        // A dragon spawns 100 ticks after its burst; more means the tick clock restarted under a stored spawn tick.
+        if (remainingTicks <= 0 || remainingTicks > MAX_REMAINING_TICKS) return null
         val ttl = ((remainingTicks - flightTicks) * 50 - pingMillis).toInt() + offsetMillis
         if (ttl < -1000) return null
         if (ttl < 0) return "§bNOW"

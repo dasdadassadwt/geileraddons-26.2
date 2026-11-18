@@ -9,6 +9,7 @@ import geiler.addons.client.gui.InventoryButtonPickerScreen
 import geiler.addons.client.gui.InventoryButtonTextScreen
 import geiler.addons.client.gui.ScratchMacroEditorScreen
 import geiler.addons.client.hud.MacroTitleOverlay
+import geiler.addons.client.macros.rotation.LookControl
 import geiler.addons.client.location.HypixelModApi
 import geiler.addons.client.location.Island
 import geiler.addons.client.module.Category
@@ -84,6 +85,10 @@ object MacroRunner {
     private var lastStatusTick = Long.MIN_VALUE
     private const val MAX_ACTIVE_RUNS = 64
     private const val MAX_CALL_DEPTH = 16
+    /** A Set View step ends once the view is this close (degrees) to the wanted angles. */
+    private const val VIEW_AIMED_DEGREES = 0.5
+    /** One shared control: a LookControl registers with the frame pump for the life of the game. */
+    private val viewLook by lazy { LookControl() }
 
     private enum class ConditionResult {
         TRUE, FALSE, UNKNOWN;
@@ -292,8 +297,8 @@ object MacroRunner {
                 continue
             }
             val currentIsland = HypixelModApi.currentIsland()
-            if (!run.macro.allowsIsland(currentIsland) &&
-                !(run.waitingForWorldSwitch() && currentIsland == Island.NONE)) {
+            if (MacroFlowRules.runEndsOnIsland(run.macro.allowsIsland(currentIsland), run.crossedWorld(),
+                    run.waitingForWorldSwitch(), currentIsland)) {
                 finishRun(run, "context no longer allowed", false)
                 continue
             }
@@ -868,6 +873,10 @@ object MacroRunner {
                 if (!value.available) return ConditionResult.UNKNOWN
                 return compareHypixel(condition, value.value)
             }
+            is MacroCondition.Player -> {
+                val matched = PlayerConditionData.evaluate(condition, minecraft) ?: return ConditionResult.UNKNOWN
+                return ConditionResult.of(matched)
+            }
             is MacroCondition.All -> {
                 var unknown = false
                 for (child in condition.children()) {
@@ -1005,6 +1014,9 @@ object MacroRunner {
         private var heldMouseUntilNanos = 0L
         private var inputBlockUntilNanos = 0L
         private var indefiniteInputBlock = false
+        private var viewUntilNanos = 0L
+        private var viewYaw = 0.0f
+        private var viewPitch = 0.0f
         private var pausedAtUnknown: MacroStep.Unknown? = null
         private var pausedFrame: Frame? = null
         private var pausedReason = ""
@@ -1013,6 +1025,7 @@ object MacroRunner {
         private var worldSwitchFrame: Frame? = null
         private var worldSwitchTarget: Island? = null
         private var levelChanged = false
+        private var levelChangedNanos = 0L
         private var structuralYieldLogged = false
         private val notices: MutableSet<String> = HashSet()
 
@@ -1022,9 +1035,15 @@ object MacroRunner {
             nextActionNanos = System.nanoTime()
         }
 
+        private var crossedWorld = false
+
+        fun crossedWorld(): Boolean = crossedWorld
+
         fun markLevelChanged() {
             releaseAllInputs()
+            crossedWorld = true
             levelChanged = true
+            levelChangedNanos = System.nanoTime()
         }
 
         fun isSyntheticKeyDown(keyCode: Int, nowNanos: Long): Boolean =
@@ -1149,11 +1168,22 @@ object MacroRunner {
 
         fun tick(minecraft: Minecraft) {
             if (isPaused()) return
-            if (levelChanged) {
-                if (worldSwitchFrame == null) {
-                    abort("world changed without a World Switch node")
-                    return
+            if (levelChanged && worldSwitchFrame == null) {
+                val waited = System.nanoTime() - levelChangedNanos
+                when (MacroFlowRules.levelChangeWithoutSwitch(ModConfig.hypixelModApi(), macro.islandRestricted(),
+                        HypixelModApi.currentIsland(), waited)) {
+                    MacroFlowRules.LevelChange.WAIT -> return
+                    MacroFlowRules.LevelChange.ABORT -> {
+                        abort("world changed and the island was not reported within 15 seconds")
+                        return
+                    }
+                    MacroFlowRules.LevelChange.RESUME -> {
+                        log(macro, "LEVEL_CHANGED resumed island=${HypixelModApi.currentIsland().label()} waitedMs=${waited / 1_000_000L}")
+                        levelChanged = false
+                    }
                 }
+            }
+            if (levelChanged) {
                 val current = HypixelModApi.currentIsland()
                 if (current == Island.NONE) {
                     waitIndefinitely(minecraft, "world switch to ${worldSwitchTarget!!.label()}")
@@ -1175,6 +1205,15 @@ object MacroRunner {
             }
             val now = System.nanoTime()
             if (inputBlockUntilNanos > 0 && now >= inputBlockUntilNanos) releaseInputBlock()
+            if (viewUntilNanos > 0) {
+                val player = minecraft.player
+                if (player != null && now < viewUntilNanos && viewLook.residualDegrees(player) > VIEW_AIMED_DEGREES) {
+                    viewLook.lookAlong(viewYaw, viewPitch, false)
+                    return
+                }
+                releaseView()
+                nextActionNanos = now
+            }
             if (heldMouseInput != null) {
                 if (MacroRuntimeRules.shouldReleaseHeldMouse(minecraft.gui.screen() != null, now, heldMouseUntilNanos)) {
                     releaseHeldMouse()
@@ -1541,6 +1580,14 @@ object MacroRunner {
                 beginTimedInputBlock(now + step.durationMillis() * 1_000_000L)
                 return true
             }
+            if (step is MacroStep.SetView) {
+                viewYaw = step.yaw()
+                viewPitch = step.pitch()
+                viewUntilNanos = now + step.maxMillis() * 1_000_000L
+                viewLook.lookAlong(viewYaw, viewPitch, false)
+                log(macro, "SET_VIEW yaw=$viewYaw pitch=$viewPitch maxMs=${step.maxMillis()}")
+                return true
+            }
             if (step is MacroStep.StartBlockPlayerInput) {
                 beginIndefiniteInputBlock()
                 return true
@@ -1785,10 +1832,16 @@ object MacroRunner {
             if (key != null) MacroRunner.releaseHeldKey(this, key)
         }
 
+        private fun releaseView() {
+            if (viewUntilNanos > 0) viewLook.release()
+            viewUntilNanos = 0
+        }
+
         fun releaseAllInputs() {
             releaseHeldKey()
             releaseHeldMouse()
             releaseInputBlock()
+            releaseView()
         }
 
         private fun abort(reason: String) = finishRun(this, reason, false)

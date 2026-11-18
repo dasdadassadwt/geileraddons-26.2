@@ -141,10 +141,13 @@ class HotspotRadarModule private constructor(settings: Settings) : Module(
             return
         }
         val camera = client.gameRenderer.mainCamera()
-        ProjectedLabelRenderer.draw(graphics, camera, client.font, spot.add(0.0, 1.7, 0.0), "§d§lHOTSPOT", WHITE, 1.7f)
-        ProjectedLabelRenderer.draw(
-            graphics, camera, client.font, spot.add(0.0, 1.6 - distance / (12 * 1.7), 0.0),
-            HotspotRules.distanceText(distance), WHITE, 1.0f,
+        // Both lines are placed exactly from one projected point (no collision shuffling, no distance-dependent height),
+        // so the number cannot jump while the player moves; the metre count only changes when its text does.
+        val anchor = spot.add(0.0, 1.7, 0.0)
+        ProjectedLabelRenderer.drawFloatingText(graphics, camera, client.font, anchor, "§d§lHOTSPOT", WHITE, 1.7f)
+        ProjectedLabelRenderer.drawFloatingText(
+            graphics, camera, client.font, anchor, HotspotRules.distanceText(distance), WHITE, 1.0f,
+            DISTANCE_GAP_PIXELS,
         )
     }
 
@@ -169,6 +172,7 @@ class HotspotRadarModule private constructor(settings: Settings) : Module(
         private const val LINE_WIDTH = 3.0f
         private const val LINE_START = 0.5
         private const val MAX_GUESS_DISTANCE = 1000.0
+        private const val DISTANCE_GAP_PIXELS = 14f
         private const val RADAR_RECLICK_NANOS = 200_000_000L
 
         @Volatile

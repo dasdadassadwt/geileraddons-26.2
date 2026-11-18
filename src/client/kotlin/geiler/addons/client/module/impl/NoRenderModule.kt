@@ -40,7 +40,7 @@ class NoRenderModule private constructor(private val settings: Settings) : Modul
         DEAD_POOF("deadPoof"), LIGHTNING("lightning"), FALLING_BLOCKS("fallingBlocks"), ENTITY_FIRE("entityFire"),
         MAGE_BEAM("mageBeam"), POWDER_COATING("powderCoating"), GUIDED_SHEEP("guidedSheep"),
         BONE_PLATING("bonePlating"), TREE_BITS("treeBits"), NAUSEA("nausea"), EXP_ORBS("expOrbs"),
-        STUCK_ARROWS("stuckArrows"), BLINDNESS("blindness"),
+        STUCK_ARROWS("stuckArrows"), BLINDNESS("blindness"), DARKNESS("darkness"),
     }
 
     private val hits = LongArray(Flag.values().size)
@@ -64,6 +64,12 @@ class NoRenderModule private constructor(private val settings: Settings) : Modul
     fun tick() {
         if (!isEnabled()) return
         diagnostics.advance()
+        // Darkness (the Warden's pulse) is a client-side effect: dropping it locally sends nothing to the server.
+        val player = net.minecraft.client.Minecraft.getInstance().player
+        if (player != null && on(Flag.DARKNESS) && player.hasEffect(net.minecraft.world.effect.MobEffects.DARKNESS)) {
+            player.removeEffect(net.minecraft.world.effect.MobEffects.DARKNESS)
+            hit(Flag.DARKNESS)
+        }
         diagnostics.status { "enabled=true flags=[${enabledFlags()}] hits=[${hitSummary()}] suppressedEvents=$it" }
     }
 

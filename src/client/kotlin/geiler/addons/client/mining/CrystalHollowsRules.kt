@@ -19,6 +19,8 @@ object CrystalHollowsRules {
         LOST_PRECURSOR_CITY("Lost Precursor City", 0xFF5555FF.toInt(), "lost", "precursor", "city"),
         KHAZAD_DUM("Khazad-dûm", 0xFFFF5555.toInt(), "khazad", "dum"),
         FAIRY_GROTTO("Fairy Grotto", 0xFFFF55FF.toInt(), "fairy", "grotto"),
+        KING("King Yolkar", 0xFFFFD700.toInt(), "king", "yolkar"),
+        ODAWA("Odawa", 0xFF55AA55.toInt(), "odawa"),
         DRAGONS_LAIR("Dragon's Lair", 0xFF55FF55.toInt(), "dragon", "dragons", "lair"),
         ;
 
@@ -65,6 +67,22 @@ object CrystalHollowsRules {
         }
         return null
     }
+
+    /** The structure an NPC name tag marks (King Yolkar, Odawa), colour codes ignored, or null for any other name. */
+    @JvmStatic
+    fun npcStructure(name: String?): Structure? {
+        if (name == null) return null
+        val plain = normalise(name.replace(Regex("§."), "")).trim()
+        return when (plain) {
+            "king yolkar" -> Structure.KING
+            "odawa" -> Structure.ODAWA
+            else -> null
+        }
+    }
+
+    /** The map pixel (0 until [size]) of a world x or z coordinate; points outside the Hollows sit on the edge. */
+    @JvmStatic
+    fun mapPixel(world: Int, size: Int): Int = ((world - 202) * size / 622).coerceIn(0, size - 1)
 
     @JvmStatic
     fun sameSpot(ax: Int, ay: Int, az: Int, bx: Int, by: Int, bz: Int): Boolean {

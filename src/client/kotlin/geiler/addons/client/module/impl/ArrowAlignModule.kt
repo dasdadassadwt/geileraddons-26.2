@@ -127,9 +127,12 @@ class ArrowAlignModule private constructor() : Module(
                 needed < 5 -> 0xFFFFAA00.toInt()
                 else -> 0xFFFF5555.toInt()
             }
+            val camera = client.gameRenderer.mainCamera()
+            val world = Vec3(pos[0] + 0.2, pos[1] + 0.6, pos[2] + 0.5)
             ProjectedLabelRenderer.drawFloatingText(
-                graphics, client.gameRenderer.mainCamera(), client.font,
-                Vec3(pos[0] + 0.2, pos[1] + 0.6, pos[2] + 0.5), needed.toString(), color, 1.0f,
+                graphics, camera, client.font, world, needed.toString(), color,
+                ArrowAlignRules.labelScale(camera.position().distanceTo(world)),
+                minScale = ArrowAlignRules.LABEL_MIN_SCALE, maxScale = ArrowAlignRules.LABEL_MAX_SCALE,
             )
         }
     }

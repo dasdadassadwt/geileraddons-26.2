@@ -36,7 +36,15 @@ public abstract class AbstractContainerScreenMixin {
 
 	@Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
 	private void geileraddons$handleInventoryButtonKeys(KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
+		if (geiler.addons.client.module.impl.ChestRollModule.INSTANCE.handleKey((AbstractContainerScreen<?>) (Object) this, event)) {
+			cir.setReturnValue(true);
+			return;
+		}
 		if (geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.handleKey((AbstractContainerScreen<?>) (Object) this, event)) {
+			cir.setReturnValue(true);
+			return;
+		}
+		if (geiler.addons.client.module.impl.StorageOverlayModule.INSTANCE.handleKey((AbstractContainerScreen<?>) (Object) this, event)) {
 			cir.setReturnValue(true);
 			return;
 		}
@@ -58,6 +66,7 @@ public abstract class AbstractContainerScreenMixin {
 	@Inject(method = "init", at = @At("HEAD"))
 	private void geileraddons$attachExperimentListener(CallbackInfo ci) {
 		geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.onScreenOpened((AbstractContainerScreen<?>) (Object) this);
+		geiler.addons.client.module.impl.StorageOverlayModule.INSTANCE.onScreenOpened((AbstractContainerScreen<?>) (Object) this);
 		ExperimentSolverModule.INSTANCE.onScreenOpened((AbstractContainerScreen<?>) (Object) this);
 	}
 	/**
@@ -69,7 +78,15 @@ public abstract class AbstractContainerScreenMixin {
 	private void geileraddons$renderExperimentSurface(GuiGraphicsExtractor graphics, int mouseX,
 		int mouseY, float delta, CallbackInfo ci) {
 		AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) (Object) this;
+		if (geiler.addons.client.module.impl.ChestRollModule.INSTANCE.renderRoll(screen, graphics, mouseX, mouseY)) {
+			ci.cancel();
+			return;
+		}
 		if (geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.renderCustomScreen(screen, graphics, mouseX, mouseY)) {
+			ci.cancel();
+			return;
+		}
+		if (geiler.addons.client.module.impl.StorageOverlayModule.INSTANCE.renderCustomScreen(screen, graphics, mouseX, mouseY)) {
 			ci.cancel();
 			return;
 		}
@@ -107,7 +124,17 @@ public abstract class AbstractContainerScreenMixin {
 	private void geileraddons$clickExperimentSurface(MouseButtonEvent event, boolean doubleClick,
 		CallbackInfoReturnable<Boolean> cir) {
 		AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) (Object) this;
+		if (geiler.addons.client.module.impl.ChestRollModule.INSTANCE.handleMouseClick(screen)) {
+			cir.setReturnValue(true);
+			return;
+		}
 		if (geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.handleMouseClick(screen, event)) {
+			cir.setReturnValue(true);
+			return;
+		}
+		if (geiler.addons.client.module.impl.StorageOverlayModule.INSTANCE.handleMouseClick(screen, event,
+			(slot, slotId, button, input) -> ((AbstractContainerScreenAccess) (Object) screen)
+				.geileraddons$invokeSlotClicked(slot, slotId, button, input))) {
 			cir.setReturnValue(true);
 			return;
 		}
@@ -168,6 +195,10 @@ public abstract class AbstractContainerScreenMixin {
 	private void geileraddons$handleInventoryAndDungeonSlotClick(Slot slot, int slotId, int button,
 		ContainerInput input, CallbackInfo ci) {
 		AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) (Object) this;
+		if (geiler.addons.client.module.impl.ChestRollModule.INSTANCE.onSlotClicked(screen, slot, slotId, button, input)) {
+			ci.cancel();
+			return;
+		}
 		if (geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.onSlotClicked(screen, slotId, button)) {
 			ci.cancel();
 			return;
@@ -198,7 +229,9 @@ public abstract class AbstractContainerScreenMixin {
 
 	@Inject(method = "removed", at = @At("HEAD"))
 	private void geileraddons$resetExperimentSurface(CallbackInfo ci) {
+		geiler.addons.client.module.impl.ChestRollModule.INSTANCE.onScreenClosed((AbstractContainerScreen<?>) (Object) this);
 		geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.onScreenClosed((AbstractContainerScreen<?>) (Object) this);
+		geiler.addons.client.module.impl.StorageOverlayModule.INSTANCE.onScreenClosed((AbstractContainerScreen<?>) (Object) this);
 		ExperimentSolverModule.INSTANCE.onScreenClosed();
 	}
 }

@@ -22,6 +22,18 @@ object ArrowAlignRules {
         intArrayOf(-1, -1, -1, -1, -1, -1, 1, -1, 1, -1, 7, 1, 7, 1, 3, 1, -1, 1, -1, 1, -1, -1, -1, -1, -1),
     )
 
+    const val LABEL_MIN_SCALE = 0.25f
+    const val LABEL_MAX_SCALE = 4.0f
+    private const val LABEL_REFERENCE_DISTANCE = 6.0
+
+    /** Text scale that keeps a click label the same size in the world: 1.0 at 6 blocks, inverse to distance. */
+    @JvmStatic
+    fun labelScale(distance: Double): Float {
+        if (distance.isNaN()) return 1.0f
+        if (distance <= 0.0) return LABEL_MAX_SCALE
+        return (LABEL_REFERENCE_DISTANCE / distance).toFloat().coerceIn(LABEL_MIN_SCALE, LABEL_MAX_SCALE)
+    }
+
     @JvmStatic
     fun neededClicks(current: Int, target: Int): Int = (8 - current + target) % 8
 

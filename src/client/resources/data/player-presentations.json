@@ -21,9 +21,15 @@
     },
     {
       "name": "Schmondooo",
-      "sizeX": 1.2,
-      "sizeY": 1.2,
-      "sizeZ": 1.2
+      "sizeX": 2.0,
+      "sizeY": 1.5,
+      "sizeZ": 1.0
+    },
+    {
+      "name": "JstLnrt2",
+      "sizeX": 4.0,
+      "sizeY": 1.0,
+      "sizeZ": 4.0
     }
   ]
 }

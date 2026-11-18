@@ -1,5 +1,6 @@
 package geiler.addons.client.module.impl
 
+import geiler.addons.client.location.Island
 import geiler.addons.client.hud.HudElement
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.Module
@@ -46,6 +47,8 @@ abstract class DungeonTextHudModule(
             text?.let { HudLine(it, if (index == 0) DEFAULT_TITLE_COLOR else DEFAULT_BODY_COLOR) }
         }
     }
+
+    override fun hudIslands(): Set<Island> = setOf(Island.CATACOMBS)
 
     final override fun id(): String = hudId
 

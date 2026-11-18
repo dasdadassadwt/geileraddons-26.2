@@ -1,5 +1,6 @@
 package geiler.addons.client.module.impl
 
+import geiler.addons.client.chat.PartyDowntime
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.Module
@@ -50,7 +51,9 @@ class InstanceRequeueModule private constructor(
     fun onChatMessage(content: String) {
         if (!isEnabled()) return
         when (logic.onChat(content, announceKick.value(), disableOnLeave.value())) {
-            InstanceRequeueLogic.Action.SCHEDULE_REQUEUE -> {
+            InstanceRequeueLogic.Action.SCHEDULE_REQUEUE -> if (PartyDowntime.holdsRequeue()) {
+                diagnostics.event("RUN_END held by a party downtime reminder")
+            } else {
                 pendingTicks = InstanceRequeueLogic.delayTicks(delay.intValue())
                 diagnostics.event("RUN_END scheduled delayTicks=$pendingTicks")
             }

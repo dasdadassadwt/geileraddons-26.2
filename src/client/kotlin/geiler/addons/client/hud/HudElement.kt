@@ -1,5 +1,7 @@
 package geiler.addons.client.hud
 
+import geiler.addons.client.location.Island
+import geiler.addons.client.module.Module
 import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphicsExtractor
 
@@ -10,6 +12,15 @@ interface HudElement {
 
     /** Shown in the Move Elements screen, where the element may not be drawing anything yet. */
     fun displayName(): String
+
+    /** Module whose page configures this element; its enabled state gates the element in Move Elements. */
+    fun module(): Module? = this as? Module
+
+    /** Islands this element belongs on; empty means anywhere. The live HUD hides it elsewhere (never on an unknown island). */
+    fun hudIslands(): Set<Island> = emptySet()
+
+    /** A value that changes while the element is in use; the live HUD hides it after 30 s without a change. Null never expires. */
+    fun activitySignature(): Any? = null
 
     fun width(font: Font?): Int
 

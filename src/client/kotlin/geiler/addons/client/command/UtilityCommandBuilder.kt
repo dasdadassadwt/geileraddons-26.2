@@ -6,12 +6,14 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.impl.GeneralModule
+import geiler.addons.client.module.impl.LeverAimAssistModule
 import geiler.addons.client.module.impl.UtilityTimerModule
 import geiler.addons.client.utility.CarriedSupplyCounter
 import geiler.addons.client.utility.CarriedSupplyPlanner
 import geiler.addons.client.utility.TimerDurationParser
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
 
@@ -28,6 +30,19 @@ object UtilityCommandBuilder {
     fun appendTo(root: LiteralArgumentBuilder<FabricClientCommandSource>) {
         appendSupplyCommand(root, "ep", CarriedSupplyPlanner.Supply.ENDER_PEARL)
         appendSupplyCommand(root, "sb", CarriedSupplyPlanner.Supply.SUPERBOOM_TNT)
+        root.then(
+            ClientCommands.literal("testlever")
+                .executes { testLever(true) }
+                .then(ClientCommands.literal("clear").executes { testLever(false) }),
+        )
+        root.then(
+            ClientCommands.literal("chat")
+                .executes { chatUsage() }
+                .then(
+                    ClientCommands.argument("text", StringArgumentType.greedyString())
+                        .executes { context -> fakeChat(StringArgumentType.getString(context, "text")) },
+                ),
+        )
         root.then(
             ClientCommands.literal("timer")
                 .executes { getTimer() }
@@ -46,6 +61,39 @@ object UtilityCommandBuilder {
                 .then(ClientCommands.literal("resume").executes { resumeTimer() })
                 .then(ClientCommands.literal("reset").executes { resetTimer() }),
         )
+    }
+
+    private fun testLever(place: Boolean): Int {
+        if (!place) {
+            LeverAimAssistModule.INSTANCE.clearTestLevers()
+            supplyMessage("Test levers removed.")
+            return 1
+        }
+        val placed = LeverAimAssistModule.INSTANCE.placeTestLevers()
+        when {
+            placed < 0 -> supplyMessage("Join a world first.")
+            LeverAimAssistModule.INSTANCE.isEnabled() ->
+                supplyMessage("Placed $placed test levers ahead of you. /ga testlever clear removes them.")
+            else -> supplyMessage("Placed $placed test levers, but Lever Aim Assist is off. Enable it to try it.")
+        }
+        return 1
+    }
+
+    private fun chatUsage(): Int {
+        supplyMessage("Usage: /ga chat <text>. & colour codes work. The line goes through the same path as a server message.")
+        return 1
+    }
+
+    /** Debug aid: shows [text] as a game chat line and runs every chat listener on it, as if the server had sent it. */
+    private fun fakeChat(text: String): Int {
+        val mc = Minecraft.getInstance()
+        val message = Component.literal(text.replace('&', '§'))
+        val shown = ClientReceiveMessageEvents.ALLOW_GAME.invoker().allowReceiveGameMessage(message, false)
+        if (shown) mc.gui.hud.getChat().addClientSystemMessage(message)
+        ClientReceiveMessageEvents.GAME.invoker().onReceiveGameMessage(message, false)
+        GeilerAddonsLog.setModuleDiagnosticsEnabled(Category.DEV, "Chat Debug", true)
+        GeilerAddonsLog.write(Category.DEV, "Chat Debug", mc.level?.gameTime ?: 0L, "CHAT_LINE shown=$shown length=${text.length}")
+        return 1
     }
 
     private fun appendSupplyCommand(

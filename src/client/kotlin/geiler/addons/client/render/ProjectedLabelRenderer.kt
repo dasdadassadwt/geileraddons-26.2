@@ -83,6 +83,9 @@ object ProjectedLabelRenderer {
         text: String?,
         color: Int,
         requestedScale: Float,
+        pixelOffsetY: Float = 0f,
+        minScale: Float = 0.55f,
+        maxScale: Float = 2.0f,
     ): Boolean {
         if (text.isNullOrBlank() || camera == null || font == null || world == null) return false
         val minecraft = Minecraft.getInstance()
@@ -92,7 +95,7 @@ object ProjectedLabelRenderer {
         val projected = projection.get()
         if (!WorldToScreen.projectInto(camera, world, projected)) return false
 
-        val scale = if (requestedScale.isFinite()) Math.max(0.55f, Math.min(2.0f, requestedScale)) else 1.0f
+        val scale = if (requestedScale.isFinite()) Math.max(minScale, Math.min(maxScale, requestedScale)) else 1.0f
         val textWidth = font.width(text) * scale
         val textHeight = font.lineHeight * scale
         if (projected[0] + textWidth / 2 < 0 || projected[0] - textWidth / 2 > width ||
@@ -100,7 +103,7 @@ object ProjectedLabelRenderer {
         ) return false
 
         graphics.pose().pushMatrix()
-        graphics.pose().translate(projected[0] - textWidth / 2, projected[1] - textHeight / 2)
+        graphics.pose().translate(projected[0] - textWidth / 2, projected[1] - textHeight / 2 + pixelOffsetY)
         graphics.pose().scale(scale, scale)
         graphics.text(font, text, 0, 0, color)
         graphics.pose().popMatrix()

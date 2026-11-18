@@ -37,6 +37,7 @@ public abstract class AbstractContainerMenuMixin {
 		CallbackInfo ci) {
 		geileraddons$notifySolver(-1);
 		geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.onContentsSet((AbstractContainerMenu) (Object) this);
+		geiler.addons.client.module.impl.StorageOverlayModule.INSTANCE.onContentsSet((AbstractContainerMenu) (Object) this);
 	}
 	@org.spongepowered.asm.mixin.Unique
 	private void geileraddons$notifySolver(int updatedSlotId) {

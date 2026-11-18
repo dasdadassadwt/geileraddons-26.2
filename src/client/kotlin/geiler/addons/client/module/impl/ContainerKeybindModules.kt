@@ -6,6 +6,7 @@ import geiler.addons.client.module.ModuleSettingsSpec
 import geiler.addons.client.module.TextSetting
 import geiler.addons.client.utility.PlayerAlerts
 import net.minecraft.client.Minecraft
+import net.minecraft.core.component.DataComponents
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.world.inventory.ContainerInput
 
@@ -89,6 +90,128 @@ class WardrobeKeybindsModule private constructor() : Module(
 
         @JvmField
         val INSTANCE = WardrobeKeybindsModule()
+    }
+}
+
+/** Keys for Next/Previous page, Unequip and nine pets in the Pets menu, after Odin Pet Keybinds. */
+class PetKeybindsModule private constructor() : Module(
+    "Pet Keybinds",
+    "Allows you to use keybinds to navigate and pick pets in the Pets menu.",
+    Category.MISCELLANEOUS,
+    false,
+    *spec.settings.toTypedArray(),
+) {
+    private val nextPage = spec.text("nextPage")
+    private val previousPage = spec.text("previousPage")
+    private val unequip = spec.text("unequip")
+    private val disableUnequip = spec.toggle("disableUnequip")
+    private val closeIfEquipped = spec.toggle("closeIfEquipped")
+    private val petKeys = (1..9).map { spec.text("pet$it") }
+    private var clicks = 0L
+    private var blocked = 0L
+    private val diagnostics = ModuleDiagnostics(Category.MISCELLANEOUS, { name() }, 8, 100L, 300)
+
+    init {
+        group(*spec.groups.toTypedArray())
+    }
+
+    override fun onEnable() {
+        clicks = 0L
+        blocked = 0L
+        diagnostics.enable("disableUnequip=${disableUnequip.value()} closeIfEquipped=${closeIfEquipped.value()}")
+    }
+
+    override fun onDisable() {
+        diagnostics.event("DISABLE clicks=$clicks blocked=$blocked")
+        diagnostics.disable()
+    }
+
+    fun tick() {
+        if (!isEnabled()) return
+        diagnostics.advance()
+        diagnostics.status { "enabled=true clicks=$clicks alreadyEquipped=$blocked suppressedEvents=$it" }
+    }
+
+    /** A key press in a container screen; true means the press was used and must not reach the screen. */
+    fun onKey(screen: AbstractContainerScreen<*>, pressedKeyName: String): Boolean {
+        if (!isEnabled()) return false
+        if (!ContainerKeybindRules.isPetsTitle(screen.title.string)) return false
+        val equipped = ContainerKeybindRules.equippedPetSlot(screen.menu.slots.map { slot ->
+            slot.index to (slot.item.get(DataComponents.LORE)?.lines()?.map { it.string } ?: emptyList())
+        })
+        val outcome = ContainerKeybindRules.pets(
+            screen.title.string, pressedKeyName, key(nextPage), key(previousPage), key(unequip), petKeys.map(::key),
+            equipped, disableUnequip.value(), closeIfEquipped.value(),
+        )
+        if (!outcome.handled) return false
+        outcome.message?.let {
+            blocked++
+            PlayerAlerts.chat(it)
+            diagnostics.event("alreadyEquipped key=$pressedKeyName close=${outcome.close}")
+            if (outcome.close) Minecraft.getInstance().gui.setScreen(null)
+            return true
+        }
+        val clicked = clickSlot(screen, outcome.slot)
+        if (clicked) {
+            clicks++
+            diagnostics.event("click slot=${outcome.slot} key=$pressedKeyName")
+        }
+        return clicked
+    }
+
+    companion object {
+        private val spec = ModuleSettingsSpec.of("Pet Keybinds")
+
+        @JvmField
+        val INSTANCE = PetKeybindsModule()
+    }
+}
+
+/** One key per preset command (pets, storage, wardrobe ...), after Odin Command Keybinds. Works in the world view only. */
+class CommandKeybindsModule private constructor() : Module(
+    "Command Keybinds",
+    "Binds keys to common SkyBlock commands such as /pets, /storage and /stats.",
+    Category.MISCELLANEOUS,
+    false,
+    *spec.settings.toTypedArray(),
+) {
+    private val keys = ContainerKeybindRules.COMMAND_PRESETS.map { spec.text(it.id) }
+    private var sent = 0L
+    private val diagnostics = ModuleDiagnostics(Category.MISCELLANEOUS, { name() }, 8, 100L, 300)
+
+    // No group(): module-settings.json declares no groups for these keys, and an empty list would hide them all.
+
+    override fun onEnable() {
+        sent = 0L
+        diagnostics.enable("presets=${keys.count { it.value().isNotBlank() }} bound")
+    }
+
+    override fun onDisable() {
+        diagnostics.event("DISABLE sent=$sent")
+        diagnostics.disable()
+    }
+
+    fun tick() {
+        if (!isEnabled()) return
+        diagnostics.advance()
+        diagnostics.status { "enabled=true sent=$sent suppressedEvents=$it" }
+    }
+
+    /** A key press with no screen open; true means a preset command was sent and the press is used. */
+    fun onKey(pressedKeyName: String): Boolean {
+        if (!isEnabled()) return false
+        val command = ContainerKeybindRules.commandFor(pressedKeyName, keys.map(::key)) ?: return false
+        PlayerAlerts.command(command)
+        sent++
+        diagnostics.event("COMMAND key=$pressedKeyName command=$command")
+        return true
+    }
+
+    companion object {
+        private val spec = ModuleSettingsSpec.of("Command Keybinds")
+
+        @JvmField
+        val INSTANCE = CommandKeybindsModule()
     }
 }
 

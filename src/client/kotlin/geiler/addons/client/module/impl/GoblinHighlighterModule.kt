@@ -39,6 +39,7 @@ class GoblinHighlighterModule private constructor(settings: Settings) : Module(
     private var marked: List<Marked> = emptyList()
     private val ownLabelIds = HashSet<Int>()
     private val seenLabelIds = HashSet<Int>()
+    private val unresolvedLogged = HashSet<Int>()
     private var spawnMessageNanos = Long.MIN_VALUE / 2
     private var tick = 0L
     private var spawnMessages = 0L
@@ -65,6 +66,7 @@ class GoblinHighlighterModule private constructor(settings: Settings) : Module(
         marked = emptyList()
         ownLabelIds.clear()
         seenLabelIds.clear()
+        unresolvedLogged.clear()
         spawnMessageNanos = Long.MIN_VALUE / 2
     }
 
@@ -109,16 +111,39 @@ class GoblinHighlighterModule private constructor(settings: Settings) : Module(
                 seenLabelIds.add(entity.id)
             }
             if (rare && entity.id !in ownLabelIds) continue
-            val body = Nameplates.resolveBody(level, entity) ?: continue
+            val body = bodyFor(level, entity, mc.player) ?: run {
+                if (unresolvedLogged.add(entity.id)) {
+                    diagnostics.event("BODY_UNRESOLVED label=\"${name.take(40)}\" nearby=${nearbyTypes(level, entity)}")
+                }
+                null
+            } ?: continue
             found.add(Marked(body.id, raid))
         }
         ownLabelIds.retainAll(live)
         seenLabelIds.retainAll(live)
+        unresolvedLogged.retainAll(live)
         marked = found
         diagnostics.statusOnChange {
             "marked=${marked.size} own=${ownLabelIds.size} spawnMessages=$spawnMessages claimed=$claimed"
         }
     }
+
+    /** Goblins are often player-model mobs, so players count as bodies here, except the local player standing beside one. */
+    private fun bodyFor(level: net.minecraft.client.multiplayer.ClientLevel, label: ArmorStand, self: net.minecraft.world.entity.Entity?): net.minecraft.world.entity.Entity? {
+        val nearby = level.getEntities(
+            net.minecraft.world.level.entity.EntityTypeTest.forClass(net.minecraft.world.entity.LivingEntity::class.java),
+            label.boundingBox.inflate(BODY_SEARCH),
+        ) { it !is ArmorStand && it !== self }
+        return Nameplates.resolveBody(label, nearby, true)
+    }
+
+    private fun nearbyTypes(level: net.minecraft.client.multiplayer.ClientLevel, label: ArmorStand): String =
+        level.getEntities(
+            net.minecraft.world.level.entity.EntityTypeTest.forClass(net.minecraft.world.entity.Entity::class.java),
+            label.boundingBox.inflate(BODY_SEARCH),
+        ) { it !== label }.take(6).joinToString(",") {
+            "${it.type}@${"%.1f".format(it.position().distanceTo(label.position()))}"
+        }
 
     fun render(context: LevelRenderContext) {
         if (!isEnabled() || marked.isEmpty()) return
@@ -157,6 +182,7 @@ class GoblinHighlighterModule private constructor(settings: Settings) : Module(
 
     companion object {
         private const val SCAN_TICKS = 5L
+        private const val BODY_SEARCH = 3.0
         private const val CLAIM_WINDOW_NANOS = 10_000_000_000L
         private const val FILL_ALPHA = 0x40000000
         private const val LINE_WIDTH = 3.0f

@@ -16,6 +16,7 @@ import geiler.addons.client.module.TextSetting;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 
 /** Focused compatibility checks for Party Commands identity, settings, and its dynamic library. */
 public final class PartyCommandsModuleChecks {
@@ -55,7 +56,8 @@ public final class PartyCommandsModuleChecks {
             check(List.of("Reply Commands", "Party", "Guild", "Co-op", "Private", "Custom Channels",
                     "Warp (!w)", "All Invite (!allinv)", "Transfer (!pt)", "Dungeon Queue (!f1-!t5)",
                     "Boop (!boop)", "Kick (!kick)", "Kick Offline (!ko)", "Promote (!promote)",
-                    "Demote (!demote)", "Invite (!inv)").equals(
+                    "Demote (!demote)", "Invite (!inv)", "Downtime (!dt)", "Reinvite (!reinvite)",
+                    "Auto Confirm Invite").equals(
                     module.booleanSettings().stream().map(Setting::name).toList())
                 && Arrays.equals(booleans, new BooleanSetting[] {
                     module.chatRepliesEnabled(), module.replyPartyEnabled(), module.replyGuildEnabled(),
@@ -65,11 +67,13 @@ public final class PartyCommandsModuleChecks {
                     PartyCommandsModule.presetToggles().get(4), PartyCommandsModule.presetToggles().get(5),
                     PartyCommandsModule.presetToggles().get(6), PartyCommandsModule.presetToggles().get(7),
                     PartyCommandsModule.presetToggles().get(8), PartyCommandsModule.presetToggles().get(9),
+                    PartyCommandsModule.presetToggles().get(10), PartyCommandsModule.presetToggles().get(11),
+                    module.inviteAutoConfirm(),
                 }),
                 "boolean setting IDs and declaration order remain compatible");
             check(Arrays.stream(booleans).map(BooleanSetting::rawValue).toList()
                     .equals(List.of(true, true, false, false, false, false,
-                        true, true, false, true, true, false, false, false, false, true)),
+                        true, true, false, true, true, false, false, false, false, true, true, false, false)),
                 "reply command and Party switches default on; harmless presets on, transfer/kick/promote/demote off (Odin defaults)");
             check(List.of("Command Prefix").equals(module.textSettings().stream().map(Setting::name).toList())
                 && prefix.value().equals("!") && prefix.maxLength() == 4,
@@ -81,7 +85,7 @@ public final class PartyCommandsModuleChecks {
             List<ModuleAction> actions = module.actions();
             check(actions.stream().map(ModuleAction::name).toList()
                     .equals(List.of("How Replies Work (i)", "Save Settings Edits"))
-                && "Explains triggers, Text Reply, Local Action and {args} in chat.".equals(actions.get(0).description())
+                && "Prints a step-by-step guide to making a command, with the tags you can use.".equals(actions.get(0).description())
                 && "Save changes made to the inline reply controls.".equals(actions.get(1).description()),
                 "reply editor actions retain their labels and descriptions");
 
@@ -96,7 +100,7 @@ public final class PartyCommandsModuleChecks {
                     module.replyPrivateEnabled(), module.replyCustomEnabled())),
                 "static setting groups retain names, order, and setting instances");
             check("Preset Commands".equals(groups.get(2).name())
-                && groups.get(2).settings().equals(List.copyOf(PartyCommandsModule.presetToggles())),
+                && groups.get(2).settings().equals(Stream.concat(PartyCommandsModule.presetToggles().stream(), Stream.of(module.inviteAutoConfirm())).toList()),
                 "built-in party presets are listed as visible per-command toggles before the custom library");
             equals0(List.of("Add Reply", "Blocklist", "Reply Folders"),
                 groups.subList(3, 6).stream().map(SettingGroup::name).toList());

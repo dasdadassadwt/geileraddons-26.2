@@ -1,6 +1,7 @@
 package geiler.addons.client.hud
 
 import geiler.addons.client.gui.MoveUiScreen
+import geiler.addons.client.location.HypixelModApi
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.Module
 import geiler.addons.client.module.impl.VisualModule
@@ -24,6 +25,7 @@ object HudManager {
     private val defaults = LinkedHashMap<String, FloatArray>()
     private val categories = LinkedHashMap<String, Category?>()
     private var registeredCategories: List<Category> = emptyList()
+    private val idleClock = HudExpiry.Clock()
 
     @JvmStatic
     fun register(element: HudElement, defaultX: Float, defaultY: Float) {
@@ -45,6 +47,13 @@ object HudManager {
 
     @JvmStatic
     fun elements(): List<HudElement> = java.util.List.copyOf(elements)
+
+    /** Move Elements hides elements of disabled modules; modules without a toggle are always listed. */
+    @JvmStatic
+    fun editorVisible(element: HudElement): Boolean {
+        val module = element.module() ?: return true
+        return !module.showsToggleControl() || module.isEnabled()
+    }
 
     @JvmStatic
     fun category(element: HudElement): Category? = categories[element.id()]
@@ -164,8 +173,12 @@ object HudManager {
         // Fractions keep normal placements inside the screen, but a user-sized label can still be
         // wider than a tiny viewport. Keep every custom HUD element inside the framebuffer as well.
         graphics.enableScissor(0, 0, width, height)
+        val island = HypixelModApi.currentIsland()
+        val now = System.nanoTime()
         for (element in elements) {
-            if (!element.renderOnHud() || !element.visible()) continue
+            val showing = element.renderOnHud() && element.visible()
+            val idle = idleClock.idle(element.id(), showing, element.activitySignature(), now)
+            if (!showing || idle || !HudExpiry.onIsland(element.hudIslands(), island)) continue
             renderElement(element, graphics, font, x(element, font, width), y(element, font, height), false)
         }
         graphics.disableScissor()

@@ -10,22 +10,28 @@ object TerminalAim {
     class Box(val slot: Int, val x: Int, val y: Int, val size: Int)
 
     /**
-     * The slot a click at ([x], [y]) should press, or null. A click inside a clickable slot wins; otherwise the one
-     * clickable slot within [margin] of the point. Two clickable slots within the margin give null, so a single
-     * click never lands on the wrong one.
+     * The slot a click at ([x], [y]) should press, or null. A click inside a clickable slot wins; otherwise the nearest
+     * clickable slot within [margin] of the point. Slots tied for nearest are chosen between at random ([random]).
      */
     @JvmStatic
-    fun pick(x: Double, y: Double, boxes: List<Box>, clickable: (Int) -> Boolean, margin: Double): Int? {
-        var near: Int? = null
-        var nearCount = 0
+    @JvmOverloads
+    fun pick(
+        x: Double, y: Double, boxes: List<Box>, clickable: (Int) -> Boolean, margin: Double,
+        random: java.util.Random = java.util.concurrent.ThreadLocalRandom.current(),
+    ): Int? {
+        val nearest = ArrayList<Int>()
+        var best = Double.MAX_VALUE
         for (box in boxes) {
             if (!clickable(box.slot)) continue
             if (x >= box.x && y >= box.y && x < box.x + box.size && y < box.y + box.size) return box.slot
-            if (margin <= 0.0 || distance(x, y, box) > margin) continue
-            near = box.slot
-            nearCount++
+            if (margin <= 0.0) continue
+            val d = distance(x, y, box)
+            if (d > margin || d > best) continue
+            if (d < best) nearest.clear()
+            best = d
+            nearest += box.slot
         }
-        return if (nearCount == 1) near else null
+        return if (nearest.isEmpty()) null else nearest[random.nextInt(nearest.size)]
     }
 
     private fun distance(x: Double, y: Double, box: Box): Double {

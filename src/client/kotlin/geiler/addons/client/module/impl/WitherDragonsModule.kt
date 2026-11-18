@@ -1,5 +1,6 @@
 package geiler.addons.client.module.impl
 
+import geiler.addons.client.location.Island
 import com.mojang.blaze3d.vertex.PoseStack
 import geiler.addons.client.dungeon.DungeonContextTracker
 import geiler.addons.client.dungeon.f7.F7Support
@@ -191,6 +192,9 @@ class WitherDragonsModule private constructor(private val s: Settings) : Module(
             diagnostics.event("WORLD_CHANGED dragonsReset=true")
         }
         val now = DungeonOdinAssistModule.INSTANCE.serverTicks()
+        if (lastServerTicks >= 0L && now < lastServerTicks) {
+            diagnostics.event("TICK_CLOCK_RESTARTED was=$lastServerTicks now=$now tick=${tracker.currentTick}")
+        }
         val delta = if (lastServerTicks < 0L || now < lastServerTicks) 0L else minOf(now - lastServerTicks, 40L)
         lastServerTicks = now
         for (i in 0 until delta) tracker.onServerTick()
@@ -316,7 +320,10 @@ class WitherDragonsModule private constructor(private val s: Settings) : Module(
     }
 
     val timerHudElement: HudElement = object : HudElement {
+        override fun hudIslands(): Set<Island> = setOf(Island.CATACOMBS)
+
         override fun id(): String = "wither_dragons_timer"
+        override fun module(): Module = this@WitherDragonsModule
         override fun displayName(): String = "Dragon Timer HUD"
         override fun width(font: Font?): Int = font!!.width(hudLine() ?: SAMPLE)
         override fun height(font: Font?): Int = font!!.lineHeight

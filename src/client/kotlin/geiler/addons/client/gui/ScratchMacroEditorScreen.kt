@@ -23,6 +23,7 @@ import geiler.addons.client.macro.MacroWorldRegion
 import geiler.addons.client.module.ModuleKeybindManager
 import geiler.addons.client.module.impl.MacrosModule
 import geiler.addons.client.module.impl.VisualModule
+import geiler.addons.client.utility.JavaStringSemantics
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphicsExtractor
@@ -82,12 +83,16 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         private const val MAX_CONDITION_DEPTH = 6
         private const val MAX_COMPOUND_TERMS = 12
         private const val BLOCK_HEIGHT = 27
-        private const val BRANCH_HEADER_HEIGHT = 15
-        private const val BRANCH_BOTTOM_PADDING = 4
-        private const val BRANCH_GAP = 5
+        private const val C_MID_BAR = 20
+        private const val C_BOTTOM_BAR = 16
+        private const val C_INNER_MIN = 18
+        private const val C_MIN_WIDTH = 110
+        private const val CHIP_HEIGHT = 17
+        private const val CHIP_TEXT_MAX = 180
+        private const val PILL_TEXT = 0xFF575E75.toInt()
         private const val EDITOR_DIAGNOSTIC_EVENT_LIMIT = 16
         private const val EDITOR_DIAGNOSTIC_MODULE = "Macro Editor"
-        private const val HAT_HEIGHT = 34
+        private const val HAT_HEIGHT = 40
         private const val DRAG_THRESHOLD_SQUARED = 25
 
         private const val COLOR_MOTION = 0xFF4C97FF.toInt()
@@ -123,6 +128,8 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
                 Supplier { MacroStep.Scroll(MacroStep.Scroll.Direction.DOWN, 1) }),
             PaletteBlock("Block player input", "Block controls for a duration", Category.INPUT,
                 Supplier { MacroStep.BlockPlayerInput(500) }),
+            PaletteBlock("Set view angle", "Turn to a yaw and pitch with the Rotation Engine", Category.INPUT,
+                Supplier { MacroStep.SetView(0.0f, 0.0f, 1_000) }),
             PaletteBlock("Start input block", "Block controls until stopped", Category.INPUT,
                 Supplier { MacroStep.StartBlockPlayerInput() }),
             PaletteBlock("Stop input block", "Release a started input block", Category.INPUT,
@@ -160,6 +167,7 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
     private var dropGapIndex = -1
     private val measuredListLayouts = IdentityHashMap<List<MacroStep>, ListLayout>()
     private val measuredStepWidths = IdentityHashMap<MacroStep, IntArray>()
+    private val measuredOwnWidths = IdentityHashMap<MacroStep, Int>()
     private val measuredListWidths = IdentityHashMap<List<MacroStep>, IntArray>()
     private var measuredWidthFont: Font? = null
     private var cachedPaletteLayout: PaletteLayout? = null
@@ -218,6 +226,10 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
     private var suppressedEditorDiagnosticEvents = 0
     private var frameMaxNodeWidth = 0
     private var frameViewportClippedNodes = 0
+    private var frameStackBlocks = 0
+    private var frameCBlocks = 0
+    private var editorMaxStackBlocks = 0
+    private var editorMaxCBlocks = 0
     private var editorMaxNodeWidthWorld = 0
     private var editorMaxNodeWidthPixels = 0
     private var editorLastViewportClippedNodes = 0
@@ -293,7 +305,8 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
             "STATUS action=close,macroId=${macro?.id() ?: -1},maxNodeWidthWorld=$editorMaxNodeWidthWorld," +
                 "maxNodeWidthPx=$editorMaxNodeWidthPixels,canvasViewportWidthPx=$editorLastCanvasViewportWidth," +
                 "canvasZoomPercent=$editorLastCanvasZoomPercent,viewportClippedNodesLast=$editorLastViewportClippedNodes," +
-                "viewportClippedNodesMax=$editorMaxViewportClippedNodes,suppressedEvents=$suppressedEditorDiagnosticEvents")
+                "viewportClippedNodesMax=$editorMaxViewportClippedNodes,stackBlocksMax=$editorMaxStackBlocks," +
+                "cBlocksMax=$editorMaxCBlocks,suppressedEvents=$suppressedEditorDiagnosticEvents")
         if (suppressedEditorDiagnosticEvents > 0) {
             GeilerAddonsLog.write(EDITOR_DIAGNOSTIC_CATEGORY, EDITOR_DIAGNOSTIC_MODULE, tick,
                 "EVENTS_SUPPRESSED count=$suppressedEditorDiagnosticEvents")
@@ -438,6 +451,8 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         val contentHeight = paletteLayout.contentHeight
         paletteScroll = clamp(paletteScroll, 0, maxOf(0, contentHeight - list.h))
         var y = list.y - paletteScroll
+        // The list scrolls under the search box and category chips, so it gets its own clip (scissors nest by intersection).
+        graphics.enableScissor(list.x, list.y, list.x + list.w, list.y + list.h)
         for (row in rows) {
             if (row.header) {
                 if (y + 18 > list.y && y < list.y + list.h) {
@@ -459,14 +474,19 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
             val background = if (hovered) MODULE_PANEL_TOP else MODULE_PANEL_BOTTOM
             roundedRectBordered(graphics, bounds.x, bounds.y, bounds.w, bounds.h, RADIUS_SMALL,
                 background, background, BORDER)
-            roundedRect(graphics, bounds.x + 4, bounds.y + 6, 5, bounds.h - 12, 2, categoryColor(block.category))
-            graphics.text(font, trim(block.label, bounds.w - 18), bounds.x + 14, bounds.y + 5, TEXT_PRIMARY)
-            graphics.text(font, trim(block.hint, bounds.w - 18), bounds.x + 14, bounds.y + 18, TEXT_MUTED)
+            val paletteColor = categoryColor(block.category)
+            val labelW = minOf(bounds.w - 8, font.width(block.label) + 18)
+            paintShape(graphics, ScratchBlockShapes.stack(labelW, 17, false), bounds.x + 4, bounds.y + 3,
+                paletteColor, blockOutline(paletteColor))
+            graphics.text(font, trim(block.label, labelW - 14), bounds.x + 11, bounds.y + 8,
+                macroAccentText(0xFFFFFFFF.toInt()))
+            graphics.text(font, trim(block.hint, bounds.w - 12), bounds.x + 6, bounds.y + 24, TEXT_MUTED)
             registerHit(bounds, list, null, null, null, block, null, null)
             y += 39
         }
         if (rows.isEmpty()) graphics.centeredText(font, trim("No nodes match this search.", list.w - 8),
             list.x + list.w / 2, list.y + 18, TEXT_MUTED)
+        graphics.disableScissor()
     }
 
     private fun renderCanvas(graphics: GuiGraphicsExtractor, pane: GuiRect, mouseX: Int, mouseY: Int) {
@@ -477,6 +497,8 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         val viewport = GuiRect(pane.x + 5, pane.y + 63, pane.w - 10, maxOf(16, pane.h - 70))
         frameMaxNodeWidth = 0
         frameViewportClippedNodes = 0
+        frameStackBlocks = 0
+        frameCBlocks = 0
         renderGrid(graphics, viewport)
         val hitStart = hitTargets.size
         val dropStart = dropSlots.size
@@ -534,6 +556,8 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         editorMaxNodeWidthPixels = maxOf(editorMaxNodeWidthPixels, widthPixels)
         editorLastViewportClippedNodes = frameViewportClippedNodes
         editorMaxViewportClippedNodes = maxOf(editorMaxViewportClippedNodes, frameViewportClippedNodes)
+        editorMaxStackBlocks = maxOf(editorMaxStackBlocks, frameStackBlocks)
+        editorMaxCBlocks = maxOf(editorMaxCBlocks, frameCBlocks)
         editorLastCanvasViewportWidth = viewport.w
         editorLastCanvasZoomPercent = Math.round(zoomPercent)
     }
@@ -638,7 +662,7 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
                 val stackW = requiredStackWidth(scriptHeaderLabel(script), script.steps(), 320)
                 val x = Math.round(script.canvasX())
                 val y = Math.round(script.canvasY())
-                val stackH = HAT_HEIGHT + 3 + measureList(script.steps(), 0)
+                val stackH = HAT_HEIGHT + measureList(script.steps(), 0) + ScratchBlockShapes.NOTCH_DEPTH
                 if (intersectsViewport(x, y, stackW, stackH, viewport)) {
                     visible.add(CanvasScriptPlacement(script, x, y, stackW, zoom))
                 }
@@ -675,7 +699,7 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
                 val note = step is MacroStep.Comment
                 val height = if (note) 128 else measureStep(step, 0)
                 val nodeWidth = if (note) maxOf(width, font.width((step as MacroStep.Comment).text()) + 16)
-                    else maxOf(width, requiredStepWidth(step, 0))
+                    else ownStepWidth(step)
                 if (intersectsViewport(x, y, nodeWidth, height + 12, viewport)) {
                     visible.add(CanvasDetachedPlacement(step, index, x, y, nodeWidth, height, note))
                 }
@@ -702,8 +726,6 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
 
     private fun renderScriptStack(graphics: GuiGraphicsExtractor, viewport: GuiRect, script: MacroScript,
         x: Int, y: Int, stackW: Int, zoom: Float) {
-        val hat = GuiRect(x, y, stackW, HAT_HEIGHT)
-        recordCanvasNodeBounds(hat, viewport)
         val color = when (script.trigger()) {
             MacroScript.Trigger.KEY_PRESS, MacroScript.Trigger.CHAT,
             MacroScript.Trigger.PEST_SPAWNED, MacroScript.Trigger.PEST_COOLDOWN_READY -> categoryColor(Category.ACTIONS)
@@ -711,27 +733,33 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
             else -> categoryColor(Category.FUNCTIONS)
         }
         val selected = script === selectedScript
-        roundedRectBordered(graphics, hat.x, hat.y, hat.w, hat.h, 11,
-            color, color, if (selected) TEXT_PRIMARY else withOpacity(color, 0.72f))
-        graphics.text(font, scriptHeaderLabel(script), hat.x + 10, hat.y + 7, macroAccentText(0xFF1C2028.toInt()))
+        val hat = drawHat(graphics, x, y, scriptHeaderLabel(script), color, if (selected) TEXT_PRIMARY else blockOutline(color))
+        recordCanvasNodeBounds(hat, viewport)
         val state = MacroRunner.scriptState(script.id())
-        val stateRect = GuiRect(hat.x + hat.w - 52, hat.y + 8, 43, 17)
+        val stateRect = GuiRect(hat.x + hat.w - 52, hat.y + ScratchBlockShapes.HAT_DOME + 7, 43, 17)
         val stateColor = stateColor(state)
-        roundedRect(graphics, stateRect.x, stateRect.y, stateRect.w, stateRect.h, 7, withOpacity(stateColor, 0.26f))
+        roundedRect(graphics, stateRect.x, stateRect.y, stateRect.w, stateRect.h, 7, withOpacity(0xFF000000.toInt(), 0.30f))
         graphics.centeredText(font, stateLabel(state), stateRect.x + stateRect.w / 2, stateRect.y + 5, stateColor)
         registerHit(hat, viewport, { selectScript(script) }, null, null, null, script, null)
 
-        val contentY = hat.y + hat.h + 3
-        val blockX = x + 8
-        val blockW = stackW - 16
+        val contentY = hat.y + hat.h
         val steps = script.steps()
         if (steps.isEmpty()) {
-            val socket = GuiRect(blockX, contentY, blockW, 22)
+            val socket = GuiRect(x, contentY + ScratchBlockShapes.NOTCH_DEPTH + 2, 140, 22)
             paintSocket(graphics, socket, color, "drop a block here")
             addDropSlot(socket, steps, 0, false, script, null, 0)
             return
         }
-        drawStepList(graphics, viewport, steps, blockX, contentY, blockW, 0, script, null, 0)
+        drawStepList(graphics, viewport, steps, x, contentY, stackW, 0, script, null, 0)
+    }
+
+    /** Draws an event hat that hugs its label (with room for the state badge) and returns its bounds. */
+    private fun drawHat(graphics: GuiGraphicsExtractor, x: Int, y: Int, label: String, color: Int, outline: Int): GuiRect {
+        val w = maxOf(font.width(label) + 64, ScratchBlockShapes.HAT_DOME_WIDTH + 24)
+        paintShape(graphics, ScratchBlockShapes.hat(w, HAT_HEIGHT), x, y, color, outline)
+        graphics.text(font, label, x + 9, y + (HAT_HEIGHT + ScratchBlockShapes.HAT_DOME - 8) / 2 + 1,
+            macroAccentText(0xFFFFFFFF.toInt()))
+        return GuiRect(x, y, w, HAT_HEIGHT)
     }
 
     private fun renderFunctionStack(graphics: GuiGraphicsExtractor, viewport: GuiRect) {
@@ -745,21 +773,18 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         val x = Math.round(function.canvasX())
         val y = Math.round(function.canvasY())
         val w = requiredStackWidth("define  ${function.name()}", function.steps(), 320)
-        val hat = GuiRect(x, y, w, HAT_HEIGHT)
-        recordCanvasNodeBounds(hat, viewport)
         val functionColor = categoryColor(Category.FUNCTIONS)
-        roundedRectBordered(graphics, hat.x, hat.y, hat.w, hat.h, 11, functionColor,
-            functionColor, GuiTheme.selectionOutline(functionColor))
-        graphics.text(font, "define  ${function.name()}", hat.x + 11, hat.y + 7, macroAccentText(0xFFFFFFFF.toInt()))
+        val hat = drawHat(graphics, x, y, "define  ${function.name()}", functionColor, GuiTheme.selectionOutline(functionColor))
+        recordCanvasNodeBounds(hat, viewport)
         registerHit(hat, viewport, { selectedStep = null; selectedOwner = null }, null, null, null, null, function)
-        val contentY = hat.y + hat.h + 3
+        val contentY = hat.y + hat.h
         if (function.steps().isEmpty()) {
-            val socket = GuiRect(x + 8, contentY, w - 16, 22)
+            val socket = GuiRect(x, contentY + ScratchBlockShapes.NOTCH_DEPTH + 2, 140, 22)
             paintSocket(graphics, socket, functionColor, "drop a block here")
             addDropSlot(socket, function.steps(), 0, true, null, function, 0)
             return
         }
-        drawStepList(graphics, viewport, function.steps(), x + 8, contentY, w - 16, 0, null, function, 0)
+        drawStepList(graphics, viewport, function.steps(), x, contentY, w, 0, null, function, 0)
     }
 
     private fun requiredStackWidth(header: String, steps: List<MacroStep>?, minimumWidth: Int): Int {
@@ -792,46 +817,40 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         return width
     }
 
-    /** Width required to draw a node's inline fields and any expanded child stack without wrapping. */
+    /** Horizontal extent of a node: its own block plus any expanded children, which may stick out past it. */
     private fun requiredStepWidth(step: MacroStep?, nesting: Int): Int {
         if (step == null || nesting > MAX_TREE_DEPTH) return 60
         ensureWidthCacheFont()
         val cachedWidths = measuredStepWidths[step]
         if (cachedWidths != null && cachedWidths[nesting] != 0) return cachedWidths[nesting]
-        val preview = inlinePreview(step)
-        val expansionToggleGutter = if (step is MacroStep.IfElse || step is MacroStep.Repeat ||
-            step is MacroStep.RepeatUntil || step is MacroStep.Switch) 22 else 0
-        var width = if (preview == null) font.width(blockLabel(step)) + 22 + expansionToggleGutter
-        else font.width(preview.prefix) + font.width(preview.value) + font.width(preview.suffix) + 40 + expansionToggleGutter
-        width = maxOf(60, width)
-        if (!ClickGuiState.macroNodeExpanded(step) || nesting >= MAX_TREE_DEPTH) {
-            cacheRequiredStepWidth(step, nesting, width, cachedWidths)
-            return width
+        var width = ownStepWidth(step)
+        val layout = if (nesting < MAX_TREE_DEPTH) cBlockLayout(step, nesting) else null
+        if (layout != null) for (branch in layout.branches) {
+            width = maxOf(width, ScratchBlockShapes.ARM_WIDTH + requiredListWidth(branch, 0, nesting + 1))
         }
-        var children = 0
-        var nestedHeaderWidth = 0
-        val emptyNestedSocketWidth = font.width("drop blocks here") + 16
-        when (step) {
-            is MacroStep.IfElse -> {
-                children = requiredListWidth(step.thenSteps(), emptyNestedSocketWidth, nesting + 1)
-                if (step.elseEnabled()) children = maxOf(children,
-                    requiredListWidth(step.elseSteps(), emptyNestedSocketWidth, nesting + 1))
-            }
-            is MacroStep.Repeat -> children = requiredListWidth(step.steps(), emptyNestedSocketWidth, nesting + 1)
-            is MacroStep.RepeatUntil -> children = requiredListWidth(step.steps(), emptyNestedSocketWidth, nesting + 1)
-            is MacroStep.Switch -> {
-                for (branch in step.cases()) {
-                    nestedHeaderWidth = maxOf(nestedHeaderWidth, font.width("case ${branch.value()}") + 31)
-                    children = maxOf(children, requiredListWidth(branch.steps(), emptyNestedSocketWidth, nesting + 1))
-                }
-                children = maxOf(children, requiredListWidth(step.defaultSteps(), emptyNestedSocketWidth, nesting + 1))
-            }
-            else -> Unit
-        }
-        val requiredWidth = maxOf(maxOf(width, children + 42), nestedHeaderWidth)
-        cacheRequiredStepWidth(step, nesting, requiredWidth, cachedWidths)
-        return requiredWidth
+        cacheRequiredStepWidth(step, nesting, width, cachedWidths)
+        return width
     }
+
+    /** The block's own width hugs its text, like Scratch. */
+    private fun ownStepWidth(step: MacroStep): Int {
+        ensureWidthCacheFont()
+        measuredOwnWidths[step]?.let { return it }
+        val preview = inlinePreview(step)
+        val container = isContainer(step)
+        var width = (if (preview == null) font.width(blockLabel(step)) else previewWidth(preview)) + 18 +
+            if (container) 20 else 0
+        if (container && ClickGuiState.macroNodeExpanded(step)) {
+            width = maxOf(width, C_MIN_WIDTH)
+            if (step is MacroStep.Switch) for (b in step.cases()) width = maxOf(width, font.width("case ${b.value()}") + 18)
+        }
+        width = maxOf(48, width)
+        measuredOwnWidths[step] = width
+        return width
+    }
+
+    private fun isContainer(step: MacroStep?): Boolean = step is MacroStep.IfElse || step is MacroStep.Repeat ||
+        step is MacroStep.RepeatUntil || step is MacroStep.Switch
 
     private fun cacheRequiredStepWidth(step: MacroStep, nesting: Int, width: Int, cachedWidths: IntArray?) {
         val widths = cachedWidths ?: IntArray(MAX_TREE_DEPTH + 1)
@@ -843,6 +862,7 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         if (measuredWidthFont === font) return
         measuredWidthFont = font
         measuredStepWidths.clear()
+        measuredOwnWidths.clear()
         measuredListWidths.clear()
     }
 
@@ -857,11 +877,8 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
             val nodeY = y + layout.starts[i]
             val nodeH = layout.heights[i]
             if (nodeY > viewport.y + viewport.h) break
-            val indent = minOf(depth * 7, 49)
-            val nodeX = x + indent
-            val nodeW = maxOf(maxOf(60, w - indent), requiredStepWidth(step, nesting))
-            val outer = GuiRect(nodeX, nodeY, nodeW, nodeH)
-            if (intersectsViewport(outer.x, outer.y, outer.w, outer.h, viewport)) {
+            val outer = GuiRect(x, nodeY, ownStepWidth(step), nodeH)
+            if (intersectsViewport(outer.x, outer.y, requiredStepWidth(step, nesting), outer.h + ScratchBlockShapes.NOTCH_DEPTH, viewport)) {
                 drawStepNode(graphics, viewport, step, steps as MutableList<MacroStep>, i, outer, script, function, nesting)
             }
         }
@@ -873,8 +890,7 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         val color = blockColor(step)
         val selected = step === selectedStep
         val active = script != null && MacroRunner.activeStep(script.id()) === step
-        val control = step is MacroStep.IfElse || step is MacroStep.Repeat ||
-            step is MacroStep.RepeatUntil || step is MacroStep.Switch
+        val control = isContainer(step)
         recordCanvasNodeBounds(bounds, viewport)
         val currentMacro = macro
         val detachedNote = step is MacroStep.Comment && currentMacro != null && owner === currentMacro.detachedBlocks()
@@ -884,62 +900,94 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
             return
         }
         val headH = minOf(BLOCK_HEIGHT, bounds.h)
-        val selectedRing = selected && !active
-        val outline = if (active) 0xFFFFFFFF.toInt() else if (selected) GuiTheme.selectionOutline(color) else withOpacity(color, 0.65f)
-        roundedRectBordered(graphics, bounds.x, bounds.y, bounds.w, headH, RADIUS_SMALL,
-            color, color, outline, if (selectedRing) 2 else 1)
-        roundedRect(graphics, bounds.x + 12, bounds.y - 2, minOf(19, bounds.w / 4), 5, 2, color)
-        if (!control) roundedRect(graphics, bounds.x + 12, bounds.y + headH - 3, minOf(19, bounds.w / 4), 5, 2, color)
-        drawInlineBlockPreview(graphics, viewport, bounds, headH, step,
-            macroAccentText(if (active) 0xFFFFFFFF.toInt() else 0xFFFAFCFF.toInt()))
-        registerHit(GuiRect(bounds.x, bounds.y, bounds.w, headH), viewport, null, step, owner, null, script, function)
-        addDropSlot(GuiRect(bounds.x, bounds.y, bounds.w, maxOf(1, headH / 2)), owner, index,
-            function != null, script, function, nesting)
-        addDropSlot(GuiRect(bounds.x, bounds.y + headH / 2, bounds.w, maxOf(1, headH - headH / 2)),
-            owner, index + 1, function != null, script, function, nesting)
-        val expanded = !control || ClickGuiState.macroNodeExpanded(step)
+        val layout = cBlockLayout(step, nesting)
+        val shape = if (layout == null) ScratchBlockShapes.stack(bounds.w, headH, false)
+            else ScratchBlockShapes.cBlock(bounds.w, layout.bars, layout.inners, layout.cap)
+        val fill = if (active) lerpColor(color, 0xFFFFFFFF.toInt(), 0.18f) else color
+        val outline = if (active) 0xFFFFFFFF.toInt() else if (selected) GuiTheme.selectionOutline(color) else blockOutline(color)
+        if (layout == null) frameStackBlocks++ else frameCBlocks++
+        paintShape(graphics, shape, bounds.x, bounds.y, fill, outline)
+        val textColor = macroAccentText(0xFFFFFFFF.toInt())
+        val head = GuiRect(bounds.x, bounds.y, bounds.w, headH)
+        drawInlineBlockPreview(graphics, viewport, head, step, color, textColor)
+        registerHit(head, viewport, null, step, owner, null, script, function)
+        val slotW = maxOf(bounds.w, 96)
+        val functionScope = function != null
+        addDropSlot(GuiRect(bounds.x, bounds.y, slotW, maxOf(1, headH / 2)), owner, index,
+            functionScope, script, function, nesting)
+        if (layout == null) addDropSlot(GuiRect(bounds.x, bounds.y + headH / 2, slotW, maxOf(1, headH - headH / 2)),
+            owner, index + 1, functionScope, script, function, nesting)
         if (control) {
-            val toggleX = bounds.x + bounds.w - 22
-            val toggle = GuiRect(toggleX, bounds.y, 22, headH)
-            graphics.centeredText(font, if (expanded) "▾" else "▸", toggleX + 11, bounds.y + 8, color)
-            registerHit(toggle, viewport, { ClickGuiState.toggleMacroNode(step); dirty() },
+            val toggleX = bounds.x + bounds.w - 18
+            graphics.centeredText(font, if (layout != null) "\u25BE" else "\u25B8", toggleX + 9, bounds.y + 10, textColor)
+            registerHit(GuiRect(toggleX, bounds.y, 18, headH), viewport, { ClickGuiState.toggleMacroNode(step); dirty() },
                 null, null, null, null, null)
         }
+        if (layout == null) return
 
-        if (!control || !expanded) return
-        val bodyY = bounds.y + headH - 1
-        val bodyH = maxOf(16, bounds.h - headH + 1)
-        graphics.fill(bounds.x + 1, bodyY, bounds.x + bounds.w - 1, bodyY + bodyH, withOpacity(color, 0.18f))
-        graphics.fill(bounds.x + 1, bodyY, bounds.x + 6, bodyY + bodyH, color)
-        graphics.fill(bounds.x + 6, bodyY + bodyH - 4, bounds.x + bounds.w - 10, bodyY + bodyH, color)
-        val childX = bounds.x + 12
-        val childW = maxOf(42, bounds.w - 23)
-        var childY = bodyY + 7
-        when (step) {
-            is MacroStep.IfElse -> {
-                childY = drawNestedBranch(graphics, viewport, step.thenSteps(), childX, childY, childW,
-                    "Then", step, script, function, nesting + 1, color)
-                if (step.elseEnabled()) {
-                    childY += BRANCH_GAP
-                    drawNestedBranch(graphics, viewport, step.elseSteps(), childX, childY, childW,
-                        "Else", step, script, function, nesting + 1, color)
-                }
+        val armX = bounds.x + ScratchBlockShapes.ARM_WIDTH
+        var y = bounds.y
+        for (k in layout.branches.indices) {
+            val barTop = y
+            val barH = layout.bars[k]
+            y += barH
+            val label = layout.labels[k]
+            if (label != null) {
+                val labelY = if (k == 0) barTop + BLOCK_HEIGHT + (C_MID_BAR - 8) / 2 else barTop + (barH - 8) / 2
+                graphics.text(font, trim(label, bounds.w - 14), bounds.x + 9, labelY, textColor)
             }
-            is MacroStep.Repeat -> drawNestedBranch(graphics, viewport, step.steps(), childX, childY, childW,
-                "Do", step, script, function, nesting + 1, color)
-            is MacroStep.RepeatUntil -> drawNestedBranch(graphics, viewport, step.steps(), childX, childY, childW,
-                "Do", step, script, function, nesting + 1, color)
-            is MacroStep.Switch -> {
-                for (branch in step.cases()) {
-                    childY = drawNestedBranch(graphics, viewport, branch.steps(), childX, childY, childW,
-                        "case ${branch.value()}", step, script, function, nesting + 1, color) + BRANCH_GAP
-                }
-                drawNestedBranch(graphics, viewport, step.defaultSteps(), childX, childY, childW,
-                    "otherwise", step, script, function, nesting + 1, color)
+            val children = layout.branches[k]
+            val innerH = layout.inners[k]
+            val gap = GuiRect(armX, y, maxOf(60, bounds.w - ScratchBlockShapes.ARM_WIDTH), innerH)
+            val branchArea = if (k == 0) gap else GuiRect(bounds.x, barTop, bounds.w, barH + innerH)
+            val branchContext = DropSlot(gap, children, children.size, functionScope, script, function, nesting + 1)
+            val branchName = (label ?: if (step is MacroStep.IfElse) "then" else "do").lowercase(Locale.ROOT)
+            registerHit(branchArea, viewport, {
+                selectedStep = null
+                selectedOwner = children
+                selectDropContext(branchContext)
+                inspectorScroll = 0
+                logEditorDiagnostic("EVENT action=select_branch,label=$branchName,blocks=${children.size},expanded=true")
+            }, null, null, null, script, function)
+            if (k > 0) {
+                val previous = layout.branches[k - 1]
+                addDropSlot(GuiRect(bounds.x, barTop, slotW, maxOf(1, barH / 2)), previous, previous.size,
+                    functionScope, script, function, nesting + 1)
             }
-            else -> Unit
+            addDropSlot(GuiRect(bounds.x, barTop + barH / 2, slotW, maxOf(1, barH - barH / 2)), children, 0,
+                functionScope, script, function, nesting + 1)
+            if (selectedStep == null && selectedOwner === children) outlineRect(graphics, gap, withOpacity(0xFFFFFFFF.toInt(), 0.70f))
+            if (children.isEmpty()) {
+                graphics.text(font, trim("drop blocks here", gap.w - 10), gap.x + 6, gap.y + (innerH - 8) / 2 + 1, TEXT_MUTED)
+                addDropSlot(gap, children, 0, functionScope, script, function, nesting + 1)
+            } else {
+                val after = drawStepList(graphics, viewport, children, armX, y, gap.w, 1, script, function, nesting + 1)
+                addDropSlot(GuiRect(armX, maxOf(y, after - 3), slotW, 6), children, children.size,
+                    functionScope, script, function, nesting + 1)
+            }
+            y += innerH
         }
+        val bottomH = layout.bars[layout.bars.size - 1]
+        registerHit(GuiRect(bounds.x, y, bounds.w, bottomH), viewport, null, step, owner, null, script, function)
+        val last = layout.branches[layout.branches.size - 1]
+        addDropSlot(GuiRect(bounds.x, y, slotW, maxOf(1, bottomH / 2)), last, last.size,
+            functionScope, script, function, nesting + 1)
+        addDropSlot(GuiRect(bounds.x, y + bottomH / 2, slotW, maxOf(1, bottomH - bottomH / 2)), owner, index + 1,
+            functionScope, script, function, nesting)
+        if (layout.loop) graphics.text(font, "\u21BB", bounds.x + bounds.w - 14, y + (bottomH - 8) / 2 + 1, textColor)
     }
+
+    private fun paintShape(graphics: GuiGraphicsExtractor, shape: ScratchBlockShapes.Shape, x: Int, y: Int, fill: Int, outline: Int) =
+        ScratchBlockRenderState.draw(graphics, shape, x, y, fill, outline)
+
+    private fun outlineRect(graphics: GuiGraphicsExtractor, r: GuiRect, color: Int) {
+        graphics.fill(r.x, r.y, r.x + r.w, r.y + 1, color)
+        graphics.fill(r.x, r.y + r.h - 1, r.x + r.w, r.y + r.h, color)
+        graphics.fill(r.x, r.y + 1, r.x + 1, r.y + r.h - 1, color)
+        graphics.fill(r.x + r.w - 1, r.y + 1, r.x + r.w, r.y + r.h - 1, color)
+    }
+
+    private fun blockOutline(color: Int): Int = lerpColor(color, 0xFF000000.toInt(), 0.28f)
 
     private fun drawCommentNote(graphics: GuiGraphicsExtractor, viewport: GuiRect, bounds: GuiRect,
         comment: MacroStep.Comment, color: Int, selected: Boolean) {
@@ -1015,74 +1063,38 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         y[0] += 12
     }
 
-    private fun drawNestedList(graphics: GuiGraphicsExtractor, viewport: GuiRect, children: MutableList<MacroStep>,
-        x: Int, y: Int, w: Int, parentStep: MacroStep, script: MacroScript?, function: MacroFunction?,
-        nesting: Int, color: Int): Int {
-        val available = maxOf(14, measureList(children, nesting))
-        if (children.isEmpty()) {
-            val socket = GuiRect(x, y, w, 17)
-            paintSocket(graphics, socket, color, "drop blocks here")
-            addDropSlot(socket, children, 0, function != null, script, function, nesting)
-            return y + socket.h + 3
+    /** Bars, gaps and child lists of an expanded control block; null for plain or collapsed blocks. */
+    private fun cBlockLayout(step: MacroStep, nesting: Int): CBlockLayout? {
+        if (!isContainer(step) || !ClickGuiState.macroNodeExpanded(step)) return null
+        val branches = ArrayList<MutableList<MacroStep>>()
+        val labels = ArrayList<String?>()
+        when (step) {
+            is MacroStep.IfElse -> {
+                branches.add(step.thenSteps()); labels.add(null)
+                if (step.elseEnabled()) { branches.add(step.elseSteps()); labels.add("else") }
+            }
+            is MacroStep.Repeat -> { branches.add(step.steps()); labels.add(null) }
+            is MacroStep.RepeatUntil -> { branches.add(step.steps()); labels.add(null) }
+            is MacroStep.Switch -> {
+                for (branch in step.cases()) { branches.add(branch.steps()); labels.add("case ${branch.value()}") }
+                branches.add(step.defaultSteps()); labels.add("otherwise")
+            }
+            else -> return null
         }
-        val after = drawStepList(graphics, viewport, children, x, y, w, 1, script, function, nesting)
-        addDropSlot(GuiRect(x, maxOf(y, after - 3), w, 6), children, children.size,
-            function != null, script, function, nesting)
-        return maxOf(after, y + available)
+        val bars = IntArray(branches.size + 1) { C_MID_BAR }
+        // A switch shows its first case label in a second row of the top bar.
+        bars[0] = if (labels[0] == null) BLOCK_HEIGHT else BLOCK_HEIGHT + C_MID_BAR
+        bars[branches.size] = C_BOTTOM_BAR
+        val inners = IntArray(branches.size) { maxOf(C_INNER_MIN, measureList(branches[it], nesting + 1)) }
+        return CBlockLayout(bars, inners, branches, labels, step is MacroStep.Repeat && step.mode() == MacroStep.Repeat.Mode.FOREVER,
+            step is MacroStep.Repeat || step is MacroStep.RepeatUntil)
     }
-
-    private fun drawNestedBranch(graphics: GuiGraphicsExtractor, viewport: GuiRect, children: MutableList<MacroStep>,
-        x: Int, y: Int, w: Int, label: String, parentStep: MacroStep, script: MacroScript?,
-        function: MacroFunction?, nesting: Int, color: Int): Int {
-        val listHeight = maxOf(20, measureList(children, nesting))
-        val pocketHeight = BRANCH_HEADER_HEIGHT + listHeight + BRANCH_BOTTOM_PADDING
-        val pocket = GuiRect(x, y, w, pocketHeight)
-        val surface = withOpacity(color, 0.11f)
-        val selected = selectedStep == null && selectedOwner === children
-        val border = if (selected) 0xFFFFFFFF.toInt() else withOpacity(color, 0.82f)
-        roundedRectBordered(graphics, pocket.x, pocket.y, pocket.w, pocket.h, RADIUS_SMALL,
-            surface, surface, border, if (selected) 2 else 1)
-        graphics.fill(pocket.x + 2, pocket.y + 2, pocket.x + pocket.w - 2,
-            pocket.y + BRANCH_HEADER_HEIGHT - 1, withOpacity(color, 0.24f))
-        graphics.text(font, trim(label, pocket.w - 14), pocket.x + 7, pocket.y + 4, TEXT_PRIMARY)
-
-        val branchContext = DropSlot(pocket, children, children.size, function != null, script, function, nesting)
-        registerHit(pocket, viewport, {
-            selectedStep = null
-            selectedOwner = children
-            selectDropContext(branchContext)
-            inspectorScroll = 0
-            logEditorDiagnostic("EVENT action=select_branch,label=${label.lowercase(Locale.ROOT)},blocks=${children.size},expanded=true")
-        }, null, null, null, script, function)
-        val listX = pocket.x + 5
-        val listY = pocket.y + BRANCH_HEADER_HEIGHT
-        val listW = maxOf(1, pocket.w - 10)
-        val after = drawNestedList(graphics, viewport, children, listX, listY, listW,
-            parentStep, script, function, nesting, color)
-        return maxOf(pocket.y + pocket.h, after)
-    }
-
-    private fun measureNestedBranch(children: List<MacroStep>?, nesting: Int): Int =
-        BRANCH_HEADER_HEIGHT + maxOf(20, measureList(children, nesting)) + BRANCH_BOTTOM_PADDING
 
     private fun measureStep(step: MacroStep?, nesting: Int): Int {
-        if (step == null || nesting > MAX_TREE_DEPTH) return 31
+        if (step == null || nesting > MAX_TREE_DEPTH) return BLOCK_HEIGHT
         val cached = measuredStepHeights[step]
         if (cached != null) return cached
-        val height: Int = when {
-            (step is MacroStep.IfElse || step is MacroStep.Repeat || step is MacroStep.RepeatUntil || step is MacroStep.Switch) &&
-                !ClickGuiState.macroNodeExpanded(step) -> BLOCK_HEIGHT
-            step is MacroStep.IfElse -> BLOCK_HEIGHT + 9 + measureNestedBranch(step.thenSteps(), nesting + 1) +
-                if (step.elseEnabled()) BRANCH_GAP + measureNestedBranch(step.elseSteps(), nesting + 1) else 0
-            step is MacroStep.Repeat -> BLOCK_HEIGHT + 9 + measureNestedBranch(step.steps(), nesting + 1)
-            step is MacroStep.RepeatUntil -> BLOCK_HEIGHT + 9 + measureNestedBranch(step.steps(), nesting + 1)
-            step is MacroStep.Switch -> {
-                var result = BLOCK_HEIGHT + 9
-                for (branch in step.cases()) result += measureNestedBranch(branch.steps(), nesting + 1) + BRANCH_GAP
-                result + measureNestedBranch(step.defaultSteps(), nesting + 1)
-            }
-            else -> BLOCK_HEIGHT
-        }
+        val height = cBlockLayout(step, nesting)?.height ?: BLOCK_HEIGHT
         measuredStepHeights[step] = height
         return height
     }
@@ -1099,12 +1111,12 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         val heights = IntArray(list.size)
         var total = 0L
         for (index in list.indices) {
-            if (list === dropGapOwner && index == dropGapIndex) total += BLOCK_HEIGHT + 3L
+            if (list === dropGapOwner && index == dropGapIndex) total += BLOCK_HEIGHT.toLong()
             starts[index] = minOf(Int.MAX_VALUE / 4L, total).toInt()
             heights[index] = measureStep(list[index], nesting)
-            total = minOf(Int.MAX_VALUE / 4L, total + heights[index] + 3L)
+            total = minOf(Int.MAX_VALUE / 4L, total + heights[index])
         }
-        if (list === dropGapOwner && dropGapIndex >= list.size) total += BLOCK_HEIGHT + 3L
+        if (list === dropGapOwner && dropGapIndex >= list.size) total += BLOCK_HEIGHT.toLong()
         val layout = ListLayout(starts, heights, total.toInt())
         measuredListLayouts[list] = layout
         return layout
@@ -1442,6 +1454,12 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
             }
             is MacroStep.BlockPlayerInput -> drawIntField(graphics, viewport, y, "Block duration (ms)",
                 "input-block-duration", step::durationMillis, step::setDurationMillis)
+            is MacroStep.SetView -> {
+                drawFloatField(graphics, viewport, y, "Yaw (-180 to 180)", "set-view-yaw", step::yaw, step::setYaw)
+                drawFloatField(graphics, viewport, y, "Pitch (-90 to 90)", "set-view-pitch", step::pitch, step::setPitch)
+                drawIntField(graphics, viewport, y, "Give up after (ms)", "set-view-time", step::maxMillis, step::setMaxMillis)
+                lineText(graphics, viewport, y, "Turn", "Speed follows Rotation Engine; ends once aimed or on timeout")
+            }
             is MacroStep.UpdateVariable -> {
                 drawVariableTarget(graphics, viewport, y, "Target", step.name(), step.targetsGlobal(), step.globalVariableId(),
                     { definition ->
@@ -1938,6 +1956,54 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
                         value, condition.argument(), condition.plotId())) })
                 lineText(graphics, viewport, y, "Data requirement", "Missing or stale values stop this macro.")
             }
+            is MacroCondition.Player -> {
+                button(graphics, "Player value · ${title(condition.field().name.replace('_', ' '))}",
+                    rowRect(viewport, y[0], 22), mouseX, mouseY, viewport, {
+                        val options = ArrayList<PickerOption>()
+                        for (field in MacroCondition.Player.Field.values()) {
+                            options.add(PickerOption(title(field.name.replace('_', ' '))) {
+                                setter.accept(MacroCondition.Player(field, condition.operator(), "", ""))
+                                dirty()
+                            })
+                        }
+                        openPicker("Choose a player value", options)
+                    }, false, categoryColor(Category.WORLD))
+                y[0] += 26
+                button(graphics, "Compare · ${title(condition.operator().name.replace('_', ' '))}",
+                    rowRect(viewport, y[0], 22), mouseX, mouseY, viewport, {
+                        val options = ArrayList<PickerOption>()
+                        for (operator in MacroCondition.Hypixel.Operator.values()) {
+                            options.add(PickerOption(title(operator.name.replace('_', ' '))) {
+                                setter.accept(MacroCondition.Player(condition.field(), operator, condition.expected(),
+                                    condition.argument()))
+                                dirty()
+                            })
+                        }
+                        openPicker("Choose comparison", options)
+                    }, false, categoryColor(Category.CONTROL))
+                y[0] += 26
+                val expectedLabel = when (condition.field()) {
+                    MacroCondition.Player.Field.YAW -> "Yaw (-180 to 180)"
+                    MacroCondition.Player.Field.PITCH -> "Pitch (-90 to 90)"
+                    MacroCondition.Player.Field.X, MacroCondition.Player.Field.Y,
+                    MacroCondition.Player.Field.Z -> "Block coordinate"
+                    else -> "Block id (stone, minecraft:dirt)"
+                }
+                drawTextField(graphics, viewport, y, expectedLabel, "player-expected", condition::expected,
+                    Consumer { value -> setter.accept(MacroCondition.Player(condition.field(), condition.operator(),
+                        value, condition.argument())) })
+                if (condition.field() == MacroCondition.Player.Field.YAW || condition.field() == MacroCondition.Player.Field.PITCH) {
+                    drawTextField(graphics, viewport, y, "Tolerance (degrees, default 5)", "player-tolerance",
+                        condition::argument, Consumer { value -> setter.accept(MacroCondition.Player(condition.field(),
+                            condition.operator(), condition.expected(), value)) })
+                }
+                if (condition.field() == MacroCondition.Player.Field.BLOCK_AT) {
+                    drawTextField(graphics, viewport, y, "Position (x y z)", "player-block-pos", condition::argument,
+                        Consumer { value -> setter.accept(MacroCondition.Player(condition.field(), condition.operator(),
+                            condition.expected(), value)) })
+                }
+                lineText(graphics, viewport, y, "Data requirement", "Unloaded chunks or bad values stop this macro.")
+            }
             else -> if (condition != null && condition !is MacroCondition.Always) {
                 lineText(graphics, viewport, y, "Logic", "Choose a condition type above")
             }
@@ -2005,6 +2071,8 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
             MacroCondition.Variable.Operator.EQUALS, MacroValue.literal(MacroValue.Type.TEXT, "")), setter)
         addConditionOption(options, "Hypixel state", MacroCondition.Hypixel(
             MacroCondition.Hypixel.Field.ISLAND, MacroCondition.Hypixel.Operator.EQUALS, "GARDEN"), setter)
+        addConditionOption(options, "Player view, position or block", MacroCondition.Player(
+            MacroCondition.Player.Field.YAW, MacroCondition.Hypixel.Operator.EQUALS, "0", ""), setter)
         if (depth < MAX_CONDITION_DEPTH) {
             addConditionOption(options, "AND · all requirements", MacroCondition.All(listOf(
                 MacroCondition.Always(true), MacroCondition.Always(true))), setter)
@@ -2289,6 +2357,7 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         measuredStepHeights.clear()
         measuredListLayouts.clear()
         measuredStepWidths.clear()
+        measuredOwnWidths.clear()
         measuredListWidths.clear()
     }
 
@@ -2305,22 +2374,28 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         val color = if (currentDrag.kind == DragKind.PALETTE) categoryColor(currentDrag.palette!!.category)
             else blockColor(currentDrag.step!!)
         val label = if (currentDrag.kind == DragKind.PALETTE) currentDrag.palette!!.label else blockLabel(currentDrag.step!!)
-        val nodeWidth = if (currentDrag.kind == DragKind.STEP) requiredStepWidth(currentDrag.step!!, target.depth)
-            else maxOf(120, font.width(label) + 18)
+        val nodeWidth = if (currentDrag.kind == DragKind.STEP) ownStepWidth(currentDrag.step!!)
+            else maxOf(96, font.width(label) + 18)
+        val zoom = canvasTransformScale
+        val scaledH = Math.round(BLOCK_HEIGHT * zoom)
         val x = target.bounds.x
-        val y = target.bounds.y + maxOf(0, (target.bounds.h - BLOCK_HEIGHT) / 2)
-        val node = GuiRect(x, y, nodeWidth, BLOCK_HEIGHT)
-        if (node.intersection(viewport) == null) return
+        val y = target.bounds.y + maxOf(0, (target.bounds.h - scaledH) / 2)
+        if (GuiRect(x, y, maxOf(1, Math.round(nodeWidth * zoom)), maxOf(1, scaledH)).intersection(viewport) == null) return
         graphics.enableScissor(viewport.x, viewport.y, viewport.x + viewport.w, viewport.y + viewport.h)
-        roundedRectBordered(graphics, node.x, node.y, node.w, node.h, RADIUS_SMALL,
-            withOpacity(color, 0.90f), withOpacity(color, 0.90f), 0xE6FFFFFF.toInt())
-        roundedRect(graphics, node.x + 12, node.y - 2, minOf(19, node.w / 4), 5, 2, withOpacity(color, 0.90f))
-        val textColor = macroAccentText(0xFFFAFCFF.toInt())
+        val pose = graphics.pose()
+        pose.pushMatrix()
+        pose.translate(x.toFloat(), y.toFloat())
+        pose.scale(zoom, zoom)
+        val node = GuiRect(0, 0, nodeWidth, BLOCK_HEIGHT)
+        paintShape(graphics, ScratchBlockShapes.stack(nodeWidth, BLOCK_HEIGHT, false), 0, 0,
+            withOpacity(color, 0.55f), withOpacity(0xFFFFFFFF.toInt(), 0.80f))
+        val textColor = macroAccentText(0xFFFFFFFF.toInt())
         if (currentDrag.kind == DragKind.STEP) {
-            drawInlineBlockPreview(graphics, viewport, node, node.h, currentDrag.step!!, textColor)
+            drawInlineBlockPreview(graphics, node, node, currentDrag.step!!, color, textColor)
         } else {
-            graphics.text(font, label, node.x + 9, node.y + 8, textColor)
+            graphics.text(font, label, 9, 10, textColor)
         }
+        pose.popMatrix()
         graphics.disableScissor()
     }
 
@@ -2353,10 +2428,9 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
             DragKind.STEP -> blockColor(currentDrag.step!!)
             else -> categoryColor(Category.ACTIONS)
         }
-        roundedRectBordered(graphics, x, y, w, 21, RADIUS_SMALL,
-            withOpacity(color, 0.94f), withOpacity(color, 0.94f), TEXT_PRIMARY)
+        paintShape(graphics, ScratchBlockShapes.stack(w, 21, false), x, y, withOpacity(color, 0.94f), TEXT_PRIMARY)
         // Keep ghost text readable on pale category fills and the bright event color.
-        graphics.text(font, trim(label, w - 12), x + 6, y + 6, macroAccentText(0xFFFAFCFF.toInt()))
+        graphics.text(font, trim(label, w - 12), x + 7, y + 7, macroAccentText(0xFFFAFCFF.toInt()))
     }
 
     private fun renderPicker(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int) {
@@ -2737,6 +2811,10 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
             DragKind.STEP -> if (released.moved) {
                 val step = released.step!!
                 val activeMacro = macro
+                if (lastLayout?.palette?.contains(x, y) == true) {
+                    deleteDraggedStep(released)
+                    return true
+                }
                 if (step is MacroStep.Comment && activeMacro != null && released.owner === activeMacro.detachedBlocks()) {
                     val target = findDropSlot(x, y, false)
                     if (target != null) moveStep(released, target)
@@ -3364,6 +3442,21 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         dirty()
     }
 
+    /** Dropping a block back on the palette throws it away, like Scratch. Ctrl+Z restores it. */
+    private fun deleteDraggedStep(source: DragState) {
+        val owner = source.owner ?: return
+        val index = owner.indexOf(source.step ?: return)
+        if (index < 0) return
+        owner.removeAt(index)
+        if (selectedStep === source.step) {
+            selectedStep = null
+            selectedOwner = null
+            inspectorScroll = 0
+        }
+        flash("Block deleted · Ctrl+Z restores it")
+        dirty()
+    }
+
     private fun undoLastEdit() {
         val previous = documentHistory.undo() ?: return
         restoreDocumentSnapshot(previous)
@@ -3562,6 +3655,7 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         measuredStepHeights.clear()
         measuredListLayouts.clear()
         measuredStepWidths.clear()
+        measuredOwnWidths.clear()
         measuredListWidths.clear()
         visibleScriptsRevision = -1
         visibleDetachedRevision = -1
@@ -3643,6 +3737,7 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         measuredStepHeights.clear()
         measuredListLayouts.clear()
         measuredStepWidths.clear()
+        measuredOwnWidths.clear()
         measuredListWidths.clear()
         visibleScriptsRevision = -1
         visibleDetachedRevision = -1
@@ -3772,6 +3867,7 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         if (step is MacroStep.MouseButton) return (if (step.hold()) "hold " else "click ") +
             step.button().name.lowercase(Locale.ROOT) + " mouse"
         if (step is MacroStep.BlockPlayerInput) return "block player input  ${step.durationMillis()} ms"
+        if (step is MacroStep.SetView) return "set view  yaw ${"%.1f".format(Locale.ROOT, step.yaw())}  pitch ${"%.1f".format(Locale.ROOT, step.pitch())}"
         if (step is MacroStep.StartBlockPlayerInput) return "start blocking player input"
         if (step is MacroStep.StopBlockPlayerInput) return "stop blocking player input"
         if (step is MacroStep.FunctionCall) {
@@ -3798,35 +3894,62 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         return step.type()
     }
 
-    private fun drawInlineBlockPreview(graphics: GuiGraphicsExtractor, viewport: GuiRect, bounds: GuiRect, headH: Int,
-        step: MacroStep, color: Int) {
-        val clip = bounds.intersection(viewport) ?: return
+    private fun drawInlineBlockPreview(graphics: GuiGraphicsExtractor, viewport: GuiRect, head: GuiRect,
+        step: MacroStep, blockColor: Int, color: Int) {
+        val clip = head.intersection(viewport) ?: return
         graphics.enableScissor(clip.x, clip.y, clip.x + clip.w, clip.y + clip.h)
         try {
+            val textY = head.y + (head.h - 8) / 2 + 1
             val preview = inlinePreview(step)
             if (preview == null) {
-                graphics.text(font, blockLabel(step), bounds.x + 9, bounds.y + 8, color)
+                graphics.text(font, blockLabel(step), head.x + 9, textY, color)
                 return
             }
-            val prefixWidth = font.width(preview.prefix)
-            val chipWidth = maxOf(22, font.width(preview.value) + 12)
-            var x = bounds.x + 9
-            val textY = bounds.y + 8
+            var x = head.x + 9
             graphics.text(font, preview.prefix, x, textY, color)
-            x += prefixWidth + 4
-            val chipY = bounds.y + (headH - 17) / 2
-            val themed = VisualModule.INSTANCE.themeSurfaces().value()
-            val chipSurface = if (themed) BUTTON_BG else withOpacity(0xFF17232C.toInt(), 0.42f)
-            roundedRectBordered(graphics, x, chipY, chipWidth, 17, 6, chipSurface, chipSurface,
-                if (themed) BORDER else withOpacity(0xFFFFFFFF.toInt(), 0.24f))
-            graphics.centeredText(font, preview.value, x + chipWidth / 2, chipY + 4,
-                if (themed) TEXT_PRIMARY else 0xFFFFFFFF.toInt())
-            x += chipWidth + 4
+            x += font.width(preview.prefix) + 4
+            val chipW = chipWidth(preview)
+            val chipY = head.y + (head.h - CHIP_HEIGHT) / 2 + 1
+            val value = chipText(preview)
+            val edge = blockOutline(blockColor)
+            val dark = lerpColor(blockColor, 0xFF000000.toInt(), 0.16f)
+            when (preview.kind) {
+                ChipKind.VALUE -> {
+                    roundedRectBordered(graphics, x, chipY, chipW, CHIP_HEIGHT, CHIP_HEIGHT / 2,
+                        0xFFFFFFFF.toInt(), 0xFFFFFFFF.toInt(), edge)
+                    graphics.text(font, value, x + (chipW - font.width(value)) / 2, chipY + 5, PILL_TEXT, false)
+                }
+                ChipKind.CHOICE -> {
+                    roundedRectBordered(graphics, x, chipY, chipW, CHIP_HEIGHT, CHIP_HEIGHT / 2, dark, dark, edge)
+                    graphics.text(font, value, x + 7, chipY + 5, color)
+                    graphics.text(font, "\u25BE", x + chipW - 12, chipY + 5, color)
+                }
+                ChipKind.CONDITION -> {
+                    paintShape(graphics, ScratchBlockShapes.hexagon(chipW, CHIP_HEIGHT), x, chipY, dark, edge)
+                    graphics.text(font, value, x + (chipW - font.width(value)) / 2, chipY + 5, color)
+                }
+            }
+            x += chipW + 4
             if (!javaIsBlank(preview.suffix)) graphics.text(font, preview.suffix, x, textY, color)
         } finally {
             graphics.disableScissor()
         }
     }
+
+    private fun chipText(preview: BlockPreview): String = trim(preview.value, CHIP_TEXT_MAX)
+
+    private fun chipWidth(preview: BlockPreview): Int {
+        val text = font.width(chipText(preview))
+        return when (preview.kind) {
+            ChipKind.VALUE -> maxOf(22, text + 12)
+            ChipKind.CHOICE -> text + 22
+            ChipKind.CONDITION -> maxOf(30, text + 20)
+        }
+    }
+
+    private fun previewWidth(preview: BlockPreview): Int =
+        font.width(preview.prefix) + 4 + chipWidth(preview) +
+            if (javaIsBlank(preview.suffix)) 0 else 4 + font.width(preview.suffix)
 
     private fun inlinePreview(step: MacroStep): BlockPreview? {
         if (step is MacroStep.Unknown) return BlockPreview("preserved block", step.originalType(), "stops this run")
@@ -3834,46 +3957,49 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         if (step is MacroStep.Chat) return BlockPreview("send chat", step.message(), "")
         if (step is MacroStep.Key) return when (step.inputMode()) {
             MacroStep.Key.InputMode.KEYBOARD -> BlockPreview(if (step.hold()) "hold key" else "press key",
-                if (javaIsBlank(step.key())) "capture" else step.key(), "")
+                if (javaIsBlank(step.key())) "capture" else step.key(), "", ChipKind.CHOICE)
             MacroStep.Key.InputMode.MOUSE -> BlockPreview(if (step.hold()) "hold" else "click",
-                step.mouseButton().name.lowercase(Locale.ROOT), "mouse")
+                step.mouseButton().name.lowercase(Locale.ROOT), "mouse", ChipKind.CHOICE)
             MacroStep.Key.InputMode.HOTBAR -> BlockPreview("select hotbar slot", step.hotbarSlot().toString(), "")
         }
         if (step is MacroStep.Wait) return if (step.mode() == MacroStep.Wait.Mode.CONDITION)
-            BlockPreview("wait until", conditionLabel(step.condition()), "")
+            BlockPreview("wait until", conditionLabel(step.condition()), "", ChipKind.CONDITION)
         else BlockPreview("wait", "${step.minMillis()}–${step.maxMillis()} ms", "")
         if (step is MacroStep.Comment) return BlockPreview("note", step.text(), "")
         if (step is MacroStep.Scroll) return BlockPreview("scroll", step.direction().name.lowercase(Locale.ROOT),
-            "${step.amount()} step(s)")
+            "${step.amount()} step(s)", ChipKind.CHOICE)
         if (step is MacroStep.InventoryClick) return BlockPreview("inventory click",
             if (step.target() == MacroStep.InventoryClick.Target.SLOT) "slot ${step.slotId()}" else step.name(), "")
         if (step is MacroStep.UpdateVariable) return BlockPreview(step.operation().name.lowercase(Locale.ROOT), step.name(),
-            if (step.operation() == MacroStep.UpdateVariable.Operation.SET) step.value().value() else step.amount().toString())
+            if (step.operation() == MacroStep.UpdateVariable.Operation.SET) step.value().value() else step.amount().toString(),
+            ChipKind.CHOICE)
         if (step is MacroStep.SelectHotbarSlot) return BlockPreview("select hotbar slot", step.slot().toString(), "")
         if (step is MacroStep.MouseButton) return BlockPreview(if (step.hold()) "hold" else "click",
-            step.button().name.lowercase(Locale.ROOT), "mouse")
+            step.button().name.lowercase(Locale.ROOT), "mouse", ChipKind.CHOICE)
         if (step is MacroStep.BlockPlayerInput) return BlockPreview("block player input", "${step.durationMillis()} ms", "")
+        if (step is MacroStep.SetView) return BlockPreview("set view", "yaw ${"%.0f".format(Locale.ROOT, step.yaw())}",
+            "pitch ${"%.0f".format(Locale.ROOT, step.pitch())}")
         if (step is MacroStep.FunctionCall) {
             val function = MacrosModule.INSTANCE.function(step.functionId())
-            return BlockPreview("call function", function?.name() ?: "choose", "")
+            return BlockPreview("call function", function?.name() ?: "choose", "", ChipKind.CHOICE)
         }
         if (step is MacroStep.MacroCall) {
             val target = MacrosModule.INSTANCE.macro(step.macroId())
             val suffix = step.condition()?.let { "if ${conditionLabel(it)}" } ?: ""
-            return BlockPreview("call macro", target?.name() ?: "choose", suffix)
+            return BlockPreview("call macro", target?.name() ?: "choose", suffix, ChipKind.CHOICE)
         }
-        if (step is MacroStep.IfElse) return BlockPreview("if", conditionLabel(step.condition()), "then")
+        if (step is MacroStep.IfElse) return BlockPreview("if", conditionLabel(step.condition()), "then", ChipKind.CONDITION)
         if (step is MacroStep.Repeat) return when (step.mode()) {
             MacroStep.Repeat.Mode.COUNT -> BlockPreview("repeat", step.count().toString(), "times")
-            MacroStep.Repeat.Mode.FOREVER -> BlockPreview("repeat", "forever", "")
-            MacroStep.Repeat.Mode.UNTIL -> BlockPreview("repeat until", conditionLabel(step.condition()), "")
+            MacroStep.Repeat.Mode.FOREVER -> null
+            MacroStep.Repeat.Mode.UNTIL -> BlockPreview("repeat until", conditionLabel(step.condition()), "", ChipKind.CONDITION)
         }
-        if (step is MacroStep.RepeatUntil) return BlockPreview("repeat until", conditionLabel(step.condition()), "")
-        if (step is MacroStep.WaitUntil) return BlockPreview("wait until", conditionLabel(step.condition()), "")
-        if (step is MacroStep.Switch) return BlockPreview("switch", step.name(), "${step.cases().size} cases")
-        if (step is MacroStep.StopRun) return BlockPreview("stop run", "release inputs", "")
+        if (step is MacroStep.RepeatUntil) return BlockPreview("repeat until", conditionLabel(step.condition()), "", ChipKind.CONDITION)
+        if (step is MacroStep.WaitUntil) return BlockPreview("wait until", conditionLabel(step.condition()), "", ChipKind.CONDITION)
+        if (step is MacroStep.Switch) return BlockPreview("switch", step.name(), "", ChipKind.CHOICE)
+        if (step is MacroStep.StopRun) return null
         if (step is MacroStep.Title) return BlockPreview("show title", step.text(), "")
-        if (step is MacroStep.Sound) return BlockPreview("play sound", step.soundId(), "")
+        if (step is MacroStep.Sound) return BlockPreview("play sound", step.soundId(), "", ChipKind.CHOICE)
         return null
     }
 
@@ -3894,7 +4020,7 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
             return categoryColor(Category.DISPLAY)
         }
         if (step is MacroStep.Key || step is MacroStep.MouseButton || step is MacroStep.SelectHotbarSlot ||
-            step is MacroStep.BlockPlayerInput || step is MacroStep.StartBlockPlayerInput ||
+            step is MacroStep.BlockPlayerInput || step is MacroStep.StartBlockPlayerInput || step is MacroStep.SetView ||
             step is MacroStep.StopBlockPlayerInput || step is MacroStep.Scroll || step is MacroStep.StopRun) {
             return categoryColor(Category.INPUT)
         }
@@ -3960,6 +4086,7 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         }
         if (condition is MacroCondition.Variable) return "variable ${condition.operator().name.lowercase(Locale.ROOT)}"
         if (condition is MacroCondition.Hypixel) return "Hypixel ${condition.field().name.lowercase(Locale.ROOT)}"
+        if (condition is MacroCondition.Player) return "player ${condition.field().name.lowercase(Locale.ROOT)}"
         if (condition is MacroCondition.All) return "all (${condition.children().size})"
         if (condition is MacroCondition.Any) return "any (${condition.children().size})"
         if (condition is MacroCondition.Not) return "not"
@@ -4005,39 +4132,11 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         return if (lower.isEmpty()) lower else Character.toUpperCase(lower[0]).toString() + lower.substring(1)
     }
 
-    private fun javaTrim(value: String): String {
-        var start = 0
-        var end = value.length
-        while (start < end && value[start].code <= 0x20) start++
-        while (end > start && value[end - 1].code <= 0x20) end--
-        return value.substring(start, end)
-    }
+    private fun javaTrim(value: String): String = JavaStringSemantics.trim(value)
 
-    private fun javaStrip(value: String): String {
-        var start = 0
-        var end = value.length
-        while (start < end) {
-            val codePoint = Character.codePointAt(value, start)
-            if (!Character.isWhitespace(codePoint)) break
-            start += Character.charCount(codePoint)
-        }
-        while (end > start) {
-            val codePoint = Character.codePointBefore(value, end)
-            if (!Character.isWhitespace(codePoint)) break
-            end -= Character.charCount(codePoint)
-        }
-        return value.substring(start, end)
-    }
+    private fun javaStrip(value: String): String = JavaStringSemantics.strip(value)
 
-    private fun javaIsBlank(value: String): Boolean {
-        var index = 0
-        while (index < value.length) {
-            val codePoint = Character.codePointAt(value, index)
-            if (!Character.isWhitespace(codePoint)) return false
-            index += Character.charCount(codePoint)
-        }
-        return true
-    }
+    private fun javaIsBlank(value: String): Boolean = JavaStringSemantics.isBlank(value)
 
     private fun safe(value: String?): String = value ?: ""
 
@@ -4070,7 +4169,15 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
 
     private data class PaletteLayout(val rows: List<PaletteRow>, val contentHeight: Int)
 
-    private data class BlockPreview(val prefix: String, val value: String, val suffix: String)
+    private enum class ChipKind { VALUE, CHOICE, CONDITION }
+
+    private data class BlockPreview(val prefix: String, val value: String, val suffix: String,
+        val kind: ChipKind = ChipKind.VALUE)
+
+    private class CBlockLayout(val bars: IntArray, val inners: IntArray, val branches: List<MutableList<MacroStep>>,
+        val labels: List<String?>, val cap: Boolean, val loop: Boolean) {
+        val height: Int = bars.sum() + inners.sum()
+    }
 
     private data class PickerOption(val label: String, val action: Runnable)
 

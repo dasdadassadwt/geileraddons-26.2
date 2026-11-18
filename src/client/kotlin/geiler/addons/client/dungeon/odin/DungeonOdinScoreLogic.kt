@@ -135,7 +135,6 @@ object DungeonOdinScoreLogic {
         if (completedRooms == null) missing.add(DungeonOdinScoreCalculator.Input.COMPLETED_ROOMS)
         if (puzzleCount == null) missing.add(DungeonOdinScoreCalculator.Input.PUZZLE_COUNT)
         if (deaths == null) missing.add(DungeonOdinScoreCalculator.Input.DEATHS)
-        if (bloodDone == null && !inBoss) missing.add(DungeonOdinScoreCalculator.Input.BLOOD_STATUS)
         if (floor != null && requiredSecretPercentage(floor) <= 0.0)
             missing.add(DungeonOdinScoreCalculator.Input.FLOOR)
         if (missing.isNotEmpty()) return unavailableScore(missing)

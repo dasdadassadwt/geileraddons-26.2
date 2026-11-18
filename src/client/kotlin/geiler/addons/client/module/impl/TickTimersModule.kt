@@ -1,5 +1,6 @@
 package geiler.addons.client.module.impl
 
+import geiler.addons.client.location.Island
 import geiler.addons.client.dungeon.DungeonContextTracker
 import geiler.addons.client.dungeon.f7.TickTimersLogic
 import geiler.addons.client.hud.HudElement
@@ -110,7 +111,10 @@ class TickTimersModule private constructor(private val s: Settings) : Module(
         private val sample: () -> String,
         private val live: () -> String?,
     ) : HudElement {
+        override fun hudIslands(): Set<Island> = setOf(Island.CATACOMBS)
+
         override fun id(): String = id
+        override fun module(): Module = this@TickTimersModule
         override fun displayName(): String = title
         override fun width(font: Font?): Int = font!!.width(live() ?: sample())
         override fun height(font: Font?): Int = font!!.lineHeight

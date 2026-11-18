@@ -84,6 +84,8 @@
 		"LevelLoadingScreenMixin",
 		"InputConstantsMixin",
 		"KeyMappingInputBlockMixin",
+		"KeyMappingGardenKeybindMixin",
+		"GameRendererBobViewMixin",
 		"KeyboardInputSnapTapMixin",
 		"KeyboardInputAutoSprintMixin",
 		"KeyboardInputFreecamMixin",

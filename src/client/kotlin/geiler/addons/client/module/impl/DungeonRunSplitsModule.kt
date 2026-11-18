@@ -1,5 +1,6 @@
 package geiler.addons.client.module.impl
 
+import geiler.addons.client.location.Island
 import geiler.addons.client.dungeon.DungeonFloor
 import geiler.addons.client.dungeon.DungeonGuideSegments
 import geiler.addons.client.dungeon.DungeonSplitPersonalBestBook
@@ -117,6 +118,8 @@ class DungeonRunSplitsModule private constructor() : Module(
         diagnostics.disable()
         clearSnapshots()
     }
+
+    override fun hudIslands(): Set<Island> = setOf(Island.CATACOMBS)
 
     override fun id(): String = "dungeon_run_splits"
 

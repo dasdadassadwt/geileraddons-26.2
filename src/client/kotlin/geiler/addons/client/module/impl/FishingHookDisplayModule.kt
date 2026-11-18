@@ -1,12 +1,13 @@
 package geiler.addons.client.module.impl
 
 import geiler.addons.client.fishing.FishingHookRules
+import geiler.addons.client.hud.HudElement
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.Module
 import geiler.addons.client.module.ModuleSettingsSpec
-import geiler.addons.client.render.ProjectedLabelRenderer
 import geiler.addons.client.utility.SkyblockItems
 import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.decoration.ArmorStand
@@ -19,14 +20,12 @@ import net.minecraft.world.level.entity.EntityTypeTest
  */
 class FishingHookDisplayModule private constructor(settings: Settings) : Module(
     "Fishing Hook Display",
-    "Shows the fish countdown and the !!! bite marker big above your hook.",
+    "Shows the fish countdown and the !!! bite marker big as a movable HUD element.",
     Category.FISHING,
     false,
-    settings.atCrosshair,
     settings.scale,
     settings.sound,
-) {
-    private val atCrosshair = settings.atCrosshair
+), HudElement {
     private val scale = settings.scale
     private val sound = settings.sound
     private val diagnostics = ModuleDiagnostics(Category.FISHING, { name() }, 12, 100L, 300)
@@ -41,7 +40,7 @@ class FishingHookDisplayModule private constructor(settings: Settings) : Module(
 
     override fun onEnable() {
         reset()
-        diagnostics.enable("crosshair=${atCrosshair.value()} scale=${scale.intValue()} sound=${sound.value()}")
+        diagnostics.enable("scale=${scale.intValue()} sound=${sound.value()}")
     }
 
     override fun onDisable() {
@@ -113,29 +112,39 @@ class FishingHookDisplayModule private constructor(settings: Settings) : Module(
         }
     }
 
-    /** The countdown or `!!!`, large, above the hook or at the crosshair. */
-    fun renderHud(graphics: GuiGraphicsExtractor) {
-        if (!isEnabled()) return
-        val shown = text ?: return
-        val client = Minecraft.getInstance()
-        val size = scale.intValue().coerceIn(1, 4).toFloat()
-        val color = if (FishingHookRules.isBite(shown)) RED else YELLOW
-        val label = "§l$shown"
-        if (atCrosshair.value()) {
-            val width = client.window.guiScaledWidth
-            val height = client.window.guiScaledHeight
-            val textWidth = client.font.width(label) * size
-            graphics.pose().pushMatrix()
-            graphics.pose().translate(width / 2f - textWidth / 2f, height / 2f - 30f)
-            graphics.pose().scale(size, size)
-            graphics.text(client.font, label, 0, 0, color)
-            graphics.pose().popMatrix()
-            return
-        }
-        val pos = hookPos ?: return
-        ProjectedLabelRenderer.drawFloatingText(
-            graphics, client.gameRenderer.mainCamera(), client.font, pos.add(0.0, ABOVE_HOOK, 0.0), label, color, size,
-        )
+    override fun id(): String = "fishing_hook_display"
+
+    override fun displayName(): String = "Fishing Hook Display"
+
+    override fun visible(): Boolean = isEnabled() && text != null
+
+    override fun previewMode(): String = if (text != null) "live" else "sample"
+
+    override fun width(font: Font?): Int = Math.round(font!!.width(label(text ?: SAMPLE)) * size())
+
+    override fun height(font: Font?): Int = Math.round(font!!.lineHeight * size())
+
+    override fun previewWidth(font: Font?): Int = Math.round(font!!.width(label(SAMPLE)) * size())
+
+    override fun render(graphics: GuiGraphicsExtractor, font: Font, x: Int, y: Int) {
+        draw(graphics, font, x, y, text ?: return)
+    }
+
+    override fun renderPreview(graphics: GuiGraphicsExtractor, font: Font, x: Int, y: Int) =
+        draw(graphics, font, x, y, text ?: SAMPLE)
+
+    private fun size(): Float = scale.intValue().coerceIn(1, 4).toFloat()
+
+    private fun label(shown: String): String = "§l$shown"
+
+    /** The countdown or `!!!`, large, at the element's Move Elements position. */
+    private fun draw(graphics: GuiGraphicsExtractor, font: Font, x: Int, y: Int, shown: String) {
+        val size = size()
+        graphics.pose().pushMatrix()
+        graphics.pose().translate(x.toFloat(), y.toFloat())
+        graphics.pose().scale(size, size)
+        graphics.text(font, label(shown), 0, 0, if (FishingHookRules.isBite(shown)) RED else YELLOW)
+        graphics.pose().popMatrix()
     }
 
     private fun reset() {
@@ -151,7 +160,6 @@ class FishingHookDisplayModule private constructor(settings: Settings) : Module(
     /** Declared in `module-settings.json`; this module only binds behaviour to the setting ids. */
     private class Settings {
         private val spec = ModuleSettingsSpec.of("Fishing Hook Display")
-        val atCrosshair = spec.toggle("atCrosshair")
         val scale = spec.slider("scale")
         val sound = spec.toggle("sound")
     }
@@ -159,7 +167,7 @@ class FishingHookDisplayModule private constructor(settings: Settings) : Module(
     companion object {
         private const val RED = 0xFFFF5555.toInt()
         private const val YELLOW = 0xFFFFFF55.toInt()
-        private const val ABOVE_HOOK = 1.2
+        private const val SAMPLE = "3.4"
         private const val DUMP_AFTER_TICKS = 160
         private const val DUMP_RADIUS = 3.0
         private const val DUMP_MAX = 8

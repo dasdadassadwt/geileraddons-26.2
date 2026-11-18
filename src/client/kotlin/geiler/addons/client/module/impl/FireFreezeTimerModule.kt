@@ -1,5 +1,6 @@
 package geiler.addons.client.module.impl
 
+import geiler.addons.client.location.Island
 import geiler.addons.client.dungeon.DungeonContextTracker
 import geiler.addons.client.dungeon.f7.FireFreezeTimerLogic
 import geiler.addons.client.hud.HudElement
@@ -74,6 +75,8 @@ class FireFreezeTimerModule private constructor(private val s: Settings) : Modul
     }
 
     private fun text(): String? = logic.text(s.displayInTicks.value(), s.displaySymbol.value(), s.showPrefix.value())
+
+    override fun hudIslands(): Set<Island> = setOf(Island.CATACOMBS)
 
     override fun id(): String = "fire_freeze_timer"
     override fun displayName(): String = "Fire Freeze Timer"

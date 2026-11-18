@@ -36,6 +36,7 @@ class PartyCommandsModule private constructor(settings: Settings) : Module(
     settings.replyPrivateEnabled,
     settings.replyCustomEnabled,
     *settings.presets.toTypedArray(),
+    settings.inviteAutoConfirm,
     settings.commandPrefix,
     settings.responseDelayTicks,
     settings.replyHelp,
@@ -121,6 +122,7 @@ class PartyCommandsModule private constructor(settings: Settings) : Module(
     private val commandPrefixSetting = settings.commandPrefix
     private val responseDelayTicksSetting = settings.responseDelayTicks
     private val presets = settings.presets
+    private val inviteAutoConfirmSetting = settings.inviteAutoConfirm
     private val replyControls = HashMap<String, ReplyControls>()
     private val folderControls = HashMap<String, BooleanSetting>()
     private val folderNames = HashMap<String, TextSetting>()
@@ -163,7 +165,7 @@ class PartyCommandsModule private constructor(settings: Settings) : Module(
                 replyPrivateEnabledSetting,
                 replyCustomEnabledSetting,
             ),
-            SettingGroup("Preset Commands", *presets.toTypedArray()),
+            SettingGroup("Preset Commands", *presets.toTypedArray(), inviteAutoConfirmSetting),
         )
     }
 
@@ -199,8 +201,13 @@ class PartyCommandsModule private constructor(settings: Settings) : Module(
         ChatReplyCommandRules.Command.PARTY_PROMOTE -> presets[7].value()
         ChatReplyCommandRules.Command.PARTY_DEMOTE -> presets[8].value()
         ChatReplyCommandRules.Command.PRIVATE_INVITE -> presets[9].value()
+        ChatReplyCommandRules.Command.PARTY_DOWNTIME, ChatReplyCommandRules.Command.PARTY_UNDOWNTIME -> presets[10].value()
+        ChatReplyCommandRules.Command.PARTY_REINVITE -> presets[11].value()
         else -> true
     }
+
+    /** When off, a private `!inv` shows a clickable invite instead of inviting at once (Odin's default). */
+    fun inviteAutoConfirm(): BooleanSetting = inviteAutoConfirmSetting
 
     fun allowsIncomingReply(channel: ChatChannel): Boolean {
         val allowed = ChatReplyConfigRules.incomingChannelAllowed(
@@ -242,6 +249,11 @@ class PartyCommandsModule private constructor(settings: Settings) : Module(
     ) {
         if (!diagnosticsActive || !isEnabled()) return
         writeDiagnosticEvent("PARTY_ACTION command=${command.name} outcome=${outcome.name}")
+    }
+
+    /** Downtime, reinvite and invite-prompt results; the outcome is a fixed token, never chat text. */
+    fun recordFeatureOutcome(outcome: String) {
+        if (diagnosticsActive && isEnabled()) writeDiagnosticEvent("FEATURE outcome=$outcome")
     }
 
     /** A request that was parsed but not run; the reason is a fixed token plus a command name, never chat text. */
@@ -601,13 +613,16 @@ class PartyCommandsModule private constructor(settings: Settings) : Module(
             BooleanSetting("Promote (!promote)", false),
             BooleanSetting("Demote (!demote)", false),
             BooleanSetting("Invite (!inv)", true),
+            BooleanSetting("Downtime (!dt)", true),
+            BooleanSetting("Reinvite (!reinvite)", false),
         )
+        val inviteAutoConfirm = BooleanSetting("Auto Confirm Invite", false)
         val commandPrefix = TextSetting("Command Prefix", "!", 4)
         val responseDelayTicks = NumberSetting("Reply Delay (Ticks)", 0f, 40f, 4f, true)
         val replyHelp = ModuleAction(
             "How Replies Work (i)",
-            "Explains triggers, Text Reply, Local Action and {args} in chat.",
-            Runnable { INSTANCE.showFeedbackPublic(ChatReplyPreview.HELP) },
+            "Prints a step-by-step guide to making a command, with the tags you can use.",
+            Runnable { ChatReplyPreview.GUIDE_LINES.forEach { INSTANCE.showFeedbackPublic(it) } },
         )
         val saveReplyEdits = ModuleAction(
             "Save Settings Edits",

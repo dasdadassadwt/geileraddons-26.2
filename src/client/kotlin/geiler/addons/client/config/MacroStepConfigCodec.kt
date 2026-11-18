@@ -117,6 +117,11 @@ object MacroStepConfigCodec {
             result.addProperty("holdMillis", step.holdMillis())
         }
         if (step is MacroStep.BlockPlayerInput) result.addProperty("durationMillis", step.durationMillis())
+        if (step is MacroStep.SetView) {
+            result.addProperty("yaw", step.yaw())
+            result.addProperty("pitch", step.pitch())
+            result.addProperty("maxMillis", step.maxMillis())
+        }
         if (step is MacroStep.FunctionCall) {
             result.addProperty("functionId", step.functionId())
             val arguments = JsonArray()
@@ -231,6 +236,13 @@ object MacroStepConfigCodec {
                 result.addProperty("operator", condition.operator().name)
                 result.add("value", writeValue(condition.value()))
             }
+            is MacroCondition.Player -> {
+                result.addProperty("type", "player")
+                result.addProperty("field", condition.field().name)
+                result.addProperty("operator", condition.operator().name)
+                result.addProperty("expected", condition.expected())
+                result.addProperty("argument", condition.argument())
+            }
             is MacroCondition.Hypixel -> {
                 result.addProperty("type", "hypixel")
                 result.addProperty("field", condition.field().name)
@@ -293,6 +305,8 @@ object MacroStepConfigCodec {
             "select_hotbar_slot" -> readHotbarAsInput(objectValue)
             "mouse_button" -> readMouseAsInput(objectValue)
             "block_player_input" -> MacroStep.BlockPlayerInput(integer(objectValue, "durationMillis", 1_000))
+            "set_view" -> MacroStep.SetView(decimal(objectValue, "yaw", 0.0f), decimal(objectValue, "pitch", 0.0f),
+                integer(objectValue, "maxMillis", 1_000))
             "start_block_player_input" -> MacroStep.StartBlockPlayerInput()
             "stop_block_player_input" -> MacroStep.StopBlockPlayerInput()
             "set_variable" -> readLegacySetVariable(objectValue)
@@ -539,6 +553,10 @@ object MacroStepConfigCodec {
                 variableOperator(string(objectValue, "operator", "EQUALS")), readValue(objectValue.get("value")),
                 string(objectValue, "globalVariableId", null))
             "hypixel" -> readHypixelCondition(objectValue)
+            "player" -> MacroCondition.Player(
+                enumOrNull<MacroCondition.Player.Field>(string(objectValue, "field", "")),
+                enumOrNull<MacroCondition.Hypixel.Operator>(string(objectValue, "operator", "")),
+                string(objectValue, "expected", ""), string(objectValue, "argument", ""))
             else -> MacroCondition.Always(true)
         }
     }
@@ -590,6 +608,9 @@ object MacroStepConfigCodec {
         }
         return result
     }
+
+    private inline fun <reified E : Enum<E>> enumOrNull(name: String?): E? =
+        enumValues<E>().firstOrNull { it.name.equals(name, ignoreCase = true) }
 
     private fun valueType(value: String?): MacroValue.Type = try {
         MacroValue.Type.valueOf((value ?: "TEXT").uppercase(Locale.ROOT))

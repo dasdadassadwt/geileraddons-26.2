@@ -1,5 +1,6 @@
 package geiler.addons.client.module.impl
 
+import geiler.addons.client.location.Island
 import geiler.addons.client.dungeon.DungeonContextTracker
 import geiler.addons.client.dungeon.f7.RelicTimerLogic
 import geiler.addons.client.hud.HudElement
@@ -69,6 +70,8 @@ class RelicTimerModule private constructor() : Module(
         val now = now()
         diagnostics.status { "m7=${isM7()} timerTicks=${logic.remaining(now)} serverTicks=$now suppressedEvents=$it" }
     }
+
+    override fun hudIslands(): Set<Island> = setOf(Island.CATACOMBS)
 
     override fun id(): String = "relic_timer"
     override fun displayName(): String = "Relic Timer"

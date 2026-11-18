@@ -5,6 +5,7 @@ import geiler.addons.client.mining.MiningContext
 import geiler.addons.client.mining.PowderChestTracker
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.ColorSetting
+import geiler.addons.client.module.NumberSetting
 import geiler.addons.client.module.Setting
 import geiler.addons.client.render.EspRenderer
 import geiler.addons.client.render.GeilerAddonsRenderTypes
@@ -40,9 +41,11 @@ class PowderChestModule private constructor(private val settings: Settings) : Mi
     private var expired = 0L
     private var opened = 0L
 
+    override fun hudIslands(): Set<Island> = setOf(Island.CRYSTAL_HOLLOWS)
+
     override fun diagnosticSettings(): String =
         "esp=${settings.highlight.value()};timer=${settings.showTimer.value()};age=${settings.showAge.value()};" +
-            "connect=${settings.connect.value()};colorByTime=${settings.colorByTime.value()}"
+            "range=${settings.espRange.intValue()};connect=${settings.connect.value()};colorByTime=${settings.colorByTime.value()}"
 
     override fun onEnable() {
         tracker.clear()
@@ -135,9 +138,9 @@ class PowderChestModule private constructor(private val settings: Settings) : Mi
     /** ESP boxes on every tracked chest and the optional oldest-to-newest line, through walls. */
     fun render(context: LevelRenderContext) {
         if (!isEnabled() || !MiningContext.on(Island.CRYSTAL_HOLLOWS)) return
-        val chests = tracker.chests()
-        if (chests.isEmpty()) return
         val client = Minecraft.getInstance()
+        val chests = inRange(tracker.chests(), client)
+        if (chests.isEmpty()) return
         val camera = client.gameRenderer.mainCamera()
         val cam = camera.position()
         val buffer = WorldRenderBuffer.current()
@@ -174,9 +177,9 @@ class PowderChestModule private constructor(private val settings: Settings) : Mi
     fun renderHud(graphics: GuiGraphicsExtractor) {
         if (!isEnabled() || !MiningContext.on(Island.CRYSTAL_HOLLOWS)) return
         if (!settings.showTimer.value() && !settings.showAge.value()) return
-        val chests = tracker.chests()
-        if (chests.isEmpty()) return
         val client = Minecraft.getInstance()
+        val chests = inRange(tracker.chests(), client)
+        if (chests.isEmpty()) return
         val camera = client.gameRenderer.mainCamera()
         val now = System.nanoTime()
         for (chest in chests) {
@@ -188,6 +191,15 @@ class PowderChestModule private constructor(private val settings: Settings) : Mi
                 parts.joinToString(" | "), chestColor(chest.remainingNanos(now)), 1.0f,
             )
         }
+    }
+
+    /** Chests within the ESP range of the player; a range of 0 shows every tracked chest. */
+    private fun inRange(chests: List<PowderChestTracker.Chest>, client: Minecraft): List<PowderChestTracker.Chest> {
+        val range = settings.espRange.intValue()
+        val player = client.player
+        if (range <= 0 || player == null) return chests
+        val limit = range.toDouble() * range
+        return chests.filter { player.distanceToSqr(it.x + 0.5, it.y + 0.5, it.z + 0.5) <= limit }
     }
 
     private fun chestColor(remainingNanos: Long): Int =
@@ -218,7 +230,8 @@ class PowderChestModule private constructor(private val settings: Settings) : Mi
         val connect = BooleanSetting("Connect Chests", false)
         val colorByTime = BooleanSetting("Color By Time Left", true)
         val chestColor = ColorSetting("Chest Color", 85, 255, 255, 255)
-        val display: List<Setting> = listOf(highlight, showTimer, showAge, connect, colorByTime, chestColor)
+        val espRange = NumberSetting("ESP Range", 0f, 100f, 40f)
+        val display: List<Setting> = listOf(highlight, espRange, showTimer, showAge, connect, colorByTime, chestColor)
         val appearance = MiningHudAppearance()
     }
 

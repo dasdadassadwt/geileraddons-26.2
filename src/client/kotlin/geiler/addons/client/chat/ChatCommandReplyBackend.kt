@@ -8,7 +8,9 @@ import geiler.addons.client.party.PartyMember
 import geiler.addons.client.party.PartySnapshot
 import geiler.addons.client.tree.ChatText
 import net.minecraft.client.Minecraft
+import net.minecraft.network.chat.ClickEvent
 import net.minecraft.network.chat.Component
+import net.minecraft.network.chat.HoverEvent
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -26,6 +28,12 @@ object ChatCommandReplyBackend {
     private val pending = ChatReplyCommandQueue<Pending>(MAX_PENDING)
     private var nextSendTick = 0L
     private var privateCounterpart: String? = null
+    private const val RUN_END_LINE = "> EXTRA STATS <"
+    private const val REMINDER_DELAY_TICKS = 30L
+    private const val REINVITE_DELAY_TICKS = 100L
+    private const val MAX_REINVITES = 4
+    private val reinvites = ArrayDeque<Pair<Long, String>>()
+    private var reminderTick = -1L
 
     /** Called only from Fabric's client chat receive callback; overlay lines are never commands. */
     @JvmStatic
@@ -33,6 +41,9 @@ object ChatCommandReplyBackend {
         val module = PartyCommandsModule.INSTANCE
         if (overlay || !module.isEnabled() || !module.chatRepliesEnabled().value()) return
         ChatReplyCommandRules.incomingPrivateSender(rawMessage).ifPresent { sender -> privateCounterpart = sender }
+        if (PartyDowntime.holdsRequeue() && rawMessage != null && ChatText.stripForMatch(rawMessage).trim() == RUN_END_LINE) {
+            reminderTick = clientTick + REMINDER_DELAY_TICKS
+        }
         val client = Minecraft.getInstance()
         val player = client.player
         val connection = client.getConnection()
@@ -130,6 +141,7 @@ object ChatCommandReplyBackend {
             clear()
             return
         }
+        runTimers(client, clientTick)
         if (clientTick < nextSendTick) return
         val queued = pending.pollReady(clientTick) ?: return
         module.recordQueueDiagnostic(PartyCommandsModule.QueueDiagnosticOutcome.READY, pending.size())
@@ -178,6 +190,8 @@ object ChatCommandReplyBackend {
             ) return
         }
 
+        if (handleLocalFeature(request, party, localPlayerName, clientTick, module)) return
+
         var helpLines: List<String>? = null
         val response: String? = when (request.command()) {
             ChatReplyCommandRules.Command.HELP -> {
@@ -215,7 +229,18 @@ object ChatCommandReplyBackend {
             } else {
                 ChatText.stripForMatch(player.getMainHandItem().getHoverName().string)
             }
-            ChatReplyCommandRules.Command.CUSTOM_REPLY -> request.response()
+            ChatReplyCommandRules.Command.CUSTOM_REPLY -> {
+                val expanded = ChatReplyTags.expand(
+                    request.response()!!, request.sender()!!, localPlayerName ?: "", ZonedDateTime.now(),
+                    ThreadLocalRandom.current(),
+                )
+                val prefix = ChatReplyCommandRules.normalizePrefix(module.commandPrefix().value())
+                if (!ChatReplyConfigRules.validResponse(expanded) || prefix == null || expanded.startsWith(prefix)) {
+                    module.recordRequestDropped("tag_expansion_rejected")
+                    return
+                }
+                expanded
+            }
             ChatReplyCommandRules.Command.PARTY_TRANSFER,
             ChatReplyCommandRules.Command.PARTY_WARP,
             ChatReplyCommandRules.Command.PARTY_ALLINVITE,
@@ -231,7 +256,13 @@ object ChatCommandReplyBackend {
         val command = if (ChatReplyCommandRules.isPartyAction(request.command())) {
             ChatReplyCommandRules.incomingPartyActionCommand(request, party, localPlayerName).orElse(null)
         } else if (request.command() == ChatReplyCommandRules.Command.PRIVATE_INVITE) {
-            ChatReplyCommandRules.privateInviteCommand(request).orElse(null)
+            val invite = ChatReplyCommandRules.privateInviteCommand(request).orElse(null)
+            if (invite != null && !module.inviteAutoConfirm().value()) {
+                promptInvite(client, invite, request.sender()!!)
+                module.recordFeatureOutcome("INVITE_PROMPTED")
+                return
+            }
+            invite
         } else {
             ChatReplyCommandRules.replyCommand(request.replyChannel(), response)
         }
@@ -275,6 +306,9 @@ object ChatCommandReplyBackend {
 
     @JvmStatic
     fun clear() {
+        reinvites.clear()
+        reminderTick = -1L
+        PartyDowntime.clear()
         val cleared = pending.size()
         if (cleared > 0) {
             PartyCommandsModule.INSTANCE.recordQueueDiagnostic(
@@ -389,6 +423,77 @@ object ChatCommandReplyBackend {
 
     private fun sameIgnoreCase(first: String?, second: String?): Boolean =
         first != null && second != null && first.equals(second, ignoreCase = true)
+
+    /** Downtime and reinvite are handled on this client and send no reply; true when the request was one of them. */
+    private fun handleLocalFeature(
+        request: ChatReplyCommandRules.Request,
+        party: PartySnapshot,
+        localPlayerName: String?,
+        clientTick: Long,
+        module: PartyCommandsModule,
+    ): Boolean {
+        val sender = request.sender() ?: return false
+        when (request.command()) {
+            ChatReplyCommandRules.Command.PARTY_DOWNTIME -> {
+                if (PartyDowntime.add(sender, request.argument())) {
+                    module.showFeedbackPublic("Downtime reminder set for the end of the run. Auto requeue is held for this run.")
+                    module.recordFeatureOutcome("DT_ADDED")
+                } else {
+                    module.showFeedbackPublic("$sender already has a downtime reminder.")
+                    module.recordFeatureOutcome("DT_DUPLICATE")
+                }
+            }
+            ChatReplyCommandRules.Command.PARTY_UNDOWNTIME -> {
+                val removed = PartyDowntime.remove(sender)
+                module.showFeedbackPublic(if (removed) "Downtime reminder removed." else "$sender has no downtime reminder.")
+                module.recordFeatureOutcome(if (removed) "DT_REMOVED" else "DT_MISSING")
+            }
+            ChatReplyCommandRules.Command.PARTY_REINVITE -> {
+                val otherLeads = party.inParty() && party.leaderName() != null && !party.isLeader(localPlayerName)
+                if (otherLeads || reinvites.size >= MAX_REINVITES) {
+                    module.recordRequestDropped("reinvite_not_allowed")
+                } else {
+                    reinvites.addLast((clientTick + REINVITE_DELAY_TICKS) to sender)
+                    module.showFeedbackPublic("Reinviting $sender in 5 seconds...")
+                    module.recordFeatureOutcome("REINVITE_QUEUED")
+                }
+            }
+            else -> return false
+        }
+        return true
+    }
+
+    /** Sends due reinvites and the end-of-run downtime reminder. */
+    private fun runTimers(client: Minecraft, clientTick: Long) {
+        val player = client.player ?: return
+        val module = PartyCommandsModule.INSTANCE
+        val due = reinvites.firstOrNull()
+        if (due != null && clientTick >= due.first) {
+            reinvites.removeFirst()
+            player.connection.sendCommand("party invite ${due.second}")
+            module.recordFeatureOutcome("REINVITE_SENT")
+        }
+        if (reminderTick in 0..clientTick) {
+            reminderTick = -1L
+            PartyDowntime.reasonFor(localName(client))?.let { player.connection.sendCommand("pc Downtime needed: $it") }
+            module.showFeedbackPublic("Downtime reasons: ${PartyDowntime.summary()}")
+            module.recordFeatureOutcome("DT_REMINDER")
+            PartyDowntime.clear()
+        }
+    }
+
+    private fun promptInvite(client: Minecraft, command: String, name: String) {
+        val chat = client.gui?.hud?.getChat() ?: return
+        chat.addClientSystemMessage(
+            Component.literal("[Party Commands] ").append(
+                Component.literal("Click to invite $name to your party.").withStyle { style ->
+                    style.withUnderlined(true)
+                        .withClickEvent(ClickEvent.RunCommand("/$command"))
+                        .withHoverEvent(HoverEvent.ShowText(Component.literal("/$command")))
+                },
+            ),
+        )
+    }
 
     private data class Pending(
         val request: ChatReplyCommandRules.Request,

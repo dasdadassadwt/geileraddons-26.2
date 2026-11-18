@@ -1,21 +1,25 @@
 {
   "subcategories": [
-    { "category": "F7", "id": "f7", "label": "F7", "modules": ["i4 helper", "Terminal Stats", "Terminal Titles", "Terminal ESP", "Melody Message", "Arrow Align", "Simon Says", "Tick Timers", "Fire Freeze Timer", "Terminal Solver", "Terminal Simulator", "Hide F7 Boss Sounds", "Boss Bar Percent"] },
+    { "category": "F7", "id": "f7", "label": "F7", "modules": ["i4 helper", "Terminal Stats", "Terminal Titles", "Terminal ESP", "Melody Message", "Arrow Align", "Simon Says", "Tick Timers", "Fire Freeze Timer", "Terminal Solver", "Lever Aim Assist", "Terminal Simulator", "Hide F7 Boss Sounds", "Boss Bar Percent"] },
     { "category": "F7", "id": "m7", "label": "M7", "modules": ["Wither Dragons", "Dragon Stack Aimer", "King Relic", "Relic Timer"] },
     { "category": "F7", "id": "highlight", "label": "Highlight", "modules": ["Dungeon Mob ESP", "Dungeon Boss ESP", "Dungeon Class ESP", "Trapped Chest ESP", "Secret Waypoints", "Mimic Announcer"] },
     { "category": "F7", "id": "room-map", "label": "Room / Map", "modules": ["Dungeon Map", "Room Alerts", "Glass Doors", "Dungeon Guide", "Puzzle Solvers"] },
-    { "category": "F7", "id": "general", "label": "General", "except": ["i4 helper", "Terminal Stats", "Terminal Titles", "Terminal ESP", "Melody Message", "Arrow Align", "Simon Says", "Tick Timers", "Fire Freeze Timer", "Terminal Solver", "Terminal Simulator", "Hide F7 Boss Sounds", "Boss Bar Percent", "Wither Dragons", "Dragon Stack Aimer", "King Relic", "Relic Timer", "Dungeon Mob ESP", "Dungeon Boss ESP", "Dungeon Class ESP", "Trapped Chest ESP", "Secret Waypoints", "Mimic Announcer", "Dungeon Map", "Room Alerts", "Glass Doors", "Dungeon Guide", "Puzzle Solvers"] },
-    { "category": "HUNTING", "id": "critter-safari", "label": "Critter Safari", "modules": ["Hideyho Finder", "Safari Floor Drops", "Sparkling Critter"] },
-    { "category": "HUNTING", "id": "general", "label": "General", "except": ["Hideyho Finder", "Safari Floor Drops", "Sparkling Critter"] },
+    { "category": "F7", "id": "general", "label": "General", "except": ["i4 helper", "Terminal Stats", "Terminal Titles", "Terminal ESP", "Melody Message", "Arrow Align", "Simon Says", "Tick Timers", "Fire Freeze Timer", "Terminal Solver", "Lever Aim Assist", "Terminal Simulator", "Hide F7 Boss Sounds", "Boss Bar Percent", "Wither Dragons", "Dragon Stack Aimer", "King Relic", "Relic Timer", "Dungeon Mob ESP", "Dungeon Boss ESP", "Dungeon Class ESP", "Trapped Chest ESP", "Secret Waypoints", "Mimic Announcer", "Dungeon Map", "Room Alerts", "Glass Doors", "Dungeon Guide", "Puzzle Solvers"] },
+    { "category": "HUNTING", "id": "critter-safari", "label": "Critter Safari", "modules": ["Critter Tracker", "Critter Markers", "Critter Alerts", "Hideonwall ESP", "Hideyho Finder", "Safari Floor Drops", "Sparkling Critter"] },
+    { "category": "HUNTING", "id": "general", "label": "General", "except": ["Critter Tracker", "Critter Markers", "Critter Alerts", "Hideonwall ESP", "Hideyho Finder", "Safari Floor Drops", "Sparkling Critter"] },
     { "category": "VISUAL", "id": "player-camera", "label": "Player & Camera", "modules": ["Player Names", "Player Size", "Hide Players", "Third Person Camera", "Freecam", "Animations"] },
     { "category": "VISUAL", "id": "highlights-effects", "label": "Highlights & Effects", "modules": ["Mob Highlight", "Compact Damage", "Block ESP", "Block Overlay", "Fullbright", "No Fog", "Hide Particles", "No Render", "Gyro Wand", "Ghost Vision"] },
     { "category": "VISUAL", "id": "interface", "label": "Interface", "modules": ["Custom Scoreboard", "Inventory Buttons", "Item Cooldowns", "Price Display"] },
+    { "category": "MINING", "id": "crystal-hollows", "label": "Crystal Hollows", "modules": ["Crystal Hollows Helper", "Metal Detector", "Powder Chests"] },
+    { "category": "MINING", "id": "dwarven-mines", "label": "Dwarven Mines", "modules": ["Goblin Highlighter"] },
+    { "category": "MINING", "id": "glacite-tunnels", "label": "Glacite Tunnels", "modules": ["Glacite Guide", "Corpse Finder", "Mineshaft Timer"] },
+    { "category": "MINING", "id": "general", "label": "General", "except": ["Crystal Hollows Helper", "Metal Detector", "Powder Chests", "Goblin Highlighter", "Glacite Guide", "Corpse Finder", "Mineshaft Timer"] },
     { "category": "MISCELLANEOUS", "id": "chat-party", "label": "Chat & Party", "modules": ["Chat", "Chat Channels", "Party Commands"] },
     { "category": "MISCELLANEOUS", "id": "utilities", "label": "Utilities", "modules": ["Macros"] },
-    { "category": "MISCELLANEOUS", "id": "inventory", "label": "Inventory", "modules": ["Slot Locking", "Wardrobe Keybinds", "Loadout Keybinds", "Scrollable Tooltip"] },
+    { "category": "MISCELLANEOUS", "id": "inventory", "label": "Inventory", "modules": ["Slot Locking", "Wardrobe Keybinds", "Loadout Keybinds", "Pet Keybinds", "Command Keybinds", "Scrollable Tooltip", "Storage Overlay"] },
     { "category": "MISCELLANEOUS", "id": "player", "label": "Player", "modules": ["Auto Sprint", "Snap Tap", "Spring Boots", "Ragnarock"] },
     { "category": "MISCELLANEOUS", "id": "world", "label": "World", "modules": ["Waypoints", "Chat Waypoints", "Lobby Sniper"] },
-    { "category": "MISCELLANEOUS", "id": "display", "label": "Display", "modules": ["System Clock", "Speed Display"] },
+    { "category": "MISCELLANEOUS", "id": "display", "label": "Display", "modules": ["System Clock", "Speed Display", "Quiver Display"] },
     { "category": "MISCELLANEOUS", "id": "fix", "label": "Fix", "modules": ["Animation Fix", "Double Use Fix", "Disconnect Fix", "No Cursor Reset"] }
   ]
 }

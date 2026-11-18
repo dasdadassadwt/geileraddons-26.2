@@ -24,7 +24,7 @@ import java.util.IdentityHashMap
  */
 class HotmTreeHelperModule private constructor(settings: Settings) : Module(
     "HotM Tree Helper",
-    "Shows perk levels on the Heart of the Mountain slots and powder costs in their tooltips.",
+    "Shows perk levels, highlights and powder costs in the Heart of the Mountain menu.",
     Category.MINING,
     false,
     settings.showLevel, settings.highlight, settings.showTokens, settings.powderSpent, settings.powderToMax,
@@ -97,9 +97,11 @@ class HotmTreeHelperModule private constructor(settings: Settings) : Module(
         }
     }
 
-    private fun inTree(mc: Minecraft): Boolean {
+    private fun inTree(mc: Minecraft): Boolean = inMenu(mc, TREE_TITLE)
+
+    private fun inMenu(mc: Minecraft, title: String): Boolean {
         val screen = mc.gui.screen() as? AbstractContainerScreen<*> ?: return false
-        return screen.title.string.trim().equals(TREE_TITLE, ignoreCase = true)
+        return screen.title.string.trim().equals(title, ignoreCase = true)
     }
 
     private fun reading(stack: ItemStack): HotmText.Reading? =
@@ -119,7 +121,8 @@ class HotmTreeHelperModule private constructor(settings: Settings) : Module(
 
     /** The level on a perk slot and the token count on the heart, after the item is drawn. */
     fun drawOnItem(graphics: GuiGraphicsExtractor, stack: ItemStack, x: Int, y: Int) {
-        if (!isEnabled() || !treeOpen || stack.isEmpty) return
+        if (!isEnabled() || stack.isEmpty) return
+        if (!treeOpen) return
         val text = when {
             showLevel.value() -> reading(stack)?.let { HotmText.slotText(it) }.orEmpty()
             else -> ""

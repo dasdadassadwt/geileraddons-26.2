@@ -31,6 +31,20 @@ public final class MineshaftChecks {
 		require(rows.size() == 2 && Boolean.FALSE.equals(rows.get("Lapis")) && Boolean.TRUE.equals(rows.get("Tungsten")), "corpse rows carry their looted state");
 		require(MiningTabText.corpses(List.of("Powders:")).isEmpty(), "no widget means no corpses");
 
+		CorpseTracker corpses = new CorpseTracker();
+		require(corpses.see("Lapis", 0, 10, 0) && !corpses.see("Lapis", 0.5, 10, 0), "the same stand is one corpse");
+		require(corpses.see("Lapis", 60, 10, 0), "a second corpse of the same type is its own entry");
+		require(corpses.update(Map.of("Lapis", false), 0, 10, 0).isEmpty(), "an unlooted type marks nothing");
+		List<CorpseTracker.Entry> done = corpses.update(Map.of("Lapis", true), 58, 10, 0);
+		require(done.size() == 1 && done.get(0).getX() == 60 && corpses.entries().get(0).getLooted() == false,
+			"only the corpse next to the player turns looted, not every corpse of the type");
+		CorpseTracker early = new CorpseTracker();
+		early.see("Tungsten", 5, 5, 5);
+		require(early.update(Map.of("Tungsten", true), 100, 5, 5).size() == 1, "a lone corpse already looted on first read is looted");
+		CorpseTracker twin = new CorpseTracker();
+		twin.see("Umber", 0, 0, 0);
+		twin.see("Umber", 80, 0, 0);
+		require(twin.update(Map.of("Umber", true), 0, 0, 0).isEmpty(), "an ambiguous first read keeps both corpses marked");
 		MineshaftTimerState timer = new MineshaftTimerState();
 		require(!timer.active() && timer.elapsed(5 * S) == 0, "idle timers read zero");
 		timer.enter(10 * S);

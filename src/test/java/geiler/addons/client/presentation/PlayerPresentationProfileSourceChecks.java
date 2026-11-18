@@ -114,7 +114,15 @@ public final class PlayerPresentationProfileSourceChecks {
 				"bundled profile is within the same byte limit as remote data");
 			PlayerPresentationProfiles profile = PlayerPresentationProfiles.parseUtf8(bytes);
 			PlayerPresentationProfiles.Entry entry = profile.find("ich_liebe_Pizza1");
-			check(profile.entries().size() == 4 && entry != null && entry.alias() == null
+			PlayerPresentationProfiles.Entry lanrt = profile.find("JstLnrt2");
+			PlayerPresentationProfiles.Entry schmon = profile.find("Schmondooo");
+			check(lanrt != null && Float.compare(lanrt.sizeX(), 4.0f) == 0
+				&& Float.compare(lanrt.sizeY(), 1.0f) == 0 && Float.compare(lanrt.sizeZ(), 4.0f) == 0,
+				"JstLnrt2 is sized 4, 1, 4");
+			check(schmon != null && Float.compare(schmon.sizeX(), 2.0f) == 0
+				&& Float.compare(schmon.sizeY(), 1.5f) == 0 && Float.compare(schmon.sizeZ(), 1.0f) == 0,
+				"Schmondooo is sized 2, 1.5, 1");
+			check(profile.entries().size() == 5 && entry != null && entry.alias() == null
 				&& Float.compare(entry.sizeX(), 2.0f) == 0
 				&& Float.compare(entry.sizeY(), 1.0f) == 0
 				&& Float.compare(entry.sizeZ(), 1.0f) == 0

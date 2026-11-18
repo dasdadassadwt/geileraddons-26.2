@@ -350,6 +350,21 @@ sealed interface MacroStep {
         override fun type(): String = "block_player_input"
     }
 
+    /** Turns the view to exact angles with the Rotation Engine; the step ends once aimed or after [maxMillis]. */
+    class SetView(yaw: Float, pitch: Float, maxMillis: Int) : Base() {
+        private var yawValue = 0.0f
+        private var pitchValue = 0.0f
+        private var maxMillisValue = 0
+        init { setYaw(yaw); setPitch(pitch); setMaxMillis(maxMillis) }
+        fun yaw(): Float = yawValue
+        fun pitch(): Float = pitchValue
+        fun maxMillis(): Int = maxMillisValue
+        fun setYaw(value: Float) { yawValue = if (value.isFinite()) net.minecraft.util.Mth.wrapDegrees(value) else 0.0f }
+        fun setPitch(value: Float) { pitchValue = if (value.isFinite()) stepClamp(value, -90.0f, 90.0f) else 0.0f }
+        fun setMaxMillis(value: Int) { maxMillisValue = stepClamp(value, 50, 10_000) }
+        override fun type(): String = "set_view"
+    }
+
     class StartBlockPlayerInput : Base() {
         override fun type(): String = "start_block_player_input"
     }

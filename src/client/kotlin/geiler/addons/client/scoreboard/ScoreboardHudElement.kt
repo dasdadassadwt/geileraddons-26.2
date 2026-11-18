@@ -1,6 +1,7 @@
 package geiler.addons.client.scoreboard
 
 import geiler.addons.client.hud.HudElement
+import geiler.addons.client.module.Module
 import geiler.addons.client.module.impl.ScoreboardModule
 import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphicsExtractor
@@ -8,6 +9,8 @@ import net.minecraft.client.gui.GuiGraphicsExtractor
 /** Movable HUD adapter; all content and styling come from the feature-local layout. */
 object ScoreboardHudElement : HudElement {
     override fun id(): String = "custom_scoreboard"
+
+    override fun module(): Module = ScoreboardModule.INSTANCE
 
     override fun displayName(): String = "Custom Scoreboard"
 

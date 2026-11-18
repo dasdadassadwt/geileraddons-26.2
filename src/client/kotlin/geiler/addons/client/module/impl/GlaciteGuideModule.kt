@@ -4,6 +4,7 @@ import geiler.addons.client.location.Island
 import geiler.addons.client.mining.GlaciteGraph
 import geiler.addons.client.mining.GlaciteRoute
 import geiler.addons.client.mining.MiningContext
+import geiler.addons.client.mining.PathSmoothing
 import geiler.addons.client.mining.MiningTabText
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
@@ -32,12 +33,13 @@ class GlaciteGuideModule private constructor(settings: Settings) : Module(
     "Shows a route to your next commission or gemstone in the Glacite Tunnels.",
     Category.MINING,
     false,
-    settings.target, settings.pigeon, settings.showDistance, settings.pathColor, settings.pathWidth,
+    settings.target, settings.pigeon, settings.showDistance, settings.pathColor, settings.colourByTarget, settings.pathWidth,
 ) {
     private val target = settings.target
     private val pigeon = settings.pigeon
     private val showDistance = settings.showDistance
     private val pathColor = settings.pathColor
+    private val colourByTarget = settings.colourByTarget
     private val pathWidth = settings.pathWidth
 
     private val diagnostics = ModuleDiagnostics(Category.MINING, { name() }, 8, 100L, 400)
@@ -53,11 +55,11 @@ class GlaciteGuideModule private constructor(settings: Settings) : Module(
     private var commissionTarget: String? = null
 
     init {
-        group(SettingGroup("Route", target, pigeon, showDistance, pathColor, pathWidth))
+        group(SettingGroup("Route", target, pigeon, showDistance, pathColor, colourByTarget, pathWidth))
     }
 
     private fun settingsText(): String =
-        "target=${target.value()};pigeon=${pigeon.value()};distance=${showDistance.value()};width=${pathWidth.intValue()}"
+        "target=${target.value()};colourByTarget=${colourByTarget.value()};pigeon=${pigeon.value()};distance=${showDistance.value()};width=${pathWidth.intValue()}"
 
     override fun onEnable() {
         ensureLoaded()
@@ -186,21 +188,24 @@ class GlaciteGuideModule private constructor(settings: Settings) : Module(
         val cam = client.gameRenderer.mainCamera().position()
         val buffer = WorldRenderBuffer.current()
         val pose = context.poseStack()
-        val color = pathColor.opaqueArgb()
+        val color = routeColor()
         val width = pathWidth.intValue().toFloat()
-        var fromX = player.x - cam.x
-        var fromY = player.y + 0.2 - cam.y
-        var fromZ = player.z - cam.z
-        for (node in path.nodes) {
-            val toX = node.x + 0.5 - cam.x
-            val toY = node.y + 0.5 - cam.y
-            val toZ = node.z + 0.5 - cam.z
-            EspRenderer.renderLine(pose, buffer, fromX, fromY, fromZ, toX, toY, toZ, color, width)
-            fromX = toX
-            fromY = toY
-            fromZ = toZ
+        val points = ArrayList<DoubleArray>(path.nodes.size + 1)
+        points.add(doubleArrayOf(player.x - cam.x, player.y + 0.2 - cam.y, player.z - cam.z))
+        for (node in path.nodes) points.add(doubleArrayOf(node.x + 0.5 - cam.x, node.y + 0.5 - cam.y, node.z + 0.5 - cam.z))
+        val smooth = PathSmoothing.smooth(points)
+        for (i in 1 until smooth.size) {
+            val a = smooth[i - 1]
+            val b = smooth[i]
+            EspRenderer.renderLine(pose, buffer, a[0], a[1], a[2], b[0], b[1], b[2], color, width)
         }
         GeilerAddonsRenderTypes.endBatches(buffer)
+    }
+
+    /** The route colour: the target's gemstone/ore colour when Colour By Target is on and it has one, else Path Color. */
+    private fun routeColor(): Int {
+        if (colourByTarget.value()) GlaciteGraph.targetColor(route?.target)?.let { return 0xFF000000.toInt() or it }
+        return pathColor.opaqueArgb()
     }
 
     fun renderHud(graphics: GuiGraphicsExtractor) {
@@ -211,7 +216,7 @@ class GlaciteGuideModule private constructor(settings: Settings) : Module(
         val client = Minecraft.getInstance()
         ProjectedLabelRenderer.draw(
             graphics, client.gameRenderer.mainCamera(), client.font, Vec3(goal.x + 0.5, goal.y + 2.0, goal.z + 0.5),
-            "${goal.name ?: "Goal"} §e${Math.round(path.length)}m", pathColor.opaqueArgb(), 1.5f,
+            "${goal.name ?: "Goal"} §e${Math.round(path.length)}m", routeColor(), 1.5f,
         )
     }
 
@@ -224,6 +229,7 @@ class GlaciteGuideModule private constructor(settings: Settings) : Module(
         val pigeon = BooleanSetting("Left Click Royal Pigeon", true)
         val showDistance = BooleanSetting("Show Distance", true)
         val pathColor = ColorSetting("Path Color", 85, 255, 255, 255)
+        val colourByTarget = BooleanSetting("Colour By Target", true)
         val pathWidth = NumberSetting("Path Width", 1f, 8f, 3f, true)
     }
 

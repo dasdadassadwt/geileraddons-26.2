@@ -1,5 +1,6 @@
 package geiler.addons.client.module.impl
 
+import geiler.addons.client.location.Island
 import com.mojang.blaze3d.vertex.PoseStack
 import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.chat.ChatStringSemantics
@@ -585,6 +586,8 @@ class DungeonHelperModule private constructor(
         drawStatusLines(graphics, client.font, statusLines(route), hudX(graphics), hudY(graphics))
         renderUpcomingLabels(graphics, client, route.current())
     }
+
+    override fun hudIslands(): Set<Island> = setOf(Island.CATACOMBS)
 
     override fun id(): String = "dungeon_guide_status"
 

@@ -94,6 +94,12 @@ public final class F7FeatureChecks {
 		require(ArrowAlignRules.solve(new int[] {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}) == null,
 			"no frames present matches nothing");
 		require(ArrowAlignRules.SOLUTIONS.size() == 9, "nine known patterns");
+		require(Math.abs(ArrowAlignRules.labelScale(6.0) - 1.0f) < 1.0e-6f && Math.abs(ArrowAlignRules.labelScale(12.0) - 0.5f) < 1.0e-6f
+			&& Math.abs(ArrowAlignRules.labelScale(3.0) - 2.0f) < 1.0e-6f,
+			"click labels keep a fixed world size: scale is inverse to distance");
+		require(ArrowAlignRules.labelScale(0.0) == 4.0f && ArrowAlignRules.labelScale(100.0) == 0.25f
+			&& ArrowAlignRules.labelScale(Double.NaN) == 1.0f,
+			"label scale is clamped and survives bad distances");
 	}
 
 	private static void checkSimonSays() {

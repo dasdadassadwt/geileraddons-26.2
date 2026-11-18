@@ -1,0 +1,5 @@
+The JSON files in this folder (pile_locations.json, pearl_waypoints.json, new_etherwarp_waypoints.json,
+custom_waypoints.json) are the default configuration data of the IQ mod by PeHenrii and DarkJota
+(https://github.com/iqaddons/IQ, branch ver/26.2), used under the Apache License, Version 2.0 (IQ-LICENSE.txt).
+GeilerAddons reads them as bundled data; they are unchanged copies. The IQ README states MIT while its LICENSE file
+is Apache-2.0; both are permissive and this notice satisfies both.

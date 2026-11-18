@@ -84,6 +84,24 @@ class GlaciteGraph private constructor(private val nodes: Map<Int, Node>) {
             label == "Campfire" || label.startsWith("Fairy Soul") || label in ORES ||
                 (label.endsWith(" Gemstone") && label.removeSuffix(" Gemstone") in GEMSTONES)
 
+        /** The path colour (RGB) for a target by gemstone/ore, or null when it has none and the setting's colour applies. */
+        @JvmStatic
+        fun targetColor(target: String?): Int? = when (target?.removeSuffix(" Gemstone")) {
+            "Ruby" -> 0xFF3333
+            "Amethyst" -> 0xAA44FF
+            "Jade" -> 0x66FF33
+            "Sapphire" -> 0x55AAFF
+            "Amber" -> 0xFFBB22
+            "Topaz" -> 0xFFEE44
+            "Onyx" -> 0x111111
+            "Aquamarine" -> 0x3355FF
+            "Citrine" -> 0x8B5A2B
+            "Peridot" -> 0x55FF55
+            "Tungsten" -> 0x9A9A9A
+            "Umber" -> 0xFF8800
+            else -> null
+        }
+
         /** Drops legacy color codes from a graph label. */
         private fun plain(label: String): String = label.replace(Regex("§."), "").trim()
 

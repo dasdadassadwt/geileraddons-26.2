@@ -2,7 +2,11 @@ package geiler.addons.client.module.impl
 
 import geiler.addons.client.dungeon.DungeonContextTracker
 import org.lwjgl.glfw.GLFW
+import geiler.addons.client.dungeon.terminal.AutoBox
+import geiler.addons.client.dungeon.terminal.AutoTermsView
 import geiler.addons.client.dungeon.terminal.TerminalAim
+import geiler.addons.client.dungeon.terminal.TerminalAnalysisLog
+import geiler.addons.client.dungeon.terminal.TerminalRunRecorder
 import geiler.addons.client.dungeon.terminal.ColorKey
 import geiler.addons.client.dungeon.terminal.TermSlot
 import geiler.addons.client.dungeon.terminal.TerminalConfig
@@ -20,6 +24,7 @@ import geiler.addons.client.module.NumberSetting
 import geiler.addons.client.module.Setting
 import geiler.addons.client.module.SettingGroup
 import geiler.addons.client.module.TextSetting
+import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
@@ -27,11 +32,15 @@ import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.core.component.DataComponents
 import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.network.chat.Component
 import net.minecraft.network.protocol.game.ClientboundSoundPacket
 import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.inventory.ContainerInput
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
+import java.io.IOException
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 /**
  * Odin's Terminal Solver for floor 7 terminals with its custom GUI: the solved slots are drawn as a compact grid,
@@ -53,6 +62,7 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
     s.melodyColumn, s.melodyPointer, s.melodyBackground, s.debug,
     s.clickSounds, s.clickSound, s.clickPitch, s.clickVolume, s.playClick,
     s.completeSounds, s.completeSound, s.completePitch, s.completeVolume, s.playComplete,
+    s.analyse,
 ) {
     private val config = object : TerminalConfig {
         override val clickPrediction get() = s.clickPrediction.value()
@@ -78,9 +88,17 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
     private var clicks = 0
     private var blockedClicks = 0
     private var hovered: Int? = null
+    private var pendingFinalClick: Triple<Int, Int, Pair<Double, Double>>? = null
     private var cursorPending = false
     private var grid: Grid? = null
     private val diagnostics = ModuleDiagnostics(Category.F7, { name() }, 10, 100L, 320)
+
+    // Analyse Terms: the run being recorded, the session file, and what the chat has already said.
+    private var run: TerminalRunRecorder? = null
+    private var runCompleted = false
+    private var analysisLog: TerminalAnalysisLog? = null
+    private var analysisFailed = false
+    private var aimWarned = false
 
     init {
         group(
@@ -99,6 +117,7 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
             SettingGroup.switched(
                 "Completion Sounds", s.completeSounds, s.completeSound, s.completePitch, s.completeVolume, s.playComplete,
             ),
+            SettingGroup("Analysis", s.analyse),
         )
     }
 
@@ -120,12 +139,17 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
                 "rubix=${s.rubixMode.value()} replaceClicks=${s.rubixReplaceClicks.value()} " +
                 "aim=${s.aimAssist.value()} aimRange=${s.aimRange.value()} melodyBlock=${s.melodyBlockWrong.value()} " +
                 "melodyCursor=${s.melodyAutoCursor.value()} protMs=${s.firstClickProt.intValue()} lag=${s.serverLag.value()} " +
-                "clickSounds=${s.clickSounds.value()} completeSounds=${s.completeSounds.value()}",
+                "clickSounds=${s.clickSounds.value()} completeSounds=${s.completeSounds.value()} analyse=${s.analyse.value()}",
         )
+        aimWarned = false
+        analysisFailed = false
     }
 
     override fun onDisable() {
+        finishRun("disabled")
         clear()
+        analysisLog?.close()
+        analysisLog = null
         diagnostics.disable()
     }
 
@@ -143,6 +167,7 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
         if (!isEnabled()) return
         if (screen === currentScreen && current != null) return
         val handler = TerminalHandler.open(screen.title.string, config) ?: return
+        finishRun("replaced")
         current = handler
         currentScreen = screen
         lastOpened = handler
@@ -150,11 +175,15 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
         clicks = 0
         blockedClicks = 0
         diagnostics.event("OPEN type=${handler.type} title=${screen.title.string.take(40)} floor7=${floor7()}")
+        startRun(handler, screen)
+        AutoTermsModule.INSTANCE.onTerminalOpened(handler.type)
     }
 
     fun onScreenClosed(screen: AbstractContainerScreen<*>) {
         if (screen !== currentScreen) return
         diagnostics.event("CLOSE type=${current?.type} clicks=$clicks blocked=$blockedClicks")
+        finishRun(if (runCompleted) "completed" else "closed")
+        AutoTermsModule.INSTANCE.onTerminalClosed()
         current = null
         currentScreen = null
         grid = null
@@ -168,6 +197,8 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
         val handler = current ?: return
         if (!isEnabled() || menu !== currentScreen?.menu) return
         handler.updateSlot(slot, BuiltInRegistries.ITEM.getKey(stack.item).path == TermSlot.BLACK_PANE, termSlots(menu, handler.type))
+        run?.board(handler.solution)
+        run?.confirm(slot)
         diagnostics.event("SLOT slot=$slot solution=${handler.solution.take(12)}")
     }
 
@@ -176,6 +207,7 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
         val handler = current ?: return
         if (!isEnabled() || menu !== currentScreen?.menu) return
         handler.updateSlot(0, false, termSlots(menu, handler.type))
+        run?.board(handler.solution)
         diagnostics.event("CONTENTS solution=${handler.solution.take(12)}")
     }
 
@@ -194,6 +226,10 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
     fun tick() {
         if (!isEnabled()) return
         diagnostics.advance()
+        pendingFinalClick?.let { (slot, button, at) ->
+            pendingFinalClick = null
+            if (current != null) clickSlot(slot, button, "auto", slot, at)
+        }
         val handler = current
         val now = DungeonOdinAssistModule.INSTANCE.serverTicks()
         val delta = if (lastServerTicks < 0L || now < lastServerTicks) 0L else minOf(now - lastServerTicks, 40L)
@@ -210,16 +246,128 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
         }
         diagnostics.status {
             "terminal=${handler?.type} solution=${handler?.solution?.size} clicked=${handler?.clickedSlots?.size} " +
-                "ticksOpened=${handler?.ticksOpened} clicks=$clicks blocked=$blockedClicks suppressedEvents=$it"
+                "ticksOpened=${handler?.ticksOpened} clicks=$clicks blocked=$blockedClicks " +
+                "analyse=${s.analyse.value()} analyseRuns=${analysisLog?.runs() ?: 0} analyseBytes=${analysisLog?.bytes() ?: 0} " +
+                "suppressedEvents=$it"
         }
+    }
+
+    // ----- Analyse Terms ---------------------------------------------------------------------------------------
+
+    private fun say(text: String) {
+        Minecraft.getInstance().gui?.hud?.chat?.addClientSystemMessage(Component.literal("[GeilerAddons] $text"))
+    }
+
+    /** The cursor in GUI units, with the sub-pixel position the window reports. */
+    private fun cursorGui(): Pair<Double, Double> {
+        val mc = Minecraft.getInstance()
+        val window = mc.window
+        if (window.screenWidth <= 0 || window.screenHeight <= 0) return 0.0 to 0.0
+        return mc.mouseHandler.xpos() * window.guiScaledWidth / window.screenWidth to
+            mc.mouseHandler.ypos() * window.guiScaledHeight / window.screenHeight
+    }
+
+    private fun analysisLog(): TerminalAnalysisLog? {
+        analysisLog?.let { return it }
+        if (analysisFailed) return null
+        return try {
+            val dir = FabricLoader.getInstance().configDir.resolve("geileraddons").resolve("recordings").resolve("terminals")
+            val id = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+            TerminalAnalysisLog(dir, id, ANALYSIS_MAX_BYTES).also {
+                analysisLog = it
+                diagnostics.event("ANALYSE_FILE dir=$dir session=$id limitMB=${ANALYSIS_MAX_BYTES / 1024 / 1024}")
+            }
+        } catch (e: IOException) {
+            analysisFailed = true
+            diagnostics.event("ANALYSE_FAILED could not open the file: ${e.message}")
+            null
+        }
+    }
+
+    /** A raw mouse move in window pixels (from the mouse mixin): kept in GUI units while a terminal run is recorded. */
+    fun trackMove(x: Double, y: Double) {
+        val recorder = run ?: return
+        val window = Minecraft.getInstance().window
+        if (window.screenWidth <= 0 || window.screenHeight <= 0) return
+        recorder.move(x * window.guiScaledWidth / window.screenWidth, y * window.guiScaledHeight / window.screenHeight)
+    }
+
+    fun trackButton(button: Int, down: Boolean) {
+        run?.button(button, down)
+    }
+
+    /** The slot the solver wants next: the first number, or the melody button the pointer's row leads to. -1 when it is a free choice. */
+    private fun targetSlot(handler: TerminalHandler): Int = when (handler.type) {
+        TerminalType.NUMBERS -> handler.solution.firstOrNull() ?: -1
+        TerminalType.MELODY -> handler.solution.getOrNull(3)
+            ?: handler.solution.firstOrNull()?.takeIf { it >= 0 }?.let { (it / 9) * 9 + 7 } ?: -1
+        else -> -1
+    }
+
+    /** True when [targetSlot] can be clicked now (a melody button only once it is lit). */
+    private fun targetLit(handler: TerminalHandler): Boolean = handler.type != TerminalType.MELODY || handler.solution.size > 3
+
+    private fun startRun(handler: TerminalHandler, screen: AbstractContainerScreen<*>) {
+        runCompleted = false
+        run = null
+        if (!s.analyse.value() && !CursorTrackerModule.INSTANCE.isEnabled()) return
+        val log = analysisLog() ?: return
+        val window = Minecraft.getInstance().window
+        val src = if (screen is TermSimScreen) "sim" else "real"
+        run = TerminalRunRecorder(
+            handler.type.name, screen.title.string, src, log.nextNumber(handler.type.name),
+            TerminalRunRecorder.Settings(
+                window.guiScale.toInt(), window.screenWidth, window.screenHeight, Minecraft.getInstance().fps,
+                s.aimAssist.value(), s.termSize.value(), config.firstClickProtectionMillis,
+            ),
+        )
+        if (s.aimAssist.value() && !aimWarned) {
+            aimWarned = true
+            say("Analyse Terms: Aim Assist is on and changes which slot is sent; turn it off for clean data.")
+        }
+    }
+
+    private fun finishRun(reason: String) {
+        val recorder = run ?: return
+        run = null
+        val handler = current
+        val type = handler?.type?.name ?: "?"
+        val number = analysisLog?.nextNumber(type) ?: 0
+        val line = recorder.finish(reason, handler?.ticksOpened ?: -1)
+        if (line == null) {
+            diagnostics.event("ANALYSE_SKIPPED type=$type reason=$reason clicks=0")
+            return
+        }
+        try {
+            analysisLog?.write(type, line)
+        } catch (e: IOException) {
+            analysisFailed = true
+            analysisLog = null
+            diagnostics.event("ANALYSE_FAILED write failed: ${e.message}")
+            return
+        }
+        val ms = if (handler != null) System.currentTimeMillis() - handler.timeOpened else 0L
+        diagnostics.event(
+            "ANALYSE_RUN type=$type n=$number reason=$reason clicks=${recorder.clicks} ms=$ms bytes=${analysisLog?.bytes()}",
+        )
+        CursorTrackerModule.INSTANCE.runFinished(type, number, recorder.rawMoves, ms)
+        say("Analyse Terms: $type #$number ${if (reason == "completed") "" else "($reason) "}${recorder.clicks} clicks, ${ms}ms")
     }
 
     // ----- clicking --------------------------------------------------------------------------------------------
 
     /** A click on [slot] with mouse [button]: sends it when the solver allows it. Returns true when consumed. */
-    private fun clickSlot(slot: Int, button: Int, source: String): Boolean {
+    private fun clickSlot(slot: Int, button: Int, source: String, hover: Int = slot, at: Pair<Double, Double>? = null): Boolean {
         val handler = current ?: return false
+        val recorder = run
+        recorder?.board(handler.solution)
+        val left = handler.solution.size
+        val expected = if (handler.type == TerminalType.NUMBERS) handler.solution.firstOrNull() ?: -1 else -1
         val click = handler.click(slot, button, s.clickPrediction.value())
+        if (recorder != null) {
+            val (x, y) = at ?: cursorGui()
+            recorder.click(click?.slot ?: slot, hover, x, y, button, click?.button ?: -1, click != null, left, expected, source)
+        }
         if (click == null) {
             blockedClicks++
             diagnostics.event("CLICK_BLOCKED source=$source slot=$slot button=$button protected=${handler.shouldProtect()}")
@@ -326,6 +474,18 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
         val mc = Minecraft.getInstance()
         val built = buildGrid(screen, handler.type)
         grid = built
+        run?.let { recorder ->
+            val (rows, cols, startRow, startCol) = shape(handler.type).toList()
+            recorder.grid(
+                TerminalRunRecorder.Grid(
+                    built.originX, built.originY, built.scale, SLOT_SIZE, s.slotGap.intValue(), rows, cols, startRow, startCol,
+                ),
+            )
+            val (cx, cy) = cursorGui()
+            recorder.cursor(cx, cy)
+            recorder.target(targetSlot(handler), targetLit(handler))
+        }
+        autoFrame(handler, built)
         if (cursorPending) {
             cursorPending = false
             if (handler.type == TerminalType.MELODY && s.melodyAutoCursor.value()) moveCursorToMelodyButtons(built)
@@ -377,6 +537,70 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
         return true
     }
 
+    // ----- Auto Terms ------------------------------------------------------------------------------------------
+
+    /** What is still to click: the solution, minus clicks already sent but not yet confirmed when prediction is off. */
+    private fun remainingForAuto(handler: TerminalHandler): List<Int> {
+        val remaining = ArrayList(handler.solution)
+        if (s.clickPrediction.value()) return remaining
+        for ((slot, _) in handler.clickedSlots) {
+            if (handler.type == TerminalType.NUMBERS) {
+                if (remaining.isNotEmpty()) remaining.removeAt(0)
+            } else {
+                remaining.remove(slot)
+            }
+        }
+        return remaining
+    }
+
+    private fun buttonFor(handler: TerminalHandler, slot: Int): Int =
+        if (handler.canClick(slot, 0)) 0 else if (handler.canClick(slot, 1)) 1 else -1
+
+    /** Once per rendered frame: lets Auto Terms move the cursor and click, before the grid is drawn. */
+    private fun autoFrame(handler: TerminalHandler, built: Grid) {
+        val auto = AutoTermsModule.INSTANCE
+        if (!auto.handles(handler.type)) return
+        val boxes = built.boxes.associateBy { it.slot }
+        val (cx, cy) = cursorGui()
+        val view = AutoTermsView(
+            handler.type, remainingForAuto(handler),
+            { slot ->
+                boxes[slot]?.let {
+                    AutoBox(
+                        built.originX + (it.x + it.size / 2.0) * built.scale, built.originY + (it.y + it.size / 2.0) * built.scale,
+                        it.size * built.scale.toDouble(),
+                    )
+                }
+            },
+            { slot -> buttonFor(handler, slot) }, handler.shouldProtect(), cx, cy, pixelGui(),
+        )
+        val step = auto.step(view, System.nanoTime()) ?: return
+        if (step.move) moveCursorGui(step.x, step.y)
+        if (step.clicks) {
+            hovered = step.clickSlot
+            if (currentScreen is TermSimScreen && view.remaining.size <= 1) {
+                // The last simulator click closes the terminal and opens its menu: do that from the tick, not mid-render.
+                pendingFinalClick = Triple(step.clickSlot, step.clickButton, step.x to step.y)
+            } else {
+                clickSlot(step.clickSlot, step.clickButton, "auto", step.clickSlot, step.x to step.y)
+            }
+        }
+    }
+
+    /** One physical screen pixel in GUI units. */
+    private fun pixelGui(): Double {
+        val window = Minecraft.getInstance().window
+        return if (window.screenWidth > 0) window.guiScaledWidth.toDouble() / window.screenWidth else 0.0
+    }
+
+    private fun moveCursorGui(guiX: Double, guiY: Double) {
+        val window = Minecraft.getInstance().window
+        if (window.guiScaledWidth <= 0 || window.guiScaledHeight <= 0) return
+        GLFW.glfwSetCursorPos(
+            window.handle(), guiX * window.screenWidth / window.guiScaledWidth, guiY * window.screenHeight / window.guiScaledHeight,
+        )
+    }
+
     /** Puts the cursor on the middle melody button (slot 25) once, so the long trip to the right is saved. */
     private fun moveCursorToMelodyButtons(built: Grid) {
         val box = built.boxes.firstOrNull { it.slot == MELODY_MIDDLE_BUTTON } ?: return
@@ -408,6 +632,7 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
     /** A mouse click while the custom GUI is up: presses the slot under the cursor. */
     fun handleMouseClick(screen: AbstractContainerScreen<*>, event: MouseButtonEvent): Boolean {
         if (!ownsScreen(screen)) return false
+        AutoTermsModule.INSTANCE.manualInput()
         val built = grid ?: return true
         val (baseX, baseY) = built.toBase(event.x(), event.y())
         val box = built.boxes.firstOrNull { baseX >= it.x && baseY >= it.y && baseX < it.x + it.size && baseY < it.y + it.size }
@@ -421,7 +646,13 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
         val slot = aimed ?: box?.slot
         if (aimed != null && aimed != box?.slot) diagnostics.event("AIM_ASSIST from=${box?.slot} to=$aimed")
         hovered = slot
-        slot?.let { clickSlot(it, event.button(), "mouse") }
+        if (slot != null) {
+            clickSlot(slot, event.button(), "mouse", box?.slot ?: -1)
+        } else {
+            // A click beside the grid: not sent anywhere, but part of how the person aims.
+            val (x, y) = cursorGui()
+            run?.click(-1, -1, x, y, event.button(), -1, false, current?.solution?.size ?: -1, -1, "mouse")
+        }
         return true
     }
 
@@ -430,6 +661,7 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
         if (!ownsScreen(screen)) return false
         val options = Minecraft.getInstance().options
         if (!options.keyDrop.matches(event) && options.keyHotbarSlots.none { it.matches(event) }) return false
+        AutoTermsModule.INSTANCE.manualInput()
         hovered?.let { clickSlot(it, if (event.hasControlDown()) 1 else 0, "key") }
         return true
     }
@@ -441,6 +673,10 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
     private fun onTerminalClick(handler: TerminalHandler, slot: Int) {
         if (!isEnabled()) return
         val done = handler.solution.isEmpty() || (handler.type == TerminalType.MELODY && slot == 43)
+        if (done) runCompleted = true
+        if (done && currentScreen !is TermSimScreen) {
+            TerminalTimesModule.INSTANCE.onSolved(handler.type, System.currentTimeMillis() - handler.timeOpened)
+        }
         if (done && s.completeSounds.value()) {
             playCompletion()
         } else if (s.clickSounds.value()) {
@@ -476,7 +712,7 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
         val melodySize = NumberSetting("Melody Size", 1f, 3f, 1.5f)
         val rubixReplaceClicks = BooleanSetting("Rubix Replace Clicks", false)
         val aimAssist = BooleanSetting("Aim Assist", false)
-        val aimRange = NumberSetting("Aim Assist Range", 1f, 12f, 6f)
+        val aimRange = NumberSetting("Aim Assist Range", 1f, 30f, 6f)
         val melodyBlockWrong = BooleanSetting("Block Wrong Melody Clicks", false)
         val melodyAutoCursor = BooleanSetting("Melody Auto Cursor", false)
         val rubixMode = ChoiceSetting(
@@ -505,6 +741,7 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
         val melodyPointer = ColorSetting("Melody Pointer", 0x55, 0xFF, 0x55, 255)
         val melodyBackground = ColorSetting("Melody Background", 0x26, 0x26, 0x26, 255)
         val debug = BooleanSetting("Debug", false)
+        val analyse = BooleanSetting("Analyse Terms", false)
         val clickSounds = BooleanSetting("Click Sounds", true)
         val clickSound = TextSetting("Click Sound", "entity.item.pickup", 64)
         val clickPitch = NumberSetting("Click Sound Pitch", 0.1f, 2f, 1f)
@@ -525,6 +762,7 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
         private const val SLOT_SIZE = 24
         private const val PADDING = 2
         private const val MELODY_MIDDLE_BUTTON = 25
+        private const val ANALYSIS_MAX_BYTES = 20L * 1024L * 1024L
         private val GATE = Regex("^The gate has been destroyed!$")
         private val CORE = Regex("^The Core entrance is opening!$")
 

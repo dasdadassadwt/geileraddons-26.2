@@ -1017,7 +1017,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         is ChoiceRow -> module.settingTooltip(row.setting)
             ?: "Click to choose the next value; right-click chooses the previous value."
         is TextRow -> if (row.setting.keybindCapture()) {
-            "Click the field, then press the key to bind. Press Backspace or Delete to clear it."
+            "Click the field, then press the key or a middle or side mouse button to bind. Press Backspace or Delete to clear it."
         } else module.settingTooltip(row.setting)
             ?: "Click the field and type ${row.setting.displayName()}. Press Enter to finish."
         is ActionRow -> row.action.description ?: "Click to run ${row.action.label}."
@@ -2206,6 +2206,17 @@ class ClickGuiScreen @JvmOverloads constructor(
         val rightX = panelX + categoryWidth()
         val left = event.button() == 0
         val right = event.button() == 1
+        // A key-capture field also takes the middle and side mouse buttons; left and right still click away to cancel.
+        val capturing = focusedTextSetting?.takeIf { it.keybindCapture() }
+        if (capturing != null && event.button() >= 2) {
+            capturing.setValue(InputConstants.Type.MOUSE.getOrCreate(event.button()).name)
+            focusedTextSetting = null
+            textCursor = 0
+            textAnchor = -1
+            invalidateSettingsLayout()
+            ModConfig.markDirty()
+            return true
+        }
         if (!left && !right) return super.mouseClicked(event, doubleClick)
 
         blurTextField()

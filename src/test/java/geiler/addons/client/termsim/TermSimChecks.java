@@ -371,7 +371,7 @@ public final class TermSimChecks {
 	 */
 	private static void checkNoOtherModuleReactsToTheSimulator() {
 		Set<String> reviewed = Set.of("DungeonOdinAssistModule.kt", "MacroRunner.kt", "TerminalSolverModule.kt", "PartyFinderStatsModule.kt",
-			"ContainerKeybindModules.kt");
+			"ContainerKeybindModules.kt", "StorageOverlayModule.kt");
 		List<String> senders = List.of("sendChat(", "sendCommand(", "sendUnattendedCommand(", "handleContainerInput(", "connection.send(");
 		Path root = Path.of("src/client/kotlin/geiler/addons/client");
 		try (Stream<Path> stream = Files.walk(root)) {

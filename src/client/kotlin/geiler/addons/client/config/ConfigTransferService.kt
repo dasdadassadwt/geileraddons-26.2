@@ -76,6 +76,7 @@ class ConfigTransferService private constructor() {
         @JvmStatic fun exportDirectory(): Path = ConfigTransferServiceCore.exportDirectory()
         @JvmStatic fun openFolder(path: Path?) = ConfigTransferServiceCore.openFolder(path)
         @JvmStatic fun saveCurrent(callback: Consumer<Result>?) = ConfigTransferServiceCore.saveCurrent(callback)
+        @JvmStatic fun reloadFromDisk(callback: Consumer<Result>?) = ConfigTransferServiceCore.reloadFromDisk(callback)
         @JvmStatic fun exportProfile(requestedName: String?, callback: Consumer<Result>?) =
             ConfigTransferServiceCore.exportProfile(requestedName, callback)
 

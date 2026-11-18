@@ -27,6 +27,41 @@ object MacroFlowRules {
         else -> WorldSwitchStart.WAIT
     }
 
+    enum class LevelChange { WAIT, RESUME, ABORT }
+
+    /** How long a run waits for the island to be reported again after a level change it did not expect. */
+    const val LEVEL_CHANGE_WAIT_NANOS = 15_000_000_000L
+
+    /**
+     * A level change during a run with no World Switch node (a plain Wait between /hub and /warp): the run resumes once
+     * the new island is known, instead of dying in the lobby. Without island detection or an island restriction the new
+     * island is never named, so it resumes at once; the restriction itself is enforced by the runner's island check.
+     */
+    @JvmStatic
+    fun levelChangeWithoutSwitch(
+        detectionEnabled: Boolean,
+        islandRestricted: Boolean,
+        current: geiler.addons.client.location.Island?,
+        waitedNanos: Long,
+    ): LevelChange = when {
+        !detectionEnabled || !islandRestricted || (current != null && current != geiler.addons.client.location.Island.NONE) ->
+            LevelChange.RESUME
+        waitedNanos > LEVEL_CHANGE_WAIT_NANOS -> LevelChange.ABORT
+        else -> LevelChange.WAIT
+    }
+
+    /**
+     * The island list is a start gate. A run that already changed world (its own /is, /hub or /warp) is not ended by it,
+     * so a macro restricted to one island can travel and carry on; a world-switch wait also survives an unreported island.
+     */
+    @JvmStatic
+    fun runEndsOnIsland(
+        allowed: Boolean,
+        crossedWorld: Boolean,
+        waitingForWorldSwitch: Boolean,
+        current: geiler.addons.client.location.Island?,
+    ): Boolean = !allowed && !crossedWorld && !(waitingForWorldSwitch && current == geiler.addons.client.location.Island.NONE)
+
     /** FL-1: literal item-count arguments become number literals so function binding does not drop their item ids. */
     @JvmStatic
     fun materializeItemCountArguments(

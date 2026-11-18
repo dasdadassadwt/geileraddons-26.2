@@ -1,5 +1,6 @@
 package geiler.addons.client.module.impl
 
+import geiler.addons.client.location.Island
 import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.farming.GardenCurrentPlotParser
 import geiler.addons.client.farming.GardenPlotGrid
@@ -353,6 +354,8 @@ class PestTrackerModule private constructor(private val settings: Settings) : Mo
         val mc = Minecraft.getInstance()
         return isEnabled() && mc.level != null && mc.player != null && HypixelModApi.onGarden()
     }
+
+    override fun hudIslands(): Set<Island> = setOf(Island.GARDEN)
 
     override fun id(): String = "pest_tracker"
 
