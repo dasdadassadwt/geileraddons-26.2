@@ -45,12 +45,21 @@ object ContainerKeybindRules {
         CommandPreset("potionBag", "Potion Bag", "potionbag"),
     )
 
-    /** The command whose key (one per preset, in [COMMAND_PRESETS] order) is [pressed], or null. */
+    /** Garden Command Keybinds: warp, spawn, barn, desk, then one key per plot (`/plottp <n>`, plots 1 to 24). */
+    @JvmField val GARDEN_PRESETS = listOf(
+        CommandPreset("warpGarden", "Warp Garden", "warp garden"),
+        CommandPreset("setSpawn", "Set Spawn", "setspawn"),
+        CommandPreset("barn", "Barn", "plottp barn"),
+        CommandPreset("desk", "Desk", "desk"),
+    ) + (1..24).map { CommandPreset("plot$it", "Plot $it", "plottp $it") }
+
+    /** The command whose key (one per preset, in [presets] order) is [pressed], or null. */
     @JvmStatic
-    fun commandFor(pressed: String, keys: List<String>): String? {
+    @JvmOverloads
+    fun commandFor(pressed: String, keys: List<String>, presets: List<CommandPreset> = COMMAND_PRESETS): String? {
         if (pressed.isEmpty()) return null
         val index = keys.indexOf(pressed)
-        return COMMAND_PRESETS.getOrNull(index)?.command
+        return presets.getOrNull(index)?.command
     }
 
     /** A saved key is a full key name, or one character for a plain key; anything else is returned trimmed. */

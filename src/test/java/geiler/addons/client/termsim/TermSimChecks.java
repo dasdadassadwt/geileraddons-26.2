@@ -370,7 +370,7 @@ public final class TermSimChecks {
 	 * exclude [TermSimScreen] or be a known title-keyed module the simulator's titles never match.
 	 */
 	private static void checkNoOtherModuleReactsToTheSimulator() {
-		Set<String> reviewed = Set.of("DungeonOdinAssistModule.kt", "MacroRunner.kt", "TerminalSolverModule.kt", "PartyFinderStatsModule.kt",
+		Set<String> reviewed = Set.of("DungeonAssistModule.kt", "MacroRunner.kt", "TerminalSolverModule.kt", "PartyFinderStatsModule.kt",
 			"ContainerKeybindModules.kt", "StorageOverlayModule.kt");
 		List<String> senders = List.of("sendChat(", "sendCommand(", "sendUnattendedCommand(", "handleContainerInput(", "connection.send(");
 		Path root = Path.of("src/client/kotlin/geiler/addons/client");

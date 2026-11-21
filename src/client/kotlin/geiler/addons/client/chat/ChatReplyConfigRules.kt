@@ -72,6 +72,31 @@ object ChatReplyConfigRules {
         return null
     }
 
+    /** [current] with an inline edit applied (id and folder kept), or null while the edit is not a valid reply. */
+    @JvmStatic
+    fun editedEntry(
+        current: ChatReplyEntry,
+        prefix: String?,
+        command: String?,
+        localAction: Boolean,
+        payload: String?,
+        enabled: Boolean,
+    ): ChatReplyEntry? {
+        if (draftError(prefix, command, localAction, payload) != null) return null
+        val text = ChatStringSemantics.trim(payload ?: "")
+        return if (localAction) {
+            ChatReplyEntry(
+                current.id(), normalizeCommand(command), ChatReplyEntry.Mode.LOCAL_ACTION, "",
+                ChatActionTemplateRules.normalize(text), current.folderId(), enabled,
+            )
+        } else {
+            ChatReplyEntry(
+                current.id(), normalizeCommand(command), ChatReplyEntry.Mode.TEXT_REPLY, text, "",
+                current.folderId(), enabled,
+            )
+        }
+    }
+
     @JvmStatic
     fun canAddEntry(entries: List<ChatReplyEntry?>?, candidate: ChatReplyEntry?): Boolean {
         if (candidate == null || !candidate.isValid() || entries == null || entries.size >= MAX_ENTRIES) return false

@@ -1,6 +1,6 @@
 package geiler.addons.client.dungeon;
 
-import geiler.addons.client.dungeon.odin.DungeonSplitEntryBuffer;
+import geiler.addons.client.dungeon.helpers.DungeonSplitEntryBuffer;
 
 /** Focused JDK checks for source-backed Guide phase-output routing and run-scoped deduplication. */
 public final class DungeonGuidePhaseOutputChecks {

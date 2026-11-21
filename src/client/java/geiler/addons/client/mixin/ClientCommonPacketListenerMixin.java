@@ -1,6 +1,6 @@
 package geiler.addons.client.mixin;
 
-import geiler.addons.client.module.impl.DungeonOdinAssistModule;
+import geiler.addons.client.module.impl.DungeonAssistModule;
 import net.minecraft.client.multiplayer.ClientCommonPacketListenerImpl;
 import net.minecraft.network.protocol.common.ClientboundPingPacket;
 import org.spongepowered.asm.mixin.Mixin;
@@ -22,6 +22,6 @@ public abstract class ClientCommonPacketListenerMixin {
 
 	@Inject(method = "handlePing", at = @At("TAIL"))
 	private void geileraddons$countServerPingPacket(ClientboundPingPacket packet, CallbackInfo ci) {
-		DungeonOdinAssistModule.INSTANCE.onServerPingPacket(packet.getId());
+		DungeonAssistModule.INSTANCE.onServerPingPacket(packet.getId());
 	}
 }

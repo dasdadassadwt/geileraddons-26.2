@@ -1,6 +1,6 @@
 package geiler.addons.client.mixin;
 
-import geiler.addons.client.module.impl.DungeonOdinAssistModule;
+import geiler.addons.client.module.impl.DungeonAssistModule;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import org.spongepowered.asm.mixin.Mixin;
@@ -14,6 +14,6 @@ public abstract class DungeonCreeperBeamHitSoundMixin {
 		"Lnet/minecraft/client/sounds/SoundManager;play(Lnet/minecraft/client/resources/sounds/SoundInstance;)Lnet/minecraft/client/sounds/SoundEngine$PlayResult;"),
 		index = 0)
 	private SoundInstance geileraddons$replaceEndpointHitSound(SoundInstance original) {
-		return DungeonOdinAssistModule.INSTANCE.replaceCreeperBeamHitSound(original);
+		return DungeonAssistModule.INSTANCE.replaceCreeperBeamHitSound(original);
 	}
 }

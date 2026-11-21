@@ -9,6 +9,7 @@ import geiler.addons.client.farming.PestCooldownText
 import geiler.addons.client.farming.PestCooldownTimer
 import geiler.addons.client.farming.PestHourlyStats
 import geiler.addons.client.farming.PestSpawnAverage
+import geiler.addons.client.farming.PestSprayText
 import geiler.addons.client.farming.PestSpawnChatParser
 import geiler.addons.client.farming.PestToolFilter
 import geiler.addons.client.farming.PestWidgetReader
@@ -53,6 +54,7 @@ class PestTrackerModule private constructor(private val settings: Settings) : Mo
 ), HudElement {
     private val totalMode = settings.totalMode
     private val showBackground = settings.showBackground
+    private val showSpray = settings.showSpray
     private val filterByTool = settings.filterByTool
     private val farmingToolFilter = settings.farmingToolFilter
     private val vacuumFilter = settings.vacuumFilter
@@ -83,6 +85,7 @@ class PestTrackerModule private constructor(private val settings: Settings) : Mo
     private var lastSavedTotalNanos = -1L
     private var lastSavedTotalKills = -1
     private var cachedLines: Array<String>? = null
+    private var spray: PestSprayText.Observation? = null
     private var cachedSecond = -1L
     private var cachedTotals = false
 
@@ -126,6 +129,7 @@ class PestTrackerModule private constructor(private val settings: Settings) : Mo
                 settings.vacuumFilter,
                 settings.lassoFilter,
                 settings.showBackground,
+                settings.showSpray,
             ),
             SettingGroup(
                 "Alerts",
@@ -139,8 +143,6 @@ class PestTrackerModule private constructor(private val settings: Settings) : Mo
             SettingGroup("Infested Plots", settings.warpToInfestedAction, settings.warpKey.setting),
         )
     }
-
-    override fun isWorkInProgress(): Boolean = true
 
     override fun onEnable() {
         GeilerAddonsLog.setModuleDiagnosticsEnabled(Category.FARMING, name(), true)
@@ -216,6 +218,14 @@ class PestTrackerModule private constructor(private val settings: Settings) : Mo
                 }
             } else {
                 widgetReadMisses = saturatedIncrement(widgetReadMisses)
+            }
+            if (showSpray.value()) {
+                widgetReader.readSpray().ifPresent {
+                    if (it != spray) {
+                        diagnosticEvent("SPRAY name=${it.name ?: "none"} remainingSeconds=${it.remainingSeconds}")
+                        spray = it
+                    }
+                }
             }
         }
         val customCooldown = useCustomCooldown.value()
@@ -415,13 +425,15 @@ class PestTrackerModule private constructor(private val settings: Settings) : Mo
         if (visible()) {
             lines()
         } else {
-            arrayOf(
+            val sample = arrayListOf(
                 "Pests ${if (totalMode.value()) "total" else "session"}",
                 "2.4/h  12 kills",
                 "Cooldown  00:42",
                 "Last spawn  04:18",
                 "Average gap  05:36",
             )
+            if (showSpray.value()) sample.add("Spray  Compost 12m 00s")
+            sample.toTypedArray()
         }
 
     private fun lines(): Array<String> {
@@ -454,13 +466,15 @@ class PestTrackerModule private constructor(private val settings: Settings) : Mo
             else -> formatDuration(ceil(cooldownSeconds).toLong())
         }
         val average = spawnAverage.averageSeconds()
-        return arrayOf(
+        val lines = arrayListOf(
             "Pests ${if (totals) "total" else "session"}",
             String.format(Locale.ROOT, "%.1f/h  %d kills", rate, kills),
             "Cooldown  $cooldownText",
             "Last spawn  $lastSpawn",
             "Average gap  ${if (average <= 0) "-" else formatDuration(average.roundToLong())}",
         )
+        if (showSpray.value()) lines.add("Spray  ${PestSprayText.text(spray)}")
+        return lines.toTypedArray()
     }
 
     private fun effectiveCustomCooldownSeconds(): Int = if (finnegan.value()) 75 else customCooldownSeconds.intValue()
@@ -485,6 +499,7 @@ class PestTrackerModule private constructor(private val settings: Settings) : Mo
         wasInGarden = false
         lastDiagnosticWidgetState = PestCooldownText.State.UNKNOWN
         lastDiagnosticWidgetSeconds = -1
+        spray = null
     }
 
     private fun formatSpawnAlert(spawn: PestSpawnChatParser.Spawn): String {
@@ -697,6 +712,7 @@ class PestTrackerModule private constructor(private val settings: Settings) : Mo
     private class Settings {
         val totalMode = BooleanSetting("Show Totals", false)
         val showBackground = BooleanSetting("Background", true)
+        val showSpray = BooleanSetting("Show Spray Timer", true)
         val filterByTool = BooleanSetting("Filter HUD by Held Tool", true)
         val farmingToolFilter = BooleanSetting("Farming Tools", true)
         val vacuumFilter = BooleanSetting("Pest Vacuum", true)
@@ -726,6 +742,7 @@ class PestTrackerModule private constructor(private val settings: Settings) : Mo
         val allSettings: List<Setting> = listOf(
             totalMode,
             showBackground,
+            showSpray,
             filterByTool,
             farmingToolFilter,
             vacuumFilter,

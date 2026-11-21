@@ -7,7 +7,7 @@ import geiler.addons.client.access.PlayerTabOverlayAccess
 import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.config.ModConfig
 import geiler.addons.client.dungeon.*
-import geiler.addons.client.dungeon.odin.*
+import geiler.addons.client.dungeon.helpers.*
 import geiler.addons.client.hud.HudElement
 import geiler.addons.client.module.*
 import geiler.addons.client.party.PartyListBackend
@@ -59,11 +59,11 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
     @Volatile private var snapshot: DungeonRoomOverlayGeometry.Snapshot =
         DungeonRoomOverlayGeometry.Snapshot.unavailable("waiting for calibrated dungeon map")
     @Volatile private var playerSkinTextures: Map<String, Identifier> = emptyMap<String, Identifier>()
-    private val roomCoreScanner = OdinDungeonMapCoreScanner()
-    private val roomLifecycle = OdinDungeonRoomLifecycle()
+    private val roomCoreScanner = DungeonMapCoreScanner()
+    private val roomLifecycle = DungeonRoomLifecycle()
     private val secretProgress = DungeonRoomSecretProgress()
     private val playerMarkerRetention = DungeonRoomPlayerMarkerRetention()
-    private var lastMapGrid: OdinDungeonMapGrid.ScanResult? = null
+    private var lastMapGrid: DungeonMapGrid.ScanResult? = null
     @Volatile private var lastGoodMapSnapshot: DungeonRoomOverlayGeometry.Snapshot? = null
     private var lastGoodMapTick = -1L
     private var activeMapTicks = 0L
@@ -366,7 +366,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
         lastEnteredRoomId = null
     }
 
-    private fun refreshCurrentMapRoom(client: Minecraft?, mapGrid: OdinDungeonMapGrid.ScanResult?) {
+    private fun refreshCurrentMapRoom(client: Minecraft?, mapGrid: DungeonMapGrid.ScanResult?) {
         var playerCell: DungeonGridRules.Cell? = null
         val player = client?.player
         if (player != null) {
@@ -378,7 +378,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
 
     private fun refreshCurrentMapRoom(
         client: Minecraft?,
-        mapGrid: OdinDungeonMapGrid.ScanResult?,
+        mapGrid: DungeonMapGrid.ScanResult?,
         playerCell: DungeonGridRules.Cell?,
     ) {
         val roomId = resolveCurrentMapRoomId(client, mapGrid, snapshot, playerCell)
@@ -389,7 +389,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
 
     private fun resolveCurrentMapRoomId(
         client: Minecraft?,
-        mapGrid: OdinDungeonMapGrid.ScanResult?,
+        mapGrid: DungeonMapGrid.ScanResult?,
         state: DungeonRoomOverlayGeometry.Snapshot?,
     ): String? {
         var playerCell: DungeonGridRules.Cell? = null
@@ -403,7 +403,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
 
     private fun resolveCurrentMapRoomId(
         client: Minecraft?,
-        mapGrid: OdinDungeonMapGrid.ScanResult?,
+        mapGrid: DungeonMapGrid.ScanResult?,
         state: DungeonRoomOverlayGeometry.Snapshot?,
         playerCell: DungeonGridRules.Cell?,
     ): String? {
@@ -413,7 +413,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
         val playerTile = playerCell.componentX + playerCell.componentZ * 6
         val mappedRooms = mapGrid.rooms().filter { room -> room != null && room.segments().contains(playerTile) }
         if (mappedRooms.size == 1) {
-            val mapRoomId = OdinDungeonMapProjection.roomIdForSegments(mappedRooms.first().segments())
+            val mapRoomId = DungeonMapProjection.roomIdForSegments(mappedRooms.first().segments())
             if (roomById(state, mapRoomId) != null) return mapRoomId
             val tileRooms = state?.rooms()?.filter { room ->
                 room != null && room.footprint().any { cell -> cell.x() + cell.z() * 6 == playerTile }
@@ -565,9 +565,9 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
         }?.roomId()
     }
 
-    private fun activeRoomCores(): Map<Int, OdinDungeonMapCoreScanner.RoomCore> = roomCoreScanner.snapshot()
+    private fun activeRoomCores(): Map<Int, DungeonMapCoreScanner.RoomCore> = roomCoreScanner.snapshot()
 
-    private fun activeRoomCoreAt(client: Minecraft, cell: DungeonGridRules.Cell?): OdinDungeonMapCoreScanner.RoomCore? =
+    private fun activeRoomCoreAt(client: Minecraft, cell: DungeonGridRules.Cell?): DungeonMapCoreScanner.RoomCore? =
         if (cell == null) null else roomCoreScanner.roomCoreAt(client, cell)
 
     private fun hasLocalPlayerMarker(state: DungeonRoomOverlayGeometry.Snapshot?): Boolean =
@@ -713,7 +713,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
     fun tick() {
         playerMarkerTick++
         val client = Minecraft.getInstance()
-        OdinDungeonPlayerRoster.observeLevel(client.level)
+        DungeonPlayerRoster.observeLevel(client.level)
         GeilerAddonsLog.setModuleDiagnosticsEnabled(Category.F7, name(), isEnabled())
         val disposition = DungeonRoomOverlayLifecycleRules.tickDisposition(
             isEnabled(), DungeonContextTracker.isMapOverlayContextActive(),
@@ -812,7 +812,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
             reportAutomaticMapDiagnostics()
             return
         }
-        val mapGrid = OdinDungeonMapGrid.scan(colors)
+        val mapGrid = DungeonMapGrid.scan(colors)
         recordMapBuffer(colors, mapGrid)
         DungeonContextTracker.observeAuthoritativeMapPixels(mapGrid.available())
         lastPlayerMapDiagnostics = "not-projected"
@@ -865,7 +865,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
             }
         }
         val localPlayerName = clientPlayer.gameProfile.name
-        val localMarker = OdinDungeonPlayerMap.projectLoadedPosition(
+        val localMarker = DungeonPlayerMap.projectLoadedPosition(
             localPlayerName, true, playerClasses.getOrDefault(localPlayerName.lowercase(Locale.ROOT), ""),
             clientPlayer.x, clientPlayer.z, clientPlayer.yRot,
         )
@@ -893,7 +893,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
                 // Keep skin data when present; do not assign map decorations without identity evidence.
             }
         }
-        val playerProjection = OdinDungeonPlayerMap.projectWithDiagnostics(
+        val playerProjection = DungeonPlayerMap.projectWithDiagnostics(
             mapGrid.layout(), tab.roster, DungeonMapRoomDetector.savedMapDecorations(client),
             loadedPlayers, localPlayerName,
         )
@@ -902,7 +902,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
         val observedPlayers = retainedPlayers.players()
         playerSkinTextures = java.util.Map.copyOf(textures)
         val predictionsEnabled = !settings.disablePredictions.value()
-        val projected = OdinDungeonMapProjection.project(
+        val projected = DungeonMapProjection.project(
             mapGrid, activeRoomCores(), playerCell, observedPlayers, floorNumber,
             tab.puzzleCount, predictionsEnabled, observedMapDoors(), roomState.walkedIntoTiles(),
         )
@@ -939,7 +939,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
         lastPlayerMapDiagnostics = localPlayerProjectionDiagnostics(currentPlayers.isNotEmpty()) +
             ",retention={" + retainedPlayers.diagnostics() + "}"
         // Tracker edges attach only to exact core-backed rooms and rendering requires a visible endpoint.
-        val world = OdinDungeonWorldRoomProjection.project(
+        val world = DungeonWorldRoomProjection.project(
             activeRoomCores().mapKeys { it.key as Int? },
             playerCell,
             retainedPlayers.players(),
@@ -985,14 +985,14 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
 
     private fun localPlayerMarkers(client: Minecraft?): List<DungeonRoomOverlayGeometry.PlayerMarker> {
         val player = client?.player ?: return emptyList()
-        val marker = OdinDungeonPlayerMap.projectLoadedPosition(
+        val marker = DungeonPlayerMap.projectLoadedPosition(
             player.gameProfile.name, true, "", player.x, player.z, player.yRot,
         )
         return if (marker != null && marker.x() >= 0 && marker.x() < DungeonRoomOverlayLayout.GRID_CELLS &&
             marker.z() >= 0 && marker.z() < DungeonRoomOverlayLayout.GRID_CELLS) listOf(marker) else emptyList()
     }
 
-    private fun recordMapBuffer(colors: ByteArray?, result: OdinDungeonMapGrid.ScanResult?) {
+    private fun recordMapBuffer(colors: ByteArray?, result: DungeonMapGrid.ScanResult?) {
         mapBufferReads++
         if (colors == null) {
             lastMapScanRejection = "saved-map-data-unavailable"
@@ -1033,9 +1033,9 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
 
     private fun observeRoomLifecycle(
         client: Minecraft,
-        mapGrid: OdinDungeonMapGrid.ScanResult?,
+        mapGrid: DungeonMapGrid.ScanResult?,
         playerCell: DungeonGridRules.Cell?,
-    ): OdinDungeonRoomLifecycle.Snapshot {
+    ): DungeonRoomLifecycle.Snapshot {
         val inDungeon = DungeonContextTracker.inDungeon()
         val inBoss = inBossPhase()
         val playerTile = if (playerCell == null) -1 else playerCell.componentX + playerCell.componentZ * 6
@@ -1048,21 +1048,21 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
         val roomData = roomCore?.data
         if (roomData == null || roomData.shape() != mapRoom.shape())
             return roomLifecycle.observe(level, true, false, null, false, playerTile, emptyList())
-        val rotation = OdinDungeonRoomRotation.resolve(roomData, mapRoom.segments(), roomCore.highestBlock) { probe ->
+        val rotation = DungeonRoomRotation.resolve(roomData, mapRoom.segments(), roomCore.highestBlock) { probe ->
             val position = BlockPos(probe.x(), probe.y(), probe.z())
-            if (!level.hasChunkAt(position)) OdinDungeonRoomRotation.ProbeState.UNAVAILABLE
+            if (!level.hasChunkAt(position)) DungeonRoomRotation.ProbeState.UNAVAILABLE
             else if (level.getBlockState(position).block == Blocks.DYED_TERRACOTTA.pick(DyeColor.BLUE))
-                OdinDungeonRoomRotation.ProbeState.BLUE_TERRACOTTA
-            else OdinDungeonRoomRotation.ProbeState.OTHER
+                DungeonRoomRotation.ProbeState.BLUE_TERRACOTTA
+            else DungeonRoomRotation.ProbeState.OTHER
         }
         val player = client.player ?: return roomLifecycle.observe(
             level, true, false, null, false, playerTile, emptyList(),
         )
-        val heightReady = OdinDungeonRoomRotation.passesHeightGate(
+        val heightReady = DungeonRoomRotation.passesHeightGate(
             player.blockPosition().y, roomCore.highestBlock, client.singleplayerServer != null,
         )
         val roomReady = rotation.resolved() && heightReady
-        val roomId = if (roomReady) OdinDungeonRoomLifecycle.roomId(mapRoom.segments()) else null
+        val roomId = if (roomReady) DungeonRoomLifecycle.roomId(mapRoom.segments()) else null
         return roomLifecycle.observe(level, true, false, roomId, roomReady,
             playerTile, if (roomReady) mapRoom.segments() else emptyList())
     }
@@ -1095,14 +1095,14 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
         }
         val lines = ordered.map { PlayerTabNameSource.rawLine(it) }
         return DungeonTabSnapshot(
-            lines, OdinDungeonPlayerRoster.currentDungeonRows(lines, OdinDungeonPlayerRoster.snapshot()),
-            OdinDungeonMapGrid.puzzleCountFromTabLines(lines),
+            lines, DungeonPlayerRoster.currentDungeonRows(lines, DungeonPlayerRoster.snapshot()),
+            DungeonMapGrid.puzzleCountFromTabLines(lines),
         )
     }
 
     private data class DungeonTabSnapshot(
         val lines: List<String>,
-        val roster: List<OdinDungeonPlayerMap.TabPlayer>,
+        val roster: List<DungeonPlayerMap.TabPlayer>,
         val puzzleCount: Int,
     )
 
@@ -1135,7 +1135,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
     /** Bounded evidence of what the Map Info panel is fed: counts and flags only, no names. */
     private fun mapInfoDiagnostics(): String {
         if (!settings.mapInfo.value()) return "off"
-        val run = DungeonOdinAssistModule.INSTANCE.mapRunInfo() ?: return "shown=" + mapInfoShown() + ",data=none"
+        val run = DungeonAssistModule.INSTANCE.mapRunInfo() ?: return "shown=" + mapInfoShown() + ",data=none"
         val info = DungeonMapInfoLogic.info(run, 0)
         return "shown=" + mapInfoShown() + ",found=" + info.secretsFound + ",percent=" + info.secretsPercent +
             ",total=" + info.totalSecrets + ",needed=" + info.neededSecrets + ",deaths=" + info.deaths +
@@ -1159,7 +1159,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
     ) {
         if (!mapInfoShown()) return
         val info = if (preview) DungeonMapInfoLogic.sampleInfo()
-        else DungeonMapInfoLogic.info(DungeonOdinAssistModule.INSTANCE.mapRunInfo(), knownSecrets(state))
+        else DungeonMapInfoLogic.info(DungeonAssistModule.INSTANCE.mapRunInfo(), knownSecrets(state))
         val pose = graphics.pose()
         pose.pushMatrix()
         pose.translate(0f, layout.height.toFloat())
@@ -1217,7 +1217,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
         if (!SpiritLeapMenuModule.showMap.value()) return false
         val screen = Minecraft.getInstance().gui.screen() as? AbstractContainerScreen<*> ?: return false
         return SpiritLeapMapLogic.hudMapHiddenInLeapMenu(
-            DungeonOdinAssistModule.INSTANCE.shouldRenderSpiritLeapScreen(screen), true,
+            DungeonAssistModule.INSTANCE.shouldRenderSpiritLeapScreen(screen), true,
         )
     }
 
@@ -1451,7 +1451,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
                 previousLocalWorldZ = currentZ
             }
             val position = if (snap) entity.position() else entity.getPosition(partialTick)
-            val interpolated = OdinDungeonPlayerMap.projectLoadedPosition(
+            val interpolated = DungeonPlayerMap.projectLoadedPosition(
                 marker.name(), marker.localPlayer(), marker.dungeonClass(), position.x, position.z,
                 if (snap && marker.localPlayer()) entity.yRot else entity.getYRot(partialTick),
             )

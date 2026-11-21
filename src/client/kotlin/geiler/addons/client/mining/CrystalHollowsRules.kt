@@ -84,6 +84,10 @@ object CrystalHollowsRules {
     @JvmStatic
     fun mapPixel(world: Int, size: Int): Int = ((world - 202) * size / 622).coerceIn(0, size - 1)
 
+    /** Screen rotation of an arrow drawn pointing up (north, -z) so it faces where a player with this [yaw] looks. */
+    @JvmStatic
+    fun arrowRadians(yaw: Float): Double = Math.toRadians((yaw - 180f).toDouble())
+
     @JvmStatic
     fun sameSpot(ax: Int, ay: Int, az: Int, bx: Int, by: Int, bz: Int): Boolean {
         val dx = (ax - bx).toLong()

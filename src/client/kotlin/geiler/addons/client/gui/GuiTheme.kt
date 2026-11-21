@@ -62,7 +62,7 @@ object GuiTheme {
 
     init {
         // A palette must exist before config is read in case a screen is drawn first.
-        apply(0x810B1220.toInt(), 0xFF191D24.toInt(), 0xFF3B82F6.toInt(),
+        apply(0xF8080808.toInt(), 0x00A8C7FF, 0xFF3B82F6.toInt(),
             0xFFEAF2FF.toInt(), 0xFF7E8FA8.toInt())
     }
 
@@ -269,6 +269,30 @@ object GuiTheme {
         val knobX = java.lang.Math.round(lerp(x + 2f, (x + w - knobSize - 2).toFloat(), clampedPosition))
         roundedRectBordered(graphics, knobX, y + 2, knobSize, knobSize, knobSize / 2,
             SWITCH_KNOB, SWITCH_KNOB, selectionOutline(track))
+    }
+
+    /**
+     * The flat menu's switch: a filled pill with a white knob and no outlines. [lead] and [trail] are the positions
+     * (0 = off, 1 = on) of the knob's leading and trailing edges, so a moving knob stretches; [pressed] widens it
+     * toward the opposite side while the mouse is held.
+     */
+    @JvmStatic
+    fun liquidSwitch(graphics: GuiGraphicsExtractor, x: Int, y: Int, w: Int, h: Int, on: Boolean,
+        lead: Float, trail: Float, pressed: Boolean) {
+        val track = lerpColor(SWITCH_OFF, SWITCH_ON, trail)
+        roundedRect(graphics, x, y, w, h, h / 2, track)
+        val knob = h - 4
+        val minLeft = x + 2f
+        val travel = (w - knob - 4).toFloat()
+        var left = minLeft + travel * java.lang.Math.min(lead, trail)
+        var right = minLeft + travel * java.lang.Math.max(lead, trail) + knob
+        if (pressed) {
+            val stretched = knob * 1.4f
+            if (on) left = java.lang.Math.min(left, right - stretched) else right = java.lang.Math.max(right, left + stretched)
+        }
+        val l = java.lang.Math.round(java.lang.Math.max(minLeft, left))
+        val r = java.lang.Math.round(java.lang.Math.min((x + w - 2).toFloat(), right))
+        roundedRect(graphics, l, y + 2, java.lang.Math.max(knob, r - l), knob, knob / 2, -1)
     }
 
     private fun fillRect(

@@ -8,13 +8,16 @@ import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.Module
 import geiler.addons.client.module.ModuleSettingsSpec
+import net.minecraft.client.renderer.fog.FogData
 import net.minecraft.core.particles.DustParticleOptions
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket
 import net.minecraft.world.entity.Display
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.ExperienceOrb
+import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.LightningBolt
+import net.minecraft.world.entity.decoration.ArmorStand
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.animal.sheep.Sheep
 import net.minecraft.world.entity.item.FallingBlockEntity
@@ -24,6 +27,7 @@ import net.minecraft.world.level.block.LeavesBlock
 import net.minecraft.world.level.block.RotatedPillarBlock
 import net.minecraft.world.level.block.SoundType
 import net.minecraft.world.level.block.state.BlockState
+import net.minecraft.world.level.material.FogType
 
 /** Hides selected overlays, HUD bars, entities and particles; the switches and detection follow NoFrills' No Render. */
 class NoRenderModule private constructor(private val settings: Settings) : Module(
@@ -41,9 +45,12 @@ class NoRenderModule private constructor(private val settings: Settings) : Modul
         MAGE_BEAM("mageBeam"), POWDER_COATING("powderCoating"), GUIDED_SHEEP("guidedSheep"),
         BONE_PLATING("bonePlating"), TREE_BITS("treeBits"), NAUSEA("nausea"), EXP_ORBS("expOrbs"),
         STUCK_ARROWS("stuckArrows"), BLINDNESS("blindness"), DARKNESS("darkness"),
+        UNDERWATER_FOG("underwaterFog"), LAVA_FOG("lavaFog"), AIR_FOG("airFog"), DISTANCE_FOG("distanceFog"),
+        CLOUDS("clouds"), SOULWEAVER_SKULLS("soulweaverSkulls"),
     }
 
     private val hits = LongArray(Flag.values().size)
+    private var lastFogType: FogType? = null
     private val diagnostics = ModuleDiagnostics(Category.VISUAL, { name() }, 8, 100L, 400)
 
     init {
@@ -52,6 +59,7 @@ class NoRenderModule private constructor(private val settings: Settings) : Modul
 
     override fun onEnable() {
         hits.fill(0L)
+        lastFogType = null
         diagnostics.enable(enabledFlags())
     }
 
@@ -81,6 +89,37 @@ class NoRenderModule private constructor(private val settings: Settings) : Modul
         return true
     }
 
+    /** True when the fog of [type] must be pushed out to the render distance (the old No Fog module). */
+    fun shouldClearFog(type: FogType): Boolean {
+        if (!isEnabled()) return false
+        return shouldClearFog(type, on(Flag.UNDERWATER_FOG), on(Flag.LAVA_FOG), on(Flag.AIR_FOG))
+    }
+
+    /** Pushes the enabled fog parts of one frame out of sight, after vanilla has filled [data] in. */
+    fun applyFog(type: FogType, data: FogData) {
+        if (!isEnabled()) return
+        var cleared = false
+        if (shouldClearFog(type, on(Flag.UNDERWATER_FOG), on(Flag.LAVA_FOG), on(Flag.AIR_FOG))) {
+            data.environmentalStart = FAR_START
+            data.environmentalEnd = FAR_END
+            data.skyEnd = FAR_END
+            data.cloudEnd = FAR_END
+            cleared = true
+            hit(fogFlag(type))
+        }
+        if (on(Flag.DISTANCE_FOG)) {
+            data.renderDistanceStart = FAR_START
+            data.renderDistanceEnd = FAR_END
+            data.skyEnd = FAR_END
+            data.cloudEnd = FAR_END
+            cleared = true
+            hit(Flag.DISTANCE_FOG)
+        }
+        if (!cleared) return
+        if (type != lastFogType) diagnostics.event("clearFog type=$type distance=${on(Flag.DISTANCE_FOG)}")
+        lastFogType = type
+    }
+
     /** `LevelExtractor.extractVisibleEntities`: whether [entity] must not be rendered. */
     fun shouldCancelRender(entity: Entity): Boolean {
         if (!isEnabled()) return false
@@ -95,6 +134,10 @@ class NoRenderModule private constructor(private val settings: Settings) : Modul
         }
         if (on(Flag.LIGHTNING) && entity is LightningBolt) return hit(Flag.LIGHTNING)
         if (on(Flag.EXP_ORBS) && entity is ExperienceOrb) return hit(Flag.EXP_ORBS)
+        if (on(Flag.SOULWEAVER_SKULLS) && entity is ArmorStand && DungeonContextTracker.inDungeon()) {
+            val head = entity.getItemBySlot(EquipmentSlot.HEAD)
+            if (head.`is`(Items.PLAYER_HEAD) && NoRenderRules.isSoulWeaverTexture(headTexture(head))) return hit(Flag.SOULWEAVER_SKULLS)
+        }
         if (on(Flag.GUIDED_SHEEP) && entity is Sheep && NoRenderRules.isGuidedSheepHealth(entity.health) &&
             DungeonContextTracker.inDungeon()
         ) return hit(Flag.GUIDED_SHEEP)
@@ -138,6 +181,14 @@ class NoRenderModule private constructor(private val settings: Settings) : Modul
         hit(Flag.DEAD_ENTITIES)
     }
 
+    /** The base64 `textures` property of a player head, or an empty string. */
+    private fun headTexture(stack: net.minecraft.world.item.ItemStack): String {
+        val profile = stack.get(net.minecraft.core.component.DataComponents.PROFILE) ?: return ""
+        return profile.partialProfile().properties().get("textures").asSequence()
+            .mapNotNull { it?.value() }
+            .firstOrNull() ?: ""
+    }
+
     private fun on(flag: Flag): Boolean = settings.byFlag.getValue(flag).value()
 
     private fun hit(flag: Flag): Boolean {
@@ -176,5 +227,23 @@ class NoRenderModule private constructor(private val settings: Settings) : Modul
     companion object {
         @JvmField
         val INSTANCE = NoRenderModule(Settings())
+
+        /** Water and lava follow their own toggle; every other fog type is air fog. */
+        @JvmStatic
+        fun shouldClearFog(type: FogType, underwater: Boolean, lava: Boolean, air: Boolean): Boolean = when (type) {
+            FogType.WATER -> underwater
+            FogType.LAVA -> lava
+            else -> air
+        }
+
+        private fun fogFlag(type: FogType): Flag = when (type) {
+            FogType.WATER -> Flag.UNDERWATER_FOG
+            FogType.LAVA -> Flag.LAVA_FOG
+            else -> Flag.AIR_FOG
+        }
+
+        /** Start and end far past any render distance, so the fog is out of sight. */
+        const val FAR_START = 1.0E6f
+        const val FAR_END = 2.0E6f
     }
 }

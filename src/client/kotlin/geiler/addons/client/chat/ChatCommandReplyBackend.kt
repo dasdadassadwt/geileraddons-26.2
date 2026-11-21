@@ -60,7 +60,7 @@ object ChatCommandReplyBackend {
             module.recordRequestDropped("preset_off command=${request.command()!!.name}")
             return
         }
-        if (sameIgnoreCase(request.sender(), localName(client))) return
+        // Your own messages are valid commands: no built-in reply starts with the prefix, so there is no echo loop.
         if (!ChatReplyCommandRules.senderAllowed(
                 request.sender(),
                 false,
@@ -154,8 +154,7 @@ object ChatCommandReplyBackend {
         if (!module.allowsIncomingReply(request.channel()!!) || !module.presetEnabled(request.command())) return
         val store = ChatChannelsLocalStore.instance()
         val localPlayerName = localName(client)
-        if (sameIgnoreCase(request.sender(), localPlayerName) ||
-            !ChatReplyCommandRules.senderAllowed(
+        if (!ChatReplyCommandRules.senderAllowed(
                 request.sender(),
                 false,
                 emptyList(),
@@ -355,17 +354,9 @@ object ChatCommandReplyBackend {
             transfer.target(),
             null,
         )
-        val command = ChatReplyCommandRules.partyTransferCommand(
-            localRequest,
-            party,
-            PartyListBackend.hasFreshSnapshot(),
-            localName,
-        ).orElse(null)
+        val command = ChatReplyCommandRules.incomingPartyActionCommand(localRequest, party, localName).orElse(null)
         if (command == null) {
-            showLocalMessage(
-                client,
-                "Transfer needs a fresh party list, you as leader, and an exact current member target.",
-            )
+            showLocalMessage(client, "Transfer needs you as party leader and a valid username.")
             return true
         }
         player.connection.sendCommand(command)

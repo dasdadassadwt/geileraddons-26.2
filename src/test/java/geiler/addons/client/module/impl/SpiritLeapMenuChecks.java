@@ -2,9 +2,9 @@ package geiler.addons.client.module.impl;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.pipeline.BlendFunction;
-import geiler.addons.client.dungeon.odin.SpiritLeapLayout;
-import geiler.addons.client.dungeon.odin.SpiritLeapRoster;
-import geiler.addons.client.dungeon.odin.SpiritLeapSelection;
+import geiler.addons.client.dungeon.helpers.SpiritLeapLayout;
+import geiler.addons.client.dungeon.helpers.SpiritLeapRoster;
+import geiler.addons.client.dungeon.helpers.SpiritLeapSelection;
 import geiler.addons.client.mixin.Matrix4fStackAccess;
 import geiler.addons.client.mixin.SkyblockerSpiritLeapSupport;
 import geiler.addons.client.mixin.SodiumWorldRendererSpiritLeapSupport;
@@ -521,10 +521,10 @@ public final class SpiritLeapMenuChecks {
 	}
 
 	private static void checkLoadedPlayerStatusOverridesStaleRoster() {
-		require(!DungeonOdinAssistModule.isLoadedLeapMemberDead(true, 20.0f),
+		require(!DungeonAssistModule.isLoadedLeapMemberDead(true, 20.0f),
 			"a loaded living teammate overrides stale dead status from party or tab metadata");
-		require(DungeonOdinAssistModule.isLoadedLeapMemberDead(false, 20.0f)
-			&& DungeonOdinAssistModule.isLoadedLeapMemberDead(true, 0.0f),
+		require(DungeonAssistModule.isLoadedLeapMemberDead(false, 20.0f)
+			&& DungeonAssistModule.isLoadedLeapMemberDead(true, 0.0f),
 			"a loaded dead teammate is still marked dead when not alive or at zero health");
 	}
 
@@ -693,7 +693,7 @@ public final class SpiritLeapMenuChecks {
 			new String[] { "cardWidth", "cardHeight", "maxHoverGrowth", "topLeft", "topRight", "bottomLeft", "bottomRight" },
 			int.class, int.class, int.class, SpiritLeapLayout.Bounds.class, SpiritLeapLayout.Bounds.class,
 			SpiritLeapLayout.Bounds.class, SpiritLeapLayout.Bounds.class);
-		checkRecordComponents(geiler.addons.client.dungeon.odin.SpiritLeapIncomingTracker.Position.class,
+		checkRecordComponents(geiler.addons.client.dungeon.helpers.SpiritLeapIncomingTracker.Position.class,
 			new String[] { "playerName", "x", "y", "z" }, String.class, double.class, double.class, double.class);
 
 		var recordBounds = new SpiritLeapLayout.Bounds(1, 2, 3, 4);
@@ -723,10 +723,10 @@ public final class SpiritLeapMenuChecks {
 			&& nullableLayout.quadrant(1).equals(recordBounds) && nullableLayout.quadrant(2) == null
 			&& nullableLayout.quadrant(3) == null && nullableLayout.quadrant(-1) == null,
 			"the canonical layout record constructor preserves nullable bounds and quadrant lookup behavior");
-		var position = new geiler.addons.client.dungeon.odin.SpiritLeapIncomingTracker.Position(null, 1.0, 2.0, 3.0);
+		var position = new geiler.addons.client.dungeon.helpers.SpiritLeapIncomingTracker.Position(null, 1.0, 2.0, 3.0);
 		checkRecordValue(position,
-			new geiler.addons.client.dungeon.odin.SpiritLeapIncomingTracker.Position(null, 1.0, 2.0, 3.0),
-			new geiler.addons.client.dungeon.odin.SpiritLeapIncomingTracker.Position(null, 1.0, 2.0, 4.0),
+			new geiler.addons.client.dungeon.helpers.SpiritLeapIncomingTracker.Position(null, 1.0, 2.0, 3.0),
+			new geiler.addons.client.dungeon.helpers.SpiritLeapIncomingTracker.Position(null, 1.0, 2.0, 4.0),
 			"Position[playerName=null, x=1.0, y=2.0, z=3.0]", "Spirit Leap incoming position");
 
 		checkRecordComponents(SpiritLeapCameraHud.Panel.class,
@@ -819,7 +819,7 @@ public final class SpiritLeapMenuChecks {
 		int[] dispatchedButton = {-1};
 		ContainerInput[] dispatchedInput = {null};
 		int[] dispatchCount = {0};
-		boolean dispatched = DungeonOdinAssistModule.dispatchSpiritLeapTarget(menu, target,
+		boolean dispatched = DungeonAssistModule.dispatchSpiritLeapTarget(menu, target,
 			(slot, slotId, button, input) -> {
 				dispatchedSlot[0] = slot;
 				dispatchedSlotId[0] = slotId;

@@ -93,8 +93,6 @@ class LobbyTargetWatchModule private constructor(private val ui: Settings) : Mod
         }
     }
 
-    override fun isWorkInProgress(): Boolean = true
-
     /** Keep the old config key so existing enable state and comma-separated names survive migration. */
     override fun configName(): String = LEGACY_CONFIG_NAME
 

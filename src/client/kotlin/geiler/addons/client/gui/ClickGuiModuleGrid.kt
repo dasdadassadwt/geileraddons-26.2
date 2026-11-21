@@ -6,9 +6,10 @@ import geiler.addons.client.module.ModuleCategoryFilter
 
 /** Section grouping and card-grid geometry shared by the Click GUI and its Java screen adapter. */
 object ClickGuiModuleGrid {
-    private const val CARD_HEIGHT_FRACTION = 0.172f
-    private const val CARD_GAP_FRACTION = 0.0147f
-    private const val GRID_INSET_FRACTION = 0.019f
+    private const val CARD_HEIGHT_FRACTION = 0.10f
+    /** Fixed design-px spacing on the 4/8 grid: 16 around the cards, 12 between them. */
+    const val GRID_INSET = 16
+    const val CARD_GAP = 12
 
     @JvmRecord
     data class Section(val label: String?, val modules: List<Module>)
@@ -31,14 +32,6 @@ object ClickGuiModuleGrid {
     @JvmStatic
     fun cardHeightForPanelHeight(panelHeight: Int): Int =
         Math.max(52, Math.round(Math.max(1, panelHeight) * CARD_HEIGHT_FRACTION))
-
-    @JvmStatic
-    fun cardGapForPanelWidth(panelWidth: Int): Int =
-        Math.max(7, Math.round(Math.max(1, panelWidth) * CARD_GAP_FRACTION))
-
-    @JvmStatic
-    fun gridInsetForPanelWidth(panelWidth: Int): Int =
-        Math.max(9, Math.round(Math.max(1, panelWidth) * GRID_INSET_FRACTION))
 
     @JvmStatic
     fun cardColumnsForModuleWidth(moduleWidth: Int): Int = when {

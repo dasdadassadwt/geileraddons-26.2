@@ -5,7 +5,7 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
-import geiler.addons.client.dungeon.odin.DungeonSplitTracker
+import geiler.addons.client.dungeon.helpers.DungeonSplitTracker
 import java.io.IOException
 import java.math.BigDecimal
 import java.nio.charset.StandardCharsets

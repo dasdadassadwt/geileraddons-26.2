@@ -12,9 +12,11 @@ import geiler.addons.client.hud.HudElement
 import geiler.addons.client.hud.HudManager
 import geiler.addons.client.location.HypixelModApi
 import geiler.addons.client.location.Island
+import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.Module
 import geiler.addons.client.module.ModuleSettingsSpec
+import geiler.addons.client.module.Setting
 import geiler.addons.client.module.TextSetting
 import geiler.addons.client.slayer.SlayerSidebar
 import geiler.addons.client.termsim.TermSimScreen
@@ -30,8 +32,10 @@ import net.minecraft.client.gui.screens.inventory.AbstractSignEditScreen
 import net.minecraft.core.component.DataComponents
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.chat.Component
+import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.inventory.Slot
 import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Items
 import org.lwjgl.glfw.GLFW
 
 private fun gardenIsland(): Boolean = HypixelModApi.currentIsland() == Island.GARDEN
@@ -176,36 +180,112 @@ class GardenKeybindsModule private constructor() : Module(
 }
 
 /**
+ * One key per Garden action (warp, set spawn, barn, desk and plots 1 to 24), like Command Keybinds. Works in the world view on
+ * the Garden only; every key starts unbound. Plot keys run `/plottp <n>`, the plot numbers of the Configure Plots menu.
+ */
+class GardenCommandKeybindsModule private constructor() : Module(
+    "Garden Command Keybinds",
+    "Binds keys to Garden commands: warp to the Garden, set spawn, teleport to the barn, open the desk and teleport to a plot.",
+    Category.FARMING,
+    false,
+    *spec.settings.toTypedArray(),
+) {
+    private val keys = ContainerKeybindRules.GARDEN_PRESETS.map { spec.text(it.id) }
+    private var sent = 0L
+    private val diagnostics = ModuleDiagnostics(Category.FARMING, { name() }, 8, 100L, 300)
+
+    init {
+        group(*spec.groups.toTypedArray())
+    }
+
+    override fun onEnable() {
+        sent = 0L
+        diagnostics.enable("bound=${keys.count { it.value().isNotBlank() }}")
+    }
+
+    override fun onDisable() {
+        diagnostics.event("DISABLE sent=$sent")
+        diagnostics.disable()
+    }
+
+    fun tick() {
+        if (!isEnabled()) return
+        diagnostics.advance()
+        diagnostics.status { "enabled=true inGarden=${gardenIsland()} sent=$sent suppressedEvents=$it" }
+    }
+
+    /** A key press with no screen open; true means a Garden command was sent and the press is used. */
+    fun onKey(pressedKeyName: String): Boolean {
+        if (!isEnabled() || !gardenIsland()) return false
+        val command = ContainerKeybindRules.commandFor(
+            pressedKeyName, keys.map { ContainerKeybindRules.normalize(it.value()) }, ContainerKeybindRules.GARDEN_PRESETS,
+        ) ?: return false
+        PlayerAlerts.command(command)
+        sent++
+        diagnostics.event("COMMAND key=$pressedKeyName command=$command")
+        return true
+    }
+
+    companion object {
+        private val spec = ModuleSettingsSpec.of("Garden Command Keybinds")
+
+        @JvmField
+        val INSTANCE = GardenCommandKeybindsModule()
+    }
+}
+
+/**
  * Lists what the Garden visitors on your island want, from the Items Required of each visitor menu you open, as a themed card
- * after SkyHanni's visitor shopping list: each visitor is green when you hold everything they want, yellow when part of it,
- * and what is still short is listed to buy. Sacks are not counted. Clicking an item to buy only runs the Bazaar search and
- * copies the missing amount; it never clicks anything in the menu for you.
+ * after SkyHanni's visitor shopping list: a header with the visitor and ready counts and the total Instabuy cost in millions,
+ * then each item still short with its icon, amount and cost. Sacks are not counted. Clicking an item to buy only runs the
+ * Bazaar search and copies the missing amount (and boxes that item in green in the search result); it never clicks anything
+ * in the menu for you.
  */
 class VisitorShoppingListModule private constructor() : Module(
     "Visitor Shopping List",
-    "Shows the items the Garden visitors want and which visitors you can serve, read from each visitor menu you open.",
+    "Shows the items the Garden visitors want, what they cost on the Bazaar and which visitors you can serve, read from each visitor menu you open.",
     Category.FARMING,
     false,
+    showIcons,
 ), HudElement {
     private val needs = LinkedHashMap<String, Map<String, Int>>()
     private val diagnostics = ModuleDiagnostics(Category.FARMING, { name() }, 8, 100L, 240)
     private var ticks = 0
     private var rows: List<VisitorRules.Row> = emptyList()
+    private var icons: Map<String, ItemStack> = emptyMap()
+    private val unresolved = HashSet<String>()
     private var read = 0
     private var searches = 0
+    private var searchedName: String? = null
+    private var searchedAtMillis = 0L
+    private var highlighted = 0L
 
     override fun id(): String = "visitor_shopping_list"
     override fun displayName(): String = "Visitor Shopping List"
     override fun hudIslands(): Set<Island> = setOf(Island.GARDEN)
+    override fun settingTooltip(setting: Setting): String? =
+        if (setting === showIcons) "Draws the item next to each entry you still have to buy." else null
     private fun shown(): List<VisitorRules.Row> = rows.ifEmpty { SAMPLE }
-    override fun width(font: Font?): Int = maxOf(MIN_WIDTH, shown().maxOf { font!!.width(it.text) } + 2 * PAD)
-    override fun height(font: Font?): Int = shown().size * (font!!.lineHeight + 1) + 2 * PAD
+    private fun rowHeight(font: Font): Int = if (showIcons.value()) maxOf(font.lineHeight + 1, ICON_ROW) else font.lineHeight + 1
+    private fun indent(row: VisitorRules.Row): Int = if (row.buyItem == null) 0 else if (showIcons.value()) ICON_ROW else 6
+    override fun width(font: Font?): Int = maxOf(
+        MIN_WIDTH,
+        shown().maxOf { indent(it) + font!!.width(it.text) + (it.costText?.let { cost -> COST_GAP + font.width(cost) } ?: 0) } + 2 * PAD,
+    )
+    override fun height(font: Font?): Int = shown().size * rowHeight(font!!) + 2 * PAD
     override fun visible(): Boolean = isEnabled() && rows.isNotEmpty() && gardenIsland()
     override fun previewMode(): String = if (visible()) "live" else "sample"
     override fun render(graphics: GuiGraphicsExtractor, font: Font, x: Int, y: Int) {
-        GuiTheme.roundedRectBordered(graphics, x, y, width(font), height(font), GuiTheme.RADIUS_SMALL, GuiTheme.PANEL_TOP, GuiTheme.PANEL_BOTTOM, GuiTheme.BORDER)
+        val width = width(font)
+        val rowHeight = rowHeight(font)
+        GuiTheme.roundedRectBordered(graphics, x, y, width, height(font), GuiTheme.RADIUS_SMALL, GuiTheme.PANEL_TOP, GuiTheme.PANEL_BOTTOM, GuiTheme.BORDER)
         shown().forEachIndexed { index, row ->
-            graphics.text(font, Component.literal(row.text), x + PAD, y + PAD + index * (font.lineHeight + 1), GuiTheme.TEXT_PRIMARY)
+            val rowY = y + PAD + index * rowHeight
+            val textY = rowY + (rowHeight - font.lineHeight) / 2
+            val icon = if (showIcons.value()) row.buyItem?.let { icons[it] ?: SAMPLE_ICONS[it] } else null
+            if (icon != null) graphics.item(icon, x + PAD, rowY + (rowHeight - 16) / 2)
+            graphics.text(font, Component.literal(row.text), x + PAD + indent(row), textY, GuiTheme.TEXT_PRIMARY)
+            row.costText?.let { graphics.text(font, Component.literal(it), x + width - PAD - font.width(it), textY, GuiTheme.TEXT_PRIMARY) }
         }
     }
 
@@ -215,15 +295,22 @@ class VisitorShoppingListModule private constructor() : Module(
     override fun onEnable() {
         needs.clear()
         rows = emptyList()
+        icons = emptyMap()
+        unresolved.clear()
+        searchedName = null
         read = 0
-        diagnostics.enable("source=visitor menu lore (every tick while a menu is open) and tab list visitors, rebuilt every 10 ticks")
+        // Prices come from the Bazaar data set, which loads on demand; icons are built from the item name.
+        PriceDisplayModule.INSTANCE.setBazaarDemand(true)
+        diagnostics.enable("source=visitor menu lore (every tick while a menu is open) and tab list visitors, rebuilt every 10 ticks; icons=${showIcons.value()}")
     }
 
     override fun onDisable() {
-        diagnostics.event("DISABLE menusRead=$read searches=$searches")
+        diagnostics.event("DISABLE menusRead=$read searches=$searches highlights=$highlighted")
         diagnostics.disable()
+        PriceDisplayModule.INSTANCE.setBazaarDemand(false)
         needs.clear()
         rows = emptyList()
+        icons = emptyMap()
     }
 
     fun tick() {
@@ -244,6 +331,8 @@ class VisitorShoppingListModule private constructor() : Module(
     /** Hooks left clicks on the list in any open screen (chat, inventory, a sign); the list is not clickable with no screen open. */
     fun registerScreenEvents() {
         ScreenEvents.AFTER_INIT.register { _, screen, _, _ ->
+            // The mod's own screens (Click GUI, Move UI, editors) draw over the list; a click there is never a click on it.
+            if (screen.javaClass.name.startsWith(OWN_SCREENS)) return@register
             ScreenMouseEvents.allowMouseClick(screen).register { _, event -> !handleClick(event.x(), event.y(), event.button()) }
         }
     }
@@ -257,7 +346,7 @@ class VisitorShoppingListModule private constructor() : Module(
         val scale = HudManager.scale(this)
         val row = GardenBazaarRules.lineAt(
             mouseX, mouseY, HudManager.x(this, font, window.guiScaledWidth), HudManager.y(this, font, window.guiScaledHeight) + (PAD * scale).toInt(),
-            width(font), font.lineHeight, scale, rows.size,
+            width(font), rowHeight(font) - 1, scale, rows.size,
         )
         val item = rows.getOrNull(row)?.takeIf { it.buyItem != null } ?: return false
         search(item.buyItem!!, item.buyAmount)
@@ -269,6 +358,8 @@ class VisitorShoppingListModule private constructor() : Module(
         val client = Minecraft.getInstance()
         client.keyboardHandler.setClipboard(amount.toString())
         searches++
+        searchedName = name
+        searchedAtMillis = System.currentTimeMillis()
         if (client.gui.screen() is AbstractSignEditScreen) {
             diagnostics.event("COPY item=$name amount=$amount (sign open)")
             PlayerAlerts.chat("§7Copied §e$amount §7for §f$name§7: press Ctrl+V in the sign")
@@ -304,7 +395,42 @@ class VisitorShoppingListModule private constructor() : Module(
         val player = Minecraft.getInstance().player ?: return
         val held = (0 until player.inventory.containerSize).map { player.inventory.getItem(it) }.filter { !it.isEmpty }
             .map { VisitorRules.Held(it.hoverName.string.replace(Regex("§."), "").trim(), it.count) }
-        rows = VisitorRules.rows(needs) { VisitorRules.have(held, it) }
+        val bazaar = PriceDisplayModule.INSTANCE.prices().bazaar
+        rows = VisitorRules.rows(needs, { VisitorRules.have(held, it) }, { name -> bazaar?.get(VisitorRules.bazaarId(name))?.buyPrice })
+        icons = rows.mapNotNull { row ->
+            val item = row.buyItem ?: return@mapNotNull null
+            item to (cropIcon(item) ?: return@mapNotNull null)
+        }.toMap()
+        for (row in rows) {
+            val item = row.buyItem ?: continue
+            val id = VisitorRules.bazaarId(item)
+            val priced = bazaar?.get(id)?.buyPrice != null
+            if ((!priced && bazaar != null || cropIcon(item) == null) && unresolved.size < MAX_UNRESOLVED && unresolved.add(item)) {
+                diagnostics.event("UNRESOLVED item=$item id=$id bazaar=${bazaar != null} priced=$priced icon=${cropIcon(item) != null}")
+            }
+        }
+    }
+
+    /** The plain crop item with the enchanted shimmer, built from the Bazaar id (`ENCHANTED_MELON` is a melon slice); null for an unknown crop. */
+    private fun cropIcon(name: String): ItemStack? {
+        val item = CROP_ITEMS[VisitorRules.baseId(VisitorRules.bazaarId(name))] ?: return null
+        return ItemStack(item).also { it.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true) }
+    }
+
+    /** In a Bazaar search result, boxes in green the slot of the item a shopping-list click searched for; called before the slots draw. */
+    fun drawSlotHighlights(graphics: GuiGraphicsExtractor, slots: List<Slot>) {
+        val wanted = searchedName ?: return
+        if (!isEnabled() || System.currentTimeMillis() - searchedAtMillis > SEARCH_MEMORY_MILLIS) return
+        val screen = containerScreen() ?: return
+        val title = screen.title.string
+        if (!title.contains("Bazaar", ignoreCase = true) && !title.contains('➜')) return
+        for (slot in slots) {
+            if (slot.container is Inventory || !slot.hasItem()) continue
+            if (!slot.item.hoverName.string.replace(FORMATTING, "").trim().equals(wanted, ignoreCase = true)) continue
+            graphics.fill(slot.x, slot.y, slot.x + 16, slot.y + 16, MATCH_FILL)
+            graphics.outline(slot.x - 1, slot.y - 1, 18, 18, MATCH_OUTLINE)
+            if (highlighted++ == 0L) diagnostics.event("BAZAAR_MATCH item=$wanted title=${title.take(40)}")
+        }
     }
 
     companion object {
@@ -314,16 +440,30 @@ class VisitorShoppingListModule private constructor() : Module(
         private const val MAX_VISITORS = 12
         private const val PAD = 4
         private const val MIN_WIDTH = 110
-        private val SAMPLE = listOf(
-            VisitorRules.Row("§7Visitor Shopping List §e2 §8(§a1 ready§8)"),
-            VisitorRules.Row("§a✔ Ryan §8Ready"),
-            VisitorRules.Row("§8  §7Carrot §a20§7/§f20"),
-            VisitorRules.Row("§e● Old Shaman Nyko §81/2"),
-            VisitorRules.Row("§8  §7Wheat §a100§7/§f100"),
-            VisitorRules.Row("§8  §7Enchanted Baked Potato §e0§7/§f10"),
-            VisitorRules.Row("§7To buy §8(click to search the Bazaar)"),
-            VisitorRules.Row("§8  §fEnchanted Baked Potato §e10"),
+        private const val ICON_ROW = 18
+        private const val COST_GAP = 10
+        private const val MAX_UNRESOLVED = 8
+        private const val SEARCH_MEMORY_MILLIS = 120_000L
+        private const val OWN_SCREENS = "geiler.addons.client.gui."
+        private const val MATCH_FILL = 0x4055FF55
+        private const val MATCH_OUTLINE = 0xFF55FF55.toInt()
+        private val FORMATTING = Regex("§.")
+        private val CROP_ITEMS = mapOf(
+            "MELON" to Items.MELON_SLICE, "MELON_BLOCK" to Items.MELON, "PUMPKIN" to Items.PUMPKIN, "SUGAR_CANE" to Items.SUGAR_CANE, "SUGAR" to Items.SUGAR,
+            "CACTUS" to Items.CACTUS, "CACTUS_GREEN" to Items.DYE.green(), "CARROT" to Items.CARROT, "GOLDEN_CARROT" to Items.GOLDEN_CARROT,
+            "POTATO" to Items.POTATO, "BAKED_POTATO" to Items.BAKED_POTATO, "WHEAT" to Items.WHEAT, "SEEDS" to Items.WHEAT_SEEDS, "HAY_BLOCK" to Items.HAY_BLOCK,
+            "BREAD" to Items.BREAD, "COOKIE" to Items.COOKIE, "COCOA" to Items.COCOA_BEANS, "RED_MUSHROOM" to Items.RED_MUSHROOM, "BROWN_MUSHROOM" to Items.BROWN_MUSHROOM,
+            "HUGE_MUSHROOM_1" to Items.BROWN_MUSHROOM_BLOCK, "HUGE_MUSHROOM_2" to Items.RED_MUSHROOM_BLOCK, "NETHER_STALK" to Items.NETHER_WART,
+            "SUNFLOWER" to Items.SUNFLOWER, "MOONFLOWER" to Items.BLUE_ORCHID, "WILD_ROSE" to Items.ROSE_BUSH,
+            "RAW_CHICKEN" to Items.CHICKEN, "PORK" to Items.PORKCHOP, "GRILLED_PORK" to Items.COOKED_PORKCHOP, "MUTTON" to Items.MUTTON, "COOKED_MUTTON" to Items.COOKED_MUTTON,
+            "RAW_BEEF" to Items.BEEF, "RABBIT" to Items.RABBIT, "COOKED_RABBIT" to Items.COOKED_RABBIT, "RAW_FISH" to Items.COD, "RAW_SALMON" to Items.SALMON, "COOKED_FISH" to Items.COOKED_COD,
         )
+        private val showIcons = BooleanSetting("Show Icons", true)
+        private val SAMPLE = listOf(
+            VisitorRules.Row("§7Visitor Shopping List §e2 §8(§a1 ready§8)", costText = "§7Total §61.25M"),
+            VisitorRules.Row("§fEnchanted Baked Potato §e10", "Enchanted Baked Potato", 10, "§61.25M"),
+        )
+        private val SAMPLE_ICONS: Map<String, ItemStack> by lazy { mapOf("Enchanted Baked Potato" to ItemStack(Items.BAKED_POTATO)) }
 
         @JvmField
         val INSTANCE = VisitorShoppingListModule()

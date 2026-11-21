@@ -91,7 +91,50 @@ enum class ClickGuiMotion(
         return 1.0f + c3 * shifted * shifted * shifted + c1 * shifted * shifted
     }
 
+    /** How long a switch knob takes to settle after a toggle. */
+    fun liquidMillis(): Long = when (this) {
+        NONE -> 0L
+        REDUCED -> 150L
+        EXPRESSIVE -> 520L
+    }
+
+    /**
+     * Progress of the knob edge that leads the travel. Expressive runs the two edges on different curves, so the
+     * knob stretches toward its target, overshoots slightly and then pulls its tail in, like a liquid pill.
+     */
+    fun liquidLead(elapsedMillis: Long): Float = when (this) {
+        NONE -> 1.0f
+        REDUCED -> ease(elapsedMillis / 150.0f)
+        EXPRESSIVE -> cubicBezier(0.25, 1.3, 0.45, 1.0, elapsedMillis / 340.0)
+    }
+
+    /** Progress of the trailing knob edge; the track colour follows it. */
+    fun liquidTrail(elapsedMillis: Long): Float = when (this) {
+        NONE -> 1.0f
+        REDUCED -> ease(elapsedMillis / 150.0f)
+        EXPRESSIVE -> cubicBezier(0.6, 0.0, 0.2, 1.0, elapsedMillis / 520.0)
+    }
+
     companion object {
+        /** CSS-style cubic-bezier(x1, y1, x2, y2) at time [x]; x(u) is monotonic for x1, x2 in 0..1, so bisection finds u. */
+        private fun cubicBezier(x1: Double, y1: Double, x2: Double, y2: Double, x: Double): Float {
+            if (x <= 0.0) return 0.0f
+            if (x >= 1.0) return 1.0f
+            var low = 0.0
+            var high = 1.0
+            var u = x
+            repeat(24) {
+                if (bezier(u, x1, x2) < x) low = u else high = u
+                u = (low + high) / 2.0
+            }
+            return bezier(u, y1, y2).toFloat()
+        }
+
+        private fun bezier(u: Double, p1: Double, p2: Double): Double {
+            val inverse = 1.0 - u
+            return 3.0 * inverse * inverse * u * p1 + 3.0 * inverse * u * u * p2 + u * u * u
+        }
+
         /** Resolves a config value without allowing a hand-edited file to disable the GUI accidentally. */
         @JvmStatic
         fun fromSetting(value: String?): ClickGuiMotion {

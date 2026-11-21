@@ -3,13 +3,12 @@ package geiler.addons.client.module.impl;
 import geiler.addons.client.module.Category;
 import net.minecraft.world.level.material.FogType;
 
-/** Offline checks for Auto Sprint, No Fog, Fullbright and Block Overlay rules and defaults. */
+/** Offline checks for Auto Sprint, Fullbright and Block Overlay rules and defaults. */
 public final class ViewModulesChecks {
 	private ViewModulesChecks() { }
 
 	public static void run() {
 		checkAutoSprint();
-		checkNoFog();
 		checkFullbright();
 		checkBlockOverlay();
 	}
@@ -24,25 +23,6 @@ public final class ViewModulesChecks {
 		check(!AutoSprintModule.resolve(false, false, false, false), "disabled leaves sprint alone");
 		check(AutoSprintModule.resolve(false, true, true, true), "a held sprint key always passes through");
 		check(!module.resolveSprint(false, false, false), "a disabled module never forces sprint on its instance");
-	}
-
-	private static void checkNoFog() {
-		NoFogModule module = NoFogModule.INSTANCE;
-		check("No Fog".equals(module.name()) && module.category() == Category.VISUAL && !module.isEnabled()
-			&& module.booleanSettings().size() == 4, "No Fog is default off with water, lava, air and distance toggles");
-		check(module.booleanSettings().stream().allMatch(s -> s.value()), "every fog toggle defaults on");
-		check(NoFogModule.shouldClear(FogType.WATER, true, false, false), "underwater fog is cleared when its toggle is on");
-		check(!NoFogModule.shouldClear(FogType.WATER, false, true, true), "underwater fog stays when only lava and air are on");
-		check(NoFogModule.shouldClear(FogType.LAVA, false, true, false), "lava fog is cleared when its toggle is on");
-		check(!NoFogModule.shouldClear(FogType.LAVA, true, false, true), "lava fog stays when only water and air are on");
-		check(NoFogModule.shouldClear(FogType.ATMOSPHERIC, false, false, true)
-			&& NoFogModule.shouldClear(FogType.POWDER_SNOW, false, false, true)
-			&& NoFogModule.shouldClear(FogType.NONE, false, false, true),
-			"overworld, nether, end, effect and powder snow fog follow the air toggle");
-		check(!NoFogModule.shouldClear(FogType.ATMOSPHERIC, true, true, false), "air fog stays when the air toggle is off");
-		check(!module.shouldClear(FogType.WATER), "a disabled module clears nothing");
-		check(NoFogModule.FAR_END > NoFogModule.FAR_START && NoFogModule.FAR_START > 100_000f,
-			"cleared fog distances lie far past any render distance and never collapse to zero width");
 	}
 
 	private static void checkFullbright() {

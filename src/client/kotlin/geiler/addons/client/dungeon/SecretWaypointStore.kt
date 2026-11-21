@@ -40,7 +40,7 @@ class SecretWaypointStore private constructor() {
     @JvmSuppressWildcards
     class RuntimeSnapshot(
         defaults: List<Waypoint>?,
-        roomTemplates: List<DevonianDungeonWaypointCatalog.Marker>?,
+        roomTemplates: List<DungeonWaypointCatalog.Marker>?,
         runtimeDefaults: List<Waypoint>?,
         personal: List<Waypoint>?,
         overrides: Map<String, WaypointOverride>?,
@@ -50,7 +50,7 @@ class SecretWaypointStore private constructor() {
         loaded: Boolean,
     ) {
         private val defaultsValue: List<Waypoint> = java.util.List.copyOf(defaults)
-        private val roomTemplatesValue: List<DevonianDungeonWaypointCatalog.Marker> =
+        private val roomTemplatesValue: List<DungeonWaypointCatalog.Marker> =
             java.util.List.copyOf(roomTemplates)
         private val runtimeDefaultsValue: List<Waypoint> = java.util.List.copyOf(runtimeDefaults)
         private val personalValue: List<Waypoint> = java.util.List.copyOf(personal)
@@ -61,7 +61,7 @@ class SecretWaypointStore private constructor() {
         private val loadedValue = loaded
 
         fun defaults(): List<Waypoint> = defaultsValue
-        fun roomTemplates(): List<DevonianDungeonWaypointCatalog.Marker> = roomTemplatesValue
+        fun roomTemplates(): List<DungeonWaypointCatalog.Marker> = roomTemplatesValue
         fun runtimeDefaults(): List<Waypoint> = runtimeDefaultsValue
         fun personal(): List<Waypoint> = personalValue
         fun overrides(): Map<String, WaypointOverride> = overridesValue
@@ -180,7 +180,7 @@ class SecretWaypointStore private constructor() {
 
         @JvmStatic fun defaults(): List<Waypoint> = SecretWaypointStoreCore.defaults()
         @JvmStatic fun personal(): List<Waypoint> = SecretWaypointStoreCore.personal()
-        @JvmStatic fun roomTemplates(): List<DevonianDungeonWaypointCatalog.Marker> =
+        @JvmStatic fun roomTemplates(): List<DungeonWaypointCatalog.Marker> =
             SecretWaypointStoreCore.roomTemplates()
         @JvmStatic fun catalogStatus(): String? = SecretWaypointStoreCore.catalogStatus()
         @JvmStatic fun canPersistChanges(): Boolean = SecretWaypointStoreCore.canPersistChanges()

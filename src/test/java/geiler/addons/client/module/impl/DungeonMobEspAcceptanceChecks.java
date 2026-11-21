@@ -219,7 +219,7 @@ public final class DungeonMobEspAcceptanceChecks {
 		String nonBreakingSpace = "\u00a0";
 		check((emSpace + "✯").equals(DungeonMobEspSupport.javaStringTrim(emSpace + "✯"))
 			&& !DungeonMobEspSupport.isStarred(emSpace + "✯")
-			&& !DungeonDevonianMobTracker.hasDevonianStarEvidence(emSpace + "✯"),
+			&& !DungeonStarredMobTracker.hasDevonianStarEvidence(emSpace + "✯"),
 			"raw Java trim preserves non-ASCII whitespace while chat normalization still flattens it before star checks");
 		check(nonBreakingSpace.equals(DungeonMobEspSupport.javaStringTrim(" " + nonBreakingSpace + " "))
 			&& !DungeonMobEspSupport.javaStringIsBlank(nonBreakingSpace)
@@ -481,38 +481,38 @@ public final class DungeonMobEspAcceptanceChecks {
 	}
 
 	private static void checkDevonianMobClassificationAndPacketTracking() {
-		check(DungeonDevonianMobTracker.classifyStarredNameplate("[Lv 100] ✯ Shadow Assassin 80,000❤")
-			== DungeonDevonianMobTracker.MobClass.SHADOW_ASSASSIN
-			&& DungeonDevonianMobTracker.classifyStarredNameplate("[Lv 100] ✯ Fels 80,000❤")
-			== DungeonDevonianMobTracker.MobClass.FEL
-			&& DungeonDevonianMobTracker.classifyStarredNameplate("[Lv 100] ✯ Skeleton Master 80,000❤")
-			== DungeonDevonianMobTracker.MobClass.SKELETON_MASTER,
+		check(DungeonStarredMobTracker.classifyStarredNameplate("[Lv 100] ✯ Shadow Assassin 80,000❤")
+			== DungeonStarredMobTracker.MobClass.SHADOW_ASSASSIN
+			&& DungeonStarredMobTracker.classifyStarredNameplate("[Lv 100] ✯ Fels 80,000❤")
+			== DungeonStarredMobTracker.MobClass.FEL
+			&& DungeonStarredMobTracker.classifyStarredNameplate("[Lv 100] ✯ Skeleton Master 80,000❤")
+			== DungeonStarredMobTracker.MobClass.SKELETON_MASTER,
 			"Devonian's Shadow Assassin, Fel, and Skeleton Master nameplate classes are recognized");
-		check(DungeonDevonianMobTracker.classifyStarredNameplate("[Lv 100] ✯ Withermancer 80,000❤")
-			== DungeonDevonianMobTracker.MobClass.WITHERMANCER
-			&& DungeonDevonianMobTracker.classifyStarredNameplate("[Lv 100] ✯ Zombie Lord 80,000❤")
-			== DungeonDevonianMobTracker.MobClass.LORD
-			&& DungeonDevonianMobTracker.classifyStarredNameplate("[Lv 100] ✯ Zombie Commander 80,000❤")
-			== DungeonDevonianMobTracker.MobClass.ZOMBIE_COMMANDER
-			&& DungeonDevonianMobTracker.classifyStarredNameplate("[Lv 100] ✯ Super Archer 80,000❤")
-			== DungeonDevonianMobTracker.MobClass.SUPER_ARCHER,
+		check(DungeonStarredMobTracker.classifyStarredNameplate("[Lv 100] ✯ Withermancer 80,000❤")
+			== DungeonStarredMobTracker.MobClass.WITHERMANCER
+			&& DungeonStarredMobTracker.classifyStarredNameplate("[Lv 100] ✯ Zombie Lord 80,000❤")
+			== DungeonStarredMobTracker.MobClass.LORD
+			&& DungeonStarredMobTracker.classifyStarredNameplate("[Lv 100] ✯ Zombie Commander 80,000❤")
+			== DungeonStarredMobTracker.MobClass.ZOMBIE_COMMANDER
+			&& DungeonStarredMobTracker.classifyStarredNameplate("[Lv 100] ✯ Super Archer 80,000❤")
+			== DungeonStarredMobTracker.MobClass.SUPER_ARCHER,
 			"Withermancer, Lord, Zombie Commander, and Super Archer classes match Devonian labels");
-		check(DungeonDevonianMobTracker.classifyStarredNameplate("[Lv 100] ✯ Lost Adventurer 80,000❤")
-			== DungeonDevonianMobTracker.MobClass.ADVENTURER
-			&& DungeonDevonianMobTracker.classifyStarredNameplate("[Lv 100] ✯ Angry Archaeologist 80,000❤")
-			== DungeonDevonianMobTracker.MobClass.ANGRY_ARCHAEOLOGIST
-			&& DungeonDevonianMobTracker.classifyStarredNameplate("[Lv 100] ✯ King Midas 80,000❤")
-			== DungeonDevonianMobTracker.MobClass.KING_MIDAS
-			&& DungeonDevonianMobTracker.classifyStarredNameplate("[Lv 100] ✯ Crypt Dreadlord 80,000❤")
-			== DungeonDevonianMobTracker.MobClass.STARRED_MOB,
+		check(DungeonStarredMobTracker.classifyStarredNameplate("[Lv 100] ✯ Lost Adventurer 80,000❤")
+			== DungeonStarredMobTracker.MobClass.ADVENTURER
+			&& DungeonStarredMobTracker.classifyStarredNameplate("[Lv 100] ✯ Angry Archaeologist 80,000❤")
+			== DungeonStarredMobTracker.MobClass.ANGRY_ARCHAEOLOGIST
+			&& DungeonStarredMobTracker.classifyStarredNameplate("[Lv 100] ✯ King Midas 80,000❤")
+			== DungeonStarredMobTracker.MobClass.KING_MIDAS
+			&& DungeonStarredMobTracker.classifyStarredNameplate("[Lv 100] ✯ Crypt Dreadlord 80,000❤")
+			== DungeonStarredMobTracker.MobClass.STARRED_MOB,
 			"Adventurer, Angry Archaeologist, King Midas, and generic fallback classes are recognized");
-		check(DungeonDevonianMobTracker.classifyStarredNameplate("Shadow Assassin") == null
-			&& DungeonDevonianMobTracker.classifyStarredNameplate("✯ Shadow Assassin") == null
-			&& DungeonDevonianMobTracker.classifyStarredNameplate("[Lv 100] ✯ Shadow Assassin")
-			== DungeonDevonianMobTracker.MobClass.SHADOW_ASSASSIN,
+		check(DungeonStarredMobTracker.classifyStarredNameplate("Shadow Assassin") == null
+			&& DungeonStarredMobTracker.classifyStarredNameplate("✯ Shadow Assassin") == null
+			&& DungeonStarredMobTracker.classifyStarredNameplate("[Lv 100] ✯ Shadow Assassin")
+			== DungeonStarredMobTracker.MobClass.SHADOW_ASSASSIN,
 			"nameplate classification requires the star at an index of at least one");
-		check(DungeonDevonianMobTracker.bodyEntityId(42, DungeonDevonianMobTracker.MobClass.SHADOW_ASSASSIN) == 41
-			&& DungeonDevonianMobTracker.bodyEntityId(42, DungeonDevonianMobTracker.MobClass.WITHERMANCER) == 39,
+		check(DungeonStarredMobTracker.bodyEntityId(42, DungeonStarredMobTracker.MobClass.SHADOW_ASSASSIN) == 41
+			&& DungeonStarredMobTracker.bodyEntityId(42, DungeonStarredMobTracker.MobClass.WITHERMANCER) == 39,
 			"the normal and Withermancer body offsets are minus one and minus three");
 		check(DungeonMobEspSupport.isExactDungeonMinibossProfileName("Shadow Assassin")
 			&& DungeonMobEspSupport.isExactDungeonMinibossProfileName("Lost Adventurer")
@@ -534,7 +534,7 @@ public final class DungeonMobEspAcceptanceChecks {
 			"retained Starred and Miniboss HUD targets bypass range while Fel remains range-limited");
 
 		Object firstWorld = new Object();
-		DungeonDevonianMobTracker tracker = new DungeonDevonianMobTracker();
+		DungeonStarredMobTracker tracker = new DungeonStarredMobTracker();
 		tracker.onWorld(firstWorld);
 		tracker.onArmorStandSpawn(firstWorld, 42);
 		tracker.onNameplateMetadata(firstWorld, 42, "[Lv 100] ✯ Shadow Assassin");
@@ -542,34 +542,34 @@ public final class DungeonMobEspAcceptanceChecks {
 			"a nameplate remains pending while its associated body has not arrived");
 		var profileFirst = tracker.resolveLoadedBodies(entityId -> entityId == 41);
 		check(profileFirst.size() == 1 && profileFirst.getFirst().bodyId() == 41
-			&& profileFirst.getFirst().mobClass() == DungeonDevonianMobTracker.MobClass.SHADOW_ASSASSIN,
+			&& profileFirst.getFirst().mobClass() == DungeonStarredMobTracker.MobClass.SHADOW_ASSASSIN,
 			"the body can load after its starred nameplate and resolve without a range parameter");
-		check(profileFirst.getFirst().source() == DungeonDevonianMobTracker.ResolutionSource.ENTITY_ID_OFFSET,
+		check(profileFirst.getFirst().source() == DungeonStarredMobTracker.ResolutionSource.ENTITY_ID_OFFSET,
 			"the Devonian entity-ID offset remains the primary association path");
 
-		DungeonDevonianMobTracker spatialTracker = new DungeonDevonianMobTracker();
+		DungeonStarredMobTracker spatialTracker = new DungeonStarredMobTracker();
 		spatialTracker.onNameplateMetadata(firstWorld, 62, "[Lv 100] ✯ Skeleton Master");
 		var spatialMatches = spatialTracker.resolveLoadedBodies(entityId -> entityId == 700,
-			entityId -> entityId == 62 ? new DungeonDevonianMobTracker.LabelPosition(10, 72.4, 10) : null,
-			List.of(new DungeonDevonianMobTracker.BodyCandidate(700, 10, 70, 10)));
+			entityId -> entityId == 62 ? new DungeonStarredMobTracker.LabelPosition(10, 72.4, 10) : null,
+			List.of(new DungeonStarredMobTracker.BodyCandidate(700, 10, 70, 10)));
 		check(spatialMatches.size() == 1 && spatialMatches.getFirst().bodyId() == 700
-			&& spatialMatches.getFirst().source() == DungeonDevonianMobTracker.ResolutionSource.SPATIAL_FALLBACK,
+			&& spatialMatches.getFirst().source() == DungeonStarredMobTracker.ResolutionSource.SPATIAL_FALLBACK,
 			"when the ID offset is unavailable, one loaded body directly below the label resolves spatially");
-		var ambiguousSpatial = DungeonDevonianMobTracker.resolveSpatialBodyId(
-			new DungeonDevonianMobTracker.LabelPosition(10, 72.4, 10), List.of(
-				new DungeonDevonianMobTracker.BodyCandidate(700, 10, 70, 10),
-				new DungeonDevonianMobTracker.BodyCandidate(701, 10.2, 70, 10)));
+		var ambiguousSpatial = DungeonStarredMobTracker.resolveSpatialBodyId(
+			new DungeonStarredMobTracker.LabelPosition(10, 72.4, 10), List.of(
+				new DungeonStarredMobTracker.BodyCandidate(700, 10, 70, 10),
+				new DungeonStarredMobTracker.BodyCandidate(701, 10.2, 70, 10)));
 		check(ambiguousSpatial.bodyId() < 0 && ambiguousSpatial.ambiguous(),
 			"overlapping bodies below one label are rejected rather than highlighting the wrong mob");
-		check(DungeonDevonianMobTracker.resolveSpatialBodyId(new DungeonDevonianMobTracker.LabelPosition(0, 70, 0),
-			List.of(new DungeonDevonianMobTracker.BodyCandidate(702, 0, 71, 0))).bodyId() < 0,
+		check(DungeonStarredMobTracker.resolveSpatialBodyId(new DungeonStarredMobTracker.LabelPosition(0, 70, 0),
+			List.of(new DungeonStarredMobTracker.BodyCandidate(702, 0, 71, 0))).bodyId() < 0,
 			"spatial fallback never associates a body above its nameplate");
 
 		tracker.onNameplateMetadata(firstWorld, 52, "[Lv 100] ✯ Withermancer");
 		tracker.onArmorStandSpawn(firstWorld, 52);
 		var nameFirst = tracker.resolveLoadedBodies(entityId -> entityId == 49);
 		check(nameFirst.size() == 1 && nameFirst.getFirst().bodyId() == 49
-			&& nameFirst.getFirst().mobClass() == DungeonDevonianMobTracker.MobClass.WITHERMANCER,
+			&& nameFirst.getFirst().mobClass() == DungeonStarredMobTracker.MobClass.WITHERMANCER,
 			"a nameplate metadata event arriving before the spawn callback keeps the minus-three association");
 
 		tracker.onArmorStandSpawn(firstWorld, 44);

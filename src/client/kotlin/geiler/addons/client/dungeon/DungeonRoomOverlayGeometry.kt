@@ -252,7 +252,7 @@ class DungeonRoomOverlayGeometry private constructor() {
     class Snapshot(
         available: Boolean, cells: List<Cell>?, rooms: List<Room>?, playerCell: DungeonGridRules.Cell?,
         players: List<PlayerMarker?>?, reason: String?,
-        predictions: List<geiler.addons.client.dungeon.odin.OdinSpecialColumnPredictor.Prediction>?,
+        predictions: List<geiler.addons.client.dungeon.helpers.SpecialColumnPredictor.Prediction>?,
     ) {
         private val availableValue = available
         private val cellsValue = immutableCopy(cells)
@@ -273,7 +273,7 @@ class DungeonRoomOverlayGeometry private constructor() {
         fun playerCell(): DungeonGridRules.Cell? = playerCellValue
         fun players(): List<PlayerMarker> = playersValue
         fun reason(): String? = reasonValue
-        fun predictions(): List<geiler.addons.client.dungeon.odin.OdinSpecialColumnPredictor.Prediction> = predictionsValue
+        fun predictions(): List<geiler.addons.client.dungeon.helpers.SpecialColumnPredictor.Prediction> = predictionsValue
         override fun equals(other: Any?): Boolean = other is Snapshot &&
             recordEquals(
                 arrayOf<Any?>(availableValue, cellsValue, roomsValue, playerCellValue, playersValue, reasonValue, predictionsValue),

@@ -11,14 +11,14 @@ import geiler.addons.client.module.impl.SpringBootsModule;
 import geiler.addons.client.module.impl.TerracottaTimerModule;
 import geiler.addons.client.module.impl.TikiHelperModule;
 import geiler.addons.client.module.impl.DungeonMobEspModule;
-import geiler.addons.client.module.impl.DungeonOdinAssistModule;
+import geiler.addons.client.module.impl.DungeonAssistModule;
 import geiler.addons.client.module.impl.DungeonBloodCampModule;
 import geiler.addons.client.module.impl.DungeonKeyPickupModule;
 import geiler.addons.client.module.impl.SecretWaypointsModule;
 import geiler.addons.client.dungeon.DungeonDoorTracker;
 import geiler.addons.client.dungeon.DungeonDoorBlockOverlayController;
 import geiler.addons.client.dungeon.DungeonMapRoomDetector;
-import geiler.addons.client.dungeon.odin.OdinDungeonPlayerRoster;
+import geiler.addons.client.dungeon.helpers.DungeonPlayerRoster;
 import geiler.addons.client.chat.ChatTpsTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Hud;
@@ -80,28 +80,28 @@ public abstract class ClientPacketListenerMixin {
 	@Inject(method = "handleSetTime", at = @At("TAIL"))
 	private void geileraddons$recordServerTpsSample(ClientboundSetTimePacket packet, CallbackInfo ci) {
 		ChatTpsTracker.record(packet.gameTime(), System.nanoTime());
-		DungeonOdinAssistModule.INSTANCE.onServerGameTime(packet.gameTime());
+		DungeonAssistModule.INSTANCE.onServerGameTime(packet.gameTime());
 	}
 
 	@Inject(method = "handleLogin", at = @At("TAIL"))
 	private void geileraddons$resetServerTpsOnLogin(ClientboundLoginPacket packet, CallbackInfo ci) {
 		ChatTpsTracker.reset();
-		DungeonOdinAssistModule.INSTANCE.onPuzzleLevelLoad();
-		DungeonOdinAssistModule.INSTANCE.onBloodWorldChanged();
+		DungeonAssistModule.INSTANCE.onPuzzleLevelLoad();
+		DungeonAssistModule.INSTANCE.onBloodWorldChanged();
 		DungeonBloodCampModule.INSTANCE.onWorldChanged("login");
 	}
 
 	@Inject(method = "handleRespawn", at = @At("TAIL"))
 	private void geileraddons$resetServerTpsOnRespawn(ClientboundRespawnPacket packet, CallbackInfo ci) {
 		ChatTpsTracker.reset();
-		DungeonOdinAssistModule.INSTANCE.onPuzzleLevelLoad();
-		DungeonOdinAssistModule.INSTANCE.onBloodWorldChanged();
+		DungeonAssistModule.INSTANCE.onPuzzleLevelLoad();
+		DungeonAssistModule.INSTANCE.onBloodWorldChanged();
 		DungeonBloodCampModule.INSTANCE.onWorldChanged("respawn");
 	}
 
 	@Inject(method = "handleMovePlayer", at = @At("HEAD"))
 	private void geileraddons$captureTpMazePositionBefore(ClientboundPlayerPositionPacket packet, CallbackInfo ci) {
-		geileraddons$tpMazePositionBefore = DungeonOdinAssistModule.INSTANCE.captureTpMazeCorrectionStart();
+		geileraddons$tpMazePositionBefore = DungeonAssistModule.INSTANCE.captureTpMazeCorrectionStart();
 	}
 
 	@Inject(method = "handleMovePlayer", at = @At("TAIL"))
@@ -109,25 +109,25 @@ public abstract class ClientPacketListenerMixin {
 		Vec3 before = geileraddons$tpMazePositionBefore;
 		geileraddons$tpMazePositionBefore = null;
 		if (before != null && packet != null && packet.change() != null)
-			DungeonOdinAssistModule.INSTANCE.onTpMazePositionCorrection(before, packet.change().position(),
+			DungeonAssistModule.INSTANCE.onTpMazePositionCorrection(before, packet.change().position(),
 				packet.change().yRot(), packet.change().xRot());
 	}
 
 	@Inject(method = "handlePlayerInfoUpdate", at = @At("TAIL"))
 	private void geileraddons$trackDungeonMinibossProfiles(ClientboundPlayerInfoUpdatePacket packet, CallbackInfo ci) {
 		DungeonMobEspModule.INSTANCE.onPlayerInfoUpdate(packet);
-		OdinDungeonPlayerRoster.onPlayerInfoUpdate(packet);
+		DungeonPlayerRoster.onPlayerInfoUpdate(packet);
 		CroesusModule.INSTANCE.onPlayerInfoUpdate(packet);
 	}
 
 	@Inject(method = "handlePlayerInfoRemove", at = @At("TAIL"))
 	private void geileraddons$removeDungeonMapRosterPlayers(ClientboundPlayerInfoRemovePacket packet, CallbackInfo ci) {
-		OdinDungeonPlayerRoster.onPlayerInfoRemove(packet);
+		DungeonPlayerRoster.onPlayerInfoRemove(packet);
 	}
 
 	@Inject(method = "close", at = @At("TAIL"))
 	private void geileraddons$clearDungeonMapRosterOnDisconnect(CallbackInfo ci) {
-		OdinDungeonPlayerRoster.onDisconnect();
+		DungeonPlayerRoster.onDisconnect();
 		ChatTpsTracker.reset();
 		DungeonBloodCampModule.INSTANCE.onWorldChanged("disconnect");
 	}
@@ -220,7 +220,7 @@ public abstract class ClientPacketListenerMixin {
 		shift = At.Shift.AFTER))
 	private void geileraddons$observePuzzleBlockEvent(ClientboundBlockEventPacket packet, CallbackInfo ci) {
 		SecretWaypointsModule.INSTANCE.onSecretBlockEvent(packet);
-		DungeonOdinAssistModule.INSTANCE.onPuzzleBlockEvent(packet);
+		DungeonAssistModule.INSTANCE.onPuzzleBlockEvent(packet);
 	}
 
 	@Inject(method = "handleBlockUpdate", at = @At(value = "INVOKE", target =
@@ -256,7 +256,7 @@ public abstract class ClientPacketListenerMixin {
 		SecretWaypointsModule.INSTANCE.onSecretBlockUpdate(geileraddons$blockUpdatePositionBefore,
 			geileraddons$blockUpdateStateBefore, packet.getBlockState());
 		SimonSaysModule.INSTANCE.onBlockChange(packet.getPos(), geileraddons$blockUpdateStateBefore, packet.getBlockState());
-		DungeonOdinAssistModule.INSTANCE.onPuzzleBlockChange(geileraddons$blockUpdatePositionBefore,
+		DungeonAssistModule.INSTANCE.onPuzzleBlockChange(geileraddons$blockUpdatePositionBefore,
 			geileraddons$blockUpdateStateBefore, packet.getPos(), packet.getBlockState());
 		geileraddons$blockUpdatePositionBefore = null;
 		geileraddons$blockUpdateStateBefore = null;
@@ -288,7 +288,7 @@ public abstract class ClientPacketListenerMixin {
 			geiler.addons.client.module.impl.PowderChestModule.INSTANCE.onBlockChange(change.position(), change.oldState(),
 				change.state());
 			geiler.addons.client.module.impl.CrystalHollowsHelperModule.INSTANCE.onBlockChange(change.position(), change.state());
-			DungeonOdinAssistModule.INSTANCE.onPuzzleBlockChange(change.position(), change.oldState(),
+			DungeonAssistModule.INSTANCE.onPuzzleBlockChange(change.position(), change.oldState(),
 				change.position(), change.state());
 		}
 	}
@@ -365,7 +365,7 @@ public abstract class ClientPacketListenerMixin {
 	private void geileraddons$rewriteDungeonTerminalTitle(Hud hud, Component title) {
 		Minecraft client = Minecraft.getInstance();
 		String localName = client.player == null ? null : client.player.getName().getString();
-		String replacement = DungeonOdinAssistModule.INSTANCE.onTerminalTitle(title.getString(), localName);
+		String replacement = DungeonAssistModule.INSTANCE.onTerminalTitle(title.getString(), localName);
 		hud.setTitle(replacement == null ? title : Component.literal(replacement));
 	}
 
@@ -380,7 +380,7 @@ public abstract class ClientPacketListenerMixin {
 	@Inject(method = "handleSetPlayerTeamPacket", at = @At("TAIL"))
 	private void geileraddons$observeDungeonTeamUpdate(ClientboundSetPlayerTeamPacket packet, CallbackInfo ci) {
 		if (packet == null) return;
-		packet.getParameters().ifPresent(parameters -> DungeonOdinAssistModule.INSTANCE.onDungeonTeamUpdate(
+		packet.getParameters().ifPresent(parameters -> DungeonAssistModule.INSTANCE.onDungeonTeamUpdate(
 			parameters.playerPrefix().getString() + " " + parameters.playerSuffix().getString()));
 	}
 

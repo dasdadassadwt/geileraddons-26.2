@@ -35,6 +35,9 @@ class PestWidgetReader {
     /** Reads the cooldown state from the same ordered tab-list widget used for plot status. */
     fun readCooldown(): Optional<PestCooldownText.Observation> = PestCooldownText.parse(lines!!.get())
 
+    /** Reads the Sprayonator row of the same widget. */
+    fun readSpray(): Optional<PestSprayText.Observation> = PestSprayText.parse(lines!!.get())
+
     companion object {
         private var warnedAboutOrdering = false
 

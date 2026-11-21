@@ -1,7 +1,7 @@
 package geiler.addons.client.dungeon
 
 import geiler.addons.GeilerAddons
-import geiler.addons.client.dungeon.odin.DungeonSplitTracker
+import geiler.addons.client.dungeon.helpers.DungeonSplitTracker
 import net.fabricmc.loader.api.FabricLoader
 import java.io.IOException
 import java.nio.charset.StandardCharsets

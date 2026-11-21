@@ -71,7 +71,30 @@ public final class CritterSafariChecks {
 		eq("critter_trades", tracker.getTradesHud().id(), "trades panel id");
 		eq(false, tracker.getProgressHud().visible(), "panels hidden while the module is off");
 		eq(true, markers.collect().isEmpty(), "no markers while idle");
-		eq(List.of("Bloodbat", "Duplico"), markers.boxedCritters(), "Bloodbat and Duplico are boxed by default");
+		eq(List.of("Bloodbat", "Duplico", "Hideonwall"), markers.boxedCritters(), "Bloodbat, Duplico and Hideonwall are boxed by default");
+		eq(true, markerToggle(markers, "Hideonfloor Boxes").value(), "Hideonfloor boxes default on");
+		eq(true, markerToggle(markers, "Hideonwall Boxes").value(), "Hideonwall boxes default on");
+		eq(false, markerToggle(markers, "Depth Check").value(), "depth check defaults off so boxes show through terrain");
+
+		// Discord mod-issues: a new Safari instance (new world object, same island) restarts the run; nothing else does.
+		Object worldA = new Object();
+		Object worldB = new Object();
+		eq(true, geiler.addons.client.module.impl.CritterSafari.worldSwapped(true, true, worldA, worldB), "a new world inside the Safari restarts the run");
+		eq(false, geiler.addons.client.module.impl.CritterSafari.worldSwapped(true, true, worldA, worldA), "the same world keeps the run");
+		eq(false, geiler.addons.client.module.impl.CritterSafari.worldSwapped(true, true, null, worldB), "the first world seen is not a swap");
+		eq(false, geiler.addons.client.module.impl.CritterSafari.worldSwapped(true, false, worldA, worldB), "no run to restart");
+		eq(false, geiler.addons.client.module.impl.CritterSafari.worldSwapped(false, true, worldA, worldB), "outside the Safari the grace period decides");
+
+		// Nearby counts: line of sight only, unless Count Through Walls is on.
+		eq(true, geiler.addons.client.module.impl.CritterSafari.countsNearby(true, false), "seen critter counts");
+		eq(false, geiler.addons.client.module.impl.CritterSafari.countsNearby(false, false), "hidden critter does not count by default");
+		eq(true, geiler.addons.client.module.impl.CritterSafari.countsNearby(false, true), "hidden critter counts through walls");
+		eq(false, tracker.nearbyThroughWalls(), "tracker starts with Count Through Walls off");
+	}
+
+	private static geiler.addons.client.module.BooleanSetting markerToggle(geiler.addons.client.module.impl.CritterMarkersModule markers, String name) {
+		return markers.booleanSettings().stream().filter(s -> s.name().equals(name)).findFirst()
+			.orElseThrow(() -> new AssertionError("missing Critter Markers setting " + name));
 	}
 
 	private static void checkRoster() {
@@ -230,6 +253,11 @@ public final class CritterSafariChecks {
 		eq(false, MarkerRules.shows(MarkerKind.SNOOPER_WALL, SafariBiome.ICY), "cavern wall not in icy");
 		eq(false, MarkerRules.shows(MarkerKind.BEE_SPOT, null), "biome markers need a biome");
 		eq(true, MarkerRules.shows(MarkerKind.TRADE, null), "trades show anywhere");
+		eq(true, MarkerRules.shows(MarkerKind.HIDEONFLOOR, SafariBiome.FOREST), "hideonfloor in forest");
+		for (SafariBiome other : List.of(SafariBiome.CAVERN, SafariBiome.ICY, SafariBiome.HAUNTED)) {
+			eq(false, MarkerRules.shows(MarkerKind.HIDEONFLOOR, other), "hideonfloor not in " + other);
+		}
+		eq(false, MarkerRules.shows(MarkerKind.HIDEONFLOOR, null), "hideonfloor needs a biome");
 
 		eq(WallState.UNKNOWN, MarkerRules.wallState(WallState.UNKNOWN, false, true, false), "unloaded air is unknown");
 		eq(WallState.UNKNOWN, MarkerRules.wallState(WallState.UNKNOWN, true, false, false), "unseen air is unknown");

@@ -195,7 +195,7 @@ class DungeonPuzzleSolversModule private constructor() : Module(
         val resetWaterBoard = ModuleAction(
             "Reset Water Board",
             "Reset tracked lever progress for this room.",
-            Runnable { DungeonOdinAssistModule.INSTANCE.resetPuzzle("WATER_BOARD") },
+            Runnable { DungeonAssistModule.INSTANCE.resetPuzzle("WATER_BOARD") },
         )
 
         @JvmField
@@ -220,7 +220,7 @@ class DungeonPuzzleSolversModule private constructor() : Module(
         val resetTpMaze = ModuleAction(
             "Reset TP Maze",
             "Clear visited pads and observed links for this room.",
-            Runnable { DungeonOdinAssistModule.INSTANCE.resetPuzzle("TP_MAZE") },
+            Runnable { DungeonAssistModule.INSTANCE.resetPuzzle("TP_MAZE") },
         )
 
         @JvmField
@@ -242,7 +242,7 @@ class DungeonPuzzleSolversModule private constructor() : Module(
         val resetIceFill = ModuleAction(
             "Reset Ice Fill",
             "Clear the detected route and progress for this room.",
-            Runnable { DungeonOdinAssistModule.INSTANCE.resetPuzzle("ICE_FILL") },
+            Runnable { DungeonAssistModule.INSTANCE.resetPuzzle("ICE_FILL") },
         )
 
         @JvmField
@@ -286,7 +286,7 @@ class DungeonPuzzleSolversModule private constructor() : Module(
         val resetBlaze = ModuleAction(
             "Reset Blaze",
             "Clear the detected Blaze targets for this room.",
-            Runnable { DungeonOdinAssistModule.INSTANCE.resetPuzzle("BLAZE") },
+            Runnable { DungeonAssistModule.INSTANCE.resetPuzzle("BLAZE") },
         )
 
         @JvmField
@@ -312,7 +312,7 @@ class DungeonPuzzleSolversModule private constructor() : Module(
         val resetCreeperBeams = ModuleAction(
             "Reset Creeper Beams",
             "Clear endpoint progress for this room.",
-            Runnable { DungeonOdinAssistModule.INSTANCE.resetPuzzle("CREEPER_BEAMS") },
+            Runnable { DungeonAssistModule.INSTANCE.resetPuzzle("CREEPER_BEAMS") },
         )
 
         @JvmField
@@ -341,7 +341,7 @@ class DungeonPuzzleSolversModule private constructor() : Module(
         val resetWeirdos = ModuleAction(
             "Reset Three Weirdos",
             "Clear the clue results for this room.",
-            Runnable { DungeonOdinAssistModule.INSTANCE.resetPuzzle("THREE_WEIRDOS") },
+            Runnable { DungeonAssistModule.INSTANCE.resetPuzzle("THREE_WEIRDOS") },
         )
 
         @JvmField
@@ -357,7 +357,7 @@ class DungeonPuzzleSolversModule private constructor() : Module(
         val resetQuiz = ModuleAction(
             "Reset Quiz",
             "Clear the active Oruo question and answer.",
-            Runnable { DungeonOdinAssistModule.INSTANCE.resetPuzzle("QUIZ") },
+            Runnable { DungeonAssistModule.INSTANCE.resetPuzzle("QUIZ") },
         )
 
         @JvmField

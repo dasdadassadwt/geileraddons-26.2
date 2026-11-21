@@ -3,7 +3,7 @@ package geiler.addons.client.module.impl
 import geiler.addons.client.config.ClickGuiState
 import geiler.addons.client.dungeon.DungeonClass
 import geiler.addons.client.dungeon.DungeonContextTracker
-import geiler.addons.client.dungeon.odin.OdinDungeonPlayerRoster
+import geiler.addons.client.dungeon.helpers.DungeonPlayerRoster
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.ColorSetting
@@ -115,7 +115,7 @@ class DungeonClassEspModule private constructor(
         val classes = HashMap<String, DungeonClass>()
         // The dungeon tab list is the live source of teammate classes; the party list only knows
         // classes advertised through Party Finder, so it is a fallback.
-        for (tabPlayer in OdinDungeonPlayerRoster.snapshot()) {
+        for (tabPlayer in DungeonPlayerRoster.snapshot()) {
             val dungeonClass = DungeonClass.parse(tabPlayer.dungeonClass()) ?: continue
             classes[tabPlayer.name().lowercase(Locale.ROOT)] = dungeonClass
         }

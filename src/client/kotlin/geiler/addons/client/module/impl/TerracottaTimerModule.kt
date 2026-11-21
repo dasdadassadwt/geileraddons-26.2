@@ -74,7 +74,7 @@ class TerracottaTimerModule private constructor() : Module(
 
     private fun floorSix(): Boolean = DungeonContextTracker.currentFloor()?.number() == TerracottaTimerRules.FLOOR
 
-    private fun serverTicks(): Long = DungeonOdinAssistModule.INSTANCE.serverTicks()
+    private fun serverTicks(): Long = DungeonAssistModule.INSTANCE.serverTicks()
 
     /** `handleBlockUpdate`: a block turning into a flower pot in the Floor 6 boss starts that pot's timer. */
     fun onBlockChange(pos: BlockPos, state: BlockState) {

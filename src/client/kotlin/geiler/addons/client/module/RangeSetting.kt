@@ -81,7 +81,7 @@ class RangeSetting @JvmOverloads constructor(
 
     /** Read-out text for the row, "3 – 4.5". */
     fun display(): String {
-        fun text(v: Float) = if (isInteger()) Math.round(v).toString() else String.format("%.2f", v)
+        fun text(v: Float) = if (isInteger()) Math.round(v).toString() else String.format(java.util.Locale.ROOT, "%.2f", v)
         return "${text(low())} – ${text(high())}"
     }
 

@@ -12,8 +12,8 @@ import geiler.addons.client.dungeon.DungeonKeyAlertChecks;
 import geiler.addons.client.dungeon.DungeonDoorBlockReplacementChecks;
 import geiler.addons.client.dungeon.SecretWaypointCollectionTrackerChecks;
 import geiler.addons.client.dungeon.DungeonRoomFootprintChecks;
-import geiler.addons.client.dungeon.odin.DungeonPuzzleVisualRendererChecks;
-import geiler.addons.client.dungeon.odin.DungeonQuizChecks;
+import geiler.addons.client.dungeon.helpers.DungeonPuzzleVisualRendererChecks;
+import geiler.addons.client.dungeon.helpers.DungeonQuizChecks;
 import geiler.addons.client.waypoint.WaypointChecks;
 import geiler.addons.client.dungeon.f7.F7FeatureChecks;
 import geiler.addons.client.dungeon.f7.CroesusChecks;
@@ -129,6 +129,9 @@ public final class OfflineChecks {
 		step("FlatLegacyConfigMigrationChecks.run", () -> FlatLegacyConfigMigrationChecks.run());
 		step("DungeonClassChecks.run", () -> DungeonClassChecks.run());
 		step("DungeonEspSplitChecks.run", () -> DungeonEspSplitChecks.run());
+		step("NoFogMigrationChecks.run", () -> NoFogMigrationChecks.run());
+		step("ClickGuiHitRectChecks.run", () -> geiler.addons.client.gui.ClickGuiHitRectChecks.run());
+		step("ZoomKeybindMigrationChecks.run", () -> ZoomKeybindMigrationChecks.run());
 		step("SlotItemOverlayChecks.run", () -> SlotItemOverlayChecks.run());
 		step("ChatTrailRequeueChecks.run", () -> ChatTrailRequeueChecks.run());
 		step("AliasBuiltInChecks.run", () -> AliasBuiltInChecks.run());
@@ -148,7 +151,6 @@ public final class OfflineChecks {
 		step("PlayerPresentationModuleChecks.run", () -> PlayerPresentationModuleChecks.run());
 		step("DungeonRoomAlertModuleChecks.run", () -> DungeonRoomAlertModuleChecks.run());
 		step("SlotIdsChecks.run", () -> SlotIdsChecks.run());
-		step("ModuleIconTexturesChecks.run", () -> geiler.addons.client.gui.ModuleIconTexturesChecks.run());
 		step("DungeonTerminalTitlesChecks.run", () -> DungeonTerminalTitlesChecks.run());
 		step("LobbyTargetWatchModuleChecks.run", () -> LobbyTargetWatchModuleChecks.run());
 		step("GeneralUtilityTimerChecks.run", () -> GeneralUtilityTimerChecks.run());
@@ -192,14 +194,14 @@ public final class OfflineChecks {
 		step("SpiritLeapModuleEnabledMigrationChecks.run", () -> SpiritLeapModuleEnabledMigrationChecks.run());
 		step("PuzzleSolversMigrationChecks.run", () -> PuzzleSolversMigrationChecks.run());
 		step("ConfigSettingKeysChecks.run", () -> ConfigSettingKeysChecks.run());
-		step("DungeonPuzzleSolversOdinDefaultsChecks.run", () -> DungeonPuzzleSolversOdinDefaultsChecks.run());
+		step("DungeonPuzzleSolversDefaultsChecks.run", () -> DungeonPuzzleSolversDefaultsChecks.run());
 		step("DungeonPuzzleVisualRendererChecks.run", () -> DungeonPuzzleVisualRendererChecks.run());
 		step("DungeonQuizChecks.run", () -> DungeonQuizChecks.run());
 		step("WaypointChecks.run", () -> WaypointChecks.run());
 		step("F7FeatureChecks.run", () -> F7FeatureChecks.run());
 		step("LeverAimChecks.run", () -> geiler.addons.client.dungeon.f7.LeverAimChecks.run());
 		step("TickTimersChecks.run", () -> geiler.addons.client.dungeon.f7.TickTimersChecks.run());
-		step("SpiritLeapMapChecks.run", () -> geiler.addons.client.dungeon.odin.SpiritLeapMapChecks.run());
+		step("SpiritLeapMapChecks.run", () -> geiler.addons.client.dungeon.helpers.SpiritLeapMapChecks.run());
 		step("WitherDragonChecks.run", () -> geiler.addons.client.dungeon.f7.WitherDragonChecks.run());
 		step("DragonAimerChecks.run", () -> geiler.addons.client.dungeon.f7.DragonAimerChecks.run());
 		step("CompactDamageChecks.run", () -> CompactDamageChecks.run());
@@ -208,6 +210,7 @@ public final class OfflineChecks {
 		step("TerminalAnalysisChecks.run", () -> geiler.addons.client.dungeon.terminal.TerminalAnalysisChecks.run());
 		step("AutoTermsChecks.run", () -> geiler.addons.client.dungeon.terminal.AutoTermsChecks.run());
 		step("PriceChecks.run", () -> geiler.addons.client.pricing.PriceChecks.run());
+		step("ItemListChecks.run", () -> geiler.addons.client.itemlist.ItemListChecks.run());
 		step("TermSimChecks.run", () -> geiler.addons.client.termsim.TermSimChecks.run());
 		step("CroesusChecks.run", () -> CroesusChecks.run());
 		step("ChestRollChecks.run", () -> geiler.addons.client.dungeon.f7.ChestRollChecks.run());
@@ -223,6 +226,7 @@ public final class OfflineChecks {
 		step("checkLegacyPresentationAndSecretMigrations", () -> checkLegacyPresentationAndSecretMigrations());
 		step("HudManagerChecks.run", () -> HudManagerChecks.run());
 		step("HudExpiryChecks.run", () -> HudExpiryChecks.run());
+		step("ProjectedLabelChecks.run", () -> geiler.addons.client.render.ProjectedLabelChecks.run());
 		step("DungeonRunSplitsModuleChecks.run", () -> DungeonRunSplitsModuleChecks.run());
 		step("ClientJsonFileFlushChecks.run", () -> ClientJsonFileFlushChecks.run());
 		step("checkIslandModes", () -> checkIslandModes());
@@ -258,9 +262,10 @@ public final class OfflineChecks {
 		step("FreecamChecks.run", () -> FreecamChecks.run());
 		step("ScrollableTooltipChecks.run", () -> ScrollableTooltipChecks.run());
 		step("NoRenderChecks.run", () -> NoRenderChecks.run());
+		step("TabWidgetRulesChecks.run", () -> geiler.addons.client.tabwidget.TabWidgetRulesChecks.run());
 		step("GameFixChecks.run", () -> GameFixChecks.run());
 		step("ItemCooldownChecks.run", () -> ItemCooldownChecks.run());
-		step("OdinPortChecks.run", () -> OdinPortChecks.run());
+		step("DungeonHelpersPortChecks.run", () -> DungeonHelpersPortChecks.run());
 		step("ContainerKeybindChecks.run", () -> ContainerKeybindChecks.run());
 		step("DungeonMapInfoChecks.run", () -> geiler.addons.client.dungeon.DungeonMapInfoChecks.run());
 		step("TreeNotifierChecks.main", () -> TreeNotifierChecks.main(args));
@@ -316,30 +321,40 @@ public final class OfflineChecks {
 		step("ClickGuiMotionChecks.run", () -> ClickGuiMotionChecks.run());
 		step("ThemeContrastChecks.run", () -> ThemeContrastChecks.run());
 		step("ClickGuiScrollChecks.run", () -> ClickGuiScrollChecks.run());
+		step("ClickGuiFlatChecks.run", () -> geiler.addons.client.gui.ClickGuiFlatChecks.run());
 		step("ClickGuiClassicChecks.run", () -> geiler.addons.client.gui.ClickGuiClassicChecks.run());
 		step("ClickGuiTextSelectionChecks.run", () -> geiler.addons.client.gui.ClickGuiTextSelectionChecks.run());
 		step("ConfigProfileChecks.run", () -> ConfigProfileChecks.run());
 		step("TreeTrackerChecks.main", () -> TreeTrackerChecks.main(args));
 		step("InventoryButtonsModuleKotlinChecks.run", () -> InventoryButtonsModuleKotlinChecks.run());
-		step("DungeonOdinAssistModuleKotlinChecks.run", () -> DungeonOdinAssistModuleKotlinChecks.run());
+		step("DungeonAssistModuleKotlinChecks.run", () -> DungeonAssistModuleKotlinChecks.run());
 		step("ModuleDiagnosticsChecks.run", () -> ModuleDiagnosticsChecks.run());
 		step("ModuleSettingsSpecChecks.run", () -> geiler.addons.client.module.ModuleSettingsSpecChecks.run());
 		step("CodeStyleChecks.run", () -> geiler.addons.client.CodeStyleChecks.run());
 		step("ChatReplyPreviewChecks.run", () -> geiler.addons.client.chat.ChatReplyPreviewChecks.run());
 		step("DungeonSpawnAnchorChecks.run", () -> geiler.addons.client.dungeon.DungeonSpawnAnchorChecks.run());
-		step("DungeonTicTacToeSuggestionHoldChecks.run", () -> geiler.addons.client.dungeon.odin.DungeonTicTacToeSuggestionHoldChecks.run());
+		step("DungeonTicTacToeSuggestionHoldChecks.run", () -> geiler.addons.client.dungeon.helpers.DungeonTicTacToeSuggestionHoldChecks.run());
 		step("SuperpairsClicksChecks.run", () -> geiler.addons.client.enchanting.SuperpairsClicksChecks.run());
 		step("SuperpairsPairColorsChecks.run", () -> geiler.addons.client.enchanting.SuperpairsPairColorsChecks.run());
 		step("ChatReplyDraftChecks.run", () -> geiler.addons.client.chat.ChatReplyDraftChecks.run());
 		step("ChatReplyTagChecks.run", () -> geiler.addons.client.chat.ChatReplyTagChecks.run());
-		step("ChatReplyOdinGapChecks.run", () -> geiler.addons.client.chat.ChatReplyOdinGapChecks.run());
-		step("DungeonServerTickChecks.run", () -> geiler.addons.client.dungeon.odin.DungeonServerTickChecks.run());
+		step("ChatReplyGapChecks.run", () -> geiler.addons.client.chat.ChatReplyGapChecks.run());
+		step("DungeonServerTickChecks.run", () -> geiler.addons.client.dungeon.helpers.DungeonServerTickChecks.run());
 		step("KeyMappingMirrorChecks.run", () -> geiler.addons.client.module.KeyMappingMirrorChecks.run());
 		step("ClickGuiGroupFlatteningChecks.run", () -> geiler.addons.client.gui.ClickGuiGroupFlatteningChecks.run());
 		step("ChatStringSemanticsChecks.run", () -> geiler.addons.client.chat.ChatStringSemanticsChecks.run());
 		step("ClickGuiInputChecks.run", () -> geiler.addons.client.gui.ClickGuiInputChecks.run());
 		step("ClickGuiWorkspaceChecks.run", () -> geiler.addons.client.gui.ClickGuiWorkspaceChecks.run());
+		step("SpikeWatchChecks.run", () -> geiler.addons.client.config.SpikeWatchChecks.run());
 		step("RangeSettingChecks.run", () -> geiler.addons.client.module.RangeSettingChecks.run());
+		step("EnchantRulesChecks.run", () -> geiler.addons.client.enchanting.EnchantRulesChecks.run());
+		step("InventoryHudRulesChecks.run", () -> geiler.addons.client.inventory.InventoryHudRulesChecks.run());
+		step("GardenPlotsRulesChecks.run", () -> geiler.addons.client.farming.GardenPlotsRulesChecks.run());
+		step("ZoomRulesChecks.run", () -> geiler.addons.client.visual.ZoomRulesChecks.run());
+		step("PanoramaChecks.run", () -> geiler.addons.client.visual.PanoramaChecks.run());
+		step("CustomMainMenuChecks.run", CustomMainMenuChecks::run);
+		step("ForagingWhispersChecks.run", () -> geiler.addons.client.foraging.ForagingWhispersChecks.run());
+		step("AutoUpdateRulesChecks.run", () -> geiler.addons.client.update.AutoUpdateRulesChecks.run());
 		step("MacroWorkspaceConfigChecks.run", () -> geiler.addons.client.macros.config.MacroWorkspaceConfigChecks.run());
 		step("SimChecks.run", () -> geiler.addons.client.macros.sim.SimChecks.run());
 		step("EtherwarpSimChecks.run", () -> geiler.addons.client.macros.sim.EtherwarpSimChecks.run());
@@ -553,6 +568,39 @@ public final class OfflineChecks {
 		assertFalse(ModConfigMigrations.migrateLegacyBloodCampSettings(new java.util.HashMap<>(),
 			new java.util.HashMap<>(), invalidScale),
 			"non-finite legacy marker scales are ignored");
+
+		var markers = CritterMarkersModule.INSTANCE;
+		String markersPrefix = markers.configName() + ".";
+		Map<String, Boolean> wallEnabled = new java.util.HashMap<>();
+		wallEnabled.put("Hideonwall ESP", true);
+		Map<String, Boolean> wallToggles = new java.util.HashMap<>();
+		Map<String, int[]> wallColors = new java.util.HashMap<>();
+		wallColors.put("Hideonwall ESP.Box Color", new int[] { 1, 2, 3, 255 });
+		assertTrue(ModConfigMigrations.migrateLegacyHideonwallEsp(wallEnabled, wallToggles, wallColors),
+			"the standalone Hideonwall ESP settings migrate into Critter Markers");
+		assertEquals(Boolean.TRUE, wallToggles.get(markersPrefix + "Hideonwall Boxes"),
+			"an enabled Hideonwall ESP turns on Hideonwall Boxes");
+		assertEquals(Boolean.TRUE, wallEnabled.get(markers.configName()),
+			"an enabled Hideonwall ESP enables Critter Markers when it had no saved state");
+		assertTrue(java.util.Arrays.equals(new int[] { 1, 2, 3, 255 }, wallColors.get(markersPrefix + "Hideonwall Color")),
+			"the Hideonwall box colour is copied");
+		Map<String, Boolean> savedEnabled = new java.util.HashMap<>();
+		savedEnabled.put("Hideonwall ESP", true);
+		savedEnabled.put(markers.configName(), false);
+		Map<String, Boolean> savedToggles = new java.util.HashMap<>();
+		savedToggles.put(markersPrefix + "Hideonwall Boxes", false);
+		assertFalse(ModConfigMigrations.migrateLegacyHideonwallEsp(savedEnabled, savedToggles, new java.util.HashMap<>())
+			|| Boolean.TRUE.equals(savedEnabled.get(markers.configName()))
+			|| Boolean.TRUE.equals(savedToggles.get(markersPrefix + "Hideonwall Boxes")),
+			"saved Critter Markers values are never overwritten by the old module");
+		Map<String, Boolean> offEnabled = new java.util.HashMap<>();
+		offEnabled.put("Hideonwall ESP", false);
+		Map<String, Boolean> offToggles = new java.util.HashMap<>();
+		ModConfigMigrations.migrateLegacyHideonwallEsp(offEnabled, offToggles, new java.util.HashMap<>());
+		assertEquals(Boolean.FALSE, offToggles.get(markersPrefix + "Hideonwall Boxes"),
+			"a disabled Hideonwall ESP leaves Hideonwall Boxes off");
+		assertFalse(offEnabled.containsKey(markers.configName()),
+			"a disabled Hideonwall ESP does not enable Critter Markers");
 
 		Map<String, float[]> hudPositions = new java.util.HashMap<>();
 		float[] oldPosition = { 0.25f, 0.75f, 1.2f };
@@ -2584,6 +2632,7 @@ public final class OfflineChecks {
 		}
 		try {
 			Map<String, VisualModule.Preset> presets = Map.of(
+				"Onyx", VisualModule.Preset.ONYX,
 				"Tracker", VisualModule.Preset.TRACKER,
 				"Amethyst", VisualModule.Preset.AMETHYST,
 				"Midnight", VisualModule.Preset.MIDNIGHT,
@@ -2593,9 +2642,9 @@ public final class OfflineChecks {
 				"Orchid", VisualModule.Preset.ORCHID,
 				"Ice Glass", VisualModule.Preset.ICE_GLASS,
 				"Rose Glass", VisualModule.Preset.ROSE_GLASS);
-			assertTrue(theme.actions().size() == 9
+			assertTrue(theme.actions().size() == 10
 				&& theme.actions().stream().allMatch(action -> presets.containsKey(action.name())),
-				"all nine built-in theme presets are registered");
+				"all ten built-in theme presets are registered");
 			for (var preset : presets.entrySet()) {
 				VisualModule.applyPreset(preset.getValue());
 				assertTrue(iconColor.argb() == text.argb(),

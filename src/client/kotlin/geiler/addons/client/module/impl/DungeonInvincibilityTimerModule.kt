@@ -1,7 +1,7 @@
 package geiler.addons.client.module.impl
 
 import geiler.addons.client.dungeon.DungeonContextTracker
-import geiler.addons.client.dungeon.odin.DungeonMaskProcTimers
+import geiler.addons.client.dungeon.helpers.DungeonMaskProcTimers
 import geiler.addons.client.hud.TitleAlertStack
 import geiler.addons.client.inventory.ItemBackgrounds
 import geiler.addons.client.module.BooleanSetting
@@ -55,7 +55,8 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
 ), ModulePreview {
     @Volatile
     private var readings: List<DungeonMaskProcTimers.Reading> = emptyList()
-    private val lastCenteredText = EnumMap<DungeonMaskProcTimers.Proc, String>(DungeonMaskProcTimers.Proc::class.java)
+    private val lastRowState = EnumMap<DungeonMaskProcTimers.Proc, RowState>(DungeonMaskProcTimers.Proc::class.java)
+    private var lastTitleKey: String? = null
     private val cooldownTotals = EnumMap<DungeonMaskProcTimers.Proc, Int>(DungeonMaskProcTimers.Proc::class.java)
 
     /** Icon rows drawn by the HUD; rebuilt with every published snapshot. */
@@ -195,7 +196,8 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
     fun clearSnapshots() {
         readings = emptyList()
         cooldownTotals.clear()
-        lastCenteredText.clear()
+        lastRowState.clear()
+        lastTitleKey = null
         clearOutput()
     }
 
@@ -223,48 +225,41 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
 
         val hudLines = ArrayList<String>(DungeonMaskProcTimers.Proc.values().size)
         val iconRows = ArrayList<TimerRow>(DungeonMaskProcTimers.Proc.values().size)
+        val readyRows = ArrayList<TimerRow>(DungeonMaskProcTimers.Proc.values().size)
+        val activeReadings = ArrayList<DungeonMaskProcTimers.Reading>(DungeonMaskProcTimers.Proc.values().size)
         val centered = display.value() == "CENTERED" || display.value() == "BOTH"
         val hud = display.value() == "HUD" || display.value() == "BOTH"
         for (proc in DungeonMaskProcTimers.Proc.values()) {
+            if (!procEnabled(proc)) continue
             val reading = reading(proc)
-            if (reading == null || !procEnabled(proc)) {
-                lastCenteredText.remove(proc)
-                TitleAlertStack.clearSource(titleSource(proc))
-                continue
-            }
-
-            val countdown = timerText(reading, showCooldowns.value())
-            if (countdown == null) {
-                lastCenteredText.remove(proc)
-                TitleAlertStack.clearSource(titleSource(proc))
-                continue
-            }
-
-            val subtitle = "${procLabel(proc)} · $countdown"
-            hudLines.add(subtitle)
-            iconRows.add(timerRow(proc, reading))
-            // Cooldowns are HUD-only; the centered title shows an active invincibility window and nothing else.
-            if (centered && reading.activeTicks > 0) {
-                if (subtitle != lastCenteredText[proc]) {
-                    val durationTicks = titleDurationTicks.intValue()
-                    TitleAlertStack.submitSubtitle(titleSource(proc), subtitle, durationTicks, ACTIVE_COLOR)
-                    diagnostics.event(
-                        "SUBTITLE result=submitted,source=${titleSource(proc)},durationTicks=$durationTicks" +
-                            ",text=${boundedDiagnosticText(subtitle)},color=${String.format(Locale.ROOT, "%08X", ACTIVE_COLOR)}",
-                    )
-                    lastCenteredText[proc] = subtitle
+            val state = rowState(reading, showCooldowns.value())
+            noteRowState(proc, state, reading)
+            when (state) {
+                RowState.HIDDEN -> {}
+                RowState.READY -> readyRows.add(TimerRow(proc, "✔", READY_COLOR))
+                RowState.ACTIVE, RowState.COOLDOWN -> {
+                    hudLines.add("${procLabel(proc)} · ${timerText(reading!!, true)}")
+                    iconRows.add(timerRow(proc, reading!!))
+                    if (state == RowState.ACTIVE) activeReadings.add(reading)
                 }
-            } else {
-                lastCenteredText.remove(proc)
-                TitleAlertStack.clearSource(titleSource(proc))
             }
+        }
+
+        // Cooldowns are HUD-only; the centered title shows an active invincibility window and nothing else.
+        // It is re-submitted every tick: a title is only drawn while its timer runs, and other modules overwrite it.
+        val title = if (centered) centeredTitle(activeReadings) else null
+        if (centered && title != null) {
+            TitleAlertStack.submitCountdown(
+                "invincibility", title.title, title.subtitle, titleDurationTicks.intValue(), ACTIVE_COLOR,
+            )
+            noteTitle(title)
+        } else {
+            noteTitle(null)
         }
 
         if (shouldShowHud(hud, hudLines.isNotEmpty(), alwaysShow.value(), DungeonContextTracker.inDungeon())) {
             // Once any proc is in use, tracked procs that are ready show a check mark beside their icon.
-            for (proc in DungeonMaskProcTimers.Proc.values()) {
-                if (procEnabled(proc) && iconRows.none { it.proc == proc }) iconRows.add(TimerRow(proc, "✔", READY_COLOR))
-            }
+            iconRows.addAll(readyRows)
             iconRows.sortBy { it.proc.ordinal }
             rows = iconRows
             if (hudLines.isNotEmpty()) publishHudLines(hudLines) else clearHudLines()
@@ -272,6 +267,28 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
             rows = emptyList()
             clearHudLines()
         }
+    }
+
+    /** Logs a proc's HUD state only when it changes, so the log shows the exact tick a row went ready or on cooldown. */
+    private fun noteRowState(proc: DungeonMaskProcTimers.Proc, state: RowState, reading: DungeonMaskProcTimers.Reading?) {
+        if (lastRowState.put(proc, state) == state) return
+        diagnostics.event(
+            "ROW proc=${proc.name},state=${state.name},activeTicks=${reading?.activeTicks ?: -1}" +
+                ",cooldownTicks=${reading?.cooldownTicks ?: -1},showCooldowns=${showCooldowns.value()}",
+        )
+    }
+
+    /** Logs the centered title when it starts, changes proc, or ends; the per-tick countdown is not logged. */
+    private fun noteTitle(title: CenteredTitle?) {
+        val key = title?.title
+        if (key == lastTitleKey) return
+        lastTitleKey = key
+        diagnostics.event(
+            if (title == null) "TITLE result=ended"
+            else "TITLE result=submitted,title=${boundedDiagnosticText(title.title)}" +
+                ",subtitle=${boundedDiagnosticText(title.subtitle)},stayTicks=${titleDurationTicks.intValue()}" +
+                ",color=${String.format(Locale.ROOT, "%08X", ACTIVE_COLOR)}",
+        )
     }
 
     private fun timerRow(proc: DungeonMaskProcTimers.Proc, reading: DungeonMaskProcTimers.Reading): TimerRow =
@@ -377,6 +394,12 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
 
     private data class TimerRow(val proc: DungeonMaskProcTimers.Proc, val text: String, val colorArgb: Int)
 
+    /** What a tracked proc's HUD row shows; READY is only ever a proc with no active time and no cooldown. */
+    enum class RowState { ACTIVE, COOLDOWN, READY, HIDDEN }
+
+    /** Centered title and its live countdown line. */
+    data class CenteredTitle(val title: String, val subtitle: String)
+
     companion object {
         private const val ACTIVE_COLOR = 0xFF55FF55.toInt()
         private const val ITEM_FILL_COLOR = 0x8055FF55.toInt()
@@ -461,6 +484,28 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
             }
             return null
         }
+
+        /** A cooldown never reads as ready: Show Cooldowns off hides the row instead of turning it into a check mark. */
+        @JvmStatic
+        fun rowState(reading: DungeonMaskProcTimers.Reading?, showCooldowns: Boolean): RowState = when {
+            reading == null || (reading.activeTicks <= 0 && reading.cooldownTicks <= 0) -> RowState.READY
+            reading.activeTicks > 0 -> RowState.ACTIVE
+            showCooldowns -> RowState.COOLDOWN
+            else -> RowState.HIDDEN
+        }
+
+        /** The proc ending first leads as the title; any others follow in the subtitle. Null when nothing is active. */
+        @JvmStatic
+        fun centeredTitle(readings: List<DungeonMaskProcTimers.Reading>): CenteredTitle? {
+            val active = readings.filter { it.activeTicks > 0 }.sortedBy { it.activeTicks }
+            val first = active.firstOrNull() ?: return null
+            val subtitle = (listOf(formatSeconds(first.activeTicks)) +
+                active.drop(1).map { "${titleLabel(it.proc)} ${formatSeconds(it.activeTicks)}" }).joinToString(" · ")
+            return CenteredTitle(titleLabel(first.proc), subtitle)
+        }
+
+        private fun titleLabel(proc: DungeonMaskProcTimers.Proc): String =
+            if (proc == DungeonMaskProcTimers.Proc.PHOENIX) "Phoenix Pet" else procLabel(proc)
 
         /** Pure outcome classification kept Java-visible for the focused interop check. */
         @JvmStatic

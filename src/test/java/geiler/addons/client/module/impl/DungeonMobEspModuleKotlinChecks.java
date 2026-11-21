@@ -115,10 +115,10 @@ public final class DungeonMobEspModuleKotlinChecks {
 		check(!DungeonMobTargetMemory.Target.class.isRecord()
 			&& Modifier.isFinal(DungeonMobTargetMemory.Target.class.getModifiers()),
 			"target snapshots stay a final Kotlin value type with Java-facing constructors/accessors");
-		checkRecord(DungeonDevonianMobTracker.Association.class, "nameplateId", "bodyId", "mobClass", "starred", "source");
-		checkRecord(DungeonDevonianMobTracker.LabelPosition.class, "x", "y", "z");
-		checkRecord(DungeonDevonianMobTracker.BodyCandidate.class, "entityId", "x", "y", "z");
-		checkRecord(DungeonDevonianMobTracker.SpatialResolution.class, "bodyId", "ambiguous");
+		checkRecord(DungeonStarredMobTracker.Association.class, "nameplateId", "bodyId", "mobClass", "starred", "source");
+		checkRecord(DungeonStarredMobTracker.LabelPosition.class, "x", "y", "z");
+		checkRecord(DungeonStarredMobTracker.BodyCandidate.class, "entityId", "x", "y", "z");
+		checkRecord(DungeonStarredMobTracker.SpatialResolution.class, "bodyId", "ambiguous");
 		checkRecord(DungeonMobEspEntityCensus.Result.class, "sampleTick", "visited", "capped", "typeCounts",
 			"typeCount", "omittedTypes", "candidateRows", "shadowAssassinCandidates", "omittedCandidates", "samples");
 		checkRecord(DungeonMobEspKeybindMigration.Resolution.class, "keybind", "migrated", "conflict");
@@ -167,8 +167,8 @@ public final class DungeonMobEspModuleKotlinChecks {
 		checkInstanceMethod(DungeonMobTargetMemory.class, "clearTransientGroups", void.class);
 		checkInstanceMethod(DungeonMobTargetMemory.class, "clear", void.class);
 		checkInstanceMethod(DungeonMobTargetMemory.class, "size", int.class);
-		checkStaticMethod(DungeonDevonianMobTracker.class, "resolveSpatialBodyId",
-			DungeonDevonianMobTracker.SpatialResolution.class, DungeonDevonianMobTracker.LabelPosition.class, List.class);
+		checkStaticMethod(DungeonStarredMobTracker.class, "resolveSpatialBodyId",
+			DungeonStarredMobTracker.SpatialResolution.class, DungeonStarredMobTracker.LabelPosition.class, List.class);
 		checkStaticMethod(DungeonMobEspEntityCensus.class, "capture", DungeonMobEspEntityCensus.Result.class,
 			net.minecraft.client.multiplayer.ClientLevel.class, long.class, List.class, List.class, java.util.Set.class,
 			DungeonMinibossProfileTracker.class, MinibossProfileMatchPolicy.IdentitySnapshot.class,

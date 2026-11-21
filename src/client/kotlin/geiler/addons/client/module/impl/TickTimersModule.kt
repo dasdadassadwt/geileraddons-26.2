@@ -64,7 +64,7 @@ class TickTimersModule private constructor(private val s: Settings) : Module(
             lastServerTicks = -1L
             diagnostics.event("WORLD_CHANGED levelPresent=${level != null} timersReset=true")
         }
-        val now = DungeonOdinAssistModule.INSTANCE.serverTicks()
+        val now = DungeonAssistModule.INSTANCE.serverTicks()
         val delta = if (lastServerTicks < 0L || now < lastServerTicks) 0L else minOf(now - lastServerTicks, MAX_CATCH_UP)
         lastServerTicks = now
         val inBoss = DungeonContextTracker.inDungeon() && !DungeonContextTracker.isMobEspPhase()

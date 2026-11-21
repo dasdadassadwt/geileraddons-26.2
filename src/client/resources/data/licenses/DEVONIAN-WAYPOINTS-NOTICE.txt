@@ -6,7 +6,7 @@ Source file: src/main/resources/assets/devonian/dungeons/DungeonWaypoints.json
 License: GPL-3.0; see DEVONIAN-GPL-3.0.txt in this directory.
 
 GeilerAddons redistributes a modified subset in
-../geileraddons/devonian-dungeon-waypoints.json. The source's room-relative integer coordinates
+../geileraddons/dungeon-waypoints.json. The source's room-relative integer coordinates
 and category distinctions are retained. Rows are flattened to one marker per record and assigned
 stable local IDs. No coordinates were authored or inferred by GeilerAddons.
 

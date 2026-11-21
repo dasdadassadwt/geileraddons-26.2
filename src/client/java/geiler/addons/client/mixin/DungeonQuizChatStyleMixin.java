@@ -1,6 +1,6 @@
 package geiler.addons.client.mixin;
 
-import geiler.addons.client.module.impl.DungeonOdinAssistModule;
+import geiler.addons.client.module.impl.DungeonAssistModule;
 import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
@@ -17,6 +17,6 @@ public abstract class DungeonQuizChatStyleMixin {
 		ordinal = 0
 	)
 	private Component geileraddons$highlightCorrectQuizOption(Component component) {
-		return DungeonOdinAssistModule.INSTANCE.styleQuizChatOption(component);
+		return DungeonAssistModule.INSTANCE.styleQuizChatOption(component);
 	}
 }

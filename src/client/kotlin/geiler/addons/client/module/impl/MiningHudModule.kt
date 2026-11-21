@@ -25,7 +25,7 @@ class MiningHudAppearance {
 }
 
 /**
- * Shared plumbing for the Mining text panels: a movable multi-line HUD with the standard appearance settings, a
+ * Shared plumbing for the Mining text panels (and the Foraging whisper panel, which passes its own category and islands): a movable multi-line HUD with the standard appearance settings, a
  * sample for the Move Elements screen, and the automatic bounded diagnostics every feature owes. Subclasses only
  * decide which lines to show.
  */
@@ -37,8 +37,10 @@ abstract class MiningHudModule(
     private val sample: List<String>,
     displaySettings: List<Setting>,
     private val appearance: MiningHudAppearance,
-) : Module(moduleName, description, Category.MINING, false, *(displaySettings + appearance.all()).toTypedArray()), HudElement {
-    protected val diagnostics = ModuleDiagnostics(Category.MINING, { name() }, 8, 100L, 400)
+    category: Category = Category.MINING,
+    private val islands: Set<Island> = MINING_ISLANDS,
+) : Module(moduleName, description, category, false, *(displaySettings + appearance.all()).toTypedArray()), HudElement {
+    protected val diagnostics = ModuleDiagnostics(category, { name() }, 8, 100L, 400)
 
     @Volatile
     protected var lines: List<String> = emptyList()
@@ -69,7 +71,7 @@ abstract class MiningHudModule(
     override fun visible(): Boolean = isEnabled() && lines.isNotEmpty()
 
     /** The islands whose mining content this panel reads; subclasses narrow it. */
-    override fun hudIslands(): Set<Island> = MINING_ISLANDS
+    override fun hudIslands(): Set<Island> = islands
 
     /** The shown lines: a panel whose lines stop changing for 30 s is not in use and hides. */
     override fun activitySignature(): Any? = lines.ifEmpty { null }

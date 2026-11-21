@@ -46,6 +46,19 @@ public final class ClickGuiClassicChecks {
 			"a click maps to the row under it, scroll included, and nothing outside the list");
 
 		check(KeybindCapture.HINT.contains("Esc"), "the keybind hint names the Escape key");
+
+		List<ClickGuiClassicSplit.Group> groups = ClickGuiClassicSplit.parse(
+			"{\"classicColumns\":[{\"category\":\"F7\",\"label\":\"F7\",\"modules\":[\"a\",\"b\"]},{\"category\":\"NOPE\",\"label\":\"x\",\"modules\":[\"c\"]},{\"category\":\"MINING\"}]}");
+		check(groups.size() == 1 && groups.get(0).getCategory() == geiler.addons.client.module.Category.F7
+			&& groups.get(0).getLabel().equals("F7") && groups.get(0).getModules().equals(java.util.Set.of("a", "b")),
+			"a classic column keeps its category, label and module names; unknown categories and incomplete entries are ignored");
+		check(ClickGuiClassicSplit.parse("not json").isEmpty() && ClickGuiClassicSplit.parse("{}").isEmpty(), "malformed layout data gives no split");
+		kotlin.Pair<List<String>, List<String>> parts = ClickGuiClassicSplit.partition(List.of("a", "x", "b", "y"), java.util.Set.of("a", "b"), s -> s);
+		check(parts.getFirst().equals(List.of("a", "b")) && parts.getSecond().equals(List.of("x", "y")),
+			"partition moves the named modules into their own column and keeps order on both sides");
+		check(ClickGuiClassicSplit.groups().stream().anyMatch(g -> g.getCategory() == geiler.addons.client.module.Category.F7
+			&& g.getModules().contains("Terminal Solver") && g.getModules().contains("Relic Timer") && !g.getModules().contains("Dungeon Map")),
+			"the shipped layout splits F7 boss modules out of the Dungeons column");
 	}
 
 	private static void check(boolean condition, String message) {

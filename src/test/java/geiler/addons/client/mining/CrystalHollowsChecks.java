@@ -56,6 +56,8 @@ public final class CrystalHollowsChecks {
 		require(rules.mapPixel(202, 100) == 0 && rules.mapPixel(823, 100) == 99, "the Hollows' edges are the map's edges");
 		require(Math.abs(rules.mapPixel(513, 100) - 50) <= 1, "the Nucleus is mid-map");
 		require(rules.mapPixel(0, 100) == 0 && rules.mapPixel(2000, 100) == 99, "outside points clamp to the edge");
+		require(Math.abs(rules.arrowRadians(180f)) < 1e-6 && Math.abs(Math.abs(rules.arrowRadians(0f)) - Math.PI) < 1e-6
+			&& Math.abs(rules.arrowRadians(90f) + Math.PI / 2) < 1e-6, "an up-pointing arrow turns to face north, south and west like the player");
 		System.out.println("Crystal Hollows checks passed");
 	}
 

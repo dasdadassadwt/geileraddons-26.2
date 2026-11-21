@@ -3,9 +3,10 @@ package geiler.addons.client.mixin;
 import com.mojang.blaze3d.platform.InputConstants;
 import geiler.addons.client.module.ModuleKeybindManager;
 import geiler.addons.client.access.AbstractContainerScreenAccess;
-import geiler.addons.client.module.impl.DungeonOdinAssistModule;
+import geiler.addons.client.module.impl.DungeonAssistModule;
 import geiler.addons.client.module.impl.LoadoutKeybindsModule;
 import geiler.addons.client.module.impl.CommandKeybindsModule;
+import geiler.addons.client.module.impl.GardenCommandKeybindsModule;
 import geiler.addons.client.module.impl.InventoryCaptureModule;
 import geiler.addons.client.module.impl.PetKeybindsModule;
 import geiler.addons.client.module.impl.WardrobeKeybindsModule;
@@ -35,7 +36,8 @@ public abstract class KeyboardHandlerMixin {
 			return;
 		}
 		if (action == InputConstants.PRESS && client.gui.screen() == null && client.player != null
-			&& CommandKeybindsModule.INSTANCE.onKey(InputConstants.getKey(event).getName())) {
+			&& (CommandKeybindsModule.INSTANCE.onKey(InputConstants.getKey(event).getName())
+				|| GardenCommandKeybindsModule.INSTANCE.onKey(InputConstants.getKey(event).getName()))) {
 			ci.cancel();
 			return;
 		}
@@ -49,7 +51,7 @@ public abstract class KeyboardHandlerMixin {
 			}
 		}
 		if (action == InputConstants.PRESS && client.gui.screen() instanceof AbstractContainerScreen<?> screen
-			&& DungeonOdinAssistModule.INSTANCE.handleSpiritLeapKey(spiritLeapKeyName(event),
+			&& DungeonAssistModule.INSTANCE.handleSpiritLeapKey(spiritLeapKeyName(event),
 				(slot, slotId, button, input) -> SpiritLeapSurfaceOwner.runDispatchedClick(() ->
 					((AbstractContainerScreenAccess) (Object) screen)
 						.geileraddons$invokeSlotClicked(slot, slotId, button, input)))) {

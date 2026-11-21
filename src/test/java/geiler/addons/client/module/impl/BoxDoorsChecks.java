@@ -5,7 +5,7 @@ import geiler.addons.client.dungeon.BloodDoorTraceRules;
 import geiler.addons.client.dungeon.DungeonClass;
 import geiler.addons.client.dungeon.DungeonGridRules;
 import geiler.addons.client.dungeon.DungeonMapGeometry;
-import geiler.addons.client.dungeon.odin.OdinDungeonMapGrid;
+import geiler.addons.client.dungeon.helpers.DungeonMapGrid;
 import geiler.addons.client.chat.ChatStringSemantics;
 import geiler.addons.client.module.SettingGroup;
 import net.minecraft.core.BlockPos;
@@ -53,20 +53,20 @@ public final class BoxDoorsChecks {
 			"status,transition,currentMapCell,mapFromCell,mapToCell,fromCell,toCell,mapEdgeType,expectedType,target," +
 				"offsetX,offsetZ,targetRoomFootprint,currentRoomFootprint,routeRoomCount,routeEdgeCount,routeState,rejectionReason",
 			BoxDoorsFairyRouteRules.Status.class, BoxDoorsFairyRouteRules.Transition.class,
-			int.class, int.class, int.class, int.class, int.class, OdinDungeonMapGrid.DoorType.class,
+			int.class, int.class, int.class, int.class, int.class, DungeonMapGrid.DoorType.class,
 			DungeonDoorTracker.Type.class, DungeonDoorTracker.Door.class, int.class, int.class,
 			List.class, List.class, int.class, int.class, String.class, String.class);
 
 		checkStaticMethod("mapCellAtMarker", BoxDoorsFairyRouteRules.MapCellResolution.class,
-			OdinDungeonMapGrid.ScanResult.class, DungeonMapGeometry.MapPoint.class);
+			DungeonMapGrid.ScanResult.class, DungeonMapGeometry.MapPoint.class);
 		checkStaticMethod("select", BoxDoorsFairyRouteRules.Selection.class,
-			OdinDungeonMapGrid.ScanResult.class, int.class, int.class, List.class);
+			DungeonMapGrid.ScanResult.class, int.class, int.class, List.class);
 		checkStaticMethod("select", BoxDoorsFairyRouteRules.Selection.class,
-			OdinDungeonMapGrid.ScanResult.class, int.class, int.class, List.class, java.util.function.Function.class);
+			DungeonMapGrid.ScanResult.class, int.class, int.class, List.class, java.util.function.Function.class);
 		checkStaticMethod("select", BoxDoorsFairyRouteRules.Selection.class,
-			OdinDungeonMapGrid.ScanResult.class, int.class, int.class, int.class, List.class);
+			DungeonMapGrid.ScanResult.class, int.class, int.class, int.class, List.class);
 		checkStaticMethod("select", BoxDoorsFairyRouteRules.Selection.class,
-			OdinDungeonMapGrid.ScanResult.class, int.class, int.class, int.class, List.class,
+			DungeonMapGrid.ScanResult.class, int.class, int.class, int.class, List.class,
 			java.util.function.Function.class);
 		checkStaticMethod("chooseTracerTarget", BoxDoorsFairyRouteRules.TraceChoice.class,
 			BoxDoorsFairyRouteRules.Selection.class, List.class, DungeonDoorTracker.Door.class,
@@ -450,16 +450,16 @@ public final class BoxDoorsChecks {
 			fixture.map(), new DungeonMapGeometry.MapPoint(52, 52));
 		BoxDoorsFairyRouteRules.MapCellResolution markerInGap = BoxDoorsFairyRouteRules.mapCellAtMarker(
 			fixture.map(), new DungeonMapGeometry.MapPoint(62, 52));
-		List<OdinDungeonMapGrid.Tile> unknownTiles = new ArrayList<>(fixture.map().tiles());
-		unknownTiles.set(7, new OdinDungeonMapGrid.Tile(7, 1, 1, OdinDungeonMapGrid.MapRoomType.UNKNOWN,
-			OdinDungeonMapGrid.MapRoomType.UNKNOWN.mapColor(), OdinDungeonMapGrid.MapRoomType.UNKNOWN.mapColor(),
-			OdinDungeonMapGrid.Checkmark.UNDISCOVERED));
-		OdinDungeonMapGrid.ScanResult unknownTileMap = new OdinDungeonMapGrid.ScanResult(true,
+		List<DungeonMapGrid.Tile> unknownTiles = new ArrayList<>(fixture.map().tiles());
+		unknownTiles.set(7, new DungeonMapGrid.Tile(7, 1, 1, DungeonMapGrid.MapRoomType.UNKNOWN,
+			DungeonMapGrid.MapRoomType.UNKNOWN.mapColor(), DungeonMapGrid.MapRoomType.UNKNOWN.mapColor(),
+			DungeonMapGrid.Checkmark.UNDISCOVERED));
+		DungeonMapGrid.ScanResult unknownTileMap = new DungeonMapGrid.ScanResult(true,
 			fixture.map().layout(), unknownTiles, fixture.map().rooms(), fixture.map().doors(), "");
 		BoxDoorsFairyRouteRules.MapCellResolution markerOnUnknown = BoxDoorsFairyRouteRules.mapCellAtMarker(
 			unknownTileMap, new DungeonMapGeometry.MapPoint(52, 52));
-		OdinDungeonMapGrid.ScanResult offsetLayout = new OdinDungeonMapGrid.ScanResult(true,
-			new OdinDungeonMapGrid.Layout(true, 18, 20, 2, 2, null), fixture.map().tiles(),
+		DungeonMapGrid.ScanResult offsetLayout = new DungeonMapGrid.ScanResult(true,
+			new DungeonMapGrid.Layout(true, 18, 20, 2, 2, null), fixture.map().tiles(),
 			fixture.map().rooms(), fixture.map().doors(), "");
 		BoxDoorsFairyRouteRules.MapCellResolution markerOutsideGrid = BoxDoorsFairyRouteRules.mapCellAtMarker(
 			offsetLayout, new DungeonMapGeometry.MapPoint(122, 22));
@@ -509,9 +509,9 @@ public final class BoxDoorsChecks {
 		check(entryCenter != null && entryCenter.x == -88.5 && entryCenter.y == 70.0 && entryCenter.z == -152.5
 			&& BoxDoorsFairyRouteRules.fairyRoomCenter(List.of(9, 10)).x == -72.5,
 			"the Fairy waypoint centers the translated room footprint, including multi-cell rooms");
-		List<OdinDungeonMapGrid.Room> multiFairyRooms = new ArrayList<>(fixture.rooms());
-		multiFairyRooms.replaceAll(segment -> segment.type() == OdinDungeonMapGrid.MapRoomType.FAIRY
-			? BoxDoorsChecks.room(List.of(8, 9), OdinDungeonMapGrid.MapRoomType.FAIRY) : segment);
+		List<DungeonMapGrid.Room> multiFairyRooms = new ArrayList<>(fixture.rooms());
+		multiFairyRooms.replaceAll(segment -> segment.type() == DungeonMapGrid.MapRoomType.FAIRY
+			? BoxDoorsChecks.room(List.of(8, 9), DungeonMapGrid.MapRoomType.FAIRY) : segment);
 		BoxDoorsFairyRouteRules.Selection multiFairyEntry = BoxDoorsFairyRouteRules.select(
 			map(multiFairyRooms, fixture.mapDoors()), fixture.predecessor(),
 			fixture.predecessor() + 1, fixture.observedDoors());
@@ -573,19 +573,19 @@ public final class BoxDoorsChecks {
 			fixture.observedDoors()).status() == BoxDoorsFairyRouteRules.Status.MAP_UNAVAILABLE,
 			"an unavailable map reports no route target");
 
-		OdinDungeonMapGrid.ScanResult incomplete = map(fixture.rooms().stream()
-			.filter(room -> room.type() != OdinDungeonMapGrid.MapRoomType.BLOOD).toList(), fixture.mapDoors());
+		DungeonMapGrid.ScanResult incomplete = map(fixture.rooms().stream()
+			.filter(room -> room.type() != DungeonMapGrid.MapRoomType.BLOOD).toList(), fixture.mapDoors());
 		BoxDoorsFairyRouteRules.Selection noBloodRoom = BoxDoorsFairyRouteRules.select(
 			incomplete, fixture.predecessor(), fixture.predecessor() + 1, fixture.observedDoors());
 		check(noBloodRoom.status() == BoxDoorsFairyRouteRules.Status.ROUTE_INCOMPLETE
 			&& noBloodRoom.target() == null && noBloodRoom.diagnostic().contains("rejection=Entrance-groups=1;Blood-groups=0"),
 			"an incomplete map without one Blood endpoint fails closed");
 
-		List<OdinDungeonMapGrid.Room> ambiguousRooms = new ArrayList<>(fixture.rooms());
-		ambiguousRooms.add(room(6, OdinDungeonMapGrid.MapRoomType.NORMAL));
-		List<OdinDungeonMapGrid.Door> ambiguousDoors = new ArrayList<>(fixture.mapDoors());
-		ambiguousDoors.add(mapDoor(0, 6, OdinDungeonMapGrid.DoorType.NORMAL));
-		ambiguousDoors.add(mapDoor(6, 7, OdinDungeonMapGrid.DoorType.NORMAL));
+		List<DungeonMapGrid.Room> ambiguousRooms = new ArrayList<>(fixture.rooms());
+		ambiguousRooms.add(room(6, DungeonMapGrid.MapRoomType.NORMAL));
+		List<DungeonMapGrid.Door> ambiguousDoors = new ArrayList<>(fixture.mapDoors());
+		ambiguousDoors.add(mapDoor(0, 6, DungeonMapGrid.DoorType.NORMAL));
+		ambiguousDoors.add(mapDoor(6, 7, DungeonMapGrid.DoorType.NORMAL));
 		BoxDoorsFairyRouteRules.Selection ambiguous = BoxDoorsFairyRouteRules.select(
 			map(ambiguousRooms, ambiguousDoors), fixture.predecessor(), fixture.predecessor() + 1,
 			fixture.observedDoors());
@@ -619,20 +619,20 @@ public final class BoxDoorsChecks {
 	}
 
 	private static FairyRouteFixture fairyRouteFixture() {
-		List<OdinDungeonMapGrid.Room> rooms = new ArrayList<>(List.of(
-			room(0, OdinDungeonMapGrid.MapRoomType.ENTRANCE),
-			room(List.of(1, 7), OdinDungeonMapGrid.MapRoomType.NORMAL),
-			room(8, OdinDungeonMapGrid.MapRoomType.FAIRY),
-			room(14, OdinDungeonMapGrid.MapRoomType.NORMAL),
-			room(20, OdinDungeonMapGrid.MapRoomType.NORMAL),
-			room(21, OdinDungeonMapGrid.MapRoomType.BLOOD)));
-		List<OdinDungeonMapGrid.Door> mapDoors = new ArrayList<>(List.of(
-			mapDoor(0, 1, OdinDungeonMapGrid.DoorType.WITHER),
-			mapDoor(1, 7, OdinDungeonMapGrid.DoorType.NORMAL),
-			mapDoor(7, 8, OdinDungeonMapGrid.DoorType.FAIRY),
-			mapDoor(8, 14, OdinDungeonMapGrid.DoorType.WITHER),
-			mapDoor(14, 20, OdinDungeonMapGrid.DoorType.WITHER),
-			mapDoor(20, 21, OdinDungeonMapGrid.DoorType.BLOOD)));
+		List<DungeonMapGrid.Room> rooms = new ArrayList<>(List.of(
+			room(0, DungeonMapGrid.MapRoomType.ENTRANCE),
+			room(List.of(1, 7), DungeonMapGrid.MapRoomType.NORMAL),
+			room(8, DungeonMapGrid.MapRoomType.FAIRY),
+			room(14, DungeonMapGrid.MapRoomType.NORMAL),
+			room(20, DungeonMapGrid.MapRoomType.NORMAL),
+			room(21, DungeonMapGrid.MapRoomType.BLOOD)));
+		List<DungeonMapGrid.Door> mapDoors = new ArrayList<>(List.of(
+			mapDoor(0, 1, DungeonMapGrid.DoorType.WITHER),
+			mapDoor(1, 7, DungeonMapGrid.DoorType.NORMAL),
+			mapDoor(7, 8, DungeonMapGrid.DoorType.FAIRY),
+			mapDoor(8, 14, DungeonMapGrid.DoorType.WITHER),
+			mapDoor(14, 20, DungeonMapGrid.DoorType.WITHER),
+			mapDoor(20, 21, DungeonMapGrid.DoorType.BLOOD)));
 		DungeonDoorTracker.Door entry = observedWither(9, 8, 1);
 		DungeonDoorTracker.Door exit = observedWither(15, 9, 2);
 		DungeonDoorTracker.Door next = observedWither(21, 15, 3);
@@ -643,12 +643,12 @@ public final class BoxDoorsChecks {
 	}
 
 	private static FairyRouteFixture withDecoyBranch(FairyRouteFixture fixture) {
-		List<OdinDungeonMapGrid.Room> rooms = new ArrayList<>(fixture.rooms());
-		rooms.add(room(2, OdinDungeonMapGrid.MapRoomType.NORMAL));
-		rooms.add(room(3, OdinDungeonMapGrid.MapRoomType.PUZZLE));
-		List<OdinDungeonMapGrid.Door> doors = new ArrayList<>(fixture.mapDoors());
-		doors.add(mapDoor(1, 2, OdinDungeonMapGrid.DoorType.NORMAL));
-		doors.add(mapDoor(2, 3, OdinDungeonMapGrid.DoorType.WITHER));
+		List<DungeonMapGrid.Room> rooms = new ArrayList<>(fixture.rooms());
+		rooms.add(room(2, DungeonMapGrid.MapRoomType.NORMAL));
+		rooms.add(room(3, DungeonMapGrid.MapRoomType.PUZZLE));
+		List<DungeonMapGrid.Door> doors = new ArrayList<>(fixture.mapDoors());
+		doors.add(mapDoor(1, 2, DungeonMapGrid.DoorType.NORMAL));
+		doors.add(mapDoor(2, 3, DungeonMapGrid.DoorType.WITHER));
 		return new FairyRouteFixture(map(rooms, doors), List.copyOf(rooms), List.copyOf(doors),
 			fixture.predecessor(), fixture.entryFromCell(), fixture.fairyCell(), fixture.afterFairy(),
 			fixture.entryDoor(), fixture.exitDoor(), fixture.nextDoor(), fixture.observedDoors());
@@ -656,12 +656,12 @@ public final class BoxDoorsChecks {
 
 	private static void directFairyBloodExitSelection() {
 		int entrance = 0, fairyCell = 1, bloodCell = 7;
-		List<OdinDungeonMapGrid.Room> rooms = List.of(room(entrance, OdinDungeonMapGrid.MapRoomType.ENTRANCE),
-			room(fairyCell, OdinDungeonMapGrid.MapRoomType.FAIRY), room(bloodCell, OdinDungeonMapGrid.MapRoomType.BLOOD));
-		List<OdinDungeonMapGrid.Door> mapDoors = List.of(
-			mapDoor(entrance, fairyCell, OdinDungeonMapGrid.DoorType.FAIRY),
-			mapDoor(fairyCell, bloodCell, OdinDungeonMapGrid.DoorType.BLOOD));
-		OdinDungeonMapGrid.ScanResult map = map(rooms, mapDoors);
+		List<DungeonMapGrid.Room> rooms = List.of(room(entrance, DungeonMapGrid.MapRoomType.ENTRANCE),
+			room(fairyCell, DungeonMapGrid.MapRoomType.FAIRY), room(bloodCell, DungeonMapGrid.MapRoomType.BLOOD));
+		List<DungeonMapGrid.Door> mapDoors = List.of(
+			mapDoor(entrance, fairyCell, DungeonMapGrid.DoorType.FAIRY),
+			mapDoor(fairyCell, bloodCell, DungeonMapGrid.DoorType.BLOOD));
+		DungeonMapGrid.ScanResult map = map(rooms, mapDoors);
 		DungeonDoorTracker.Door entryDoor = observedWither(2, 1, 11);
 		DungeonDoorTracker.Door bloodDoor = new DungeonDoorTracker.Door(DungeonDoorTracker.Type.BLOOD,
 			8, 2, 411, 70, -411, 3, 4, 3);
@@ -683,21 +683,21 @@ public final class BoxDoorsChecks {
 			map, fairyCell, fairyCell + 1, List.of(entryDoor));
 		check(missingBlood.status() == BoxDoorsFairyRouteRules.Status.OBSERVED_EDGE_MISSING
 			&& missingBlood.transition() == BoxDoorsFairyRouteRules.Transition.EXIT_FAIRY_TO_BLOOD
-			&& missingBlood.mapEdgeType() == OdinDungeonMapGrid.DoorType.BLOOD
+			&& missingBlood.mapEdgeType() == DungeonMapGrid.DoorType.BLOOD
 			&& missingBlood.expectedType() == DungeonDoorTracker.Type.BLOOD && missingBlood.target() == null,
 			"a direct Fairy-to-Blood edge without an exact observed record fails closed");
 	}
 
 	private static void normalIntermediaryRoute() {
-		List<OdinDungeonMapGrid.Room> rooms = List.of(
-			room(0, OdinDungeonMapGrid.MapRoomType.ENTRANCE),
-			room(1, OdinDungeonMapGrid.MapRoomType.NORMAL),
-			room(2, OdinDungeonMapGrid.MapRoomType.NORMAL),
-			room(3, OdinDungeonMapGrid.MapRoomType.BLOOD));
-		List<OdinDungeonMapGrid.Door> mapDoors = List.of(
-			mapDoor(0, 1, OdinDungeonMapGrid.DoorType.NORMAL),
-			mapDoor(1, 2, OdinDungeonMapGrid.DoorType.NORMAL),
-			mapDoor(2, 3, OdinDungeonMapGrid.DoorType.BLOOD));
+		List<DungeonMapGrid.Room> rooms = List.of(
+			room(0, DungeonMapGrid.MapRoomType.ENTRANCE),
+			room(1, DungeonMapGrid.MapRoomType.NORMAL),
+			room(2, DungeonMapGrid.MapRoomType.NORMAL),
+			room(3, DungeonMapGrid.MapRoomType.BLOOD));
+		List<DungeonMapGrid.Door> mapDoors = List.of(
+			mapDoor(0, 1, DungeonMapGrid.DoorType.NORMAL),
+			mapDoor(1, 2, DungeonMapGrid.DoorType.NORMAL),
+			mapDoor(2, 3, DungeonMapGrid.DoorType.BLOOD));
 		DungeonDoorTracker.Door reversedBlood = new DungeonDoorTracker.Door(DungeonDoorTracker.Type.BLOOD,
 			5, 4, 300, 70, -300, 3, 4, 3);
 		BoxDoorsFairyRouteRules.Selection route = BoxDoorsFairyRouteRules.select(
@@ -747,10 +747,10 @@ public final class BoxDoorsChecks {
 			&& holdsUnknownBlood.rejectionReason().contains("unknown"),
 			"an unknown Blood state remains the selected endpoint without rendering or advancing");
 
-		OdinDungeonMapGrid.ScanResult incomplete = map(
-			List.of(room(0, OdinDungeonMapGrid.MapRoomType.ENTRANCE),
-				room(1, OdinDungeonMapGrid.MapRoomType.NORMAL)),
-			List.of(mapDoor(0, 1, OdinDungeonMapGrid.DoorType.NORMAL)));
+		DungeonMapGrid.ScanResult incomplete = map(
+			List.of(room(0, DungeonMapGrid.MapRoomType.ENTRANCE),
+				room(1, DungeonMapGrid.MapRoomType.NORMAL)),
+			List.of(mapDoor(0, 1, DungeonMapGrid.DoorType.NORMAL)));
 		BoxDoorsFairyRouteRules.Selection incompleteRoute = BoxDoorsFairyRouteRules.select(
 			incomplete, 0, 1, List.of(firstWither));
 		var routeFallback = BoxDoorsFairyRouteRules.chooseTracerTarget(incompleteRoute,
@@ -814,26 +814,26 @@ public final class BoxDoorsChecks {
 			"targeted scans honor the retry cooldown and become eligible at its limit");
 	}
 
-	private static OdinDungeonMapGrid.Room room(int cell, OdinDungeonMapGrid.MapRoomType type) {
+	private static DungeonMapGrid.Room room(int cell, DungeonMapGrid.MapRoomType type) {
 		return room(List.of(cell), type);
 	}
 
-	private static OdinDungeonMapGrid.Room room(List<Integer> cells, OdinDungeonMapGrid.MapRoomType type) {
-		return new OdinDungeonMapGrid.Room(cells, type, OdinDungeonMapGrid.Checkmark.UNDISCOVERED,
+	private static DungeonMapGrid.Room room(List<Integer> cells, DungeonMapGrid.MapRoomType type) {
+		return new DungeonMapGrid.Room(cells, type, DungeonMapGrid.Checkmark.UNDISCOVERED,
 			cells.size() == 1 ? "1x1" : "multi");
 	}
 
-	private static OdinDungeonMapGrid.ScanResult map(List<OdinDungeonMapGrid.Room> rooms,
-		List<OdinDungeonMapGrid.Door> doors) {
-		List<OdinDungeonMapGrid.Tile> tiles = new ArrayList<>(36);
+	private static DungeonMapGrid.ScanResult map(List<DungeonMapGrid.Room> rooms,
+		List<DungeonMapGrid.Door> doors) {
+		List<DungeonMapGrid.Tile> tiles = new ArrayList<>(36);
 		for (int cell = 0; cell < 36; cell++) {
-			OdinDungeonMapGrid.MapRoomType type = OdinDungeonMapGrid.MapRoomType.UNDISCOVERED;
-			for (OdinDungeonMapGrid.Room room : rooms) if (room.segments().contains(cell)) type = room.type();
-			tiles.add(new OdinDungeonMapGrid.Tile(cell, cell % 6, cell / 6, type,
-				type.mapColor(), type.mapColor(), OdinDungeonMapGrid.Checkmark.UNDISCOVERED));
+			DungeonMapGrid.MapRoomType type = DungeonMapGrid.MapRoomType.UNDISCOVERED;
+			for (DungeonMapGrid.Room room : rooms) if (room.segments().contains(cell)) type = room.type();
+			tiles.add(new DungeonMapGrid.Tile(cell, cell % 6, cell / 6, type,
+				type.mapColor(), type.mapColor(), DungeonMapGrid.Checkmark.UNDISCOVERED));
 		}
-		return new OdinDungeonMapGrid.ScanResult(true,
-			new OdinDungeonMapGrid.Layout(true, 18, 22, 22, 22, null), tiles, rooms, doors, "");
+		return new DungeonMapGrid.ScanResult(true,
+			new DungeonMapGrid.Layout(true, 18, 22, 22, 22, null), tiles, rooms, doors, "");
 	}
 
 	private static List<DungeonDoorTracker.Door> append(List<DungeonDoorTracker.Door> doors,
@@ -842,11 +842,11 @@ public final class BoxDoorsChecks {
 		result.add(extra);
 		return List.copyOf(result);
 	}
-	private static OdinDungeonMapGrid.Door mapDoor(int firstCell, int secondCell,
-		OdinDungeonMapGrid.DoorType type) {
-		OdinDungeonMapGrid.Direction direction = firstCell / 6 == secondCell / 6
-			? OdinDungeonMapGrid.Direction.HORIZONTAL : OdinDungeonMapGrid.Direction.VERTICAL;
-		return new OdinDungeonMapGrid.Door(firstCell, secondCell, direction, type, type.ordinal());
+	private static DungeonMapGrid.Door mapDoor(int firstCell, int secondCell,
+		DungeonMapGrid.DoorType type) {
+		DungeonMapGrid.Direction direction = firstCell / 6 == secondCell / 6
+			? DungeonMapGrid.Direction.HORIZONTAL : DungeonMapGrid.Direction.VERTICAL;
+		return new DungeonMapGrid.Door(firstCell, secondCell, direction, type, type.ordinal());
 	}
 
 	private static DungeonDoorTracker.Door observedWither(int firstCell, int secondCell, int marker) {
@@ -854,8 +854,8 @@ public final class BoxDoorsChecks {
 			100 + marker, 70, -100 - marker, 3, 4, 3);
 	}
 
-	private record FairyRouteFixture(OdinDungeonMapGrid.ScanResult map, List<OdinDungeonMapGrid.Room> rooms,
-		List<OdinDungeonMapGrid.Door> mapDoors, int predecessor, int entryFromCell, int fairyCell,
+	private record FairyRouteFixture(DungeonMapGrid.ScanResult map, List<DungeonMapGrid.Room> rooms,
+		List<DungeonMapGrid.Door> mapDoors, int predecessor, int entryFromCell, int fairyCell,
 		int afterFairy, DungeonDoorTracker.Door entryDoor, DungeonDoorTracker.Door exitDoor,
 		DungeonDoorTracker.Door nextDoor, List<DungeonDoorTracker.Door> observedDoors) { }
 

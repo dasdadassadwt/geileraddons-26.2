@@ -43,6 +43,7 @@ enum class MarkerKind(val biome: SafariBiome?) {
     TROODON_WALL(SafariBiome.ICY),
     BEE_SPOT(SafariBiome.FOREST),
     HIDEONWALL_PERCH(SafariBiome.HAUNTED),
+    HIDEONFLOOR(SafariBiome.FOREST),
     MOUND(SafariBiome.CAVERN),
     TRADE(null),
     BLOODBAT(null),

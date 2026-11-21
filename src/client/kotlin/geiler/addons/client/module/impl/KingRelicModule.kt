@@ -94,7 +94,7 @@ class KingRelicModule private constructor(private val s: Settings) : Module(
             reset()
             diagnostics.event("WORLD_CHANGED relicReset=true")
         }
-        val now = DungeonOdinAssistModule.INSTANCE.serverTicks()
+        val now = DungeonAssistModule.INSTANCE.serverTicks()
         val delta = if (lastServerTicks < 0L || now < lastServerTicks) 0L else minOf(now - lastServerTicks, 40L)
         lastServerTicks = now
         if (F7Support.inPhase5() && placeTick >= 0) placeTick += delta.toInt()

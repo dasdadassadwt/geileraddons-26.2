@@ -79,7 +79,7 @@ object NeuRecipes {
     }
 
     /** NEU names enchanted books `NAME;level`; the Bazaar names them `ENCHANTMENT_NAME_level`. */
-    private fun priceKey(id: String, known: (String) -> Boolean): String {
+    fun priceKey(id: String, known: (String) -> Boolean): String {
         if (known(id)) return id
         val semicolon = id.indexOf(';')
         if (semicolon > 0) {

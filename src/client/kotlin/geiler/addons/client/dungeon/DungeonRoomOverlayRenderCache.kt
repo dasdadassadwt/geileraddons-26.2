@@ -1,6 +1,6 @@
 package geiler.addons.client.dungeon
 
-import geiler.addons.client.dungeon.odin.OdinSpecialColumnPredictor
+import geiler.addons.client.dungeon.helpers.SpecialColumnPredictor
 
 /** Snapshot identity and bounded derived-data cache for the room-map renderer. */
 class DungeonRoomOverlayRenderCache {
@@ -36,7 +36,7 @@ class DungeonRoomOverlayRenderCache {
         fun roomsById(): Map<String, DungeonRoomOverlayGeometry.Room> = logic.roomsById()
         fun cellAt(x: Int, z: Int): DungeonRoomOverlayGeometry.Cell? = logic.cellAt(x, z)
         fun visibleCellAt(x: Int, z: Int): DungeonRoomOverlayGeometry.Cell? = logic.visibleCellAt(x, z)
-        fun predictions(): List<OdinSpecialColumnPredictor.Prediction> = logic.predictions()
+        fun predictions(): List<SpecialColumnPredictor.Prediction> = logic.predictions()
         fun doorGeometry(cellSize: Int, cellGap: Int, doorScale: Float): List<DoorGeometry> =
             logic.doorGeometry(cellSize, cellGap, doorScale)
     }

@@ -99,11 +99,12 @@ open class MoveUiScreen(private val parent: Screen?) : Screen(Component.literal(
             }
             if (event.button() == 1 && !selector.containsButton(mouseX, mouseY) && !selector.containsPopup(mouseX, mouseY)) {
                 val element = elementAt(mouseX, mouseY)
-                val module = element?.module()
-                if (element != null && module != null && module.hasSettings()) {
+                val module = element?.let { HudManager.settingsModule(it) }
+                if (element != null && module != null) {
                     openModulePage(element, module)
                     return true
                 }
+                if (element != null) logInteraction("NO_MODULE element=${element.id()}")
             }
             return super.mouseClicked(event, doubleClick)
         }

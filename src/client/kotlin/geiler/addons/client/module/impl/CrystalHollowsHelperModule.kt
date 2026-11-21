@@ -19,6 +19,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.ChatFormatting
 import net.minecraft.core.BlockPos
 import net.minecraft.core.registries.BuiltInRegistries
@@ -49,7 +50,7 @@ class CrystalHollowsHelperModule private constructor(settings: Settings) : Modul
     Category.MINING,
     false,
     settings.structures, settings.scan, settings.chatCoordinates, settings.nucleus, settings.labels, settings.chests, settings.chestColor,
-    settings.map, settings.mapSize,
+    settings.map, settings.mapSize, settings.mapImage,
 ), HudElement {
     private val scan = settings.scan
     private val structures = settings.structures
@@ -60,6 +61,7 @@ class CrystalHollowsHelperModule private constructor(settings: Settings) : Modul
     private val chestColor = settings.chestColor
     private val map = settings.map
     private val mapSize = settings.mapSize
+    private val mapImage = settings.mapImage
 
     private class Waypoint(val name: String, val argb: Int, val x: Int, val y: Int, val z: Int, val structure: CrystalHollowsRules.Structure?)
 
@@ -91,13 +93,13 @@ class CrystalHollowsHelperModule private constructor(settings: Settings) : Modul
     }
 
     init {
-        group(SettingGroup("Waypoints", structures, scan, chatCoordinates, nucleus, labels), SettingGroup("Treasure Chests", chests, chestColor), SettingGroup("Map", map, mapSize))
+        group(SettingGroup("Waypoints", structures, scan, chatCoordinates, nucleus, labels), SettingGroup("Treasure Chests", chests, chestColor), SettingGroup("Map", map, mapSize, mapImage))
     }
 
     private fun block(id: String?): Block? = id?.let { Identifier.tryParse(it) }?.let(BuiltInRegistries.BLOCK::getValue)
 
     private fun settingsText(): String =
-        "structures=${structures.value()};map=${map.value()}@${mapSize.intValue()};scan=${scan.value()};chat=${chatCoordinates.value()};nucleus=${nucleus.value()};chests=${chests.value()}"
+        "structures=${structures.value()};map=${map.value()}@${mapSize.intValue()};image=${mapImage.value()};scan=${scan.value()};chat=${chatCoordinates.value()};nucleus=${nucleus.value()};chests=${chests.value()}"
 
     override fun onEnable() {
         reset()
@@ -419,13 +421,36 @@ class CrystalHollowsHelperModule private constructor(settings: Settings) : Modul
     override fun render(graphics: GuiGraphicsExtractor, font: Font, x: Int, y: Int) {
         val size = mapSize.intValue()
         GuiTheme.roundedRectBordered(graphics, x - 1, y - 1, size + 2, size + 2, GuiTheme.RADIUS_SMALL, MAP_BG, MAP_BG, GuiTheme.CARD_BORDER)
-        // The Nucleus crosshair, so the quarters read at a glance.
-        val mid = CrystalHollowsRules.mapPixel(CrystalHollowsRules.NUCLEUS_X, size)
-        graphics.fill(x + mid, y, x + mid + 1, y + size, MAP_GRID)
-        graphics.fill(x, y + mid, x + size, y + mid + 1, MAP_GRID)
+        if (mapImage.value()) {
+            // Skyblocker's Hollows picture (LGPL-3.0), scaled from its 621 px to the map size.
+            val pose = graphics.pose()
+            pose.pushMatrix()
+            pose.translate(x.toFloat(), y.toFloat())
+            pose.scale(size / MAP_TEXTURE_SIZE.toFloat(), size / MAP_TEXTURE_SIZE.toFloat())
+            graphics.blit(RenderPipelines.GUI_TEXTURED, MAP_TEXTURE, 0, 0, 0.0f, 0.0f, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE)
+            pose.popMatrix()
+        } else {
+            // The Nucleus crosshair, so the quarters read at a glance.
+            val mid = CrystalHollowsRules.mapPixel(CrystalHollowsRules.NUCLEUS_X, size)
+            graphics.fill(x + mid, y, x + mid + 1, y + size, MAP_GRID)
+            graphics.fill(x, y + mid, x + size, y + mid + 1, MAP_GRID)
+        }
         for (w in waypoints.values) dot(graphics, x, y, size, w.x, w.z, w.argb, 2)
         dot(graphics, x, y, size, CrystalHollowsRules.NUCLEUS_X, CrystalHollowsRules.NUCLEUS_Z, NUCLEUS_COLOR, 2)
-        Minecraft.getInstance().player?.let { dot(graphics, x, y, size, it.blockX, it.blockZ, WHITE, 1) }
+        Minecraft.getInstance().player?.let { arrow(graphics, x, y, size, it.blockX, it.blockZ, it.yRot) }
+    }
+
+    /** A small arrow turned to face where the player looks. */
+    private fun arrow(graphics: GuiGraphicsExtractor, x: Int, y: Int, size: Int, wx: Int, wz: Int, yaw: Float) {
+        val pose = graphics.pose()
+        pose.pushMatrix()
+        pose.translate((x + CrystalHollowsRules.mapPixel(wx, size)).toFloat(), (y + CrystalHollowsRules.mapPixel(wz, size)).toFloat())
+        pose.rotate(CrystalHollowsRules.arrowRadians(yaw).toFloat())
+        graphics.fill(-1, -4, 1, -3, WHITE)
+        graphics.fill(-2, -3, 2, -1, WHITE)
+        graphics.fill(-3, -1, 3, 1, WHITE)
+        graphics.fill(-1, 1, 1, 3, WHITE)
+        pose.popMatrix()
     }
 
     private fun dot(graphics: GuiGraphicsExtractor, x: Int, y: Int, size: Int, wx: Int, wz: Int, argb: Int, radius: Int) {
@@ -466,6 +491,7 @@ class CrystalHollowsHelperModule private constructor(settings: Settings) : Modul
         val chestColor = ColorSetting("Chest Color", 255, 170, 0, 255)
         val map = BooleanSetting("Show Map", true)
         val mapSize = NumberSetting("Map Size", 60f, 200f, 110f, true)
+        val mapImage = BooleanSetting("Map Image", true)
     }
 
     companion object {
@@ -486,6 +512,8 @@ class CrystalHollowsHelperModule private constructor(settings: Settings) : Modul
         private const val UNKNOWN = "Shared Location"
         private const val MAP_BG = 0xB0101418.toInt()
         private const val MAP_GRID = 0x40FFFFFF
+        private const val MAP_TEXTURE_SIZE = 621
+        private val MAP_TEXTURE: Identifier = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/crystals_map.png")
 
         @JvmField
         val INSTANCE = CrystalHollowsHelperModule(Settings())

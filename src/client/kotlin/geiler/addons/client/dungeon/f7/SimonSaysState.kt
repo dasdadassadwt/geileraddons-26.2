@@ -11,6 +11,9 @@ import net.minecraft.core.BlockPos
 class SimonSaysState {
     private val sequence = ArrayList<Long>()
     private var sinceLantern = 0
+
+    /** Lanterns recorded since the list was last cleared; the first-phase rules apply to the 2nd and 3rd only. */
+    private var lanternsSeen = 0
     private var startClicks = 0
 
     /** True from a start-button press (or a fresh device) until the first round is completed or its grid resets. */
@@ -22,14 +25,23 @@ class SimonSaysState {
     /** The next button to press as a packed block position, or null. */
     fun next(): Long? = sequence.firstOrNull()
 
+    /** A lantern lit: only restarts the idle count of [tick]; the order is recorded when it turns off ([lanternOff]). */
     fun lanternLit(x: Int, y: Int, z: Int) {
+        if (inLights(x, y, z)) sinceLantern = 0
+    }
+
+    /**
+     * A lantern turned off (sea lantern back to obsidian), the order Odin records and applies its first-phase rules to.
+     * A lantern already in the list is ignored, so repeated events never duplicate a step.
+     */
+    fun lanternOff(x: Int, y: Int, z: Int) {
         if (!inLights(x, y, z)) return
         val button = pack(x - 1, y, z)
         if (button in sequence) return
         sequence.add(button)
         sinceLantern = 0
         if (!firstPhase) return
-        when (sequence.size) {
+        when (++lanternsSeen) {
             2 -> sequence.reverse()
             3 -> sequence.removeAt(sequence.lastIndex - 1)
         }
@@ -59,29 +71,53 @@ class SimonSaysState {
     /** The start button was pressed: forget the sequence and expect the first phase again. */
     fun restart() {
         sequence.clear()
+        lanternsSeen = 0
         sinceLantern = 0
         firstPhase = true
     }
 
-    /** [CORRECT] when the pressed button is the next one (and it is consumed), [WRONG] for another button, else [NONE]. */
-    fun buttonClicked(x: Int, y: Int, z: Int): Int {
+    /**
+     * What a press of the button would be, without changing anything: [CORRECT] for the next button, [AHEAD] for a later one
+     * (a skip: the buttons before it are done too), [WRONG] for a button that is not left in the list, else [NONE].
+     */
+    fun peek(x: Int, y: Int, z: Int): Int {
         if (!inButtons(x, y, z) || sequence.isEmpty()) return NONE
-        if (sequence.first() == pack(x, y, z)) {
-            sequence.removeAt(0)
-            if (sequence.isEmpty()) endFirstPhase()
-            return CORRECT
+        return when (sequence.indexOf(pack(x, y, z))) {
+            -1 -> WRONG
+            0 -> CORRECT
+            else -> AHEAD
         }
-        return WRONG
     }
 
-    /** Drops the head of the sequence (a skipped step observed from the world). */
-    fun skipHead() {
-        if (sequence.isNotEmpty()) sequence.removeAt(0)
+    /** Applies a press: the list continues after the pressed button (Odin's pointer), and the first phase ends with the list. */
+    fun buttonClicked(x: Int, y: Int, z: Int): Int {
+        val kind = peek(x, y, z)
+        if (kind == CORRECT || kind == AHEAD) completeThrough(pack(x, y, z))
+        return kind
     }
 
-    /** Forgets [x]/[y]/[z] when its button was removed from the world. */
+    /** The server confirmed a press (the button turned powered); a button the client press already completed changes nothing. */
+    fun buttonConfirmed(x: Int, y: Int, z: Int) {
+        if (inButtons(x, y, z)) completeThrough(pack(x, y, z))
+    }
+
+    private fun completeThrough(button: Long) {
+        val index = sequence.indexOf(button)
+        if (index < 0) return
+        repeat(index + 1) { sequence.removeAt(0) }
+        if (sequence.isEmpty()) endFirstPhase()
+    }
+
+    /** Forgets [x]/[y]/[z] when its button was skipped or removed from the world; only that button, and only once. */
     fun removeButton(x: Int, y: Int, z: Int) {
         sequence.remove(pack(x, y, z))
+    }
+
+    /** A new round is being shown (the button grid was cleared): drop the old list but stay in the current phase. */
+    fun clearSequence() {
+        sequence.clear()
+        lanternsSeen = 0
+        sinceLantern = 0
     }
 
     /** Back to a fresh device: no sequence, first phase, no start clicks counted. */
@@ -94,6 +130,7 @@ class SimonSaysState {
         const val NONE = 0
         const val CORRECT = 1
         const val WRONG = 2
+        const val AHEAD = 3
 
         /** Margin that keeps the box outside the button's faces so they do not z-fight. */
         const val HIGHLIGHT_MARGIN = 0.002

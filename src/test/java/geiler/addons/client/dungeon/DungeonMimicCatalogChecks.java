@@ -8,12 +8,12 @@ public final class DungeonMimicCatalogChecks {
 	public static void main(String[] args) { run(); }
 
 	public static void run() {
-		DevonianDungeonWaypointCatalog.CatalogResult catalog = DevonianDungeonWaypointCatalog.bundled();
+		DungeonWaypointCatalog.CatalogResult catalog = DungeonWaypointCatalog.bundled();
 		check(catalog.available(), "bundled Mimic coordinates load");
 		equals(108L, catalog.markers().stream().filter(marker -> marker.category().equals("chest"))
-			.map(DevonianDungeonWaypointCatalog.Marker::roomName).distinct().count(),
+			.map(DungeonWaypointCatalog.Marker::roomName).distinct().count(),
 			"the shared catalog has chest rows for verified direct joins and aliases");
-		List<DevonianDungeonWaypointCatalog.Marker> waterfall = catalog.find("Waterfall", "chest");
+		List<DungeonWaypointCatalog.Marker> waterfall = catalog.find("Waterfall", "chest");
 		equals(238L, catalog.markers().stream().filter(marker -> marker.category().equals("chest")).count(),
 			"the shared catalog contains all joined chest positions");
 		check(catalog.find("Criss-Cross", "chest").size() == 1,
@@ -26,7 +26,7 @@ public final class DungeonMimicCatalogChecks {
 			&& catalog.find("Lower Blaze", "chest").size() == 1
 			&& catalog.find("Blaze", "chest").isEmpty(),
 			"the exact Blaze coordinate split is exposed only under the two local puzzle names");
-		check(waterfall.contains(new DevonianDungeonWaypointCatalog.Marker(
+		check(waterfall.contains(new DungeonWaypointCatalog.Marker(
 			"devonian:waterfall:chest:0", "Waterfall", "chest", 34, 84, 23)),
 			"a representative canonical chest coordinate is retained");
 		equals(waterfall, catalog.find(" waterFALL ", "chest"), "room lookup is case-insensitive and trims the name");

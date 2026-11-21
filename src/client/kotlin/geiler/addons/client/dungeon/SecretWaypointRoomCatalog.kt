@@ -34,7 +34,7 @@ class SecretWaypointRoomCatalog private constructor() {
             roomCells: List<DungeonGridRules.Cell?>?,
             roomName: String?,
             orientation: DungeonRoomOrientationRules.Candidate?,
-            templates: List<DevonianDungeonWaypointCatalog.Marker?>?,
+            templates: List<DungeonWaypointCatalog.Marker?>?,
         ): List<SecretWaypointStore.Waypoint> =
             SecretWaypointRoomCatalogLogic.materialize(floor, roomCells, roomName, orientation, templates)
 

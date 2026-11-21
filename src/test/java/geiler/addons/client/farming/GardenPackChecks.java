@@ -1,5 +1,7 @@
 package geiler.addons.client.farming;
 
+import geiler.addons.client.module.impl.ContainerKeybindRules;
+import geiler.addons.client.module.impl.GardenCommandKeybindsModule;
 import geiler.addons.client.module.impl.GardenKeybindsModule;
 import geiler.addons.client.module.impl.GreenhouseHelperModule;
 import geiler.addons.client.module.impl.VisitorShoppingListModule;
@@ -16,6 +18,30 @@ public final class GardenPackChecks {
 		checkGreenhouseRules();
 		checkBazaar();
 		checkModules();
+		checkGardenCommandKeybinds();
+	}
+
+	private static void checkGardenCommandKeybinds() {
+		List<ContainerKeybindRules.CommandPreset> presets = ContainerKeybindRules.GARDEN_PRESETS;
+		check(presets.size() == 28 && "warpGarden".equals(presets.get(0).getId()) && "plot24".equals(presets.get(27).getId()),
+			"Garden Command Keybinds has four fixed actions and plots 1 to 24");
+		check("warp garden".equals(presets.get(0).getCommand()) && "setspawn".equals(presets.get(1).getCommand())
+			&& "plottp barn".equals(presets.get(2).getCommand()) && "desk".equals(presets.get(3).getCommand())
+			&& "plottp 1".equals(presets.get(4).getCommand()) && "plottp 24".equals(presets.get(27).getCommand()),
+			"the garden presets run /warp garden, /setspawn, /plottp barn, /desk and /plottp <n>");
+		List<String> keys = new java.util.ArrayList<>(java.util.Collections.nCopies(28, ""));
+		keys.set(1, "key.keyboard.k");
+		keys.set(5, "key.keyboard.l");
+		check("setspawn".equals(ContainerKeybindRules.commandFor("key.keyboard.k", keys, presets))
+			&& "plottp 2".equals(ContainerKeybindRules.commandFor("key.keyboard.l", keys, presets))
+			&& ContainerKeybindRules.commandFor("key.keyboard.x", keys, presets) == null
+			&& ContainerKeybindRules.commandFor("", keys, presets) == null,
+			"a pressed key maps to its garden command; unbound and unknown keys map to none");
+		GardenCommandKeybindsModule module = GardenCommandKeybindsModule.INSTANCE;
+		check(!module.defaultEnabled() && module.textSettings().size() == 28
+			&& module.textSettings().stream().allMatch(setting -> setting.keybindCapture() && setting.value().isEmpty()),
+			"Garden Command Keybinds declares 28 unbound key-capture settings and is off by default");
+		check(!module.onKey("key.keyboard.k"), "a key press does nothing while the module is off or outside the Garden");
 	}
 
 	private static void checkKeybindRules() {
@@ -50,16 +76,27 @@ public final class GardenPackChecks {
 		needs.get("Nyko").put("Carrot", 20);
 		List<VisitorRules.Row> rows = VisitorRules.rows(needs, name -> name.equals("Wheat") ? 100 : 10);
 		check(rows.get(0).getText().contains("2") && rows.get(0).getText().contains("1 ready") && rows.get(0).getBuyItem() == null, "the header counts visitors and ready ones");
-		VisitorRules.Row ryan = rows.stream().filter(r -> r.getText().contains("Ryan")).findFirst().orElseThrow();
-		VisitorRules.Row nyko = rows.stream().filter(r -> r.getText().contains("Nyko")).findFirst().orElseThrow();
-		check(ryan.getText().startsWith("§a") && nyko.getText().startsWith("§e"), "a visitor you can serve is green, one half served is yellow");
-		check(rows.indexOf(ryan) < rows.indexOf(nyko), "visitors keep the order they were read in");
+		check(rows.stream().noneMatch(r -> r.getText().contains("Ryan") || r.getText().contains("Nyko")), "visitor names are not listed");
 		List<VisitorRules.Row> buy = rows.stream().filter(r -> r.getBuyItem() != null).toList();
 		check(buy.size() == 1 && buy.get(0).getBuyItem().equals("Carrot") && buy.get(0).getBuyAmount() == 15,
 			"only the short item is clickable, with the missing amount (25 needed, 10 held, the stock spent on Ryan first)");
 		List<VisitorRules.Row> none = VisitorRules.rows(Map.of("Ryan", Map.of("Carrot", 5)), name -> 5);
 		check(none.stream().allMatch(r -> r.getBuyItem() == null) && none.stream().anyMatch(r -> r.getText().contains("in hand")), "nothing short means nothing to buy");
 		check(VisitorRules.rows(Map.of(), name -> 0).isEmpty(), "no visitors means no rows");
+		check(rows.stream().noneMatch(r -> r.getText().contains("To buy") || r.getText().contains("click to search")), "the to-buy heading is gone");
+		List<VisitorRules.Row> priced = VisitorRules.rows(needs, name -> name.equals("Wheat") ? 100 : 10, name -> name.equals("Carrot") ? 100_000.0 : null);
+		check(priced.get(0).getCostText().contains("Total") && priced.get(0).getCostText().contains("1.50M"), "the header shows the total in millions (15 x 100,000)");
+		check(priced.stream().filter(r -> "Carrot".equals(r.getBuyItem())).findFirst().orElseThrow().getCostText().contains("1.50M"), "a row shows its own cost");
+		check(rows.get(0).getCostText() == null && "§8?".equals(buy.get(0).getCostText()), "no price means no total and a question mark on the row");
+		check("<0.01M".equals(VisitorRules.millions(4_999)) && "0.01M".equals(VisitorRules.millions(5_000)) && "12.3M".equals(VisitorRules.millions(12_345_678)) && "123M".equals(VisitorRules.millions(123_456_789)),
+			"coin amounts print as millions");
+		check("ENCHANTED_MELON".equals(VisitorRules.bazaarId("Enchanted Melon")) && "ENCHANTED_SUGAR_CANE".equals(VisitorRules.bazaarId("Enchanted Sugar Cane"))
+			&& "ENCHANTED_RED_MUSHROOM".equals(VisitorRules.bazaarId("Enchanted Red Mushroom")) && "COMPACTED_SUNFLOWER".equals(VisitorRules.bazaarId("Compacted Sunflower")),
+			"a visitor item name is its Bazaar id in capitals");
+		check("MUTANT_NETHER_STALK".equals(VisitorRules.bazaarId("Mutant Nether Wart")) && "ENCHANTED_COCOA".equals(VisitorRules.bazaarId("Enchanted Cocoa Beans"))
+			&& "ENCHANTED_PORK".equals(VisitorRules.bazaarId("Enchanted Raw Porkchop")), "names the Bazaar words differently use their own id");
+		check("NETHER_STALK".equals(VisitorRules.baseId("MUTANT_NETHER_STALK")) && "MELON".equals(VisitorRules.baseId("ENCHANTED_MELON")) && "WILD_ROSE".equals(VisitorRules.baseId("COMPACTED_WILD_ROSE"))
+			&& "DIAMOND".equals(VisitorRules.baseId("DIAMOND")), "the base crop is the id without its tier prefix");
 	}
 
 	private static void checkGreenhouseRules() {

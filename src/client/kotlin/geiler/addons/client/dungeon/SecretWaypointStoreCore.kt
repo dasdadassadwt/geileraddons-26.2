@@ -22,7 +22,7 @@ object SecretWaypointStoreCore {
     private var defaults: List<SecretWaypointStore.Waypoint> = java.util.List.of()
 
     @kotlin.jvm.Volatile
-    private var roomTemplates: List<DevonianDungeonWaypointCatalog.Marker> = java.util.List.of()
+    private var roomTemplates: List<DungeonWaypointCatalog.Marker> = java.util.List.of()
 
     @kotlin.jvm.Volatile
     private var runtimeDefaults: List<SecretWaypointStore.Waypoint> = java.util.List.of()
@@ -163,7 +163,7 @@ object SecretWaypointStoreCore {
         return personal
     }
 
-    fun roomTemplates(): List<DevonianDungeonWaypointCatalog.Marker> {
+    fun roomTemplates(): List<DungeonWaypointCatalog.Marker> {
         load()
         return roomTemplates
     }
@@ -536,7 +536,7 @@ object SecretWaypointStoreCore {
     }
 
     private fun loadRoomTemplates() {
-        val catalog = DevonianDungeonWaypointCatalog.bundled()
+        val catalog = DungeonWaypointCatalog.bundled()
         if (catalog.available()) {
             roomTemplates = catalog.markers()
             catalogStatus = "Loaded " + defaults.size + " fixed and " + roomTemplates.size +

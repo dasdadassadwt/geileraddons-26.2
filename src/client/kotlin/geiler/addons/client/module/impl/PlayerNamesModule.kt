@@ -143,8 +143,6 @@ class PlayerNamesModule private constructor(settings: Settings) : Module(
 
     override fun configName(): String = "Player Names"
 
-    override fun isWorkInProgress(): Boolean = true
-
     override fun isSettingVisible(setting: Setting): Boolean {
         if (setting === ownSolidColor) return ownSolidColorEnabled.value() && !ownGradientEnabled.value()
         if (setting === ownGradientMode || setting === ownGradientAnimated) return ownGradientEnabled.value()
@@ -170,11 +168,9 @@ class PlayerNamesModule private constructor(settings: Settings) : Module(
         val tick = ++diagnosticTick
         GeilerAddonsLog.setModuleDiagnosticsEnabled(Category.VISUAL, name(), isEnabled())
         migrateLegacyGradientStops()
-        if (!isEnabled()) {
-            clearTransformCache()
-            return
-        }
+        // Hosted names of other players apply with the module off, so the profile keeps loading.
         PlayerPresentationProfileStore.INSTANCE.refreshIfDue()
+        if (!isEnabled()) return
         if (lastDiagnosticTick == Long.MIN_VALUE || tick - lastDiagnosticTick >= 100L) {
             val profiles = PlayerPresentationProfileStore.INSTANCE.current()
             GeilerAddonsLog.write(
@@ -455,7 +451,7 @@ class PlayerNamesModule private constructor(settings: Settings) : Module(
     private data class CachedString(val revision: Long, val value: String?)
 
     fun hasEnabledNameStyle(playerName: String?): Boolean {
-        if (!isEnabled() || !applyNameStyles.value() || playerName == null) return false
+        if (!applyNameStyles.value() || playerName == null) return false
         val entry = profileFor(playerName)
         return entry != null && entry.hasNameStyle()
     }
@@ -472,7 +468,7 @@ class PlayerNamesModule private constructor(settings: Settings) : Module(
 
     /** Fast guard so the Font hooks skip component/sequence reconstruction when no visible profile can match. */
     fun shouldTransformFontInput(path: Int): Boolean {
-        if (path < 0 || path >= TRANSFORM_PATHS.size || !isEnabled()) return false
+        if (path < 0 || path >= TRANSFORM_PATHS.size) return false
         if (path == PATH_WIDTH_STRING) return hasActiveNameAliasProfiles()
         return (replaceNames.value() || applyNameStyles.value()) && hasActiveNamePresentationProfiles()
     }
@@ -496,7 +492,7 @@ class PlayerNamesModule private constructor(settings: Settings) : Module(
     }
 
     fun chatMessageHasNamePresentation(message: Component?): Boolean {
-        if (!isEnabled() || (!replaceNames.value() && !applyNameStyles.value())) return false
+        if (!replaceNames.value() && !applyNameStyles.value()) return false
         refreshVisibilityCache()
         return PlayerNameTextTransform.hasNamePresentation(message) { name ->
             val entry = profileForCached(name)
@@ -536,10 +532,10 @@ class PlayerNamesModule private constructor(settings: Settings) : Module(
         val aliasNames = HashSet<String>()
         for (candidate in profiles.entries().values) {
             val playerName = requireNotNull(candidate.playerName()) { "Parsed player profile entry has no player name" }
-            val entry = resolveProfile(playerName, candidate, ownName)!!
+            // Null only for your own name while the module is off.
+            val entry = resolveProfile(playerName, candidate, ownName) ?: continue
             val key = normalizeName(playerName)
             resolved[key] = entry
-            if (!isEnabled()) continue
             if (isVisible(entry)) {
                 cachedVisibleNames = true
                 presentationNames.add(key)
@@ -556,17 +552,13 @@ class PlayerNamesModule private constructor(settings: Settings) : Module(
                 own = resolveProfile(ownName, null, ownName)
                 if (own != null) resolved[key] = own
             }
-            if (!isEnabled()) {
-                if (own == null) resolved.remove(key)
-            } else {
-                if (isVisible(own)) {
-                    cachedVisibleNames = true
-                    presentationNames.add(key)
-                }
-                if (replaceNames.value() && own != null && own.alias() != null) {
-                    cachedVisibleAliases = true
-                    aliasNames.add(key)
-                }
+            if (isVisible(own)) {
+                cachedVisibleNames = true
+                presentationNames.add(key)
+            }
+            if (replaceNames.value() && own != null && own.alias() != null) {
+                cachedVisibleAliases = true
+                aliasNames.add(key)
             }
         }
         profileSnapshot = java.util.Map.copyOf(resolved)
@@ -596,6 +588,8 @@ class PlayerNamesModule private constructor(settings: Settings) : Module(
         ownName: String?,
     ): PlayerPresentationProfiles.Entry? {
         if (playerName == null || ownName == null || !ownName.equals(playerName, ignoreCase = true)) return remote
+        // Module off: your own name gets no hosted or local presentation.
+        if (!isEnabled()) return null
 
         var alias: String? = ownAlias.value().trim { it.code <= 0x20 }
         if (isBlank(alias ?: "")) alias = if (remote == null) null else remote.alias()
@@ -629,7 +623,7 @@ class PlayerNamesModule private constructor(settings: Settings) : Module(
     }
 
     private fun hasAnimatedProfiles(): Boolean {
-        if (!isEnabled() || !applyNameStyles.value()) return false
+        if (!applyNameStyles.value()) return false
         refreshVisibilityCache()
         for (entry in profileSnapshot.values) {
             if (entry != null && entry.animation() != null && entry.hasNameStyle()) return true

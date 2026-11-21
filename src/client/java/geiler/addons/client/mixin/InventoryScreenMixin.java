@@ -18,6 +18,7 @@ public abstract class InventoryScreenMixin {
 	private void geileraddons$renderInventoryButtons(GuiGraphicsExtractor graphics, int mouseX, int mouseY,
 		float delta, CallbackInfo ci) {
 		InventoryButtonOverlay.render((InventoryScreen) (Object) this, graphics, mouseX, mouseY);
+		geiler.addons.client.module.impl.GardenPlotsOverlayModule.INSTANCE.renderOnInventory((InventoryScreen) (Object) this, graphics, mouseX, mouseY);
 	}
 
 	@Inject(method = "mouseReleased", at = @At("TAIL"))

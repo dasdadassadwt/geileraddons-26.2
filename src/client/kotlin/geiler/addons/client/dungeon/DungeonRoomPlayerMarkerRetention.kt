@@ -1,6 +1,6 @@
 package geiler.addons.client.dungeon
 
-import geiler.addons.client.dungeon.odin.OdinDungeonPlayerMap
+import geiler.addons.client.dungeon.helpers.DungeonPlayerMap
 import java.util.LinkedHashMap
 import java.util.LinkedHashSet
 import java.util.Locale
@@ -15,7 +15,7 @@ class DungeonRoomPlayerMarkerRetention {
 
     fun merge(
         current: List<DungeonRoomOverlayGeometry.PlayerMarker?>?,
-        roster: List<OdinDungeonPlayerMap.TabPlayer?>?,
+        roster: List<DungeonPlayerMap.TabPlayer?>?,
         tick: Long,
     ): Result = logic.merge(current, roster, tick)
 
@@ -81,11 +81,11 @@ private class RetentionCore {
 
     fun merge(
         current: List<DungeonRoomOverlayGeometry.PlayerMarker?>?,
-        roster: List<OdinDungeonPlayerMap.TabPlayer?>?,
+        roster: List<DungeonPlayerMap.TabPlayer?>?,
         tick: Long,
     ): DungeonRoomPlayerMarkerRetention.Result {
         val observed: List<DungeonRoomOverlayGeometry.PlayerMarker?> = current ?: emptyList()
-        val currentRoster: List<OdinDungeonPlayerMap.TabPlayer?> = roster ?: emptyList()
+        val currentRoster: List<DungeonPlayerMap.TabPlayer?> = roster ?: emptyList()
         val living = LinkedHashSet<String>()
         val dead = LinkedHashSet<String>()
         for (player in currentRoster) {

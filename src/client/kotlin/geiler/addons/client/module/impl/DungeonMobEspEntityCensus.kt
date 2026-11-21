@@ -22,7 +22,7 @@ object DungeonMobEspEntityCensus {
     fun capture(
         level: ClientLevel?,
         tick: Long,
-        associations: List<DungeonDevonianMobTracker.Association?>?,
+        associations: List<DungeonStarredMobTracker.Association?>?,
         publishedTargets: List<LivingEntity?>?,
         starredIdentities: Set<LivingEntity>?,
         profiles: DungeonMinibossProfileTracker?,
@@ -65,7 +65,7 @@ object DungeonMobEspEntityCensus {
 
     private fun appendAssociationRows(
         level: ClientLevel,
-        associations: List<DungeonDevonianMobTracker.Association?>?,
+        associations: List<DungeonStarredMobTracker.Association?>?,
         publishedTargets: List<LivingEntity?>?,
         identities: MinibossProfileMatchPolicy.IdentitySnapshot?,
         minibossEnabled: Boolean,
@@ -82,7 +82,7 @@ object DungeonMobEspEntityCensus {
             val bodyLiving = body is LivingEntity
             val bodyStand = body is ArmorStand
             val distanceSquared = if (label == null || body == null) Double.NaN else label.distanceToSqr(body)
-            val associationReason = if (association.source == DungeonDevonianMobTracker.ResolutionSource.SPATIAL_FALLBACK) {
+            val associationReason = if (association.source == DungeonStarredMobTracker.ResolutionSource.SPATIAL_FALLBACK) {
                 "unique-spatial-fallback"
             } else {
                 DungeonMobEspSupport.shadowAssassinAssociationReason(
@@ -95,7 +95,7 @@ object DungeonMobEspEntityCensus {
             } else {
                 "not-player"
             }
-            val shadowAssassin = association.mobClass == DungeonDevonianMobTracker.MobClass.SHADOW_ASSASSIN
+            val shadowAssassin = association.mobClass == DungeonStarredMobTracker.MobClass.SHADOW_ASSASSIN
             val starredPass = shadowAssassin || !onlyStarred || association.starred
             val onlyStarredResult = if (!onlyStarred) "off"
                 else if (shadowAssassin && !association.starred) "sa-exempt"
@@ -127,17 +127,17 @@ object DungeonMobEspEntityCensus {
     ) {
         if (entity.hasCustomName()) {
             val name = DungeonMobEspSupport.plainName(entity)
-            val mobClass = DungeonDevonianMobTracker.classifyNameplate(name)
+            val mobClass = DungeonStarredMobTracker.classifyNameplate(name)
             val normalized = DungeonMobEspSupport.normalizedMobName(name)
             val shadowLike = normalized.contains("shadow") || normalized.contains("assassin")
             if (mobClass != null || shadowLike) {
                 val label = mobClass?.label()?.replace(' ', '_') ?: "unmatched-shadow-related"
-                val starred = DungeonDevonianMobTracker.hasDevonianStarEvidence(name)
+                val starred = DungeonStarredMobTracker.hasDevonianStarEvidence(name)
                 var row = "entity#${entity.getId()}($typeId),label=$label,star=$starred"
                 val shadowAssassin = mobClass?.isShadowAssassin() == true || shadowLike
                 if (entity is ArmorStand && shadowAssassin) {
-                    val bodyId = DungeonDevonianMobTracker.bodyEntityId(
-                        entity.getId(), DungeonDevonianMobTracker.MobClass.SHADOW_ASSASSIN,
+                    val bodyId = DungeonStarredMobTracker.bodyEntityId(
+                        entity.getId(), DungeonStarredMobTracker.MobClass.SHADOW_ASSASSIN,
                     )
                     val body = level.getEntity(bodyId)
                     val distanceSquared = if (body == null) Double.NaN else body.distanceToSqr(entity)
@@ -147,7 +147,7 @@ object DungeonMobEspEntityCensus {
                     )
                     row += ",bodyId=$bodyId(${typeId(body)}),assoc=$association"
                 } else if (entity is ArmorStand && mobClass != null) {
-                    row += ",bodyId=${DungeonDevonianMobTracker.bodyEntityId(entity.getId(), mobClass)}"
+                    row += ",bodyId=${DungeonStarredMobTracker.bodyEntityId(entity.getId(), mobClass)}"
                 }
                 rows.add(row, shadowAssassin, shadowAssassin)
             }

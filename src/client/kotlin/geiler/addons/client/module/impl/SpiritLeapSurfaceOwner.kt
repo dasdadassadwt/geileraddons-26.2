@@ -1,6 +1,6 @@
 package geiler.addons.client.module.impl
 
-import geiler.addons.client.dungeon.odin.SpiritLeapSelection
+import geiler.addons.client.dungeon.helpers.SpiritLeapSelection
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.Screen

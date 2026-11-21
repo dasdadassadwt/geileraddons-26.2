@@ -467,7 +467,7 @@ class SparklingCritterModule private constructor(settings: Settings) : Module(
                 continue
             }
             val label = SparklingCritterDecisions.hudLabel(sighting.species)
-            val box = sighting.body.getBoundingBox()
+            val box = ProjectedLabelRenderer.entityBox(sighting.body)
             val world = Vec3(box.getCenter().x, box.maxY + LABEL_HEIGHT, box.getCenter().z)
             attempted++
             if (ProjectedLabelRenderer.draw(graphics, camera, mc.font, world, label, argb, scale)) {

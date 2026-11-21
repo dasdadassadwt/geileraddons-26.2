@@ -1,7 +1,7 @@
 package geiler.addons.client.module.impl
 
 import geiler.addons.client.dungeon.DungeonClass
-import geiler.addons.client.dungeon.odin.SpiritLeapRoster
+import geiler.addons.client.dungeon.helpers.SpiritLeapRoster
 import geiler.addons.client.tree.ChatText
 import java.util.Locale
 

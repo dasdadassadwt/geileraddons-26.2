@@ -5,6 +5,7 @@ import geiler.addons.client.module.Module
 import geiler.addons.client.module.NumberSetting
 import geiler.addons.client.module.impl.ChatChannelsModule
 import geiler.addons.client.module.impl.ChatModule
+import geiler.addons.client.module.impl.CritterMarkersModule
 import geiler.addons.client.module.impl.DungeonBloodCampModule
 import geiler.addons.client.module.impl.DungeonHelperModule
 import geiler.addons.client.module.impl.DungeonInvincibilityTimerModule
@@ -25,6 +26,31 @@ import geiler.addons.client.presentation.PlayerPresentationPolicy
 
 /** Kotlin implementations of config migrations whose Java entrypoints remain stable. */
 object ModConfigMigrations {
+    /**
+     * Moves the removed Hideonwall ESP module into Critter Markers. Its on/off state becomes Hideonwall Boxes (and turns
+     * Critter Markers on when that module had no saved state, or the boxes would vanish), its Box Color becomes
+     * Hideonwall Color. Saved Critter Markers values always win.
+     */
+    @JvmStatic
+    fun migrateLegacyHideonwallEsp(
+        enabled: MutableMap<String, Boolean?>,
+        toggles: MutableMap<String, Boolean?>,
+        colors: MutableMap<String, IntArray?>,
+    ): Boolean {
+        val markers = CritterMarkersModule.INSTANCE
+        val oldEnabled = enabled["Hideonwall ESP"]
+        var changed = false
+        val boxesKey = ConfigSettingKeys.settingKey(markers, "Hideonwall Boxes")
+        if (oldEnabled != null && !toggles.containsKey(boxesKey)) {
+            toggles[boxesKey] = oldEnabled
+            changed = true
+            if (oldEnabled && !enabled.containsKey(markers.configName())) enabled[markers.configName()] = true
+        }
+        return ConfigSettingKeys.copySetting(
+            colors, "Hideonwall ESP.Box Color", ConfigSettingKeys.settingKey(markers, "Hideonwall Color"),
+        ) || changed
+    }
+
     /** Moves the former channel-history HUD preference to the standalone Chat module once. */
     @JvmStatic
     fun migrateLegacyChatHud(

@@ -99,7 +99,7 @@ public final class PresentationControlChecks {
 		check("Slot Locking".equals(inventoryControls.name())
 			&& "Player Inventory Controls".equals(inventoryControls.configName())
 			&& inventoryControls.category() == Category.MISCELLANEOUS
-			&& !inventoryControls.defaultEnabled() && !inventoryControls.isWorkInProgress(),
+			&& !inventoryControls.defaultEnabled(),
 			"Slot Locking retains its public/config identity, category and default-off state, and carries no WIP marker");
 		check(booleanValues(inventoryControls.booleanSettings()).equals(Map.of(
 			"Protect Bound Slots", true,

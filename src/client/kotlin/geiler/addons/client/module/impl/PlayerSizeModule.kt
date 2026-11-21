@@ -61,8 +61,9 @@ class PlayerSizeModule private constructor(settings: Settings) : Module(
     }
 
     fun tick() {
+        // Hosted sizes of other players apply with the module off, so the profile must keep loading.
+        if (useRemoteSizes.value()) PlayerPresentationProfileStore.INSTANCE.refreshIfDue()
         if (!isEnabled()) return
-        PlayerPresentationProfileStore.INSTANCE.refreshIfDue()
         diagnosticTick++
         if (diagnosticTick % DIAGNOSTIC_HEARTBEAT_TICKS == 0L) {
             writeDiagnostic(status("enabled=true"))
@@ -70,15 +71,18 @@ class PlayerSizeModule private constructor(settings: Settings) : Module(
     }
 
     fun sizeScale(playerName: String?): SizeScale {
-        if (!isEnabled() || playerName == null) return SizeScale.UNIT
+        if (playerName == null) return SizeScale.UNIT
 
         val client = Minecraft.getInstance()
         val ownName = if (client == null || client.user == null) null else client.user.name
-        if (resizeOwnPlayer.value() && ownName != null && ownName.equals(playerName, ignoreCase = true)) {
+        val isOwn = ownName != null && ownName.equals(playerName, ignoreCase = true)
+        // Module off: only other players' hosted sizes show; your own model and local overrides need the module.
+        if (!isEnabled() && isOwn) return SizeScale.UNIT
+        if (isEnabled() && resizeOwnPlayer.value() && isOwn) {
             return SizeScale(ownSizeX.value(), ownSizeY.value(), ownSizeZ.value())
         }
 
-        val local = PlayerSizeOverrideStore.INSTANCE.find(playerName)
+        val local = if (isEnabled()) PlayerSizeOverrideStore.INSTANCE.find(playerName) else null
         if (local != null && local.enabled) {
             return SizeScale(local.sizeX, local.sizeY, local.sizeZ)
         }

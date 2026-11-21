@@ -1,7 +1,7 @@
 package geiler.addons.client.mixin;
 
 import geiler.addons.client.module.impl.ExperimentSolverModule;
-import geiler.addons.client.module.impl.DungeonOdinAssistModule;
+import geiler.addons.client.module.impl.DungeonAssistModule;
 import geiler.addons.client.module.impl.SpiritLeapPovRenderer;
 import geiler.addons.client.module.impl.SpiritLeapGuiOrdering;
 import geiler.addons.client.module.impl.SpiritLeapSurfaceOwner;
@@ -58,7 +58,7 @@ public abstract class ScreenMixin {
 			return;
 		}
 		if (screen instanceof AbstractContainerScreen<?> container) {
-			if (DungeonOdinAssistModule.INSTANCE.renderSpiritLeapScreen(graphics, Minecraft.getInstance().font,
+			if (DungeonAssistModule.INSTANCE.renderSpiritLeapScreen(graphics, Minecraft.getInstance().font,
 				screen.width, screen.height, container, mouseX, mouseY)) {
 				SpiritLeapSurfaceOwner.acquireAfterValidatedRender(container);
 				graphics.extractDeferredElements(mouseX, mouseY, delta);

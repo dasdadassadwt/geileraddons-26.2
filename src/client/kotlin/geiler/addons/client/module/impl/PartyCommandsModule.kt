@@ -74,10 +74,14 @@ class PartyCommandsModule private constructor(settings: Settings) : Module(
             return true
         }
 
-        /** Folder dropdown: "" is the top level, other values are folder ids shown by their path. */
-        private fun replyFolderChoice(current: String?): ChoiceSetting {
+        /** Folder dropdown value for "no folder"; ChoiceSetting rejects blank names, so it cannot be "". */
+        const val TOP_LEVEL = "top-level"
+
+        /** Folder dropdown: [TOP_LEVEL] is the top level, other values are folder ids shown by their path. */
+        @JvmStatic
+        fun replyFolderChoice(current: String?): ChoiceSetting {
             val tree = ChatChannelsLocalStore.instance().replyFolders()
-            val labels = linkedMapOf("" to "Top level")
+            val labels = linkedMapOf(TOP_LEVEL to "Top level")
             for (folder in tree.folders()) {
                 val names = ArrayList<String>()
                 var node: geiler.addons.client.collections.FolderTree.Folder? = folder
@@ -87,7 +91,7 @@ class PartyCommandsModule private constructor(settings: Settings) : Module(
                 }
                 labels[folder.id!!] = names.joinToString(" / ")
             }
-            val value = if (current != null && labels.containsKey(current)) current else ""
+            val value = if (current != null && labels.containsKey(current)) current else TOP_LEVEL
             return ChoiceSetting("Folder", value, labels, *labels.keys.toTypedArray())
         }
 
@@ -168,8 +172,6 @@ class PartyCommandsModule private constructor(settings: Settings) : Module(
             SettingGroup("Preset Commands", *presets.toTypedArray(), inviteAutoConfirmSetting),
         )
     }
-
-    override fun isWorkInProgress(): Boolean = true
 
     override fun configName(): String = "Party Commands"
 
@@ -518,11 +520,12 @@ class PartyCommandsModule private constructor(settings: Settings) : Module(
             if (controls != null && controls.enabled.value() != entry.enabled()) {
                 store.setChatReplyEnabled(entry.id(), controls.enabled.value())
             }
-            if (controls != null && controls.folder.value() != (entry.folderId() ?: "")) {
-                store.setChatReplyFolder(entry.id(), controls.folder.value().ifEmpty { null })
+            if (controls != null && controls.folder.value() != (entry.folderId() ?: TOP_LEVEL)) {
+                store.setChatReplyFolder(entry.id(), controls.folder.value().takeIf { it != TOP_LEVEL })
             }
         }
         replyControls.keys.retainAll(liveReplies)
+        applyLiveReplyEdits(store)
 
         val liveFolders = HashSet<String>()
         for (folder in store.replyFolderSnapshot()) {
@@ -539,6 +542,28 @@ class PartyCommandsModule private constructor(settings: Settings) : Module(
         }
         folderControls.keys.retainAll(liveFolders)
         folderNames.keys.retainAll(liveFolders)
+    }
+
+    /**
+     * Applies edits to the inline command, mode and text fields as they are typed. A half-typed edit that is not
+     * yet a valid reply (or whose name is taken) is skipped silently and the saved reply keeps working.
+     */
+    private fun applyLiveReplyEdits(store: ChatChannelsLocalStore) {
+        val prefix = commandPrefixSetting.value()
+        val current = store.chatReplies()
+        var changed = false
+        val updated = ArrayList<ChatReplyEntry>(current.size)
+        for (entry in current) {
+            val controls = replyControls[entry.id()]
+            val edited = if (controls == null) null else ChatReplyConfigRules.editedEntry(
+                entry, prefix, controls.command.value(),
+                controls.mode.value() == ChatReplyEntry.Mode.LOCAL_ACTION.name,
+                controls.payload.value(), controls.enabled.value(),
+            )
+            if (edited != null && edited != entry) changed = true
+            updated.add(edited ?: entry)
+        }
+        if (changed && ChatReplyConfigRules.validReplacement(updated)) store.replaceChatReplies(updated)
     }
 
     private fun saveReplyEdits() {

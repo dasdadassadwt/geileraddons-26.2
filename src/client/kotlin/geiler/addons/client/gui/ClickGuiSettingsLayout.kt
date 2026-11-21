@@ -34,7 +34,7 @@ internal object ClickGuiSettingsLayout {
 
     const val PREVIEW_GAP = 6
     const val SWITCH_WIDTH = 20
-    const val SWITCH_HEIGHT = 11
+    const val SWITCH_HEIGHT = 12
     const val TEXT_FIELD_WIDTH = 64
     const val TEXT_FIELD_HEIGHT = 13
     const val NUMBER_FIELD_WIDTH = 64

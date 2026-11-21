@@ -13,6 +13,7 @@ import geiler.addons.client.module.DebugState
 import geiler.addons.client.module.Module
 import geiler.addons.client.module.ModuleAction
 import geiler.addons.client.module.ModuleCategoryFilter
+import geiler.addons.client.module.ModuleKeybind
 import geiler.addons.client.module.ModuleKeybindManager
 import geiler.addons.client.module.ModuleManager
 import geiler.addons.client.module.ModulePreview
@@ -72,7 +73,6 @@ import geiler.addons.client.gui.GuiTheme.GROUP_HEADER
 import geiler.addons.client.gui.GuiTheme.PANEL_BOTTOM
 import geiler.addons.client.gui.GuiTheme.PANEL_HIGHLIGHT
 import geiler.addons.client.gui.GuiTheme.PANEL_TOP
-import geiler.addons.client.gui.GuiTheme.RADIUS
 import geiler.addons.client.gui.GuiTheme.RADIUS_SMALL
 import geiler.addons.client.gui.GuiTheme.SCROLLBAR
 import geiler.addons.client.gui.GuiTheme.SLIDER_FILL
@@ -113,6 +113,8 @@ class ClickGuiScreen @JvmOverloads constructor(
 
     /** The preview that took the mouse press now being dragged, if any. */
     private var draggingPreview: ModulePreview? = null
+    /** The card under a held left click; it shrinks slightly and stretches its knob until the release. */
+    private var pressedCard: Module? = null
     private var focusedTextSetting: TextSetting? = null
     private var textCursor = 0
     private var textAnchor = -1
@@ -147,6 +149,8 @@ class ClickGuiScreen @JvmOverloads constructor(
     private var closing = false
     private var pendingScreen: Screen? = null
     private var lastFrameNanos = openedAtNanos
+    /** When a scrollbar last moved; the thin bars fade out shortly after. */
+    private var lastScrollNanos = 0L
     private var searchQuery = ""
     private var stashedGridQuery = ""
     private var searchCursor = 0
@@ -193,6 +197,14 @@ class ClickGuiScreen @JvmOverloads constructor(
     init {
         settingsScrollVisual = settingsScroll.toDouble()
         gridScrollVisual = gridScroll.toDouble()
+        // A search from the last two minutes carries over; it belongs to the grid, so a module open on top keeps it stashed.
+        val recalled = ClickGuiState.recalledSearch()
+        if (openSettingsModule == null) {
+            searchQuery = recalled
+            searchCursor = recalled.length
+        } else {
+            stashedGridQuery = recalled
+        }
     }
 
     override fun init() {
@@ -202,7 +214,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         guiDiagnosticEvents = 0
         suppressedGuiDiagnosticEvents = 0
         GeilerAddonsLog.setModuleDiagnosticsEnabled(Category.MISCELLANEOUS, GUI_DIAGNOSTIC_MODULE, true)
-        logGuiDiagnostic("STATUS action=open,${gridDiagnosticState(selectedCategory)}")
+        logGuiDiagnostic("STATUS action=open,${gridDiagnosticState(selectedCategory)},${designDiagnostic()}")
     }
 
     override fun isPauseScreen(): Boolean = false
@@ -226,6 +238,7 @@ class ClickGuiScreen @JvmOverloads constructor(
     override fun removed() {
         // Written once on the way out rather than on every scroll notch.
         persistView()
+        ClickGuiState.rememberSearch(if (openSettingsModule == null) searchQuery else stashedGridQuery)
         ModuleKeybindManager.cancelBinding()
         ModConfig.save()
         if (guiDiagnosticsActive) {
@@ -278,7 +291,15 @@ class ClickGuiScreen @JvmOverloads constructor(
         return "category=${category.name},filter=${ClickGuiState.moduleFilter(category)},columns=${cardColumns()},queryActive=${searchQuery.isNotBlank()},cards=${modules.size},sections=$sectionSummary" +
             ",categoryScroll=$categoryScroll,categoryViewportHeight=${categoryViewportHeight(panelY())}" +
             ",viewport=${viewport.w}x${viewport.h},contentHeight=${layout.contentHeight()},scroll=$scroll" +
-            ",maxScroll=${maxOf(0, layout.contentHeight() - viewport.h)}"
+            ",maxScroll=${maxOf(0, layout.contentHeight() - viewport.h)}" + firstCardHitDiagnostic(category, modules)
+    }
+
+    /** Hit-area sizes (heart, switch, key) of the first card, so a dead or overlapping click area shows in the log. */
+    private fun firstCardHitDiagnostic(category: Category, modules: List<Module>): String {
+        val card = cardRects(category, modules, panelX() + categoryWidth(), panelY(), 0.0).firstOrNull() ?: return ""
+        val bounds = Rect(card.x(), card.y(), card.w(), card.h())
+        val hits = cardHitRects(card.module(), bounds)
+        return ",hit=" + hits.joinToString("/") { if (it == null) "none" else "${it.w}x${it.h}" }
     }
 
     private fun persistView() {
@@ -437,14 +458,18 @@ class ClickGuiScreen @JvmOverloads constructor(
         togglePulses[target] = TogglePulse(from, to, System.nanoTime())
     }
 
-    private fun togglePosition(target: Any, on: Boolean, now: Long, motion: ClickGuiMotion): Float {
-        val pulse = togglePulses[target] ?: return if (on) 1.0f else 0.0f
-        val progress = ClickGuiMotion.smoothToggle(elapsedMillis(pulse.startedNanos, now).toFloat() / 180.0f)
-        if (progress >= 1.0f) {
+    /** Knob edge positions (0 = off, 1 = on) as [lead, trail]; they differ only while a toggle settles. */
+    private fun toggleEdges(target: Any, on: Boolean, now: Long, motion: ClickGuiMotion): FloatArray {
+        val end = if (on) 1.0f else 0.0f
+        val pulse = togglePulses[target] ?: return floatArrayOf(end, end)
+        val elapsed = elapsedMillis(pulse.startedNanos, now)
+        if (elapsed >= motion.liquidMillis()) {
             togglePulses.remove(target)
-            return if (pulse.to) 1.0f else 0.0f
+            return floatArrayOf(end, end)
         }
-        return lerp(if (pulse.from) 1.0f else 0.0f, if (pulse.to) 1.0f else 0.0f, progress)
+        val from = if (pulse.from) 1.0f else 0.0f
+        val to = if (pulse.to) 1.0f else 0.0f
+        return floatArrayOf(lerp(from, to, motion.liquidLead(elapsed)), lerp(from, to, motion.liquidTrail(elapsed)))
     }
 
     private fun setExpandedColor(target: ColorSetting?) {
@@ -497,9 +522,26 @@ class ClickGuiScreen @JvmOverloads constructor(
 
     // ---- layout -------------------------------------------------------------------------
 
-    private fun panelWidth(): Int = ClickGuiHeaderGeometry.panelWidthForScreen(width)
+    /** Pose scale from design px (GUI scale 2) to the current GUI px; see [ClickGuiDesignScale]. */
+    private fun designPose(): Float {
+        val window = minecraft.window
+        return ClickGuiDesignScale.poseScale(window.width, window.height, window.guiScale.toDouble(),
+            VisualModule.INSTANCE.lockGuiScale().value())
+    }
 
-    private fun panelHeight(): Int = ClickGuiHeaderGeometry.panelHeightForScreen(height)
+    /** Screen size in design px; every layout below works in these units. */
+    private fun vw(): Int = ClickGuiDesignScale.virtualSize(width, designPose())
+    private fun vh(): Int = ClickGuiDesignScale.virtualSize(height, designPose())
+
+    private fun designDiagnostic(): String {
+        val window = minecraft.window
+        return "poseScale=${String.format(java.util.Locale.ROOT, "%.3f", designPose())},guiScale=${window.guiScale}," +
+            "virtual=${vw()}x${vh()},locked=${VisualModule.INSTANCE.lockGuiScale().value()}"
+    }
+
+    private fun panelWidth(): Int = ClickGuiHeaderGeometry.panelWidthForScreen(vw())
+
+    private fun panelHeight(): Int = ClickGuiHeaderGeometry.panelHeightForScreen(vh())
 
     private fun categoryWidth(): Int {
         val panelWidth = panelWidth()
@@ -509,13 +551,13 @@ class ClickGuiScreen @JvmOverloads constructor(
         ) return categoryWidthCachedValue
 
         var longestLabel = 0
-        for (category in Category.values()) longestLabel = maxOf(longestLabel, font.width(category.displayName()))
-        val logoRoom = ClickGuiHeaderGeometry.categoryBrandRoom(panelWidth, panelHeight)
-        val labelRoom = Math.round(longestLabel * CATEGORY_TEXT_SCALE) + 24
+        for (category in Category.values()) longestLabel = maxOf(longestLabel, font.width(categoryLabel(category)))
+        // label inset + widest label + gap + favourite heart + its inset
+        val labelRoom = CATEGORY_LABEL_X + longestLabel + 5 + categoryFavoriteSize() + 4
         categoryWidthCachedFont = font
         categoryWidthCachedPanelWidth = panelWidth
         categoryWidthCachedPanelHeight = panelHeight
-        categoryWidthCachedValue = minOf(maxOf(1, panelWidth - 1), maxOf(labelRoom, logoRoom))
+        categoryWidthCachedValue = minOf(maxOf(1, panelWidth - 1), maxOf(CATEGORY_MIN_WIDTH, labelRoom))
         return categoryWidthCachedValue
     }
 
@@ -537,13 +579,6 @@ class ClickGuiScreen @JvmOverloads constructor(
 
     private fun headerInsetX(): Int = ClickGuiHeaderGeometry.headerInsetXForPanelWidth(panelWidth())
 
-    private fun headerButtonGap(): Int = ClickGuiHeaderGeometry.headerButtonGapForPanelWidth(panelWidth())
-
-    private fun profileHeaderRect(panelX: Int, panelY: Int): Rect =
-        ClickGuiHeaderGeometry.profileHeaderRectForLayout(panelX, panelY, panelWidth(), panelHeight())
-
-    private fun versionRect(panelX: Int, panelY: Int): Rect =
-        ClickGuiHeaderGeometry.versionBadgeRectForLayout(panelX, panelY, panelWidth(), panelHeight())
 
     private fun updateDownloadRect(panelX: Int, panelY: Int): Rect {
         val scale = maxOf(1, Math.round(panelWidth() / 1357.0f * 100))
@@ -559,7 +594,7 @@ class ClickGuiScreen @JvmOverloads constructor(
     private fun updateInfoRect(panelX: Int, panelY: Int): Rect {
         val download = updateDownloadRect(panelX, panelY)
         return Rect(
-            download.x + download.w + maxOf(3, headerButtonGap() / 3), download.y,
+            download.x + download.w + 3, download.y,
             maxOf(30, Math.round(panelWidth() * 0.028f)), download.h,
         )
     }
@@ -567,20 +602,12 @@ class ClickGuiScreen @JvmOverloads constructor(
     private fun searchRect(panelX: Int, panelY: Int): Rect =
         ClickGuiHeaderGeometry.searchRectForLayout(panelX, panelY, panelWidth(), panelHeight(), categoryWidth())
 
+    private fun workspaceRect(panelX: Int, panelY: Int): Rect = topBarRect(panelX, panelY, TopBarIcon.WORKSPACE)
     private fun githubRect(panelX: Int, panelY: Int): Rect = topBarRect(panelX, panelY, TopBarIcon.GITHUB)
     private fun settingsGearRect(panelX: Int, panelY: Int): Rect = topBarRect(panelX, panelY, TopBarIcon.SETTINGS)
     private fun themeRect(panelX: Int, panelY: Int): Rect = topBarRect(panelX, panelY, TopBarIcon.THEME)
     private fun moveElementsRect(panelX: Int, panelY: Int): Rect = topBarRect(panelX, panelY, TopBarIcon.MOVE_ELEMENTS)
     private fun settingsBackRect(x: Int, panelY: Int): Rect = settingsHeaderSurfaceRect(x, panelY)
-
-    private fun settingsBackLabelRect(x: Int, panelY: Int): Rect {
-        val surface = settingsHeaderSurfaceRect(x, panelY)
-        val height = minOf(18, maxOf(1, surface.h - 4))
-        return Rect(
-            surface.x + 4, surface.y + (surface.h - height) / 2,
-            minOf(58, maxOf(1, surface.w - 8)), height,
-        )
-    }
 
     private fun settingsHeaderSurfaceRect(x: Int, panelY: Int): Rect {
         val viewport = gridViewport(x, panelY)
@@ -669,95 +696,59 @@ class ClickGuiScreen @JvmOverloads constructor(
         now: Long,
         motion: ClickGuiMotion,
     ) {
-        val logo = profileHeaderRect(panelX, panelY)
-        val versionBounds = versionRect(panelX, panelY)
         val search = searchRect(panelX, panelY)
-        val repository = githubRect(panelX, panelY)
-        val settings = settingsGearRect(panelX, panelY)
-        val theme = themeRect(panelX, panelY)
-        val moveElements = moveElementsRect(panelX, panelY)
-        val pose = graphics.pose()
-        pose.pushMatrix()
-        pose.translate(logo.x.toFloat(), logo.y.toFloat())
-        pose.scale(logo.w / 512.0f, logo.h / 512.0f)
-        graphics.blit(RenderPipelines.GUI_TEXTURED, MOD_LOGO, 0, 0, 0.0f, 0.0f, 512, 512, 512, 512, 0xFFFFFFFF.toInt())
-        pose.popMatrix()
         var version = UpdateChecker.currentVersion()
         if (version.isBlank()) version = "unknown"
-        roundedRectBordered(
-            graphics, versionBounds.x, versionBounds.y, versionBounds.w, versionBounds.h,
-            maxOf(5, Math.round(versionBounds.h * 0.22f)), GROUP_HEADER, GROUP_HEADER, BORDER,
-        )
-        val versionText = textFit(font, "v$version", maxOf(1, Math.round((versionBounds.w - 12) / HEADER_TEXT_SCALE)))
-        val versionTextWidth = Math.round(font.width(versionText) * HEADER_TEXT_SCALE)
-        val versionTextHeight = Math.round(font.lineHeight * HEADER_TEXT_SCALE)
-        drawScaledText(
-            graphics, font, versionText,
-            versionBounds.x + (versionBounds.w - versionTextWidth) / 2,
-            versionBounds.y + (versionBounds.h - versionTextHeight) / 2,
-            TEXT_PRIMARY, HEADER_TEXT_SCALE,
+        val versionX = ClickGuiHeaderGeometry.versionTextX(panelX, categoryWidth())
+        graphics.text(
+            font, textFit(font, "v$version", maxOf(1, search.x - versionX - 8)), versionX,
+            panelY + (baseHeaderHeight() - TEXT_HEIGHT) / 2, TEXT_MUTED, false,
         )
 
         if (search.w > 0) {
-            roundedRectBordered(
-                graphics, search.x, search.y, search.w, search.h, maxOf(6, Math.round(search.h * 0.22f)),
-                if (searchFocused) BUTTON_BG else GROUP_HEADER,
-                if (searchFocused) BUTTON_BG else GROUP_HEADER,
-                if (searchFocused) PANEL_HIGHLIGHT else BORDER,
-            )
+            roundedRect(graphics, search.x, search.y, search.w, search.h, componentRadius(),
+                if (searchFocused) CARD_BG_HOVER else GROUP_HEADER)
         }
 
-        renderTopBarButton(graphics, repository, TopBarIcon.GITHUB, "Open GitHub repository", mouseX, mouseY)
-        renderTopBarButton(graphics, settings, TopBarIcon.SETTINGS, "General settings", mouseX, mouseY)
-        renderTopBarButton(graphics, theme, TopBarIcon.THEME, "Theme settings", mouseX, mouseY)
-        renderTopBarButton(graphics, moveElements, TopBarIcon.MOVE_ELEMENTS, "Move HUD elements", mouseX, mouseY)
+        renderTopBarButton(graphics, workspaceRect(panelX, panelY), TopBarIcon.WORKSPACE,
+            "Switch to " + ClickGuiState.workspace().switchLabel(), mouseX, mouseY)
+        renderTopBarButton(graphics, githubRect(panelX, panelY), TopBarIcon.GITHUB, "Open the GitHub page", mouseX, mouseY)
+        renderTopBarButton(graphics, settingsGearRect(panelX, panelY), TopBarIcon.SETTINGS, "General settings", mouseX, mouseY)
+        renderTopBarButton(graphics, themeRect(panelX, panelY), TopBarIcon.THEME, "Theme and colors", mouseX, mouseY)
+        renderTopBarButton(graphics, moveElementsRect(panelX, panelY), TopBarIcon.MOVE_ELEMENTS, "Move HUD elements", mouseX, mouseY)
         val newer = UpdateChecker.newerVersion()
         if (newer != null) {
             renderUpdateButton(graphics, font, updateDownloadRect(panelX, panelY), "Download", mouseX, mouseY)
             renderUpdateButton(graphics, font, updateInfoRect(panelX, panelY), "Info", mouseX, mouseY)
         }
 
-        if (search.w > 0) {
-            val queryText = if (searchQuery.isEmpty()) (if (openSettingsModule != null) "Search settings..." else "Search modules...") else searchQuery
-            val searchTextInset = searchTextInsetForHeight(search.h)
-            val searchTextX = search.x + searchTextInset
+        if (search.w > 0 && (searchFocused || searchQuery.isNotEmpty())) {
+            val searchTextX = search.x + searchTextInsetForHeight(search.h)
             val searchTextWidth = searchTextFontWidth(search.w, search.h)
             val searchTextPixels = searchTextViewportWidth(search.w, search.h)
-            var queryColor = if (searchQuery.isEmpty()) TEXT_MUTED else TEXT_PRIMARY
-            val querySlice = if (searchQuery.isEmpty()) TextSlice(textFit(font, queryText, searchTextWidth), 0, 0)
-                else visibleSlice(font, searchQuery, searchCursor, searchTextWidth)
-            val searchTextY = search.y + (search.h - Math.round(TEXT_HEIGHT * HEADER_TEXT_SCALE)) / 2
+            val querySlice = visibleSlice(font, searchQuery, searchCursor, searchTextWidth)
+            val searchTextY = search.y + (search.h - TEXT_HEIGHT) / 2
             graphics.enableScissor(searchTextX, search.y + 2, searchTextX + searchTextPixels, search.y + search.h - 2)
             val searchSelection = selection(searchQuery, searchCursor, searchAnchor)
             if (searchFocused && !searchSelection.isEmpty() && querySlice.text.isNotEmpty()) {
                 val from = clampCursor(querySlice.text, searchSelection.start - querySlice.start)
                 val to = clampCursor(querySlice.text, searchSelection.end - querySlice.start)
-                val fromX = searchTextX + Math.round(font.width(querySlice.text.substring(0, from)) * HEADER_TEXT_SCALE)
-                val toX = minOf(
-                    searchTextX + searchTextPixels,
-                    searchTextX + Math.round(font.width(querySlice.text.substring(0, to)) * HEADER_TEXT_SCALE),
-                )
-                graphics.fill(
-                    fromX, searchTextY - 1, toX,
-                    searchTextY + Math.round(TEXT_HEIGHT * HEADER_TEXT_SCALE) + 1, CATEGORY_SELECTED,
-                )
+                val fromX = searchTextX + font.width(querySlice.text.substring(0, from))
+                val toX = minOf(searchTextX + searchTextPixels, searchTextX + font.width(querySlice.text.substring(0, to)))
+                graphics.fill(fromX, searchTextY - 1, toX, searchTextY + TEXT_HEIGHT + 1, CATEGORY_SELECTED)
             }
-            drawScaledText(graphics, font, querySlice.text, searchTextX, searchTextY, queryColor, HEADER_TEXT_SCALE)
+            graphics.text(font, querySlice.text, searchTextX, searchTextY, TEXT_PRIMARY, false)
             if (searchFocused && (System.currentTimeMillis() / CARET_BLINK_MILLIS) % 2 == 0L) {
                 val cursorInSlice = clampCursor(querySlice.text, searchCursor - querySlice.start)
-                val caretX = searchTextX + Math.round(
-                    font.width(querySlice.text.substring(0, cursorInSlice)) * HEADER_TEXT_SCALE,
-                )
-                graphics.fill(
-                    caretX, search.y + maxOf(3, search.h / 5), caretX + 1,
-                    search.y + search.h - maxOf(3, search.h / 5), TEXT_PRIMARY,
-                )
+                val caretX = searchTextX + font.width(querySlice.text.substring(0, cursorInSlice))
+                graphics.fill(caretX, search.y + maxOf(3, search.h / 5), caretX + 1,
+                    search.y + search.h - maxOf(3, search.h / 5), TEXT_PRIMARY)
             }
             graphics.disableScissor()
-            renderSearchIcon(graphics, search, GuiTheme.searchIconColor())
         }
     }
 
+    /** A flat toolbar button: no outline, the accent fill on hover, and a short tooltip. */
     private fun renderTopBarButton(
         graphics: GuiGraphicsExtractor,
         bounds: Rect,
@@ -767,13 +758,10 @@ class ClickGuiScreen @JvmOverloads constructor(
         mouseY: Int,
     ) {
         val hovered = bounds.contains(mouseX, mouseY)
-        val surface = if (hovered) BUTTON_HOVER else GROUP_HEADER
-        roundedRectBordered(
-            graphics, bounds.x, bounds.y, bounds.w, bounds.h,
-            maxOf(6, Math.round(bounds.w * 0.24f)), surface, surface, if (hovered) PANEL_HIGHLIGHT else BORDER,
-        )
+        roundedRect(graphics, bounds.x, bounds.y, bounds.w, bounds.h, componentRadius(), if (hovered) BUTTON_HOVER else GROUP_HEADER)
         val iconColor = if (hovered) TEXT_ON_ACCENT else TEXT_PRIMARY
         val texture = when (icon) {
+            TopBarIcon.WORKSPACE -> ICON_CHEATS
             TopBarIcon.GITHUB -> ICON_GITHUB
             TopBarIcon.SETTINGS -> ICON_SETTINGS
             TopBarIcon.THEME -> ICON_THEME
@@ -792,35 +780,28 @@ class ClickGuiScreen @JvmOverloads constructor(
             TOOLBAR_ICON_TEXTURE_SIZE, iconColor,
         )
         pose.popMatrix()
-        if (hovered) graphics.setTooltipForNextFrame(Component.literal(tooltip), mouseX, mouseY)
+        if (hovered) tooltip(graphics, tooltip, mouseX, mouseY)
     }
 
-    private fun renderSearchIcon(graphics: GuiGraphicsExtractor, bounds: Rect, color: Int) {
-        val size = searchIconSize(bounds.h)
-        val x = bounds.x + searchIconOffset(bounds.h)
-        val y = bounds.y + (bounds.h - size) / 2
-        val pose = graphics.pose()
-        pose.pushMatrix()
-        pose.translate(x.toFloat(), y.toFloat())
-        pose.scale(size / TOOLBAR_ICON_TEXTURE_SIZE.toFloat(), size / TOOLBAR_ICON_TEXTURE_SIZE.toFloat())
-        graphics.blit(
-            RenderPipelines.GUI_TEXTURED, ICON_SEARCH, 0, 0, 0.0f, 0.0f,
-            TOOLBAR_ICON_TEXTURE_SIZE, TOOLBAR_ICON_TEXTURE_SIZE, TOOLBAR_ICON_TEXTURE_SIZE,
-            TOOLBAR_ICON_TEXTURE_SIZE, color,
-        )
-        pose.popMatrix()
+    /** Vanilla tooltips draw after the frame at the real GUI scale, so design-px coordinates are converted back. */
+    private fun tooltip(graphics: GuiGraphicsExtractor, text: String, mouseX: Int, mouseY: Int) {
+        val scale = designPose()
+        graphics.setTooltipForNextFrame(Component.literal(text), Math.round(mouseX * scale), Math.round(mouseY * scale))
     }
 
     // ---- rendering ----------------------------------------------------------------------
 
     override fun extractRenderState(
         graphics: GuiGraphicsExtractor,
-        mouseX: Int,
-        mouseY: Int,
+        rawMouseX: Int,
+        rawMouseY: Int,
         partialTick: Float,
     ) {
         // Refresh before drawing: a theme colour drag updates the menu on the same frame.
         VisualModule.INSTANCE.refreshTheme()
+        val design = designPose()
+        val mouseX = Math.floor(rawMouseX / design.toDouble()).toInt()
+        val mouseY = Math.floor(rawMouseY / design.toDouble()).toInt()
         val now = System.nanoTime()
         val motion = motion()
         updateAnimationState(now, motion)
@@ -835,8 +816,6 @@ class ClickGuiScreen @JvmOverloads constructor(
 
         val lifecycle = lifecycleProgress(now, motion)
         val visible = if (closing) 1.0f - lifecycle else lifecycle
-        val shade = if (motion == ClickGuiMotion.EXPRESSIVE) 0.78f else 0.66f
-        graphics.fill(0, 0, width, height, withOpacity(0xC0000000.toInt(), visible * shade))
 
         val panelX = panelX()
         val panelY = panelY()
@@ -845,8 +824,12 @@ class ClickGuiScreen @JvmOverloads constructor(
         val panelHeight = panelHeight()
         val rightX = panelX + categoryWidth
         val font = this.font
+        val centerX = vw() / 2.0f
+        val centerY = vh() / 2.0f
 
         val pose = graphics.pose()
+        pose.pushMatrix()
+        pose.scale(design, design)
         pose.pushMatrix()
         val scale = when {
             closing -> motion.closeScale(lifecycle)
@@ -854,21 +837,15 @@ class ClickGuiScreen @JvmOverloads constructor(
             motion == ClickGuiMotion.REDUCED -> 0.90f + 0.10f * lifecycle
             else -> 0.72f + 0.28f * motion.spring(lifecycle)
         }
-        pose.translate(width / 2.0f, height / 2.0f)
+        pose.translate(centerX, centerY)
         pose.scale(scale, scale)
-        pose.translate(-width / 2.0f, -height / 2.0f)
+        pose.translate(-centerX, -centerY)
 
-        roundedRect(
-            graphics, panelX - 2, panelY + 3, panelWidth + 4, panelHeight + 2, panelRadius() + 2,
-            withOpacity(0xFF000000.toInt(), 0.32f),
-        )
-        roundedRect(graphics, panelX, panelY, panelWidth, panelHeight, panelRadius(), PANEL_TOP, PANEL_BOTTOM)
-        graphics.fill(rightX - 1, panelY, rightX, panelY + panelHeight, withOpacity(BORDER, 0.9f))
-        graphics.fill(
-            panelX, panelY + headerHeight() - 1, panelX + panelWidth, panelY + headerHeight(),
-            withOpacity(BORDER, 0.9f),
-        )
-        roundedRectOutline(graphics, panelX, panelY, panelWidth, panelHeight, panelRadius(), BORDER)
+        // Flat panel: no dim, shadow or outline; one line under the top bar (module side) and one beside the categories.
+        roundedRect(graphics, panelX, panelY, panelWidth, panelHeight, PANEL_RADIUS, PANEL_TOP, PANEL_BOTTOM)
+        val line = withOpacity(BORDER, 0.9f)
+        graphics.fill(rightX - 1, panelY + headerHeight(), rightX, panelY + panelHeight, line)
+        graphics.fill(rightX, panelY + headerHeight() - 1, panelX + panelWidth, panelY + headerHeight(), line)
 
         graphics.enableScissor(panelX, panelY, panelX + panelWidth, panelY + panelHeight)
         renderHeader(graphics, font, mouseX, mouseY, panelX, panelY, rightX, now, motion)
@@ -877,16 +854,16 @@ class ClickGuiScreen @JvmOverloads constructor(
         graphics.disableScissor()
         if (visible < 1.0f && motion != ClickGuiMotion.NONE) {
             val fade = (1.0f - visible) * if (motion == ClickGuiMotion.EXPRESSIVE) 0.42f else 0.20f
-            roundedRect(graphics, panelX, panelY, panelWidth, panelHeight, RADIUS, withOpacity(0xFF000000.toInt(), fade))
+            roundedRect(graphics, panelX, panelY, panelWidth, panelHeight, PANEL_RADIUS, withOpacity(0xFF000000.toInt(), fade))
         }
         pose.popMatrix()
-        renderHoverTooltip(graphics, font, mouseX, mouseY)
         renderBindingNotice(graphics, font)
         renderChangelogOverlay(graphics, font, mouseX, mouseY)
+        pose.popMatrix()
+        renderHoverTooltip(graphics, font, mouseX, mouseY)
     }
 
-    private fun panelRadius(): Int = maxOf(8, Math.round(panelWidth() * 0.014f))
-    private fun componentRadius(): Int = maxOf(5, Math.round(panelWidth() * 0.008f))
+    private fun componentRadius(): Int = COMPONENT_RADIUS
 
     private fun renderUpdateButton(
         graphics: GuiGraphicsExtractor,
@@ -897,8 +874,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         mouseY: Int,
     ) {
         val hovered = bounds.contains(mouseX, mouseY)
-        val surface = if (hovered) BUTTON_HOVER else BUTTON_BG
-        roundedRectBordered(graphics, bounds.x, bounds.y, bounds.w, bounds.h, RADIUS_SMALL, surface, surface, BORDER)
+        roundedRect(graphics, bounds.x, bounds.y, bounds.w, bounds.h, RADIUS_SMALL, if (hovered) BUTTON_HOVER else BUTTON_BG)
         graphics.centeredText(
             font, textFit(font, label, maxOf(1, bounds.w - 8)), bounds.x + bounds.w / 2,
             bounds.y + (bounds.h - TEXT_HEIGHT) / 2, if (hovered) TEXT_ON_ACCENT else TEXT_PRIMARY,
@@ -908,8 +884,8 @@ class ClickGuiScreen @JvmOverloads constructor(
     private fun renderChangelogOverlay(graphics: GuiGraphicsExtractor, font: Font, mouseX: Int, mouseY: Int) {
         if (!changelogOpen) return
         val panel = changelogPanelRect()
-        graphics.fill(0, 0, width, height, withOpacity(0xFF000000.toInt(), 0.45f))
-        roundedRectBordered(graphics, panel.x, panel.y, panel.w, panel.h, RADIUS, PANEL_TOP, PANEL_BOTTOM, BORDER)
+        graphics.fill(0, 0, vw(), vh(), withOpacity(0xFF000000.toInt(), 0.45f))
+        roundedRect(graphics, panel.x, panel.y, panel.w, panel.h, PANEL_RADIUS, PANEL_TOP, PANEL_BOTTOM)
         val newer = UpdateChecker.newerVersion()
         val title = "GeilerAddons v${newer ?: "?"} is available"
         val currentVersion = UpdateChecker.currentVersion()
@@ -934,9 +910,9 @@ class ClickGuiScreen @JvmOverloads constructor(
     }
 
     private fun changelogPanelRect(): Rect {
-        val panelW = minOf(maxOf(240, panelWidth() - 40), maxOf(200, width - 24))
-        val panelH = minOf(maxOf(120, panelHeight() + 40), maxOf(100, height - 24))
-        return Rect((width - panelW) / 2, (height - panelH) / 2, panelW, panelH)
+        val panelW = minOf(maxOf(240, panelWidth() - 40), maxOf(200, vw() - 24))
+        val panelH = minOf(maxOf(120, panelHeight() + 40), maxOf(100, vh() - 24))
+        return Rect((vw() - panelW) / 2, (vh() - panelH) / 2, panelW, panelH)
     }
 
     private fun changelogViewport(panel: Rect): Rect =
@@ -945,7 +921,7 @@ class ClickGuiScreen @JvmOverloads constructor(
     private fun changelogLines(): List<String> {
         val notes = UpdateChecker.releaseNotes()
         val viewport = changelogViewport(changelogPanelRect())
-        val key = "$width\u0078$height|${UpdateChecker.newerVersion()}|${notes.length}"
+        val key = "${vw()}\u0078${vh()}|${UpdateChecker.newerVersion()}|${notes.length}"
         if (key == changelogCacheKey) return changelogLines
         val wrapped = ArrayList<String>()
         for (line in java.util.regex.Pattern.compile("\n").split(notes, -1).asList()) {
@@ -981,11 +957,11 @@ class ClickGuiScreen @JvmOverloads constructor(
     private fun renderBindingNotice(graphics: GuiGraphicsExtractor, font: Font) {
         val target = ModuleKeybindManager.bindingModule()?.name()
             ?: ModuleKeybindManager.bindingMacro()?.name() ?: return
-        val boxW = minOf(420, maxOf(220, width - 24))
+        val boxW = minOf(420, maxOf(220, vw() - 24))
         val boxH = 30
-        val boxX = (width - boxW) / 2
-        val boxY = height - boxH - 12
-        roundedRectBordered(graphics, boxX, boxY, boxW, boxH, RADIUS_SMALL, BUTTON_HOVER, BUTTON_HOVER, TEXT_PRIMARY)
+        val boxX = (vw() - boxW) / 2
+        val boxY = vh() - boxH - 12
+        roundedRect(graphics, boxX, boxY, boxW, boxH, COMPONENT_RADIUS, BUTTON_HOVER)
         graphics.text(font, "Listening for a hotkey: ${textFit(font, target, boxW - 170)}", boxX + 8, boxY + 5, TEXT_ON_ACCENT)
         graphics.text(
             font, "Press and release a key; Escape clears; click the key field to cancel.",
@@ -1001,7 +977,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         for (row in settingsRows(module, panelX() + categoryWidth(), panelY())) {
             if (!row.getBounds().contains(mouseX, mouseY)) continue
             val description = settingTooltip(module, row)
-            if (!description.isNullOrBlank()) graphics.setTooltipForNextFrame(Component.literal(description), mouseX, mouseY)
+            if (!description.isNullOrBlank()) tooltip(graphics, description, mouseX, mouseY)
             return
         }
     }
@@ -1059,15 +1035,14 @@ class ClickGuiScreen @JvmOverloads constructor(
             val hovered = row.contains(mouseX, mouseY)
             val favorite = categoryFavoriteRect(row)
             ClickGuiScreenRenderBehavior.renderCategoryRow(
-                graphics, font, row.x, row.y, row.w, row.h, entry.category.displayName(),
+                graphics, font, row.x, row.y, row.w, row.h, categoryLabel(entry.category),
                 selected, !moving && selected, hovered, favorite.x, favorite.y, favorite.w, favorite.h,
-                ClickGuiState.isFavorite(entry.category), favorite.contains(mouseX, mouseY),
+                ClickGuiState.isFavorite(entry.category), categoryHeartHitRect(row, favorite).contains(mouseX, mouseY),
                 componentRadius(), TEXT_HEIGHT, CATEGORY_TEXT_SCALE, FAVORITE_COLOR,
                 ICON_FAVORITE_FILLED, ICON_FAVORITE_OUTLINE,
             )
         }
         graphics.disableScissor()
-        renderWorkspaceButton(graphics, font, mouseX, mouseY, panelX, panelY)
         val notice = UpdateChecker.bannerText()
         if (notice != null) {
             val text = textFit(font, notice, maxOf(1, categoryWidth() - 28))
@@ -1075,29 +1050,6 @@ class ClickGuiScreen @JvmOverloads constructor(
             graphics.text(font, text, panelX + 14, y, TEXT_WARN)
         }
         graphics.disableScissor()
-    }
-
-    /** The switch to the other workspace, drawn like a category row with an accent outline and an arrow to show it leaves. */
-    private fun renderWorkspaceButton(
-        graphics: GuiGraphicsExtractor,
-        font: Font,
-        mouseX: Int,
-        mouseY: Int,
-        panelX: Int,
-        panelY: Int,
-    ) {
-        val rect = workspaceButtonRect(panelX, panelY)
-        val hovered = rect.contains(mouseX, mouseY)
-        val radius = componentRadius()
-        roundedRect(graphics, rect.x, rect.y, rect.w, rect.h, radius, if (hovered) BUTTON_HOVER else BUTTON_BG)
-        roundedRectOutline(graphics, rect.x, rect.y, rect.w, rect.h, radius, withOpacity(SLIDER_FILL, if (hovered) 0.9f else 0.55f))
-        val workspace = ClickGuiState.workspace()
-        val label = if (workspace == Workspace.NORMAL) workspace.switchLabel() + "  ›" else "‹  " + workspace.switchLabel()
-        ClickGuiScreenRenderBehavior.drawCenteredScaledText(
-            graphics, font, textFit(font, label, maxOf(1, Math.round((rect.w - 8) / CATEGORY_TEXT_SCALE))),
-            rect.x + rect.w / 2, rect.y + (rect.h - Math.round(TEXT_HEIGHT * CATEGORY_TEXT_SCALE)) / 2,
-            SLIDER_FILL, CATEGORY_TEXT_SCALE,
-        )
     }
 
     private fun renderView(
@@ -1215,15 +1167,13 @@ class ClickGuiScreen @JvmOverloads constructor(
 
     private fun renderModuleSectionHeading(graphics: GuiGraphicsExtractor, font: Font, label: String?, viewport: Rect, y: Int) {
         val heading = label ?: ""
-        val titleX = viewport.x + maxOf(2, PADDING / 2)
-        val titleWidth = Math.round(font.width(heading) * CATEGORY_TEXT_SCALE)
-        val titleY = y + (moduleSectionHeaderHeight() - Math.round(TEXT_HEIGHT * CATEGORY_TEXT_SCALE)) / 2
-        drawScaledText(graphics, font, heading, titleX, titleY, TEXT_PRIMARY, CATEGORY_TEXT_SCALE)
-        val lineLeft = titleX + titleWidth + PADDING
+        val titleY = y + (moduleSectionHeaderHeight() - TEXT_HEIGHT) / 2
+        graphics.text(font, heading, viewport.x, titleY, TEXT_MUTED, false)
+        val lineLeft = viewport.x + font.width(heading) + PADDING
         val lineRight = viewport.x + viewport.w - SCROLLBAR_GUTTER
         if (lineLeft < lineRight) {
             val lineY = y + moduleSectionHeaderHeight() / 2
-            graphics.fill(lineLeft, lineY, lineRight, lineY + 1, withOpacity(BORDER, 0.92f))
+            graphics.fill(lineLeft, lineY, lineRight, lineY + 1, withOpacity(BORDER, 0.9f))
         }
     }
 
@@ -1245,125 +1195,81 @@ class ClickGuiScreen @JvmOverloads constructor(
         val bounds = Rect(card.x(), card.y(), card.w(), card.h())
         val enabled = module.showsToggleControl() && module.isEnabled()
         val hovered = hoverable && bounds.contains(mouseX, mouseY)
+        val pressed = hovered && motion != ClickGuiMotion.NONE && pressedCard === module
         val toggle = cardSwitchRect(bounds)
         val keybind = if (module.showsKeybindControl()) keybindRect(module, bounds) else null
-        val keybindHovered = hoverable && keybind != null && keybind.contains(mouseX, mouseY)
+        val hits = cardHitRects(module, bounds)
+        val keybindHovered = hoverable && hits[2]?.contains(mouseX, mouseY) == true
         val pose = graphics.pose()
         pose.pushMatrix()
-
-        val togglePosition = togglePosition(module, enabled, now, motion)
-        var background = lerpColor(CARD_BG, CARD_BG_ENABLED, togglePosition)
-        val hoverBackground = lerpColor(CARD_BG_HOVER, CARD_BG_ENABLED, togglePosition)
-        var border = lerpColor(CARD_BORDER, CARD_BORDER_ENABLED, togglePosition)
-        if (hovered) {
-            background = lerpColor(background, hoverBackground, 0.85f)
-            border = lerpColor(border, PANEL_HIGHLIGHT, 0.82f)
+        if (pressed) {
+            pose.translate(bounds.x + bounds.w / 2.0f, bounds.y + bounds.h / 2.0f)
+            pose.scale(0.98f, 0.98f)
+            pose.translate(-(bounds.x + bounds.w / 2.0f), -(bounds.y + bounds.h / 2.0f))
         }
+
+        val edges = toggleEdges(module, enabled, now, motion)
+        val position = edges[1].coerceIn(0.0f, 1.0f)
+        var background = lerpColor(CARD_BG, CARD_BG_ENABLED, position)
+        if (hovered) background = lerpColor(background, lerpColor(CARD_BG_HOVER, CARD_BG_ENABLED, position), 0.85f)
         val pulse = interactionPulse(module, now, motion)
-        if (pulse > 0.0f) {
-            background = lerpColor(background, CARD_BG_HOVER, pulse * 0.65f)
-            border = lerpColor(border, PANEL_HIGHLIGHT, pulse)
-        }
-        roundedRectBordered(graphics, bounds.x, bounds.y, bounds.w, bounds.h, componentRadius(), background, background, border)
+        if (pulse > 0.0f) background = lerpColor(background, CARD_BG_HOVER, pulse * 0.65f)
+        roundedRect(graphics, bounds.x, bounds.y, bounds.w, bounds.h, componentRadius(), background)
 
-        val inset = cardInset()
-        val iconSize = maxOf(16, minOf(Math.round(bounds.h * 0.70f), Math.round(bounds.w * 0.27f)))
-        val iconX = bounds.x + inset + maxOf(1, Math.round(bounds.w * 0.02f))
-        val icon = Rect(iconX, bounds.y + (bounds.h - iconSize) / 2, iconSize, iconSize)
-        val moduleIcon = ModuleIconTextures.forModule(module.name())
-        val iconTexture = moduleIcon ?: ICON_MODULE_PLACEHOLDER
-        val iconSourceSize = ModuleIconTextures.sourceSize(module.name())
-        val itemPose = graphics.pose()
-        itemPose.pushMatrix()
-        itemPose.translate(icon.x.toFloat(), icon.y.toFloat())
-        itemPose.scale(iconSize / iconSourceSize.toFloat(), iconSize / iconSourceSize.toFloat())
-        if (moduleIcon != null && ModuleIconTextures.isTintable(module.name())) {
-            graphics.blit(
-                RenderPipelines.GUI_TEXTURED, iconTexture, 0, 0, 0.0f, 0.0f,
-                iconSourceSize, iconSourceSize, iconSourceSize, iconSourceSize,
-                VisualModule.INSTANCE.iconColorSetting().argb(),
-            )
-        } else {
-            graphics.blit(RenderPipelines.GUI_TEXTURED, iconTexture, 0, 0, 0.0f, 0.0f,
-                iconSourceSize, iconSourceSize, iconSourceSize, iconSourceSize)
-        }
-        itemPose.popMatrix()
-
-        val textX = icon.x + icon.w + maxOf(8, Math.round(bounds.w * 0.022f))
         val favorite = moduleFavoriteRect(module, bounds)
-        val textRight = minOf(
-            favorite.x - maxOf(5, Math.round(bounds.w * 0.015f)),
-            if (module.showsToggleControl()) toggle.x - maxOf(8, Math.round(bounds.w * 0.025f))
-            else bounds.x + bounds.w - maxOf(8, Math.round(bounds.w * 0.035f)),
-        )
-        val textWidth = maxOf(1, textRight - textX)
-        val titleY = bounds.y + maxOf(8, Math.round(bounds.h * 0.17f))
-        val showWipBadge = module.isWorkInProgress()
-        var badgeWidth = if (showWipBadge) font.width(WIP_BADGE_LABEL) + 8 else 0
-        badgeWidth = minOf(badgeWidth, maxOf(0, textWidth - 1))
-        val badgeGap = if (showWipBadge) minOf(5, maxOf(0, textWidth - badgeWidth - 1)) else 0
-        val titleWidth = if (showWipBadge) maxOf(0, textWidth - badgeWidth - badgeGap) else textWidth
-        val titleScale = cardTitleScale(font, module.name(), titleWidth)
-        cardTitleFit(graphics, font, module.name(), textX, titleY, titleWidth, TEXT_PRIMARY)
-        val titleHeight = maxOf(TEXT_HEIGHT, ceil(LINE_HEIGHT * titleScale).toInt())
-        if (showWipBadge && badgeWidth > 0) {
-            val badgeHeight = TEXT_HEIGHT + 4
-            val renderedTitleWidth = if (titleWidth <= 0) 0 else minOf(titleWidth, ceil(font.width(module.name()) * titleScale).toInt())
-            val badgeX = textX + renderedTitleWidth + badgeGap
-            val badgeY = titleY + maxOf(0, (titleHeight - badgeHeight) / 2)
-            val badgeTextWidth = maxOf(1, badgeWidth - 6)
-            val badgeSurface = withOpacity(TEXT_WARN, 0.18f)
-            roundedRectBordered(
-                graphics, badgeX, badgeY, badgeWidth, badgeHeight, minOf(RADIUS_SMALL, badgeHeight / 2),
-                badgeSurface, badgeSurface, withOpacity(TEXT_WARN, 0.72f),
-            )
-            graphics.centeredText(font, textFit(font, WIP_BADGE_LABEL, badgeTextWidth),
-                badgeX + badgeWidth / 2, badgeY + (badgeHeight - TEXT_HEIGHT) / 2, TEXT_WARN)
-        }
+        val textX = bounds.x + CARD_PADDING
+        val textWidth = maxOf(1, cardTextRight(bounds, if (module.showsToggleControl()) toggle else null, favorite) - textX)
+        val titleY = bounds.y + CARD_PADDING
+        graphics.text(font, textFit(font, module.name(), textWidth), textX, titleY, TEXT_PRIMARY, false)
         val summary = if (searchQuery.isBlank()) module.description()
             else module.category().displayName() + " · " + module.description()
-        val summaryLines = cardSummaryLines(font, module, summary, cardTextWidth(textWidth))
-        val lineLimit = if (bounds.h >= 88) 3 else 1
-        val summaryY = titleY + titleHeight + 4
-        val summaryLineHeight = maxOf(9, Math.round(bounds.h * 0.095f))
+        val summaryLines = cardSummaryLines(font, module, summary, textWidth)
+        val summaryY = titleY + LINE_HEIGHT + 4
+        val lineLimit = maxOf(1, minOf(2, (bounds.y + bounds.h - 4 - summaryY) / CARD_LINE_HEIGHT))
         for (line in 0 until minOf(lineLimit, summaryLines.size)) {
-            cardText(graphics, font, summaryLines[line], textX, summaryY + line * summaryLineHeight, TEXT_MUTED)
+            graphics.text(font, summaryLines[line], textX, summaryY + line * CARD_LINE_HEIGHT, TEXT_MUTED, false)
         }
 
         val status = if (GeneralModule.INSTANCE.availabilityNotices().value()) module.inactiveReason() else null
         if (status != null && bounds.h >= 90) {
-            val statusY = summaryY + minOf(lineLimit, summaryLines.size) * summaryLineHeight + 3
+            val statusY = summaryY + minOf(lineLimit, summaryLines.size) * CARD_LINE_HEIGHT + 3
             if (keybind == null || statusY + TEXT_HEIGHT < keybind.y) {
-                cardTextFit(graphics, font, status, textX, statusY, cardTextWidth(textWidth), TEXT_WARN)
+                graphics.text(font, textFit(font, status, textWidth), textX, statusY, TEXT_WARN, false)
             }
         }
 
-        if (module.showsKeybindControl()) {
-            val keybindBounds = keybind!!
+        if (keybind != null) {
             val binding = ModuleKeybindManager.isBinding(module)
             val unbound = !module.keybind().isBound()
-            val keybindBackground = if (binding || keybindHovered) BUTTON_HOVER else if (unbound) GROUP_HEADER else BUTTON_BG
-            roundedRectBordered(
-                graphics, keybindBounds.x, keybindBounds.y, keybindBounds.w, keybindBounds.h, componentRadius(),
-                keybindBackground, keybindBackground, if (binding || keybindHovered) PANEL_HIGHLIGHT else BORDER,
-            )
-            val label = if (binding) "…" else if (unbound) "none" else module.keybind().displayName()
-            moduleCenteredText(
-                graphics, font, textFit(font, label, keybindBounds.w - 4),
-                keybindBounds.x + keybindBounds.w / 2,
-                keybindBounds.y + (keybindBounds.h - TEXT_HEIGHT) / 2,
-                if (unbound && !binding) TEXT_SECONDARY else TEXT_PRIMARY,
+            roundedRect(graphics, keybind.x, keybind.y, keybind.w, keybind.h, KEY_SQUARE_RADIUS,
+                if (binding || keybindHovered) BUTTON_HOVER else GROUP_HEADER)
+            val color = when {
+                binding || keybindHovered -> TEXT_ON_ACCENT
+                unbound -> TEXT_MUTED
+                else -> TEXT_PRIMARY
+            }
+            ClickGuiScreenRenderBehavior.drawCenteredScaledText(
+                graphics, font, textFit(font, keyLabel(module), KEY_LABEL_MAX_WIDTH), keybind.x + keybind.w / 2,
+                keybind.y + (keybind.h - Math.round(TEXT_HEIGHT * KEY_TEXT_SCALE)) / 2, color, KEY_TEXT_SCALE,
             )
             if (keybindHovered && module === geiler.addons.client.module.impl.DungeonHelperModule.INSTANCE) {
-                graphics.setTooltipForNextFrame(
-                    Component.literal("Press this key to open the Dungeon Guide editor."), mouseX, mouseY,
-                )
+                tooltip(graphics, "Press this key to open the Dungeon Guide editor.", mouseX, mouseY)
             }
         }
-        if (module.showsToggleControl()) toggleSwitch(graphics, toggle.x, toggle.y, toggle.w, toggle.h, togglePosition)
-        renderFavoriteHeart(graphics, favorite, ClickGuiState.isFavorite(module), hoverable && favorite.contains(mouseX, mouseY))
+        if (module.showsToggleControl()) {
+            GuiTheme.liquidSwitch(graphics, toggle.x, toggle.y, toggle.w, toggle.h, enabled, edges[0], edges[1], pressed)
+        }
+        renderFavoriteHeart(graphics, favorite, ClickGuiState.isFavorite(module), hoverable && hits[0]?.contains(mouseX, mouseY) == true)
         pose.popMatrix()
     }
+
+    /** What a card's key square shows: the bound key, a dash when unbound, an ellipsis while listening. */
+    private fun keyLabel(module: Module): String = when {
+        ModuleKeybindManager.isBinding(module) -> "…"
+        else -> keyBadgeLabel(module.keybind())
+    }
+
+    private fun categoryFavoriteSize(): Int = maxOf(20, minOf(26, categoryRowHeight() - 4))
 
     private fun categoryFavoriteRect(row: Rect): Rect {
         val hitSize = maxOf(20, minOf(26, row.h - 4))
@@ -1382,27 +1288,18 @@ class ClickGuiScreen @JvmOverloads constructor(
         )
     }
 
-    private fun cardInset(): Int = maxOf(8, Math.round(panelWidth() * CARD_INSET_FRACTION))
-    private fun cardGap(): Int = ClickGuiModuleGrid.cardGapForPanelWidth(panelWidth())
+    private fun cardGap(): Int = ClickGuiModuleGrid.CARD_GAP
 
-    private fun keybindControlWidth(module: Module): Int =
-        if (module.keybind().isBound() || ModuleKeybindManager.isBinding(module)) KEYBIND_WIDTH else SET_BIND_WIDTH
+    private fun keybindRect(module: Module, card: Rect): Rect = keySquareRect(
+        card, module.showsToggleControl(), Math.round(minOf(font.width(keyLabel(module)), KEY_LABEL_MAX_WIDTH) * KEY_TEXT_SCALE),
+    )
 
-    private fun keybindRect(module: Module, card: Rect): Rect {
-        val controlWidth = keybindControlWidth(module)
-        val scaledWidth = minOf(controlWidth, maxOf(1, Math.round(card.w * 0.18f)))
-        val height = maxOf(14, minOf(KEYBIND_HEIGHT, Math.round(card.h * 0.19f)))
-        if (module.showsToggleControl()) {
-            val toggle = cardSwitchRect(card)
-            return Rect(
-                toggle.x + (toggle.w - scaledWidth) / 2,
-                toggle.y + toggle.h + maxOf(2, Math.round(card.h * 0.035f)), scaledWidth, height,
-            )
-        }
-        val inset = maxOf(8, Math.round(card.w * 0.035f))
-        return Rect(card.x + card.w - inset - scaledWidth,
-            card.y + card.h - maxOf(4, Math.round(card.h * 0.10f)) - height, scaledWidth, height)
-    }
+    /** Heart, switch and key click areas of one card (see [cardControlHitRects]). */
+    private fun cardHitRects(module: Module, card: Rect): Array<Rect?> = cardControlHitRects(
+        card, moduleFavoriteRect(module, card),
+        if (module.showsToggleControl()) cardSwitchRect(card) else null,
+        if (module.showsKeybindControl()) keybindRect(module, card) else null,
+    )
 
     private fun cardSummaryLines(font: Font, module: Module, summary: String, width: Int): List<FormattedCharSequence> {
         val cached = cardSummaryLayouts[module]
@@ -1410,44 +1307,6 @@ class ClickGuiScreen @JvmOverloads constructor(
         val lines = java.util.List.copyOf(font.split(Component.literal(conciseSummary(summary)), width))
         cardSummaryLayouts[module] = CardSummaryLayout(font, summary, width, lines)
         return lines
-    }
-
-    private fun cardTextFit(
-        graphics: GuiGraphicsExtractor, font: Font, text: String, x: Int, y: Int, availableWidth: Int, color: Int,
-    ) {
-        if (text.isEmpty() || availableWidth <= 0) return
-        val scale = minOf(CARD_TEXT_SCALE, availableWidth / maxOf(1, font.width(text)).toFloat())
-        val pose = graphics.pose()
-        pose.pushMatrix()
-        pose.translate(x.toFloat(), y.toFloat())
-        pose.scale(scale, scale)
-        graphics.text(font, text, 0, 0, color)
-        pose.popMatrix()
-    }
-
-    private fun cardTitleFit(graphics: GuiGraphicsExtractor, font: Font, text: String, x: Int, y: Int, availableWidth: Int, color: Int) {
-        if (text.isEmpty() || availableWidth <= 0) return
-        val scale = cardTitleScale(font, text, availableWidth)
-        val pose = graphics.pose()
-        pose.pushMatrix()
-        pose.translate(x.toFloat(), y.toFloat())
-        pose.scale(scale, scale)
-        graphics.text(font, text, 0, 0, color)
-        pose.popMatrix()
-    }
-
-    private fun cardTitleScale(font: Font, text: String, availableWidth: Int): Float =
-        minOf(CARD_TITLE_SCALE, availableWidth / maxOf(1, font.width(text)).toFloat())
-
-    private fun cardTextWidth(pixels: Int): Int = maxOf(1, ceil(pixels / CARD_TEXT_SCALE).toInt())
-
-    private fun cardText(graphics: GuiGraphicsExtractor, font: Font, text: FormattedCharSequence, x: Int, y: Int, color: Int) {
-        val pose = graphics.pose()
-        pose.pushMatrix()
-        pose.translate(x.toFloat(), y.toFloat())
-        pose.scale(CARD_TEXT_SCALE, CARD_TEXT_SCALE)
-        graphics.text(font, text, 0, 0, color)
-        pose.popMatrix()
     }
 
     private fun moduleTextWidth(pixels: Int): Int = maxOf(1, ceil(pixels / MODULE_TEXT_SCALE).toInt())
@@ -1500,7 +1359,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         return cardWidthForGridViewport(viewportWidth, cardColumns(), cardGap())
     }
 
-    private fun gridInset(): Int = ClickGuiModuleGrid.gridInsetForPanelWidth(panelWidth())
+    private fun gridInset(): Int = ClickGuiModuleGrid.GRID_INSET
 
     private fun gridViewport(x: Int, panelY: Int): Rect {
         val inset = gridInset()
@@ -1517,14 +1376,13 @@ class ClickGuiScreen @JvmOverloads constructor(
         return if (options.size > 1) options else emptyList()
     }
 
-    private fun chipHeight(): Int = maxOf(16, Math.round(panelHeight() * 0.036f))
-    private fun chipGap(): Int = maxOf(5, cardGap() / 2)
+    private fun chipHeight(): Int = 16
+    private fun chipGap(): Int = 8
 
     private fun chipLayout(category: Category, viewportWidth: Int): ClickGuiModuleGrid.ChipLayout {
         val filters = chipFilters(category)
         if (filters.isEmpty()) return ClickGuiModuleGrid.chipLayout(emptyList(), viewportWidth, chipHeight(), chipGap(), chipGap())
-        val padX = maxOf(8, Math.round(panelWidth() * 0.009f))
-        val widths = filters.map { Math.round(font.width(it.label() ?: "") * CATEGORY_TEXT_SCALE) + padX * 2 }
+        val widths = filters.map { font.width(it.label() ?: "") + PADDING * 2 }
         return ClickGuiModuleGrid.chipLayout(widths, viewportWidth - SCROLLBAR_GUTTER, chipHeight(), chipGap(), chipGap())
     }
 
@@ -1558,13 +1416,10 @@ class ClickGuiScreen @JvmOverloads constructor(
             val selected = filters[i].id() == active
             val hovered = hoverable && rect.contains(mouseX, mouseY)
             val background = if (selected) CARD_BG_ENABLED else if (hovered) CARD_BG_HOVER else CARD_BG
-            val border = if (selected) CARD_BORDER_ENABLED else if (hovered) PANEL_HIGHLIGHT else CARD_BORDER
-            roundedRectBordered(graphics, rect.x, rect.y, rect.w, rect.h, componentRadius(), background, background, border)
+            roundedRect(graphics, rect.x, rect.y, rect.w, rect.h, componentRadius(), background)
             val label = filters[i].label() ?: ""
-            val textWidth = Math.round(font.width(label) * CATEGORY_TEXT_SCALE)
-            val textY = rect.y + (rect.h - Math.round(TEXT_HEIGHT * CATEGORY_TEXT_SCALE)) / 2
-            drawScaledText(graphics, font, label, rect.x + (rect.w - textWidth) / 2, textY,
-                if (selected || hovered) TEXT_PRIMARY else TEXT_SECONDARY, CATEGORY_TEXT_SCALE)
+            val color = if (selected) SLIDER_FILL else if (hovered) TEXT_PRIMARY else TEXT_SECONDARY
+            graphics.text(font, label, rect.x + (rect.w - font.width(label)) / 2, rect.y + (rect.h - TEXT_HEIGHT) / 2, color, false)
         }
     }
 
@@ -1581,9 +1436,9 @@ class ClickGuiScreen @JvmOverloads constructor(
         logGuiDiagnostic("EVENT action=filter,filter=$id,${gridDiagnosticState(category)}")
     }
 
-    private fun moduleSectionHeaderHeight(): Int = maxOf(16, Math.round(panelHeight() * 0.028f))
-    private fun moduleSectionHeaderGap(): Int = maxOf(4, Math.round(panelHeight() * 0.012f))
-    private fun moduleSectionGap(): Int = maxOf(8, Math.round(panelHeight() * 0.018f))
+    private fun moduleSectionHeaderHeight(): Int = 16
+    private fun moduleSectionHeaderGap(): Int = 8
+    private fun moduleSectionGap(): Int = 16
 
     private fun moduleSections(category: Category, modules: List<Module>): List<ClickGuiModuleGrid.Section> {
         if (moduleSectionCacheCategory === category && moduleSectionCacheModules === modules && moduleSectionCacheQuery == searchQuery) {
@@ -1632,31 +1487,16 @@ class ClickGuiScreen @JvmOverloads constructor(
         now: Long,
         motion: ClickGuiMotion,
     ) {
+        // Flat header: the whole row is the back button; it only gains a tint on hover.
         val headerSurface = settingsHeaderSurfaceRect(x, y)
-        val back = settingsBackRect(x, y)
-        val backLabel = settingsBackLabelRect(x, y)
-        val backHovered = hoverable && back.contains(mouseX, mouseY)
-        val headerColor = if (backHovered) BUTTON_HOVER else GROUP_HEADER
-        roundedRectBordered(
-            graphics, headerSurface.x, headerSurface.y, headerSurface.w, headerSurface.h,
-            componentRadius(), headerColor, headerColor, if (backHovered) PANEL_HIGHLIGHT else BORDER,
+        val backHovered = hoverable && settingsBackRect(x, y).contains(mouseX, mouseY)
+        if (backHovered) {
+            roundedRect(graphics, headerSurface.x, headerSurface.y, headerSurface.w, headerSurface.h, componentRadius(), CATEGORY_HOVER)
+        }
+        graphics.text(
+            font, textFit(font, "‹  " + module.name(), maxOf(1, headerSurface.w - 16)), headerSurface.x + PADDING,
+            headerSurface.y + (headerSurface.h - TEXT_HEIGHT) / 2, if (backHovered) SLIDER_FILL else TEXT_PRIMARY, false,
         )
-        graphics.centeredText(
-            font, textFit(font, "Back", maxOf(1, backLabel.w - 8)), backLabel.x + backLabel.w / 2,
-            backLabel.y + (backLabel.h - TEXT_HEIGHT) / 2, if (backHovered) TEXT_ON_ACCENT else TEXT_PRIMARY,
-        )
-        val titleDividerX = backLabel.x + backLabel.w + 8
-        val dividerTop = headerSurface.y + 4
-        val dividerBottom = headerSurface.y + headerSurface.h - 4
-        graphics.fill(titleDividerX, dividerTop, titleDividerX + 1, maxOf(dividerTop + 1, dividerBottom),
-            if (backHovered) TEXT_ON_ACCENT else BORDER)
-        val titleX = titleDividerX + 9
-        val titleWidth = maxOf(0, headerSurface.x + headerSurface.w - 8 - titleX)
-        graphics.text(font, textFit(font, module.name(), titleWidth), titleX,
-            headerSurface.y + (headerSurface.h - TEXT_HEIGHT) / 2, if (backHovered) TEXT_ON_ACCENT else TEXT_PRIMARY)
-        val horizontalDividerY = headerSurface.y + headerSurface.h + 2
-        graphics.fill(headerSurface.x + 3, horizontalDividerY, headerSurface.x + headerSurface.w - 3,
-            horizontalDividerY + 1, BORDER)
         val viewport = settingsViewport(x, y)
         val insideViewport = hoverable && viewport.contains(mouseX, mouseY)
         val rows = settingsRows(module, x, y, scroll, expandedColor)
@@ -1845,12 +1685,13 @@ class ClickGuiScreen @JvmOverloads constructor(
         val toggle = groupRow.toggle
         val groupToggle = groupRow.group.toggle
         val pulse = interactionPulse(groupRow.group, now, motion)
-        val animatedTogglePosition = if (toggle == null || groupToggle == null) 0.0f
-            else togglePosition(groupToggle, groupToggle.value(), now, motion)
+        val on = groupToggle?.value() == true
+        val edges = if (toggle == null || groupToggle == null) floatArrayOf(0.0f, 0.0f)
+            else toggleEdges(groupToggle, on, now, motion)
         ClickGuiScreenRenderBehavior.renderGroupSettingRow(
             graphics, font, groupRow.bounds, toggle, mouseX, mouseY, hoverable, pulse,
-            groupRow.group.name!!, groupRow.collapsed, groupRow.depth, animatedTogglePosition,
-            MODULE_TEXT_SCALE, TEXT_HEIGHT, GROUP_INDENT, SWITCH_WIDTH, RADIUS_SMALL,
+            groupRow.group.name!!, groupRow.collapsed, groupRow.depth, on, edges[0], edges[1],
+            MODULE_TEXT_SCALE, TEXT_HEIGHT, GROUP_INDENT, SWITCH_WIDTH, componentRadius(),
         )
     }
 
@@ -1862,7 +1703,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         val hovered = hoverable && Rect(bounds.x, bounds.y, bounds.w, ROW_HEIGHT).contains(mouseX, mouseY)
         if (hovered || pulse > 0.0f) {
             val highlight = if (hovered) CATEGORY_HOVER else withOpacity(PANEL_HIGHLIGHT, pulse * 0.35f)
-            roundedRect(graphics, bounds.x + 9, bounds.y, bounds.w - 18, ROW_HEIGHT - 2, RADIUS_SMALL, highlight)
+            roundedRect(graphics, bounds.x + 9, bounds.y, bounds.w - 18, ROW_HEIGHT - 2, componentRadius(), highlight)
         }
         moduleText(graphics, font, textFit(font, setting.displayName(), moduleTextWidth(bounds.w - VALUE_GUTTER - 28)),
             bounds.x + 16, bounds.y + (ROW_HEIGHT - TEXT_HEIGHT) / 2, TEXT_SECONDARY)
@@ -1897,8 +1738,7 @@ class ClickGuiScreen @JvmOverloads constructor(
 
     private fun renderHexField(graphics: GuiGraphicsExtractor, font: Font, field: Rect, setting: ColorSetting) {
         val focused = setting === focusedHexSetting
-        roundedRectBordered(graphics, field.x, field.y, field.w, field.h, 3, SLIDER_TRACK, SLIDER_TRACK,
-            if (focused) SLIDER_FILL else BORDER)
+        renderField(graphics, field, focused)
         val value = if (focused) hexInput else setting.hex()
         val slice = visibleSlice(font, value, if (focused) hexCursor else value.length, maxOf(1, field.w - 8))
         val shown = slice.text
@@ -1947,7 +1787,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         for (thumbX in intArrayOf(lowX, highX)) {
             roundedRect(graphics, thumbX - 2, slider.y - 2, 5, slider.h + 4, 2, TEXT_PRIMARY)
         }
-        roundedRectBordered(graphics, field.x, field.y, field.w, field.h, 3, SLIDER_TRACK, SLIDER_TRACK, BORDER)
+        renderField(graphics, field, false)
         val text = textFit(font, setting.display(), maxOf(1, field.w - 8))
         graphics.text(font, text, field.x + 4, field.y + (field.h - TEXT_HEIGHT) / 2, TEXT_PRIMARY)
     }
@@ -1956,9 +1796,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         now: Long, motion: ClickGuiMotion) {
         val field = numberRow.field!!
         val focused = numberRow.setting === focusedNumberSetting
-        val pulse = interactionPulse(numberRow.setting, now, motion)
-        val border = if (focused) SLIDER_FILL else if (pulse > 0.0f) lerpColor(BORDER, PANEL_HIGHLIGHT, pulse) else BORDER
-        roundedRectBordered(graphics, field.x, field.y, field.w, field.h, 3, SLIDER_TRACK, SLIDER_TRACK, border)
+        renderField(graphics, field, focused)
         val value = if (focused) numberInput else numberRow.setting.display()
         val slice = visibleSlice(font, value, if (focused) numberCursor else value.length, maxOf(1, field.w - 8))
         val shown = slice.text
@@ -1975,17 +1813,18 @@ class ClickGuiScreen @JvmOverloads constructor(
     private fun renderToggleRow(graphics: GuiGraphicsExtractor, font: Font, mouseX: Int, mouseY: Int,
         toggleRow: ToggleRow, hoverable: Boolean, now: Long, motion: ClickGuiMotion) {
         val pulse = interactionPulse(toggleRow.setting, now, motion)
-        val animated = togglePosition(toggleRow.setting, toggleRow.setting.value(), now, motion)
+        val on = toggleRow.setting.value()
+        val edges = toggleEdges(toggleRow.setting, on, now, motion)
         ClickGuiScreenRenderBehavior.renderToggleSettingRow(graphics, font, toggleRow.bounds, mouseX, mouseY,
-            hoverable, pulse, toggleRow.setting.displayName(), animated, MODULE_TEXT_SCALE, TEXT_HEIGHT,
-            SWITCH_WIDTH, SWITCH_HEIGHT, RADIUS_SMALL)
+            hoverable, pulse, toggleRow.setting.displayName(), on, edges[0], edges[1], MODULE_TEXT_SCALE, TEXT_HEIGHT,
+            SWITCH_WIDTH, SWITCH_HEIGHT, componentRadius())
     }
 
     private fun renderChoiceRow(graphics: GuiGraphicsExtractor, font: Font, mouseX: Int, mouseY: Int,
         choiceRow: ChoiceRow, hoverable: Boolean, now: Long, motion: ClickGuiMotion) {
         ClickGuiScreenRenderBehavior.renderChoiceSettingRow(graphics, font, choiceRow.bounds, choiceRow.field!!,
             mouseX, mouseY, hoverable, interactionPulse(choiceRow.setting, now, motion),
-            choiceRow.setting.displayName(), choiceRow.setting.displayValue(), MODULE_TEXT_SCALE, TEXT_HEIGHT, RADIUS_SMALL)
+            choiceRow.setting.displayName(), choiceRow.setting.displayValue(), MODULE_TEXT_SCALE, TEXT_HEIGHT, componentRadius())
     }
 
     private fun renderTextRow(graphics: GuiGraphicsExtractor, font: Font, textRow: TextRow,
@@ -1996,9 +1835,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         val focused = setting === focusedTextSetting
         moduleText(graphics, font, textFit(font, setting.displayName(), moduleTextWidth(bounds.w - field.w - 36)),
             bounds.x + 16, bounds.y + (bounds.h - TEXT_HEIGHT) / 2, TEXT_SECONDARY)
-        val pulse = interactionPulse(setting, now, motion)
-        val fieldBorder = if (focused) SLIDER_FILL else if (pulse > 0.0f) lerpColor(BORDER, PANEL_HIGHLIGHT, pulse) else BORDER
-        roundedRectBordered(graphics, field.x, field.y, field.w, field.h, 3, SLIDER_TRACK, SLIDER_TRACK, fieldBorder)
+        renderField(graphics, field, focused)
         val value = if (setting.keybindCapture()) {
             if (focused && focusedTextSetting === setting) KeybindCapture.HINT else keybindDisplayName(setting.value())
         } else setting.value()
@@ -2049,18 +1886,28 @@ class ClickGuiScreen @JvmOverloads constructor(
         actionRow: ActionRow, hoverable: Boolean, now: Long, motion: ClickGuiMotion) {
         ClickGuiScreenRenderBehavior.renderActionSettingRow(graphics, font, actionRow.bounds, mouseX, mouseY,
             hoverable, interactionPulse(actionRow.action, now, motion), actionRow.action.label,
-            MODULE_TEXT_SCALE, TEXT_HEIGHT, RADIUS_SMALL)
+            MODULE_TEXT_SCALE, TEXT_HEIGHT, componentRadius())
+    }
+
+    /** Input fields are flat; only the focused one gets an accent outline. */
+    private fun renderField(graphics: GuiGraphicsExtractor, field: Rect, focused: Boolean) {
+        roundedRect(graphics, field.x, field.y, field.w, field.h, 3, SLIDER_TRACK)
+        if (focused) roundedRectOutline(graphics, field.x, field.y, field.w, field.h, 3, SLIDER_FILL)
     }
 
     private fun renderScrollbar(graphics: GuiGraphicsExtractor, viewport: Rect, contentHeight: Int, scroll: Int) {
         if (contentHeight <= viewport.h) return
+        // Thin and only while scrolling: fully visible for 700 ms after the last wheel notch, then a 250 ms fade.
+        val idle = elapsedMillis(lastScrollNanos, System.nanoTime())
+        val opacity = if (idle < 700L) 1.0f else 1.0f - (idle - 700L) / 250.0f
+        if (opacity <= 0.0f) return
         val trackX = viewport.x + viewport.w - SCROLLBAR_WIDTH - 3
         val thumbHeight = maxOf(16, viewport.h * viewport.h / contentHeight)
         val travel = viewport.h - thumbHeight
         val maxScroll = contentHeight - viewport.h
         val appliedScroll = maxOf(0, minOf(maxScroll, scroll))
         val thumbY = viewport.y + travel * appliedScroll / maxScroll
-        roundedRect(graphics, trackX, thumbY, SCROLLBAR_WIDTH, thumbHeight, SCROLLBAR_WIDTH / 2, SCROLLBAR)
+        roundedRect(graphics, trackX, thumbY, SCROLLBAR_WIDTH, thumbHeight, 1, withOpacity(SCROLLBAR, opacity))
     }
 
     private fun settingsViewport(x: Int, panelY: Int): Rect {
@@ -2190,7 +2037,28 @@ class ClickGuiScreen @JvmOverloads constructor(
         if (categoryChanged || filterChanged) logGuiDiagnostic("EVENT action=category,${gridDiagnosticState(category)}")
     }
 
-    override fun mouseClicked(event: MouseButtonEvent, doubleClick: Boolean): Boolean {
+    // Input arrives in GUI px; the handlers below work in design px like the layout.
+    override fun mouseClicked(event: MouseButtonEvent, doubleClick: Boolean): Boolean =
+        handleMouseClicked(toDesign(event), doubleClick)
+
+    override fun mouseDragged(event: MouseButtonEvent, dragX: Double, dragY: Double): Boolean {
+        val scale = designPose()
+        return handleMouseDragged(toDesign(event), dragX / scale, dragY / scale)
+    }
+
+    override fun mouseReleased(event: MouseButtonEvent): Boolean = handleMouseReleased(toDesign(event))
+
+    override fun mouseScrolled(mouseX: Double, mouseY: Double, scrollX: Double, scrollY: Double): Boolean {
+        val scale = designPose()
+        return handleMouseScrolled(mouseX / scale, mouseY / scale, scrollX, scrollY)
+    }
+
+    private fun toDesign(event: MouseButtonEvent): MouseButtonEvent {
+        val scale = designPose()
+        return MouseButtonEvent(event.x() / scale, event.y() / scale, event.buttonInfo())
+    }
+
+    private fun handleMouseClicked(event: MouseButtonEvent, doubleClick: Boolean): Boolean {
         val mouseX = event.x().toInt()
         val mouseY = event.y().toInt()
         if (!inputSettled()) {
@@ -2254,6 +2122,10 @@ class ClickGuiScreen @JvmOverloads constructor(
                 return true
             }
         }
+        if (left && transitionFrom == null && workspaceRect(panelX, panelY).contains(mouseX, mouseY)) {
+            switchWorkspace()
+            return true
+        }
         if (left && githubRect(panelX, panelY).contains(mouseX, mouseY)) {
             ConfirmLinkScreen.confirmLinkNow(this, repositoryUrl())
             return true
@@ -2282,17 +2154,12 @@ class ClickGuiScreen @JvmOverloads constructor(
             return true
         }
 
-        if (left && transitionFrom == null && workspaceButtonRect(panelX, panelY).contains(mouseX, mouseY)) {
-            switchWorkspace()
-            return true
-        }
-
         val clickedEntry = categoryEntryAt(mouseX.toDouble(), mouseY.toDouble(), panelX, panelY)
         if (left && clickedEntry != null) {
             val entries = categoryEntries()
             val fullRow = categoryRowBounds(panelX, panelY)[entries.indexOf(clickedEntry)]
             val visibleRow = Rect(fullRow.x, fullRow.y - categoryScroll, fullRow.w, fullRow.h)
-            if (categoryFavoriteRect(visibleRow).contains(mouseX, mouseY)) {
+            if (categoryHeartHitRect(visibleRow, categoryFavoriteRect(visibleRow)).contains(mouseX, mouseY)) {
                 ClickGuiScreenCategoryBehavior.toggleCategoryFavorite(clickedEntry.category)
                 favoriteStateChanged()
                 playClick()
@@ -2323,7 +2190,9 @@ class ClickGuiScreen @JvmOverloads constructor(
             val bounds = Rect(card.x(), card.y(), card.w(), card.h())
             val module = card.module()
             if (!bounds.contains(mouseX, mouseY)) continue
-            if (left && moduleFavoriteRect(module, bounds).contains(mouseX, mouseY)) {
+            if (left) pressedCard = module
+            val hits = cardHitRects(module, bounds)
+            if (left && hits[0]!!.contains(mouseX, mouseY)) {
                 markInteraction(module)
                 playClick()
                 ClickGuiState.toggleFavorite(module)
@@ -2331,15 +2200,14 @@ class ClickGuiScreen @JvmOverloads constructor(
                 ModConfig.markDirty()
                 return true
             }
-            val toggle = cardSwitchRect(bounds)
-            if (left && module.showsKeybindControl() && keybindRect(module, bounds).contains(mouseX, mouseY)) {
+            if (left && hits[2]?.contains(mouseX, mouseY) == true) {
                 markInteraction(module)
                 playClick()
                 if (ModuleKeybindManager.isBinding(module)) ModuleKeybindManager.cancelBinding()
                 else ModuleKeybindManager.beginBinding(module)
                 return true
             }
-            if (left && module.showsToggleControl() && toggle.contains(mouseX, mouseY)) {
+            if (left && hits[1]?.contains(mouseX, mouseY) == true) {
                 markInteraction(module)
                 playClick()
                 val wasEnabled = module.isEnabled()
@@ -2598,7 +2466,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         return false
     }
 
-    override fun mouseDragged(event: MouseButtonEvent, dragX: Double, dragY: Double): Boolean {
+    private fun handleMouseDragged(event: MouseButtonEvent, dragX: Double, dragY: Double): Boolean {
         if (!inputSettled()) return true
         if (event.button() == 0 && dragSelection(event.x().toInt())) return true
         if (draggingPreview != null) return routePreviewMouse(event, release = false)
@@ -2627,8 +2495,9 @@ class ClickGuiScreen @JvmOverloads constructor(
         return super.mouseDragged(event, dragX, dragY)
     }
 
-    override fun mouseReleased(event: MouseButtonEvent): Boolean {
+    private fun handleMouseReleased(event: MouseButtonEvent): Boolean {
         selectingField = null
+        pressedCard = null
         if (draggingPreview != null) return routePreviewMouse(event, release = true)
         if (!inputSettled()) {
             draggingPicker = null
@@ -2905,8 +2774,9 @@ class ClickGuiScreen @JvmOverloads constructor(
         }
     }
 
-    override fun mouseScrolled(mouseX: Double, mouseY: Double, scrollX: Double, scrollY: Double): Boolean {
+    private fun handleMouseScrolled(mouseX: Double, mouseY: Double, scrollX: Double, scrollY: Double): Boolean {
         if (!inputSettled()) return true
+        lastScrollNanos = System.nanoTime()
         val rightX = panelX() + categoryWidth()
         val scrollSpeed = if (Minecraft.getInstance().hasControlDown()) 4 else 1
         val notch = Math.round(scrollY * CHANNEL_ROW_HEIGHT * scrollSpeed).toInt()
@@ -3055,23 +2925,14 @@ class ClickGuiScreen @JvmOverloads constructor(
     private fun categoryTopInset(): Int = maxOf(8, Math.round(panelHeight() * 0.034f))
     private fun categoryViewportTop(panelY: Int): Int = contentTop(panelY)
 
-    /** Where the scrolling category rows end: the switch button and a small gap sit below them. */
+    /** Where the scrolling category rows end; an update notice reserves a line below them. */
     private fun categoryViewportBottom(panelY: Int): Int {
         val bottomReserve = if (UpdateChecker.bannerText() == null) gridInset() else CATEGORY_NOTICE_HEIGHT + gridInset()
-        return panelY + panelHeight() - bottomReserve - workspaceButtonHeight() - WORKSPACE_BUTTON_GAP
+        return panelY + panelHeight() - bottomReserve
     }
 
     private fun categoryViewportHeight(panelY: Int): Int =
         maxOf(1, categoryViewportBottom(panelY) - categoryViewportTop(panelY))
-
-    private fun workspaceButtonHeight(): Int = maxOf(20, categoryRowHeight() - 4)
-
-    /** The Normal/Macros switch: the last row of the category rail, pinned below the scrolling rows. */
-    private fun workspaceButtonRect(panelX: Int, panelY: Int): Rect {
-        val height = workspaceButtonHeight()
-        val y = categoryViewportBottom(panelY) + WORKSPACE_BUTTON_GAP
-        return Rect(panelX + 7, y, maxOf(1, categoryWidth() - 14), height)
-    }
 
     /**
      * Swaps the whole screen to the other workspace. The view being left is written to its own saved state first and
@@ -3232,46 +3093,50 @@ class ClickGuiScreen @JvmOverloads constructor(
         }
     }
 
-    enum class TopBarIcon { GITHUB, SETTINGS, THEME, MOVE_ELEMENTS }
+    enum class TopBarIcon { WORKSPACE, GITHUB, SETTINGS, THEME, MOVE_ELEMENTS }
     private enum class PickerPart { SQUARE, HUE, ALPHA }
 
     companion object {
-        private val MOD_LOGO = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/geileraddons-logo.png")
-        private const val TOOLBAR_ICON_TEXTURE_SIZE = 256
+        private const val TOOLBAR_ICON_TEXTURE_SIZE = ClickGuiScreenRenderBehavior.TOOLBAR_ICON_TEXTURE_SIZE
         private val ICON_GITHUB = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/octicon-mark-github-16.png")
         private val ICON_SETTINGS = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/octicon-gear-16.png")
         private val ICON_THEME = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/octicon-paintbrush-16.png")
         private val ICON_MOVE = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/move-arrows-16.png")
-        private val ICON_SEARCH = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/octicon-search-16.png")
+        /** The Macros workspace button: a lightning bolt for "cheats", drawn for this mod. */
+        private val ICON_CHEATS = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/cheats-bolt.png")
         private val ICON_FAVORITE_OUTLINE = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/favorite-heart-outline.png")
         private val ICON_FAVORITE_FILLED = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/favorite-heart-filled.png")
-        private val ICON_MODULE_PLACEHOLDER = Identifier.fromNamespaceAndPath("minecraft", "textures/item/barrier.png")
         private const val SEARCH_MAX_LENGTH = 64
-        private const val SEARCH_TEXT_ICON_GAP = 6
+        private const val SEARCH_TEXT_INSET = 8
         private const val SEARCH_TEXT_RIGHT_PADDING = 8
         private const val CHANNEL_ROW_HEIGHT = 14
-        private const val SCROLLBAR_WIDTH = 3
-        private const val SCROLLBAR_GUTTER = SCROLLBAR_WIDTH + 6
+        private const val SCROLLBAR_WIDTH = 2
+        private const val SCROLLBAR_GUTTER = 9
         private const val CATEGORY_NOTICE_HEIGHT = 14
-        private const val WORKSPACE_BUTTON_GAP = 4
         private const val FAVORITE_COLOR = 0xFFFF4B5C.toInt()
-        private const val WIP_BADGE_LABEL = "WIP"
         private const val GUI_DIAGNOSTIC_MODULE = "Click GUI"
         private const val GUI_DIAGNOSTIC_EVENT_LIMIT = 32
         private const val VALUE_GUTTER = 36
         private const val LINE_HEIGHT = 9
         private const val TEXT_HEIGHT = 8
-        private const val MODULE_TEXT_SCALE = 0.76f
-        private const val CARD_TEXT_SCALE = 0.82f
-        private const val CATEGORY_TEXT_SCALE = 0.90f
-        private const val HEADER_TEXT_SCALE = 0.76f
-        private const val CARD_TITLE_SCALE = 1.50f
-        private const val CARD_INSET_FRACTION = 0.018f
-        private const val SWITCH_WIDTH_FRACTION = 0.12f
-        private const val SWITCH_HEIGHT_FRACTION = 0.25f
-        private const val KEYBIND_WIDTH = 18
-        private const val KEYBIND_HEIGHT = 15
-        private const val SET_BIND_WIDTH = 46
+        // Text scales are whole or half steps, so at the locked GUI scale 2 every font pixel lands on whole screen pixels.
+        private const val MODULE_TEXT_SCALE = 1.0f
+        private const val CATEGORY_TEXT_SCALE = 1.0f
+        private const val HEADER_TEXT_SCALE = 1.0f
+        private const val KEY_TEXT_SCALE = 1.0f
+        private const val KEY_BOX_HEIGHT = 16
+        /** Widest key label the badge shows; longer binds are cut with an ellipsis. */
+        private const val KEY_LABEL_MAX_WIDTH = 56
+        /** Visual rects of the card controls grow this far to the left for clicking. */
+        private const val HIT_LEFT = 8
+        private const val HIT_VERTICAL = 4
+        private const val PANEL_RADIUS = 5
+        private const val COMPONENT_RADIUS = 7
+        private const val KEY_SQUARE_RADIUS = 4
+        private const val CARD_PADDING = 8
+        private const val CARD_LINE_HEIGHT = 10
+        private const val CATEGORY_LABEL_X = 11
+        private const val CATEGORY_MIN_WIDTH = 100
         private const val CARET_BLINK_MILLIS = 500L
         private const val REPOSITORY_URL = ProjectLinks.GITHUB_URL
 
@@ -3282,8 +3147,8 @@ class ClickGuiScreen @JvmOverloads constructor(
             ClickGuiScreenCategoryBehavior.categoryEntrySelected(entry, selectedCategory, filterId, expanded)
         @JvmStatic fun categoryEntryLabel(entry: CategoryEntry, filterId: String?, expanded: Boolean): String =
             ClickGuiScreenCategoryBehavior.categoryEntryLabel(entry, filterId, expanded)
-        @JvmStatic fun searchTextInsetForHeight(fieldHeight: Int): Int =
-            ClickGuiHeaderGeometry.searchIconOffset(fieldHeight) + ClickGuiHeaderGeometry.searchIconSize(fieldHeight) + SEARCH_TEXT_ICON_GAP
+        @Suppress("UNUSED_PARAMETER")
+        @JvmStatic fun searchTextInsetForHeight(fieldHeight: Int): Int = SEARCH_TEXT_INSET
         @JvmStatic fun searchTextViewportWidth(fieldWidth: Int, fieldHeight: Int): Int =
             maxOf(1, fieldWidth - searchTextInsetForHeight(fieldHeight) - SEARCH_TEXT_RIGHT_PADDING)
         @JvmStatic fun searchTextFontWidth(fieldWidth: Int, fieldHeight: Int): Int =
@@ -3304,14 +3169,75 @@ class ClickGuiScreen @JvmOverloads constructor(
             }
             return Rect(left, top, hitSize, hitSize)
         }
+        /** A compact pill in the iOS 1.65:1 ratio on the card's right side. */
         @JvmStatic fun cardSwitchRect(card: Rect): Rect {
-            val width = cardSwitchWidth(card)
-            val height = cardSwitchHeight(card)
+            val height = maxOf(12, Math.round(card.h * 0.22f))
+            val width = Math.round(height * 1.65f)
             val inset = maxOf(8, Math.round(card.w * 0.035f))
             return Rect(card.x + card.w - inset - width, card.y + Math.round(card.h * 0.40f) - height / 2, width, height)
         }
-        @JvmStatic fun cardSwitchWidth(card: Rect): Int = maxOf(28, Math.round(card.w * 0.10f))
-        @JvmStatic fun cardSwitchHeight(card: Rect): Int = maxOf(12, Math.round(card.h * 0.21f))
+        /** The key box under the switch: a square that widens to fit [labelWidth] (already scaled) plus 4 px a side. */
+        @JvmStatic fun keySquareRect(card: Rect, showsToggleControl: Boolean, labelWidth: Int): Rect {
+            val height = KEY_BOX_HEIGHT
+            val width = maxOf(height, labelWidth + 10)
+            if (showsToggleControl) {
+                val toggle = cardSwitchRect(card)
+                // A long bind would stick out past the card's right edge when centred under the switch.
+                val left = (toggle.x + (toggle.w - width) / 2).coerceIn(card.x + 4, maxOf(card.x + 4, card.x + card.w - 4 - width))
+                return Rect(left, toggle.y + toggle.h + maxOf(2, Math.round(card.h * 0.035f)), width, height)
+            }
+            val inset = maxOf(8, Math.round(card.w * 0.035f))
+            return Rect(card.x + card.w - inset - width, card.y + card.h - maxOf(4, Math.round(card.h * 0.10f)) - height, width, height)
+        }
+        /** Compact bind text for the key badge: modifier letters (C, S, A, W) then the key, so a combo stays short. */
+        @JvmStatic fun keyBadgeLabel(bind: ModuleKeybind): String {
+            if (!bind.isBound()) return "–"
+            val mods = StringBuilder()
+            if ((bind.modifiers() and InputConstants.MOD_CONTROL) != 0) mods.append("C+")
+            if ((bind.modifiers() and InputConstants.MOD_SHIFT) != 0) mods.append("S+")
+            if ((bind.modifiers() and InputConstants.MOD_ALT) != 0) mods.append("A+")
+            if ((bind.modifiers() and InputConstants.MOD_SUPER) != 0) mods.append("W+")
+            return mods.toString() + bind.key().displayName.string
+        }
+
+        /**
+         * Click areas for the heart, switch and key square, in that order (null where a card has no such control): each
+         * visual rect grows 8 px left, to the card's right edge and half way up or down to its neighbour, so the three never
+         * overlap and stay inside the card.
+         */
+        @JvmStatic fun cardControlHitRects(card: Rect, heart: Rect, toggle: Rect?, key: Rect?): Array<Rect?> {
+            val visuals = arrayOf<Rect?>(heart, toggle, key)
+            val order = visuals.indices.filter { visuals[it] != null }.sortedBy { visuals[it]!!.y }
+            val out = arrayOfNulls<Rect>(3)
+            val right = card.x + card.w
+            for ((n, index) in order.withIndex()) {
+                val v = visuals[index]!!
+                val top = if (n == 0) maxOf(card.y, v.y - HIT_VERTICAL)
+                    else (visuals[order[n - 1]]!!.let { it.y + it.h } + v.y) / 2
+                val bottom = if (n == order.size - 1) minOf(card.y + card.h, v.y + v.h + HIT_VERTICAL)
+                    else (v.y + v.h + visuals[order[n + 1]]!!.y) / 2
+                val left = maxOf(card.x, v.x - HIT_LEFT)
+                out[index] = Rect(left, top, right - left, bottom - top)
+            }
+            return out
+        }
+
+        /** The category row heart's click area: wider to the left and to the row's edge, never taller. */
+        @JvmStatic fun categoryHeartHitRect(row: Rect, heart: Rect): Rect {
+            val left = maxOf(row.x, heart.x - HIT_LEFT)
+            return Rect(left, heart.y, row.x + row.w - left, heart.h)
+        }
+
+        /** Where card text must stop: before the heart, and before the switch when there is one. */
+        @JvmStatic fun cardTextRight(card: Rect, toggle: Rect?, heart: Rect): Int = minOf(
+            heart.x - maxOf(5, Math.round(card.w * 0.015f)),
+            if (toggle != null) toggle.x - maxOf(8, Math.round(card.w * 0.025f))
+            else card.x + card.w - maxOf(8, Math.round(card.w * 0.035f)),
+        )
+        /** Category names as the menu shows them; only Miscellaneous is shortened. */
+        @JvmStatic fun categoryLabel(category: Category): String =
+            if (category == Category.MISCELLANEOUS) "Misc" else category.displayName()
+        @JvmStatic fun scrollbarGutter(): Int = SCROLLBAR_GUTTER
         @JvmStatic fun gridCardContentWidth(viewportWidth: Int): Int = ClickGuiModuleGrid.gridCardContentWidth(viewportWidth, SCROLLBAR_GUTTER)
         @JvmStatic fun cardWidthForGridViewport(viewportWidth: Int, columns: Int, gap: Int): Int =
             ClickGuiModuleGrid.cardWidthForGridViewport(viewportWidth, columns, gap, SCROLLBAR_GUTTER)
@@ -3340,8 +3266,6 @@ class ClickGuiScreen @JvmOverloads constructor(
             ClickGuiScreenRenderBehavior.drawScaledText(graphics, font, text, x, y, color, scale)
         private fun elapsedMillis(startedNanos: Long, nowNanos: Long): Long =
             ClickGuiMotion.elapsedMillis(startedNanos, nowNanos)
-        private fun searchIconSize(fieldHeight: Int): Int = ClickGuiHeaderGeometry.searchIconSize(fieldHeight)
-        private fun searchIconOffset(fieldHeight: Int): Int = ClickGuiHeaderGeometry.searchIconOffset(fieldHeight)
         private fun clampCursor(text: String, cursor: Int): Int = ClickGuiTextEditing.clampCursor(text, cursor)
         private fun moveCursor(text: String, cursor: Int, direction: Int): Int = ClickGuiTextEditing.moveCursor(text, cursor, direction)
         private val EDIT_KEYS = setOf(

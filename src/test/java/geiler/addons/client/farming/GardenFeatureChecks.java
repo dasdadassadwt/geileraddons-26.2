@@ -124,6 +124,21 @@ public final class GardenFeatureChecks {
 		equals(75, cooldown.remainingSeconds(), "widget cooldown seconds");
 		equals(PestCooldownText.State.READY, PestCooldownText.parse(List.of(
 			"Pests:", "0 Pests", "Plots: none", "Cooldown: READY", "Area: Garden")).orElseThrow().state(), "widget ready state");
+		PestSprayText.Observation spray = PestSprayText.parse(List.of(
+			"Pests:", "3 Pests", "Cooldown: 1m 15s", "Spray: Compost (12m)", "Area: Garden")).orElseThrow();
+		check("Compost".equals(spray.getName()) && spray.getRemainingSeconds() == 720, "spray row reads name and minutes");
+		PestSprayText.Observation sprayMixed = PestSprayText.parse(List.of("Pests:", "Spray: Honey Jar (1m 3s)")).orElseThrow();
+		check("Honey Jar".equals(sprayMixed.getName()) && sprayMixed.getRemainingSeconds() == 63, "spray row reads minutes and seconds");
+		check(PestSprayText.parse(List.of("Pests:", "Spray: Compost (53s)")).orElseThrow().getRemainingSeconds() == 53, "spray row reads seconds");
+		PestSprayText.Observation none = PestSprayText.parse(List.of("Pests:", "Spray: None", "Area: Garden")).orElseThrow();
+		check(none.getName() == null && none.getRemainingSeconds() == 0, "Spray: None means no spray on this plot");
+		check(PestSprayText.parse(List.of("Pests:", "Cooldown: READY")).isEmpty() && PestSprayText.parse(List.of("Spray: Compost (3m)")).isEmpty()
+			&& PestSprayText.parse(List.of()).isEmpty(), "no pests widget or no spray row is unknown");
+		check(PestSprayText.parse(List.of("Area: Garden", "Spray: Compost (3m)", "Pests:", "Cooldown: READY")).isEmpty(),
+			"a spray row outside the Pests widget is ignored");
+		check("Compost 12m 00s".equals(PestSprayText.text(spray)) && "none".equals(PestSprayText.text(none))
+			&& "Honey Jar 53s".equals(PestSprayText.text(new PestSprayText.Observation("Honey Jar", 53)))
+			&& "unknown".equals(PestSprayText.text(null)), "spray text shows minutes and seconds, none or unknown");
 	}
 
 	private static void cooldownReadyIsOnceAndWaitsForBothSources() {

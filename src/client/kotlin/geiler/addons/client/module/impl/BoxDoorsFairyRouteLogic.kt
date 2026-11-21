@@ -4,7 +4,7 @@ import geiler.addons.client.dungeon.BloodDoorTraceRules
 import geiler.addons.client.dungeon.DungeonDoorTracker
 import geiler.addons.client.dungeon.DungeonGridRules
 import geiler.addons.client.dungeon.DungeonMapGeometry
-import geiler.addons.client.dungeon.odin.OdinDungeonMapGrid
+import geiler.addons.client.dungeon.helpers.DungeonMapGrid
 import java.util.ArrayDeque
 import java.util.Locale
 import java.util.function.Function
@@ -16,7 +16,7 @@ object BoxDoorsFairyRouteLogic {
     private const val CELL_COUNT = GRID_SIZE * GRID_SIZE
 
     fun mapCellAtMarker(
-        map: OdinDungeonMapGrid.ScanResult?,
+        map: DungeonMapGrid.ScanResult?,
         marker: DungeonMapGeometry.MapPoint?,
     ): BoxDoorsFairyRouteRules.MapCellResolution {
         if (map == null || !map.available()) return BoxDoorsFairyRouteRules.MapCellResolution(-1, "map-scan-unavailable")
@@ -45,14 +45,14 @@ object BoxDoorsFairyRouteLogic {
         if (tile == null || tile.index != cell)
             return BoxDoorsFairyRouteRules.MapCellResolution(-1, "map-tile-index-mismatch")
         val type = tile.type
-        if (type == null || type == OdinDungeonMapGrid.MapRoomType.UNKNOWN ||
-            type == OdinDungeonMapGrid.MapRoomType.UNDISCOVERED
+        if (type == null || type == DungeonMapGrid.MapRoomType.UNKNOWN ||
+            type == DungeonMapGrid.MapRoomType.UNDISCOVERED
         ) return BoxDoorsFairyRouteRules.MapCellResolution(-1, "player-map-marker-on-unknown-tile")
         return BoxDoorsFairyRouteRules.MapCellResolution(cell, "inside-recognized-tile")
     }
 
     fun select(
-        map: OdinDungeonMapGrid.ScanResult?, currentMapCell: Int, currentWorldCell: Int,
+        map: DungeonMapGrid.ScanResult?, currentMapCell: Int, currentWorldCell: Int,
         observedDoors: List<DungeonDoorTracker.Door>?,
     ): BoxDoorsFairyRouteRules.Selection = select(
         map, currentMapCell, currentWorldCell, observedDoors,
@@ -60,7 +60,7 @@ object BoxDoorsFairyRouteLogic {
     )
 
     fun select(
-        map: OdinDungeonMapGrid.ScanResult?, currentMapCell: Int, currentWorldCell: Int,
+        map: DungeonMapGrid.ScanResult?, currentMapCell: Int, currentWorldCell: Int,
         observedDoors: List<DungeonDoorTracker.Door>?,
         presenceOf: Function<DungeonDoorTracker.Door, BloodDoorTraceRules.DoorPresence>?,
     ): BoxDoorsFairyRouteRules.Selection {
@@ -76,7 +76,7 @@ object BoxDoorsFairyRouteLogic {
     }
 
     fun select(
-        map: OdinDungeonMapGrid.ScanResult?, currentMapCell: Int, offsetX: Int, offsetZ: Int,
+        map: DungeonMapGrid.ScanResult?, currentMapCell: Int, offsetX: Int, offsetZ: Int,
         observedDoors: List<DungeonDoorTracker.Door>?,
     ): BoxDoorsFairyRouteRules.Selection = select(
         map, currentMapCell, offsetX, offsetZ, observedDoors,
@@ -85,7 +85,7 @@ object BoxDoorsFairyRouteLogic {
 
     /** Resolves the unique room-group route and matches its exact physical door edge. */
     fun select(
-        map: OdinDungeonMapGrid.ScanResult?, currentMapCell: Int, offsetX: Int, offsetZ: Int,
+        map: DungeonMapGrid.ScanResult?, currentMapCell: Int, offsetX: Int, offsetZ: Int,
         observedDoors: List<DungeonDoorTracker.Door>?,
         presenceOf: Function<DungeonDoorTracker.Door, BloodDoorTraceRules.DoorPresence>?,
     ): BoxDoorsFairyRouteRules.Selection {
@@ -335,7 +335,7 @@ object BoxDoorsFairyRouteLogic {
         else -> false
     }
 
-    private fun buildRoute(map: OdinDungeonMapGrid.ScanResult, offsetX: Int, offsetZ: Int): RouteBuild {
+    private fun buildRoute(map: DungeonMapGrid.ScanResult, offsetX: Int, offsetZ: Int): RouteBuild {
         val roomCount = map.rooms().size
         if (roomCount == 0)
             return RouteBuild.failure(BoxDoorsFairyRouteRules.Status.ROUTE_INCOMPLETE,
@@ -354,8 +354,8 @@ object BoxDoorsFairyRouteLogic {
                         "room-segment-invalid-or-owned-by-multiple-groups", "incomplete", roomCount, map.doors().size)
                 ownerByCell[cell] = roomIndex
             }
-            if (room.type() == OdinDungeonMapGrid.MapRoomType.ENTRANCE) entrances.add(roomIndex)
-            if (room.type() == OdinDungeonMapGrid.MapRoomType.BLOOD) bloodRooms.add(roomIndex)
+            if (room.type() == DungeonMapGrid.MapRoomType.ENTRANCE) entrances.add(roomIndex)
+            if (room.type() == DungeonMapGrid.MapRoomType.BLOOD) bloodRooms.add(roomIndex)
         }
         if (entrances.size > 1 || bloodRooms.size > 1)
             return RouteBuild.failure(BoxDoorsFairyRouteRules.Status.ROUTE_AMBIGUOUS,
@@ -430,7 +430,7 @@ object BoxDoorsFairyRouteLogic {
 
     private fun translatedCurrentFootprint(route: RouteBuild, roomIndex: Int, offsetX: Int, offsetZ: Int): List<Int> {
         for (edge in route.pathEdges) {
-            if (edge.toRoomType == OdinDungeonMapGrid.MapRoomType.FAIRY && route.ownerByCell[edge.mapTo] == roomIndex)
+            if (edge.toRoomType == DungeonMapGrid.MapRoomType.FAIRY && route.ownerByCell[edge.mapTo] == roomIndex)
                 return edge.targetRoomFootprint
         }
         for (pathIndex in route.roomPath.indices) {
@@ -482,13 +482,13 @@ object BoxDoorsFairyRouteLogic {
     }
 
     private fun transition(edge: RouteEdge): BoxDoorsFairyRouteRules.Transition = when {
-        edge.mapEdge.type == OdinDungeonMapGrid.DoorType.BLOOD &&
-            edge.toRoomType == OdinDungeonMapGrid.MapRoomType.BLOOD ->
-            if (edge.fromRoomType == OdinDungeonMapGrid.MapRoomType.FAIRY)
+        edge.mapEdge.type == DungeonMapGrid.DoorType.BLOOD &&
+            edge.toRoomType == DungeonMapGrid.MapRoomType.BLOOD ->
+            if (edge.fromRoomType == DungeonMapGrid.MapRoomType.FAIRY)
                 BoxDoorsFairyRouteRules.Transition.EXIT_FAIRY_TO_BLOOD
             else BoxDoorsFairyRouteRules.Transition.FOLLOW_ROUTE
-        edge.toRoomType == OdinDungeonMapGrid.MapRoomType.FAIRY -> BoxDoorsFairyRouteRules.Transition.ENTER_FAIRY
-        edge.fromRoomType == OdinDungeonMapGrid.MapRoomType.FAIRY -> BoxDoorsFairyRouteRules.Transition.EXIT_FAIRY
+        edge.toRoomType == DungeonMapGrid.MapRoomType.FAIRY -> BoxDoorsFairyRouteRules.Transition.ENTER_FAIRY
+        edge.fromRoomType == DungeonMapGrid.MapRoomType.FAIRY -> BoxDoorsFairyRouteRules.Transition.EXIT_FAIRY
         else -> BoxDoorsFairyRouteRules.Transition.FOLLOW_ROUTE
     }
 
@@ -534,13 +534,13 @@ object BoxDoorsFairyRouteLogic {
         return Vec3(x / worldFootprint.size, DungeonGridRules.SCAN_MIN_Y + 1.0, z / worldFootprint.size)
     }
 
-    private fun trackerType(type: OdinDungeonMapGrid.DoorType?): DungeonDoorTracker.Type? = when (type) {
-        OdinDungeonMapGrid.DoorType.BLOOD -> DungeonDoorTracker.Type.BLOOD
-        OdinDungeonMapGrid.DoorType.WITHER, OdinDungeonMapGrid.DoorType.FAIRY -> DungeonDoorTracker.Type.WITHER
+    private fun trackerType(type: DungeonMapGrid.DoorType?): DungeonDoorTracker.Type? = when (type) {
+        DungeonMapGrid.DoorType.BLOOD -> DungeonDoorTracker.Type.BLOOD
+        DungeonMapGrid.DoorType.WITHER, DungeonMapGrid.DoorType.FAIRY -> DungeonDoorTracker.Type.WITHER
         else -> null
     }
 
-    private fun validEdge(edge: OdinDungeonMapGrid.Door?): Boolean {
+    private fun validEdge(edge: DungeonMapGrid.Door?): Boolean {
         if (edge == null || edge.type == null || !validCell(edge.firstCell) || !validCell(edge.secondCell)) return false
         val dx = kotlin.math.abs(edge.firstCell % GRID_SIZE - edge.secondCell % GRID_SIZE)
         val dz = kotlin.math.abs(edge.firstCell / GRID_SIZE - edge.secondCell / GRID_SIZE)
@@ -576,7 +576,7 @@ object BoxDoorsFairyRouteLogic {
     )
 
     private data class GraphEdge(
-        val id: Int, val firstRoom: Int, val secondRoom: Int, val door: OdinDungeonMapGrid.Door,
+        val id: Int, val firstRoom: Int, val secondRoom: Int, val door: DungeonMapGrid.Door,
     ) {
         fun otherRoom(room: Int): Int = if (firstRoom == room) secondRoom else firstRoom
     }
@@ -586,9 +586,9 @@ object BoxDoorsFairyRouteLogic {
         val mapTo: Int,
         val worldFrom: Int,
         val worldTo: Int,
-        val mapEdge: OdinDungeonMapGrid.Door,
-        val fromRoomType: OdinDungeonMapGrid.MapRoomType,
-        val toRoomType: OdinDungeonMapGrid.MapRoomType,
+        val mapEdge: DungeonMapGrid.Door,
+        val fromRoomType: DungeonMapGrid.MapRoomType,
+        val toRoomType: DungeonMapGrid.MapRoomType,
         val targetRoomFootprint: List<Int>,
     )
 

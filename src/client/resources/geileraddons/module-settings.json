@@ -20,6 +20,15 @@
         { "id": "backgroundColor", "type": "color", "name": "Background Color", "default": [0, 0, 0, 128] }
       ]
     },
+    "Performance HUD": {
+      "settings": [
+        { "id": "showPing", "type": "toggle", "name": "Show Ping", "default": true },
+        { "id": "showTps", "type": "toggle", "name": "Show TPS", "default": true },
+        { "id": "showFps", "type": "toggle", "name": "Show FPS", "default": true },
+        { "id": "style", "type": "dropdown", "name": "Style", "default": "Click GUI", "choices": ["Click GUI", "Text"] },
+        { "id": "textColor", "type": "color", "name": "Text Color", "default": [255, 255, 255, 255] }
+      ]
+    },
     "Fishing Bobber Timer": {
       "settings": [
         { "id": "startOnLiquidTouch", "type": "toggle", "name": "Start On Liquid Touch", "default": false }
@@ -37,6 +46,12 @@
         { "id": "showIcon", "type": "toggle", "name": "Show Bait Icon", "default": true },
         { "id": "baitChangeWarning", "type": "toggle", "name": "Bait Change Warning", "default": true },
         { "id": "noBaitWarning", "type": "toggle", "name": "No Bait Warning", "default": true }
+      ]
+    },
+    "Sea Creature Cap": {
+      "settings": [
+        { "id": "cap", "type": "slider", "name": "Cap", "label": "Creatures Allowed At Once (0 = No Cap)", "min": 0, "max": 20, "default": 5, "integer": true },
+        { "id": "hideWhenNone", "type": "toggle", "name": "Hide When None", "label": "Only Show While Fishing Or Creatures Are Alive", "default": true }
       ]
     },
     "Sea Creature Alerts": {
@@ -370,14 +385,6 @@
         { "name": "Free Look", "settings": ["freeLookEnabled", "freeLookKeybind"] }
       ]
     },
-    "No Fog": {
-      "settings": [
-        { "id": "underwater", "type": "toggle", "name": "Underwater", "label": "Remove Underwater Fog", "default": true },
-        { "id": "lava", "type": "toggle", "name": "Lava", "label": "Remove Lava Fog", "default": true },
-        { "id": "air", "type": "toggle", "name": "Air", "label": "Remove Nether, World And Effect Fog", "default": true },
-        { "id": "distance", "type": "toggle", "name": "Distance", "label": "Remove Render Distance Fog", "default": true }
-      ]
-    },
     "Freecam": {
       "settings": [
         { "id": "speed", "type": "slider", "name": "Speed", "label": "Flight Speed (blocks per tick)", "min": 0.1, "max": 10.0, "default": 1.0 }
@@ -471,12 +478,19 @@
         {"id": "expOrbs", "type": "toggle", "name": "Exp Orbs", "default": false},
         {"id": "stuckArrows", "type": "toggle", "name": "Stuck Arrows", "default": false},
         {"id": "blindness", "type": "toggle", "name": "Blindness", "label": "Remove The Blindness Effect", "default": false},
-        {"id": "darkness", "type": "toggle", "name": "Warden Darkness", "label": "Remove The Darkness Effect", "default": false}
+        {"id": "darkness", "type": "toggle", "name": "Warden Darkness", "label": "Remove The Darkness Effect", "default": false},
+        {"id": "underwaterFog", "type": "toggle", "name": "Underwater Fog", "label": "Remove Underwater Fog", "default": false},
+        {"id": "lavaFog", "type": "toggle", "name": "Lava Fog", "label": "Remove Lava Fog", "default": false},
+        {"id": "airFog", "type": "toggle", "name": "Air Fog", "label": "Remove Nether, World And Effect Fog", "default": false},
+        {"id": "distanceFog", "type": "toggle", "name": "Distance Fog", "label": "Remove Render Distance Fog", "default": false},
+        {"id": "clouds", "type": "toggle", "name": "Clouds", "label": "Remove The Sky Clouds", "default": false},
+        {"id": "soulweaverSkulls", "type": "toggle", "name": "Soul Weaver Skulls", "label": "Hide The Skulls From Soul Weaver's Gloves", "default": false}
       ],
       "groups": [
         {"name": "Overlays & HUD", "settings": ["fireOverlay", "foodBar", "armorBar", "bossBar", "effectDisplay", "recipeBook", "nausea", "blindness", "darkness"]},
-        {"name": "Entities", "settings": ["deadEntities", "lightning", "fallingBlocks", "entityFire", "guidedSheep", "bonePlating", "treeBits", "expOrbs", "stuckArrows"]},
-        {"name": "Particles", "settings": ["deadPoof", "mageBeam", "powderCoating"]}
+        {"name": "Entities", "settings": ["deadEntities", "lightning", "fallingBlocks", "entityFire", "guidedSheep", "bonePlating", "treeBits", "expOrbs", "stuckArrows", "soulweaverSkulls"]},
+        {"name": "Particles", "settings": ["deadPoof", "mageBeam", "powderCoating"]},
+        {"name": "Fog", "settings": ["underwaterFog", "lavaFog", "airFog", "distanceFog", "clouds"]}
       ]
     },
     "Animation Fix": {
@@ -609,6 +623,42 @@
         {"id": "sneak", "type": "text", "name": "Sneak", "default": "", "maxLength": 64, "keybind": true},
         {"id": "excludeBarn", "type": "toggle", "name": "Exclude Barn", "label": "Keep Normal Keys In The Barn And Greenhouse", "default": true},
         {"id": "requireTool", "type": "toggle", "name": "Require Farming Tool", "label": "Only While Holding A Farming Tool", "default": true}
+      ]
+    },
+    "Garden Command Keybinds": {
+      "settings": [
+        {"id": "warpGarden", "type": "text", "name": "Warp Garden", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "setSpawn", "type": "text", "name": "Set Spawn", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "barn", "type": "text", "name": "Barn", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "desk", "type": "text", "name": "Desk", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot1", "type": "text", "name": "Plot 1", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot2", "type": "text", "name": "Plot 2", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot3", "type": "text", "name": "Plot 3", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot4", "type": "text", "name": "Plot 4", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot5", "type": "text", "name": "Plot 5", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot6", "type": "text", "name": "Plot 6", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot7", "type": "text", "name": "Plot 7", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot8", "type": "text", "name": "Plot 8", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot9", "type": "text", "name": "Plot 9", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot10", "type": "text", "name": "Plot 10", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot11", "type": "text", "name": "Plot 11", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot12", "type": "text", "name": "Plot 12", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot13", "type": "text", "name": "Plot 13", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot14", "type": "text", "name": "Plot 14", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot15", "type": "text", "name": "Plot 15", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot16", "type": "text", "name": "Plot 16", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot17", "type": "text", "name": "Plot 17", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot18", "type": "text", "name": "Plot 18", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot19", "type": "text", "name": "Plot 19", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot20", "type": "text", "name": "Plot 20", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot21", "type": "text", "name": "Plot 21", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot22", "type": "text", "name": "Plot 22", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot23", "type": "text", "name": "Plot 23", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "plot24", "type": "text", "name": "Plot 24", "default": "", "maxLength": 64, "keybind": true}
+      ],
+      "groups": [
+        {"name": "Actions", "settings": ["warpGarden", "setSpawn", "barn", "desk"]},
+        {"name": "Plots", "folded": true, "settings": ["plot1", "plot2", "plot3", "plot4", "plot5", "plot6", "plot7", "plot8", "plot9", "plot10", "plot11", "plot12", "plot13", "plot14", "plot15", "plot16", "plot17", "plot18", "plot19", "plot20", "plot21", "plot22", "plot23", "plot24"]}
       ]
     },
     "Greenhouse Helper": {
@@ -807,12 +857,14 @@
         {"id": "obsidian", "type": "toggle", "name": "Obsidian Chest", "default": true},
         {"id": "bedrock", "type": "toggle", "name": "Bedrock Chest", "default": true},
         {"id": "spinSeconds", "type": "slider", "name": "Spin Seconds", "min": 2, "max": 8, "default": 5, "integer": true},
+        {"id": "revealSeconds", "type": "slider", "name": "Reveal Seconds", "min": 0.5, "max": 4.0, "default": 1.6},
+        {"id": "blur", "type": "toggle", "name": "Blur Background", "default": true},
         {"id": "playSound", "type": "toggle", "name": "Play Sound", "default": true},
         {"id": "volume", "type": "slider", "name": "Volume", "min": 0, "max": 100, "default": 60, "integer": true}
       ],
       "groups": [
         {"name": "Chests", "settings": ["wood", "gold", "diamond", "emerald", "obsidian", "bedrock"]},
-        {"name": "Animation", "settings": ["spinSeconds", "playSound", "volume"]}
+        {"name": "Animation", "settings": ["spinSeconds", "revealSeconds", "blur", "playSound", "volume"]}
       ]
     },
     "Ghost Vision": {
@@ -821,6 +873,22 @@
         {"id": "fillColor", "type": "color", "name": "Fill Color", "default": [0, 200, 200, 128]},
         {"id": "outlineColor", "type": "color", "name": "Outline Color", "default": [0, 200, 200, 255]},
         {"id": "hideCharge", "type": "toggle", "name": "Remove Charge Effect", "default": true}
+      ]
+    },
+    "Enchant Colors": {
+      "settings": [
+        {"id": "rainbowPerfect", "type": "toggle", "name": "Rainbow Perfect", "default": true},
+        {"id": "boldPerfect", "type": "toggle", "name": "Bold Perfect", "default": false},
+        {"id": "perfect", "type": "color", "name": "Perfect Color", "default": [255, 85, 85]},
+        {"id": "great", "type": "color", "name": "Great Color", "default": [255, 170, 0]},
+        {"id": "good", "type": "color", "name": "Good Color", "default": [85, 85, 255]},
+        {"id": "poor", "type": "color", "name": "Poor Color", "default": [170, 170, 170]},
+        {"id": "ultimate", "type": "color", "name": "Ultimate Color", "default": [255, 85, 255]}
+      ]
+    },
+    "Missing Enchants": {
+      "settings": [
+        {"id": "color", "type": "color", "name": "Color", "default": [170, 170, 170]}
       ]
     }
   }

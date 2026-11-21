@@ -10,7 +10,8 @@ import kotlin.math.sin
  * each frame by a mixin; a capture older than [FRESH_NANOS] means bobbing is off or paused and nothing is applied.
  */
 object ViewBob {
-    private const val FRESH_NANOS = 100_000_000L
+    // Long enough to ride out a few slow frames; shorter, one late capture drops the bob and every label jumps for a frame.
+    const val FRESH_NANOS = 250_000_000L
     private var walk = 0f
     private var bob = 0f
     private var capturedAt = 0L

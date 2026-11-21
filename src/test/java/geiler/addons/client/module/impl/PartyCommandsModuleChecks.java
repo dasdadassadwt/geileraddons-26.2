@@ -43,8 +43,7 @@ public final class PartyCommandsModuleChecks {
                 && module.description().equals(
                     "Answers configured incoming commands and handles local party-transfer helpers.")
                 && module.category() == Category.MISCELLANEOUS
-                && !module.defaultEnabled()
-                && module.isWorkInProgress(),
+                && !module.defaultEnabled(),
                 "module identity, description, category, WIP marker, and disabled default remain stable");
             check(publicJavaEntrypointsRemainStable(module),
                 "the singleton field, static chat entrypoint, and public setting getters remain Java-visible");
@@ -150,6 +149,15 @@ public final class PartyCommandsModuleChecks {
                 && module.allowsIncomingReply(new ChatChannel("custom", "Custom", "/say", true))
                 && module.allowsIncomingReply(ChatChannel.PARTY),
                 "enabling Guild and Custom channels leaves the Party route active");
+
+            // Crash 2026-11-19: the top-level choice used "", which ChoiceSetting rejects, so any custom reply crashed the GUI.
+            ChoiceSetting folderChoice = PartyCommandsModule.replyFolderChoice(null);
+            check(folderChoice.value().equals(PartyCommandsModule.TOP_LEVEL)
+                && folderChoice.choices().contains(PartyCommandsModule.TOP_LEVEL)
+                && "Top level".equals(folderChoice.displayValue()),
+                "the reply folder dropdown builds with a non-blank top-level choice");
+            check(PartyCommandsModule.replyFolderChoice("no-such-folder").value().equals(PartyCommandsModule.TOP_LEVEL),
+                "an unknown folder id falls back to the top level instead of failing");
         } finally {
             for (int index = 0; index < booleans.length; index++) booleans[index].setValue(previousBooleans[index]);
             prefix.setValue(previousPrefix);

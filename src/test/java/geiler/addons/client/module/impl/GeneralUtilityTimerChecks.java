@@ -51,7 +51,7 @@ public final class GeneralUtilityTimerChecks {
 		assertPublicMethod(GeneralModule.class, "timerTitleDurationTicks", NumberSetting.class);
 
 		assertNames(module.booleanSettings(), List.of(
-			"Chat Triggers In Text Screens", "Check for Updates", "Island Detection API",
+			"Chat Triggers In Text Screens", "Check for Updates", "Auto Update", "Island Detection API",
 			"Show Availability Notices", "Supply Command Messages", "Show Timer HUD", "Completion Alert", "Chat Alert",
 			"Title Alert", "Sound Alert", "Custom Window Icon"), "boolean setting IDs");
 		check(!module.chatTriggersInTextScreens().value() && module.checkForUpdates().value()

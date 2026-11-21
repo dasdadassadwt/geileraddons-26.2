@@ -1,7 +1,7 @@
 package geiler.addons.client.dungeon
 
-import geiler.addons.client.dungeon.odin.DungeonOdinScoreCalculator
-import geiler.addons.client.dungeon.odin.DungeonOdinScoreLogic
+import geiler.addons.client.dungeon.helpers.DungeonScoreCalculator
+import geiler.addons.client.dungeon.helpers.DungeonScoreLogic
 
 /**
  * Text, colours and layout of the Map Info panel under the Dungeon Map. Follows the two-row "Full Hud" panel of Odin's
@@ -21,8 +21,8 @@ object DungeonMapInfoLogic {
     /** The latest run data the panel reads; published by the dungeon tick whenever the panel is wanted. */
     class RunSnapshot(
         val floor: DungeonFloor?,
-        val stats: DungeonOdinScoreCalculator.TabStats,
-        val score: DungeonOdinScoreCalculator.ScoreEstimate,
+        val stats: DungeonScoreCalculator.TabStats,
+        val score: DungeonScoreCalculator.ScoreEstimate,
         val inBoss: Boolean,
     )
 
@@ -70,7 +70,7 @@ object DungeonMapInfoLogic {
             batKillers = stats?.batKillers ?: 0,
             paul = stats?.paul == true,
             floorNumber = floor?.number() ?: 0,
-            requiredPercent = DungeonOdinScoreLogic.requiredSecretPercentage(floor),
+            requiredPercent = DungeonScoreLogic.requiredSecretPercentage(floor),
             score = run?.score?.minimum(),
             knownSecrets = knownSecrets,
         )

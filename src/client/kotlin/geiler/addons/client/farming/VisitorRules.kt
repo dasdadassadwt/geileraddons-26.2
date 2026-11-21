@@ -54,33 +54,55 @@ object VisitorRules {
     fun have(held: List<Held>, name: String): Int = held.filter { it.name == name }.sumOf { it.count }
 
     /** One line of the shopping-list card; [buyItem] is the item a click on it searches for, with [buyAmount] to buy. */
-    class Row(val text: String, val buyItem: String? = null, val buyAmount: Int = 0)
+    class Row(val text: String, val buyItem: String? = null, val buyAmount: Int = 0, val costText: String? = null)
+
+    /** Coins as millions for the card: `1.23M`, one decimal from 10M, none from 100M, `<0.01M` below 5,000 coins. */
+    @JvmStatic
+    fun millions(coins: Double): String {
+        val m = coins / 1_000_000.0
+        return when {
+            coins < 5_000.0 -> "<0.01M"
+            m < 10.0 -> String.format(java.util.Locale.ROOT, "%.2fM", m)
+            m < 100.0 -> String.format(java.util.Locale.ROOT, "%.1fM", m)
+            else -> String.format(java.util.Locale.ROOT, "%.0fM", m)
+        }
+    }
+
+    /** Visitor wording that differs from the Bazaar id (the Bazaar still says Nether Stalk, Pork, Huge Mushroom). */
+    private val ID_ALIASES = mapOf(
+        "ENCHANTED_NETHER_WART" to "ENCHANTED_NETHER_STALK", "MUTANT_NETHER_WART" to "MUTANT_NETHER_STALK", "ENCHANTED_COCOA_BEANS" to "ENCHANTED_COCOA",
+        "ENCHANTED_HAY_BALE" to "ENCHANTED_HAY_BLOCK", "ENCHANTED_RED_MUSHROOM_BLOCK" to "ENCHANTED_HUGE_MUSHROOM_2",
+        "ENCHANTED_BROWN_MUSHROOM_BLOCK" to "ENCHANTED_HUGE_MUSHROOM_1", "ENCHANTED_RAW_PORKCHOP" to "ENCHANTED_PORK",
+        "ENCHANTED_COOKED_PORKCHOP" to "ENCHANTED_GRILLED_PORK", "ENCHANTED_RAW_MUTTON" to "ENCHANTED_MUTTON", "ENCHANTED_RAW_RABBIT" to "ENCHANTED_RABBIT",
+        "ENCHANTED_RAW_COD" to "ENCHANTED_RAW_FISH", "ENCHANTED_COOKED_COD" to "ENCHANTED_COOKED_FISH", "ENCHANTED_MELON_SLICE" to "ENCHANTED_MELON",
+    )
+    private val TIERS = listOf("ENCHANTED_", "COMPACTED_", "MUTANT_", "POLISHED_")
+
+    /** The Bazaar product id of a visitor's item: `Enchanted Melon` is `ENCHANTED_MELON`, with a few renamed ones. */
+    @JvmStatic
+    fun bazaarId(name: String): String {
+        val id = name.trim().uppercase().replace(Regex("[^A-Z0-9]+"), "_").trim('_')
+        return ID_ALIASES[id] ?: id
+    }
+
+    /** The plain crop behind a tier id (`ENCHANTED_MELON` is `MELON`); an id with no tier prefix is returned as it is. */
+    @JvmStatic
+    fun baseId(id: String): String = TIERS.firstOrNull { id.startsWith(it) }?.let { id.removePrefix(it) } ?: id
 
     /**
-     * The shopping-list card: a header, each visitor (green when everything they want is in hand, yellow when part of it is)
-     * with their items, then what is still short to buy. Stock is handed out in the order visitors were read, and only to
+     * The shopping-list card: a header with the visitor and ready counts, then only what is still short to buy (no visitor
+     * names). Stock is handed out in the order visitors were read, and only to
      * visitors who can be served in full, so one stack is never counted for two of them.
      */
     @JvmStatic
-    fun rows(needs: Map<String, Map<String, Int>>, haveOf: (String) -> Int): List<Row> {
+    @JvmOverloads
+    fun rows(needs: Map<String, Map<String, Int>>, haveOf: (String) -> Int, unitPrice: (String) -> Double? = { null }): List<Row> {
         if (needs.isEmpty()) return emptyList()
         val stock = HashMap<String, Int>()
         fun left(item: String): Int = stock.getOrPut(item) { haveOf(item) }
-        val body = ArrayList<Row>()
         var ready = 0
-        for ((visitor, items) in needs) {
-            val satisfied = items.count { (item, amount) -> left(item) >= amount }
-            val served = items.isNotEmpty() && satisfied == items.size
-            body += when {
-                served -> Row("§a✔ $visitor §8Ready")
-                satisfied > 0 -> Row("§e● $visitor §8$satisfied/${items.size}")
-                else -> Row("§7○ $visitor")
-            }
-            for ((item, amount) in items.toSortedMap()) {
-                val have = left(item)
-                body += Row("§8  §7$item §${if (have >= amount) "a" else "e"}$have§7/§f$amount")
-            }
-            if (served) {
+        for (items in needs.values) {
+            if (items.isNotEmpty() && items.all { (item, amount) -> left(item) >= amount }) {
                 ready++
                 for ((item, amount) in items) stock[item] = left(item) - amount
             }
@@ -90,10 +112,13 @@ object VisitorRules {
         val short = total.toSortedMap().mapNotNull { (item, amount) ->
             (amount - haveOf(item)).takeIf { it > 0 }?.let { item to it }
         }
+        // Instabuy price of what is missing; an item the Bazaar does not list shows `?` and is left out of the total.
+        val costs = short.associate { (item, missing) -> item to unitPrice(item)?.let { it * missing } }
         val footer = if (short.isEmpty()) listOf(Row("§aEverything in hand")) else
-            listOf(Row("§7To buy §8(click to search the Bazaar)")) + short.map { (item, missing) -> Row("§8  §f$item §e$missing", item, missing) }
-        val header = Row("§7Visitor Shopping List §e${needs.size} §8(§a$ready ready§8)")
-        return listOf(header) + body + footer
+            short.map { (item, missing) -> Row("§f$item §e$missing", item, missing, costs[item]?.let { "§6${millions(it)}" } ?: "§8?") }
+        val totalCost = costs.values.filterNotNull().sum()
+        val header = Row("§7Visitor Shopping List §e${needs.size} §8(§a$ready ready§8)", costText = if (totalCost > 0.0) "§7Total §6${millions(totalCost)}" else null)
+        return listOf(header) + footer
     }
 
     private fun clean(text: String): String = text.replace(FORMATTING, "").trim()

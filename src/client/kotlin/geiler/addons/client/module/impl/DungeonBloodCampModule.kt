@@ -5,7 +5,7 @@ import com.mojang.blaze3d.vertex.PoseStack
 import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.dungeon.DungeonContextTracker
 import geiler.addons.client.dungeon.DungeonFloor
-import geiler.addons.client.dungeon.odin.DungeonBloodCampTracker
+import geiler.addons.client.dungeon.helpers.DungeonBloodCampTracker
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.ColorSetting
@@ -782,7 +782,7 @@ class DungeonBloodCampModule private constructor() : Module(
 
     /** Blood Camp timings follow server ticks (Odin counts them too) so server lag does not skew predictions. */
     private fun trackerTimeNanos(): Long {
-        val server = DungeonOdinAssistModule.INSTANCE.serverTicks()
+        val server = DungeonAssistModule.INSTANCE.serverTicks()
         return Math.max(0L, if (server > 0L) server else clientTick) * 50_000_000L
     }
 

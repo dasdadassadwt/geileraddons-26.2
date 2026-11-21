@@ -101,8 +101,6 @@ abstract class Module {
 
     open fun showsKeybindControl(): Boolean = true
 
-    open fun isWorkInProgress(): Boolean = false
-
     open fun isSettingVisible(setting: Setting): Boolean = true
 
     /** Module-specific hover help for one setting; null falls back to the generic text for its type. */
@@ -114,6 +112,12 @@ abstract class Module {
     open fun defaultEnabled(): Boolean = freshInstallEnabled
 
     open fun keybind(): ModuleKeybind = keybind
+
+    /** Whether a press of the keybind flips the module (false for Zoom, which holds on it instead). */
+    open fun togglesOnKeybind(): Boolean = true
+
+    /** The bind a fresh install and "reset to defaults" use; only Zoom has one. */
+    open fun defaultKeybind(): ModuleKeybind = ModuleKeybind.NONE
 
     open fun setKeybind(keybind: ModuleKeybind?) {
         this.keybind = keybind ?: ModuleKeybind.NONE

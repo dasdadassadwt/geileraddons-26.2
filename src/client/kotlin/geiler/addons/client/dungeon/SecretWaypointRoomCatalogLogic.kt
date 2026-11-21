@@ -24,7 +24,7 @@ object SecretWaypointRoomCatalogLogic {
         roomCells: List<DungeonGridRules.Cell?>?,
         roomName: String?,
         orientation: DungeonRoomOrientationRules.Candidate?,
-        templates: List<DevonianDungeonWaypointCatalog.Marker?>?,
+        templates: List<DungeonWaypointCatalog.Marker?>?,
     ): List<SecretWaypointStore.Waypoint> {
         val parsedFloor = DungeonFloor.parse(floor)
         if (parsedFloor == null || roomCells == null || roomCells.isEmpty() || roomName == null ||

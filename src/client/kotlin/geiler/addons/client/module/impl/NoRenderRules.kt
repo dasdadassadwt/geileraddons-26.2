@@ -45,6 +45,21 @@ object NoRenderRules {
     @JvmStatic
     fun isGuidedSheepHealth(health: Float): Boolean = health == 8.0f
 
+    /** Skin hash of the Soul Weaver's Gloves skull (SkyHanni's `DUNGEONS_SOUL_WEAVER`, NoFrills' Soulweaver Skulls). */
+    private const val SOUL_WEAVER_SKIN = "2f24ed6875304fa4a1f0c785b2cb6a6a72563e9f3e24ea55e18178452119aa66"
+
+    /** Whether a head's base64 `textures` property is the Soul Weaver skull skin. */
+    @JvmStatic
+    fun isSoulWeaverTexture(texture: String?): Boolean {
+        if (texture.isNullOrEmpty()) return false
+        val decoded = try {
+            String(java.util.Base64.getDecoder().decode(texture), Charsets.UTF_8)
+        } catch (error: IllegalArgumentException) {
+            return false
+        }
+        return decoded.contains(SOUL_WEAVER_SKIN)
+    }
+
     /** The bone-meal item stack of Bone Plating, by item id and exact display name. */
     @JvmStatic
     fun isBonePlatingDrop(isBoneMeal: Boolean, hoverName: String?): Boolean = isBoneMeal && hoverName == "Bone Meal"

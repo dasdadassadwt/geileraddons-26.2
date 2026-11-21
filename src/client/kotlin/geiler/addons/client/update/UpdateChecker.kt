@@ -5,6 +5,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import geiler.addons.GeilerAddons
 import geiler.addons.client.config.ModConfig
+import geiler.addons.client.module.impl.GeneralModule
 import geiler.addons.client.net.BoundedHttpBodyReader
 import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.ChatFormatting
@@ -22,9 +23,9 @@ import java.util.regex.Pattern
 /**
  * Notices when a newer release has been published on GitHub.
  *
- * Deliberately passive: it reads the releases API, compares tags, and says so once. It never
- * downloads or installs anything, and the whole thing is skipped when the user turns it off in
- * the config. One request per launch runs on a background thread, failing silently so a rate limit
+ * Passive by default: it reads the releases API, compares tags, and says so once. Only with the
+ * opt-in Auto Update setting does it hand the release to [AutoUpdater] to download and stage the new jar.
+ * The whole thing is skipped when the user turns it off in the config. One request per launch runs on a background thread, failing silently so a rate limit
  * or an offline machine never becomes something the player notices.
  */
 object UpdateChecker {
@@ -47,6 +48,7 @@ object UpdateChecker {
 
     private var currentVersion = ""
     private var announced = false
+    private var announcedInstall = false
 
     /** Fires the one background request. Safe to call before the player has joined anything. */
     @JvmStatic
@@ -55,6 +57,7 @@ object UpdateChecker {
             .map { container -> container.metadata.version.friendlyString }
             .orElse("")
         if (!ModConfig.checkForUpdates()) return
+        if (GeneralModule.INSTANCE.autoUpdate().value()) AutoUpdater.resumePending(currentVersion)
 
         val thread = Thread({ check() }, "GeilerAddons update check")
         // A hung request must never hold the game open on exit.
@@ -65,10 +68,19 @@ object UpdateChecker {
     /** Called each client tick; announces in chat once, as soon as there is a player to tell. */
     @JvmStatic
     fun tick() {
-        if (announced) return
-        val version = newerVersion ?: return
         val minecraft = Minecraft.getInstance()
         if (minecraft.player == null || minecraft.gui == null) return
+        AutoUpdater.installedVersion?.let { installed ->
+            if (!announcedInstall) {
+                announcedInstall = true
+                minecraft.gui.hud.getChat().addClientSystemMessage(
+                    Component.literal("[GeilerAddons] ").withStyle(ChatFormatting.LIGHT_PURPLE)
+                        .append(Component.literal("v$installed was downloaded and checked; restart the game to finish installing it").withStyle(ChatFormatting.WHITE)),
+                )
+            }
+        }
+        if (announced) return
+        val version = newerVersion ?: return
 
         announced = true
         val message = Component.literal("[GeilerAddons] ").withStyle(ChatFormatting.LIGHT_PURPLE)
@@ -138,6 +150,9 @@ object UpdateChecker {
                     releaseNotes = notes
                     releaseUrl = validated ?: RELEASES_PAGE
                     newerVersion = tag
+                    if (GeneralModule.INSTANCE.autoUpdate().value()) {
+                        AutoUpdater.install(json.get("assets")?.takeIf { it.isJsonArray }?.asJsonArray, tag)
+                    }
                 }
             }
         } catch (interrupted: InterruptedException) {

@@ -28,14 +28,19 @@ class ModuleKeybind(key: InputConstants.Key?, modifiers: Int) {
     fun conflictsWith(other: ModuleKeybind?): Boolean = other != null && isBound() && other.isBound() &&
         keyValue == other.keyValue && modifiersValue == other.modifiersValue
 
-    fun displayName(): String {
+    fun displayName(): String = describe { keyValue.displayName.string }
+
+    /** Like [displayName] with the raw key id; safe before GLFW is initialized (config load), where displayName crashes. */
+    fun diagnosticName(): String = describe { keyValue.name }
+
+    private fun describe(keyText: () -> String): String {
         if (!isBound()) return "None"
         val result = StringBuilder()
         if ((modifiersValue and InputConstants.MOD_CONTROL) != 0) result.append("Ctrl + ")
         if ((modifiersValue and InputConstants.MOD_SHIFT) != 0) result.append("Shift + ")
         if ((modifiersValue and InputConstants.MOD_ALT) != 0) result.append("Alt + ")
         if ((modifiersValue and InputConstants.MOD_SUPER) != 0) result.append("Super + ")
-        result.append(keyValue.displayName.string)
+        result.append(keyText())
         return result.toString()
     }
 

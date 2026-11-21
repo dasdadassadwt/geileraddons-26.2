@@ -404,7 +404,7 @@ class PestHighlighterModule private constructor(settings: Settings) : Module(
                 continue
             }
             val label = "Pest: " + sighting.kind.displayName()
-            val bounds: AABB = entity.boundingBox
+            val bounds: AABB = ProjectedLabelRenderer.entityBox(entity)
             val world = Vec3(bounds.getCenter().x, bounds.maxY + LABEL_HEIGHT, bounds.getCenter().z)
             ProjectedLabelRenderer.draw(graphics, camera, minecraft.font, world, label, nameColor.argb(), scale)
             labelCalls++

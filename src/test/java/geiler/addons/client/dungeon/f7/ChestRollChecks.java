@@ -15,6 +15,7 @@ public final class ChestRollChecks {
 	public static void run() {
 		checkTiers();
 		checkFloors();
+		checkFloorKeys();
 		checkStrip();
 		checkEmptyPool();
 		checkLanding();
@@ -22,6 +23,46 @@ public final class ChestRollChecks {
 		checkTimeline();
 		checkMainItem();
 		checkLootFile();
+		checkContentWatch();
+		checkRolledChests();
+	}
+
+	/** A chest that was rolled once is not rolled again when reopened or viewed in Croesus; a reroll or new chest still rolls. */
+	private static void checkRolledChests() {
+		ChestRollRules.RolledChests rolled = new ChestRollRules.RolledChests(3, 1000L);
+		require(!rolled.contains("Gold|A", 0L), "an unseen chest is not remembered");
+		rolled.mark("Gold|A", 0L);
+		require(rolled.contains("Gold|A", 10L), "a rolled chest is remembered across screens");
+		require(!rolled.contains("Gold|B", 10L), "a rerolled chest has new content and rolls");
+		require(!rolled.contains("Wood|A", 10L), "the same content in another tier is another chest");
+		require(!rolled.contains("Gold|A", 1001L), "a memory older than the time limit is forgotten");
+		rolled.mark("Gold|A", 2000L);
+		require(rolled.contains("Gold|A", 2500L), "marking again refreshes the time");
+		rolled.mark("1", 2001L);
+		rolled.mark("2", 2002L);
+		rolled.mark("3", 2003L);
+		require(!rolled.contains("Gold|A", 2004L) && rolled.contains("3", 2004L) && rolled.size() == 3,
+			"the oldest entry is dropped past the size limit");
+		rolled.clear();
+		require(rolled.size() == 0, "clear forgets everything");
+	}
+
+	private static void checkContentWatch() {
+		ChestRollRules.ContentWatch watch = new ChestRollRules.ContentWatch();
+		require(!watch.update("A"), "first sighting waits one tick");
+		require(watch.update("A"), "stable content starts a roll");
+		require(!watch.update("A"), "handled content does not start again");
+		require(!watch.update("B"), "a reroll waits one tick");
+		require(watch.update("B"), "rerolled content starts a roll");
+		require(!watch.update(null), "empty content never starts");
+		require(!watch.update("B"), "same content after empty waits one tick");
+		require(watch.update("B"), "empty content re-arms the watch");
+		require(!watch.update("C"), "flicker C");
+		require(!watch.update("D"), "flicker D resets the wait");
+		require(watch.update("D"), "D settles");
+		watch.reset();
+		require(!watch.update("D"), "a new screen resets the watch");
+		require(watch.update("D"), "and rolls the same content again");
 	}
 
 	private static ChestRollRules.Card card(String name, int rarity, double weight) {
@@ -124,6 +165,43 @@ public final class ChestRollChecks {
 		require(t.skip(9000) == 9000, "skip when done changes nothing");
 		require(t.spinProgress(0) == 0.0 && t.spinProgress(5000) == 1.0 && t.spinProgress(9999) == 1.0, "spin progress clamps");
 		require(new ChestRollRules.Timeline(100, 0, 0).phase(100) == ChestRollRules.Phase.DONE, "zero tails end at once");
+		checkRevealTiming();
+	}
+
+	/** The reveal is short by default and its length follows the slider; its fraction drives the grow, spin and text stages. */
+	private static void checkRevealTiming() {
+		ChestRollRules.Timeline fast = new ChestRollRules.Timeline(5000);
+		require(ChestRollRules.SETTLE_MS <= 400L, "the settle after the landing is short");
+		require(ChestRollRules.REVEAL_MS >= 800L && ChestRollRules.REVEAL_MS <= 2200L, "the default reveal is quick");
+		require(fast.getRevealStart() == 5000 + ChestRollRules.SETTLE_MS, "the reveal follows the settle");
+		require(fast.phase(fast.getRevealStart() + ChestRollRules.REVEAL_MS - 1) == ChestRollRules.Phase.REVEAL, "default reveal length");
+		require(fast.phase(fast.getRevealStart() + ChestRollRules.REVEAL_MS) == ChestRollRules.Phase.DONE, "done after the default reveal");
+		ChestRollRules.Timeline slow = new ChestRollRules.Timeline(5000, ChestRollRules.SETTLE_MS, 3000);
+		require(slow.revealFraction(slow.getRevealStart() - 10) == 0.0, "no reveal progress before the reveal");
+		require(slow.revealFraction(slow.getRevealStart() + 1500) == 0.5, "half way through the reveal");
+		require(slow.revealFraction(slow.getRevealStart() + 9000) == 1.0, "reveal progress clamps at the end");
+		require(new ChestRollRules.Timeline(100, 0, 0).revealFraction(500) == 1.0, "an empty reveal is complete");
+		require(ChestRollRules.revealMs(1.6f) == 1600L && ChestRollRules.revealMs(0.1f) == 500L && ChestRollRules.revealMs(99f) == 4000L,
+			"the slider seconds become milliseconds inside 0.5 to 4 s");
+		double last = -1;
+		for (int i = 0; i <= 100; i++) {
+			double spin = ChestRollRules.revealSpin(i / 100.0);
+			require(spin >= last && spin >= 0.0 && spin <= 1.0, "the item spin only moves forward");
+			last = spin;
+		}
+		require(ChestRollRules.revealSpin(0.0) == 0.0 && ChestRollRules.revealSpin(ChestRollRules.SPIN_END) == 1.0, "the spin spans the first stage");
+		require(ChestRollRules.revealText(0.0) == 0.0 && ChestRollRules.revealText(1.0) == 1.0, "the text fades in over the reveal");
+		require(ChestRollRules.revealText(ChestRollRules.TEXT_START) == 0.0 && ChestRollRules.TEXT_START < ChestRollRules.SPIN_END,
+			"the text starts before the spin ends so it overlaps");
+	}
+
+	private static void checkFloorKeys() {
+		require("F7".equals(ChestRollRules.floorKeyOf("F7")) && "M3".equals(ChestRollRules.floorKeyOf("M3")), "dungeon floor labels are floor keys");
+		require("F0".equals(ChestRollRules.floorKeyOf("Entrance")), "the entrance is F0 like the Croesus title");
+		require(ChestRollRules.floorKeyOf(null) == null && ChestRollRules.floorKeyOf("nope") == null, "unknown labels give no key");
+		require("M5".equals(ChestRollRules.pickFloor("M5", "F7")), "the dungeon floor wins over a remembered Croesus floor");
+		require("F7".equals(ChestRollRules.pickFloor(null, "F7")), "the remembered Croesus floor is used outside a dungeon");
+		require(ChestRollRules.pickFloor(null, null) == null, "no floor at all");
 	}
 
 	private static void checkMainItem() {
@@ -154,10 +232,31 @@ public final class ChestRollChecks {
 		require(threw, "a non-positive weight is rejected");
 		String shipped = readResource("/data/chest-roll-loot.json");
 		Map<String, Map<String, List<ChestRollRules.Card>>> real = ChestRollRules.parseLoot(shipped);
-		require(real.containsKey("F7") && real.containsKey("M7"), "the shipped file covers F7 and M7");
-		for (String tier : List.of("Wood", "Gold", "Diamond", "Emerald", "Obsidian", "Bedrock")) {
-			require(!real.get("F7").getOrDefault(tier, List.of()).isEmpty(), "F7 has a " + tier + " pool");
+		int nonBooks = 0;
+		int withId = 0;
+		for (String floor : List.of("F1", "F2", "F3", "F4", "F5", "F6", "F7", "M1", "M2", "M3", "M4", "M5", "M6", "M7")) {
+			require(real.containsKey(floor), "the shipped file covers " + floor);
+			boolean bedrockFloor = floor.charAt(1) >= '5';
+			for (String tier : List.of("Wood", "Gold", "Diamond", "Emerald", "Obsidian", "Bedrock")) {
+				List<ChestRollRules.Card> pool = real.get(floor).getOrDefault(tier, List.of());
+				if (tier.equals("Bedrock") && !bedrockFloor) {
+					require(pool.isEmpty(), floor + " has no Bedrock chest");
+					continue;
+				}
+				require(!pool.isEmpty(), floor + " has a " + tier + " pool");
+				for (ChestRollRules.Card c : pool) {
+					require(c.getWeight() > 0 && !c.getIcon().isEmpty() && !c.getName().isEmpty(), floor + "/" + tier + " entry is complete");
+					if (!c.getIcon().equals("minecraft:enchanted_book")) {
+						nonBooks++;
+						if (!c.getId().isEmpty()) withId++;
+					}
+				}
+			}
 		}
+		require(nonBooks > 0 && withId * 4 >= nonBooks * 3, "most non-book entries carry a NEU id (" + withId + " of " + nonBooks + ")");
+		String idJson = "{\"floors\":{\"F7\":{\"Bedrock\":[{\"name\":\"Wither Boots\",\"w\":1,\"r\":\"EPIC\",\"icon\":\"minecraft:leather_boots\",\"id\":\"WITHER_BOOTS\"}]}}}";
+		require(ChestRollRules.parseLoot(idJson).get("F7").get("Bedrock").get(0).getId().equals("WITHER_BOOTS"), "an optional NEU id parses");
+		require(card("A", 0, 1).getId().isEmpty(), "a card without an id has an empty one");
 		boolean handleInBedrock = real.get("F7").get("Bedrock").stream().anyMatch(c -> c.getName().equals("Necron's Handle"));
 		require(handleInBedrock, "Necron's Handle is in the F7 Bedrock pool");
 	}

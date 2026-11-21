@@ -21,7 +21,6 @@ import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
 import net.minecraft.sounds.SoundEvents
 import org.lwjgl.glfw.GLFW
-import java.util.EnumMap
 
 /**
  * The "Classic" Click GUI: one column per category with its modules listed underneath, a search field at the bottom
@@ -29,12 +28,15 @@ import java.util.EnumMap
  * click on a module that has no toggle, opens that module's settings in the Modern screen, which returns here.
  */
 class ClickGuiClassicScreen : Screen(Component.literal("GeilerAddons")) {
-    private var query = ""
+    private var query = ClickGuiState.recalledSearch()
     private var favoriteRevision = 0L
     private val search = ClickGuiModuleSearch()
-    private val scrolls: MutableMap<Category, Int> = EnumMap(Category::class.java)
+    private val scrolls: MutableMap<String, Int> = HashMap()
 
-    private class Column(val category: Category, val modules: List<Module>, val x: Int, val y: Int, val width: Int, val listHeight: Int)
+    /** [key] identifies the column for scrolling; one category can fill more than one column (see [ClickGuiClassicSplit]). */
+    private class Column(val key: String, val title: String, val modules: List<Module>, val x: Int, val y: Int, val width: Int, val listHeight: Int)
+
+    private class Entry(val key: String, val title: String, val modules: List<Module>)
 
     private enum class Button(val tooltip: String) {
         GITHUB("Open GitHub repository"),
@@ -46,6 +48,7 @@ class ClickGuiClassicScreen : Screen(Component.literal("GeilerAddons")) {
     override fun isPauseScreen(): Boolean = false
 
     override fun removed() {
+        ClickGuiState.rememberSearch(query)
         ModConfig.save()
         super.removed()
     }
@@ -56,13 +59,26 @@ class ClickGuiClassicScreen : Screen(Component.literal("GeilerAddons")) {
         .orderFavoriteCategories(Category.of(ClickGuiState.workspace()).toTypedArray())
 
     private fun columns(): List<Column> {
-        val shown = categories().map { it to search.visibleModules(it, query, favoriteRevision) }
-            .filter { (_, modules) -> modules.isNotEmpty() }
+        val shown = categories().flatMap { entries(it, search.visibleModules(it, query, favoriteRevision)) }
+            .filter { it.modules.isNotEmpty() }
         val plan = ClickGuiClassicLayout.plan(width, height, shown.size)
         return plan.columns.map { slot ->
-            val (category, modules) = shown[slot.index]
-            Column(category, modules, slot.x, slot.y, slot.width, ClickGuiClassicLayout.listHeight(modules.size, plan.maxListHeight))
+            val entry = shown[slot.index]
+            Column(entry.key, entry.title, entry.modules, slot.x, slot.y, slot.width, ClickGuiClassicLayout.listHeight(entry.modules.size, plan.maxListHeight))
         }
+    }
+
+    /** A category's own column, followed by its split-out columns; a search keeps one column per category. */
+    private fun entries(category: Category, modules: List<Module>): List<Entry> {
+        val groups = if (query.isBlank()) ClickGuiClassicSplit.groups().filter { it.category == category } else emptyList()
+        var rest = modules
+        val extra = ArrayList<Entry>()
+        for (group in groups) {
+            val (own, others) = ClickGuiClassicSplit.partition(rest, group.modules) { it.name() }
+            extra.add(Entry(category.name + ":" + group.label, group.label, own))
+            rest = others
+        }
+        return listOf(Entry(category.name, category.displayName(), rest)) + extra
     }
 
     private fun searchRect(): GuiRect = GuiRect((width - SEARCH_WIDTH) / 2, height - 32, SEARCH_WIDTH, BUTTON_SIZE)
@@ -102,9 +118,9 @@ class ClickGuiClassicScreen : Screen(Component.literal("GeilerAddons")) {
     private fun drawColumn(graphics: GuiGraphicsExtractor, column: Column, mouseX: Int, mouseY: Int) {
         val top = column.y + ClickGuiClassicLayout.TITLE_HEIGHT
         GuiTheme.roundedRect(graphics, column.x, column.y, column.width, ClickGuiClassicLayout.TITLE_HEIGHT + column.listHeight, GuiTheme.RADIUS_SMALL, solid(GuiTheme.MODULE_PANEL_BOTTOM))
-        val title = Component.literal(column.category.displayName()).withStyle(ChatFormatting.BOLD)
+        val title = Component.literal(column.title).withStyle(ChatFormatting.BOLD)
         graphics.centeredText(font, title, column.x + column.width / 2, column.y + (ClickGuiClassicLayout.TITLE_HEIGHT - font.lineHeight) / 2 + 1, GuiTheme.TEXT_PRIMARY)
-        val scroll = scrolls[column.category] ?: 0
+        val scroll = scrolls[column.key] ?: 0
         graphics.enableScissor(column.x, top, column.x + column.width, top + column.listHeight)
         val first = scroll / ClickGuiClassicLayout.ROW_HEIGHT
         val last = minOf(column.modules.size, (scroll + column.listHeight) / ClickGuiClassicLayout.ROW_HEIGHT + 1)
@@ -242,7 +258,7 @@ class ClickGuiClassicScreen : Screen(Component.literal("GeilerAddons")) {
             if (mouseY < column.y || mouseY >= column.y + ClickGuiClassicLayout.TITLE_HEIGHT + column.listHeight) continue
             val max = ClickGuiClassicLayout.maxScroll(column.modules.size, column.listHeight)
             val step = if (scrollY > 0) -1 else 1
-            scrolls[column.category] = ((scrolls[column.category] ?: 0) + step * ClickGuiClassicLayout.ROW_HEIGHT * 2).coerceIn(0, max)
+            scrolls[column.key] = ((scrolls[column.key] ?: 0) + step * ClickGuiClassicLayout.ROW_HEIGHT * 2).coerceIn(0, max)
             return true
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY)
@@ -278,13 +294,13 @@ class ClickGuiClassicScreen : Screen(Component.literal("GeilerAddons")) {
     // ---- helpers --------------------------------------------------------------------------------------------
 
     private fun rowAt(column: Column, mouseY: Int): Int = ClickGuiClassicLayout.rowAt(
-        mouseY, column.y + ClickGuiClassicLayout.TITLE_HEIGHT, scrolls[column.category] ?: 0, column.modules.size, column.listHeight,
+        mouseY, column.y + ClickGuiClassicLayout.TITLE_HEIGHT, scrolls[column.key] ?: 0, column.modules.size, column.listHeight,
     )
 
     private fun clampScroll(column: Column) {
         val max = ClickGuiClassicLayout.maxScroll(column.modules.size, column.listHeight)
-        val current = scrolls[column.category] ?: return
-        if (current > max) scrolls[column.category] = max
+        val current = scrolls[column.key] ?: return
+        if (current > max) scrolls[column.key] = max
     }
 
     private fun playClick() {
@@ -314,7 +330,7 @@ class ClickGuiClassicScreen : Screen(Component.literal("GeilerAddons")) {
         const val SURFACE_ALPHA = 0xE6
         const val BACKDROP = 0x88000000.toInt()
         const val CARET_BLINK_MILLIS = 500L
-        const val ICON_TEXTURE_SIZE = 256
+        const val ICON_TEXTURE_SIZE = ClickGuiScreenRenderBehavior.TOOLBAR_ICON_TEXTURE_SIZE
         val ICON_GITHUB: Identifier = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/octicon-mark-github-16.png")
         val ICON_SETTINGS: Identifier = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/octicon-gear-16.png")
         val ICON_THEME: Identifier = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/octicon-paintbrush-16.png")

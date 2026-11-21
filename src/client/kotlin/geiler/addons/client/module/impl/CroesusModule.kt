@@ -83,6 +83,11 @@ class CroesusModule private constructor() : DungeonTextHudModule(
      */
     private fun publishFitted(chests: List<CroesusRules.ChestResult>) {
         val client = Minecraft.getInstance()
+        // The profit list names the loot, so it waits until the Chest Roll animation has finished on this screen.
+        if (ChestRollModule.INSTANCE.hidesResult(client.gui.screen() as? AbstractContainerScreen<*>)) {
+            clearHudLines()
+            return
+        }
         val lineHeight = client.font.lineHeight + 2
         val allowed = ((client.window.guiScaledHeight * 0.95f) / (lineHeight * HudManager.scale(this))).toInt().coerceAtLeast(3)
         var lines = CroesusRules.hudLines(chests, minimized.value())

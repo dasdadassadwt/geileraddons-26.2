@@ -8,7 +8,7 @@ import geiler.addons.client.module.impl.SlotIdsModule;
 import geiler.addons.client.gui.SlotIdOverlay;
 import geiler.addons.client.gui.InventoryButtonOverlay;
 import geiler.addons.client.inventory.PlayerInventoryControls;
-import geiler.addons.client.module.impl.DungeonOdinAssistModule;
+import geiler.addons.client.module.impl.DungeonAssistModule;
 import geiler.addons.client.module.impl.SpiritLeapSurfaceOwner;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -146,7 +146,7 @@ public abstract class AbstractContainerScreenMixin {
 			cir.setReturnValue(true);
 		}
 		if (!ExperimentSolverModule.INSTANCE.ownsScreen(screen)
-			&& DungeonOdinAssistModule.INSTANCE.handleSpiritLeapMouseClick(screen, event.x(), event.y(),
+			&& DungeonAssistModule.INSTANCE.handleSpiritLeapMouseClick(screen, event.x(), event.y(),
 				event.button(),
 				(slot, slotId, button, input) -> SpiritLeapSurfaceOwner.runDispatchedClick(() ->
 					((AbstractContainerScreenAccess) (Object) screen)
@@ -163,8 +163,13 @@ public abstract class AbstractContainerScreenMixin {
 	private void geileraddons$releaseSpiritLeapCard(MouseButtonEvent event,
 		CallbackInfoReturnable<Boolean> cir) {
 		AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) (Object) this;
+		// Vanilla would read the release against its hidden slot layout and throw the carried stack (-999).
+		if (geiler.addons.client.module.impl.StorageOverlayModule.INSTANCE.ownsScreen(screen)) {
+			cir.setReturnValue(true);
+			return;
+		}
 		if (!ExperimentSolverModule.INSTANCE.ownsScreen(screen)
-			&& DungeonOdinAssistModule.INSTANCE.handleSpiritLeapMouseRelease(screen, event.x(), event.y(),
+			&& DungeonAssistModule.INSTANCE.handleSpiritLeapMouseRelease(screen, event.x(), event.y(),
 				event.button(),
 				(slot, slotId, button, input) -> SpiritLeapSurfaceOwner.runDispatchedClick(() ->
 					((AbstractContainerScreenAccess) (Object) screen)
@@ -173,6 +178,15 @@ public abstract class AbstractContainerScreenMixin {
 			return;
 		}
 		if (SpiritLeapSurfaceOwner.owns(screen)) {
+			cir.setReturnValue(true);
+		}
+	}
+
+	/** The overlay has no vanilla slots to drag over, so vanilla drag-splitting must not start under it. */
+	@Inject(method = "mouseDragged", at = @At("HEAD"), cancellable = true)
+	private void geileraddons$dragStorageOverlay(MouseButtonEvent event, double dragX, double dragY,
+		CallbackInfoReturnable<Boolean> cir) {
+		if (geiler.addons.client.module.impl.StorageOverlayModule.INSTANCE.ownsScreen((AbstractContainerScreen<?>) (Object) this)) {
 			cir.setReturnValue(true);
 		}
 	}
@@ -195,7 +209,7 @@ public abstract class AbstractContainerScreenMixin {
 	private void geileraddons$handleInventoryAndDungeonSlotClick(Slot slot, int slotId, int button,
 		ContainerInput input, CallbackInfo ci) {
 		AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) (Object) this;
-		if (geiler.addons.client.module.impl.ChestRollModule.INSTANCE.onSlotClicked(screen, slot, slotId, button, input)) {
+		if (geiler.addons.client.module.impl.ChestRollModule.INSTANCE.swallowsClick(screen)) {
 			ci.cancel();
 			return;
 		}

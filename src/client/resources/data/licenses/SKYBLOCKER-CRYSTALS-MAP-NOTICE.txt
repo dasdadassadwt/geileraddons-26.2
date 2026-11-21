@@ -1,0 +1,11 @@
+Third-party asset: Crystal Hollows map picture
+
+Bundled file: assets/geileraddons/textures/gui/crystals_map.png (unmodified)
+Source repository: https://github.com/SkyblockerMod/Skyblocker
+Source file: src/main/resources/assets/skyblocker/textures/gui/crystals_map.png
+Revision: e364eb8f7cfe0d7b73c552383cc7095ec2ba55fb
+
+Skyblocker is licensed under the GNU Lesser General Public License v3.0 (LGPL-3.0); no separate
+license was found for this picture, so that license applies to it. The full text is at
+https://www.gnu.org/licenses/lgpl-3.0.txt and in the repository's LICENSE file. The picture is
+used as it is, as the background of the Crystal Hollows Helper map; the map code is written locally.

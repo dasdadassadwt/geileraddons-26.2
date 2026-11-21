@@ -3,7 +3,7 @@ package geiler.addons.client.module.impl
 import com.mojang.blaze3d.vertex.PoseStack
 import geiler.addons.client.dungeon.DungeonContextTracker
 import geiler.addons.client.dungeon.DungeonMimicChestDetector
-import geiler.addons.client.dungeon.odin.OdinDungeonMapCoreScanner
+import geiler.addons.client.dungeon.helpers.DungeonMapCoreScanner
 import geiler.addons.client.entity.ClientEntitySnapshot
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
@@ -47,7 +47,7 @@ class DungeonBossEspModule private constructor(
 
     @Volatile private var targets: List<LivingEntity> = emptyList()
     @Volatile private var mimicChests: List<BlockPos?> = emptyList()
-    private val roomCoreScanner = OdinDungeonMapCoreScanner()
+    private val roomCoreScanner = DungeonMapCoreScanner()
     private var lastLevel: ClientLevel? = null
     private val diagnostics = ModuleDiagnostics(Category.F7, { name() })
 

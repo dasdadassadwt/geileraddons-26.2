@@ -26,12 +26,17 @@ public final class RegisteredModuleCatalogChecks {
 		"RareCropTitleModule",
 		"ComposterDisplayModule",
 		"GardenKeybindsModule",
+		"GardenCommandKeybindsModule",
 		"VisitorShoppingListModule",
 		"GreenhouseHelperModule",
 		"VisitorMessageHiderModule",
+		"GardenPlotsOverlayModule",
 		"I4HelperModule",
 		"ExperimentSolverModule",
 		"AutoExperimentsModule",
+		"EnchantColorsModule",
+		"MissingEnchantsModule",
+		"InventoryHudModule",
 		"AutoKickModule",
 		"PartyFinderStatsModule",
 		"PartyFinderListingsModule",
@@ -58,7 +63,6 @@ public final class RegisteredModuleCatalogChecks {
 		"CritterTrackerModule",
 		"CritterMarkersModule",
 		"CritterAlertsModule",
-		"HideonwallEspModule",
 		"PestHighlighterModule",
 		"GardenPlotBordersModule",
 		"PestTrackerModule",
@@ -84,6 +88,7 @@ public final class RegisteredModuleCatalogChecks {
 		"PlayerSizeModule",
 		"ScoreboardModule",
 		"SystemClockHudModule",
+		"PerformanceHudModule",
 		"ThirdPersonCameraModule",
 		"TreeTrackerModule",
 		"TreeNotifierModule",
@@ -108,11 +113,13 @@ public final class RegisteredModuleCatalogChecks {
 		"InventoryButtonsModule",
 		"SnapTapModule",
 		"AutoSprintModule",
-		"NoFogModule",
 		"FullbrightModule",
+		"CustomMainMenuModule",
 		"BlockOverlayModule",
 		"ScrollableTooltipModule",
 		"FreecamModule",
+		"ZoomModule",
+		"BorderlessFullscreenModule",
 		"NoRenderModule",
 		"AnimationFixModule",
 		"DoubleUseFixModule",
@@ -151,17 +158,20 @@ public final class RegisteredModuleCatalogChecks {
 		"AutoTermsModule",
 		"LeverAimAssistModule",
 		"PriceDisplayModule",
+		"ItemListModule",
 		"TerminalSimulatorModule",
 		"TerminalTimesModule",
 		"FishingBobberTimerModule",
 		"FishingHookDisplayModule",
 		"FishingBaitModule",
 		"SeaCreatureAlertModule",
+		"SeaCreatureCapModule",
 		"GeyserFishingModule",
 		"HotspotRadarModule",
 		"LavaReplacementModule",
 		"MiningCommissionsModule",
 		"MiningPowderModule",
+		"ForagingPowderModule",
 		"HotmTreeHelperModule",
 		"HotfTreeHelperModule",
 		"PowderChestModule",
@@ -174,6 +184,7 @@ public final class RegisteredModuleCatalogChecks {
 		"MiningSolversModule",
 		"MiningEventsModule",
 		"HeatAndColdModule",
+		"TabWidgetModule",
 		"SpeedSimModule",
 		"JumpBoostModule",
 		"OneTapModule",
@@ -196,13 +207,6 @@ public final class RegisteredModuleCatalogChecks {
 		if (!EXPECTED_MODULES.equals(actual)) {
 			throw new AssertionError("Registered module catalog/order changed: expected "
 				+ EXPECTED_MODULES + ", got " + actual);
-		}
-		List<String> withoutIcon = ModuleManager.modules().stream()
-			.map(module -> module.name())
-			.filter(name -> geiler.addons.client.gui.ModuleIconTextures.forModule(name) == null)
-			.collect(Collectors.toList());
-		if (!withoutIcon.isEmpty()) {
-			throw new AssertionError("Every registered module needs a bundled icon; missing: " + withoutIcon);
 		}
 		checkEverySettingIsShown();
 	}

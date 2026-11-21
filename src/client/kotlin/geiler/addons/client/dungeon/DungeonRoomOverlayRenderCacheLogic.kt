@@ -87,7 +87,7 @@ class DungeonRoomOverlayRenderCacheDataLogic(
         return if (index < 0) null else visibleCells[index]
     }
 
-    fun predictions(): List<geiler.addons.client.dungeon.odin.OdinSpecialColumnPredictor.Prediction> = predictions
+    fun predictions(): List<geiler.addons.client.dungeon.helpers.SpecialColumnPredictor.Prediction> = predictions
 
     fun doorGeometry(
         cellSize: Int,

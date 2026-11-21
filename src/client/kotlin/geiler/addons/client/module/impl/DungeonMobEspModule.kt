@@ -5,13 +5,13 @@ import com.mojang.blaze3d.vertex.PoseStack
 import geiler.addons.GeilerAddons
 import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.dungeon.DungeonClass
-import geiler.addons.client.dungeon.odin.OdinDungeonPlayerRoster
+import geiler.addons.client.dungeon.helpers.DungeonPlayerRoster
 import geiler.addons.client.dungeon.DungeonContextTracker
 import geiler.addons.client.dungeon.DungeonFloor
 import geiler.addons.client.dungeon.DungeonMapRoomDetector
 import geiler.addons.client.dungeon.DungeonMimicChestDetector
 import geiler.addons.client.dungeon.DungeonRoomTracker
-import geiler.addons.client.dungeon.odin.OdinDungeonMapCoreScanner
+import geiler.addons.client.dungeon.helpers.DungeonMapCoreScanner
 import geiler.addons.client.entity.ClientEntitySnapshot
 import geiler.addons.client.entity.Nameplates
 import geiler.addons.client.farming.PestAnimation
@@ -140,7 +140,7 @@ class DungeonMobEspModule private constructor(
     private val knownFelBodies = HashMap<UUID, KnownFelBody>()
     private val targetMemory = DungeonMobTargetMemory()
     private val minibossProfileTracker = DungeonMinibossProfileTracker()
-    private val devonianMobTracker = DungeonDevonianMobTracker()
+    private val devonianMobTracker = DungeonStarredMobTracker()
     private val appearanceCapture = MinibossAppearanceCapture()
     private var appearanceCatalog = MinibossAppearanceCatalog.empty()
     private var appearanceCatalogLoaded = false
@@ -351,14 +351,14 @@ class DungeonMobEspModule private constructor(
         } else {
             emptyList()
         }
-        val spatialBodyCandidates = ArrayList<DungeonDevonianMobTracker.BodyCandidate>()
+        val spatialBodyCandidates = ArrayList<DungeonStarredMobTracker.BodyCandidate>()
         if (devonianMobTracker.trackedNameplates() > 0) {
             for (entity in level.entitiesForRendering()) {
                 if (entity !is LivingEntity || entity is ArmorStand || entity === player ||
                     entity.isRemoved() || !entity.isAlive()
                 ) continue
                 spatialBodyCandidates.add(
-                    DungeonDevonianMobTracker.BodyCandidate(entity.getId(), entity.getX(), entity.getY(), entity.getZ()),
+                    DungeonStarredMobTracker.BodyCandidate(entity.getId(), entity.getX(), entity.getY(), entity.getZ()),
                 )
             }
         }
@@ -371,7 +371,7 @@ class DungeonMobEspModule private constructor(
             { entityId ->
                 val entity = level.getEntity(entityId)
                 if (entity is ArmorStand) {
-                    DungeonDevonianMobTracker.LabelPosition(entity.getX(), entity.getY(), entity.getZ())
+                    DungeonStarredMobTracker.LabelPosition(entity.getX(), entity.getY(), entity.getZ())
                 } else {
                     null
                 }
@@ -1049,7 +1049,7 @@ class DungeonMobEspModule private constructor(
 
     private fun entityCensusSummary(
         client: Minecraft?,
-        associations: List<DungeonDevonianMobTracker.Association>,
+        associations: List<DungeonStarredMobTracker.Association>,
         publishedTargets: List<LivingEntity>,
         starredIdentities: Set<LivingEntity>,
         identities: MinibossProfileMatchPolicy.IdentitySnapshot,

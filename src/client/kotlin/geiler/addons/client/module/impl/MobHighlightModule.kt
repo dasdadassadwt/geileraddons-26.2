@@ -359,7 +359,7 @@ class MobHighlightModule private constructor(
             val color = highlight.outlineColor().argb()
             for (entity in highlight.matches()) {
                 if (entity.isRemoved()) continue
-                val box: AABB = entity.getBoundingBox()
+                val box: AABB = ProjectedLabelRenderer.entityBox(entity)
                 val center: Vec3 = box.getCenter()
                 val world = Vec3(center.x, box.maxY + LABEL_HEIGHT, center.z)
                 ProjectedLabelRenderer.draw(graphics, camera, minecraft.font, world, label, color, scale)

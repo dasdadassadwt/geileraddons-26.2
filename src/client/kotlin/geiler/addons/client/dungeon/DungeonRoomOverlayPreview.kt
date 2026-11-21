@@ -1,6 +1,6 @@
 package geiler.addons.client.dungeon
 
-import geiler.addons.client.dungeon.odin.OdinSpecialColumnPredictor
+import geiler.addons.client.dungeon.helpers.SpecialColumnPredictor
 import java.util.ArrayList
 
 /** Deterministic Water Board screenshot fixture used by the production map renderer. */
@@ -78,7 +78,7 @@ object DungeonRoomOverlayPreview {
 
         // Keep this connected cell unresolved so the production renderer demonstrates its neutral
         // question-mark hint without assigning a predicted type to the room.
-        val predictions = listOf(OdinSpecialColumnPredictor.Prediction(4, 2,
+        val predictions = listOf(SpecialColumnPredictor.Prediction(4, 2,
             listOf(DungeonMapGeometry.RoomType.PUZZLE, DungeonMapGeometry.RoomType.TRAP)))
         return DungeonRoomOverlayGeometry.Snapshot(true, cells, rooms,
             DungeonGridRules.Cell(0, 0, DungeonGridRules.GRID_MIN, DungeonGridRules.GRID_MIN),

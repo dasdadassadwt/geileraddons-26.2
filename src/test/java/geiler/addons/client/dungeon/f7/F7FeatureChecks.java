@@ -18,6 +18,7 @@ public final class F7FeatureChecks {
 		checkArrowAlign();
 		checkSimonSays();
 		checkSimonSaysFirstPhase();
+		checkSimonSaysSkips();
 	}
 
 	private static void checkBlessings() {
@@ -107,9 +108,9 @@ public final class F7FeatureChecks {
 		require(s.next() == null && s.remaining().isEmpty(), "a fresh state has no solution");
 		require(s.getFirstPhase(), "a fresh state starts in the first (skip) phase");
 		s.endFirstPhase();
-		s.lanternLit(111, 121, 93);
-		s.lanternLit(111, 121, 93);
-		s.lanternLit(111, 122, 94);
+		s.lanternOff(111, 121, 93);
+		s.lanternOff(111, 121, 93);
+		s.lanternOff(111, 122, 94);
 		require(s.remaining().size() == 2, "a lit lantern is recorded once");
 		long first = s.next();
 		require(first == SimonSaysState.pack(110, 121, 93), "the next button is one block west of the first lantern");
@@ -118,7 +119,7 @@ public final class F7FeatureChecks {
 		require(s.buttonClicked(110, 120, 92) == SimonSaysState.WRONG && s.remaining().size() == 1,
 			"clicking another button is wrong and changes nothing");
 		require(s.buttonClicked(110, 122, 94) == SimonSaysState.CORRECT && s.next() == null, "the last click empties the list");
-		s.lanternLit(111, 120, 92);
+		s.lanternOff(111, 120, 92);
 		s.reset();
 		require(s.remaining().isEmpty(), "reset clears the sequence");
 		require(SimonSaysState.inLights(111, 123, 95) && !SimonSaysState.inLights(111, 124, 95) && !SimonSaysState.inLights(112, 121, 93)
@@ -140,22 +141,22 @@ public final class F7FeatureChecks {
 		long a = SimonSaysState.pack(110, 120, 92);
 		long b = SimonSaysState.pack(110, 121, 93);
 		long c = SimonSaysState.pack(110, 122, 94);
-		s.lanternLit(111, 120, 92);
+		s.lanternOff(111, 120, 92);
 		require(s.remaining().equals(java.util.List.of(a)), "the first lantern is recorded as is");
-		s.lanternLit(111, 121, 93);
+		s.lanternOff(111, 121, 93);
 		require(s.remaining().equals(java.util.List.of(b, a)), "the second lantern reverses the list in the first phase");
-		s.lanternLit(111, 122, 94);
+		s.lanternOff(111, 122, 94);
 		require(s.remaining().equals(java.util.List.of(b, c)), "the third lantern drops the one before it in the first phase: " + s.remaining());
 
 		SimonSaysState later = new SimonSaysState();
 		later.endFirstPhase();
-		later.lanternLit(111, 120, 92);
-		later.lanternLit(111, 121, 93);
-		later.lanternLit(111, 122, 94);
+		later.lanternOff(111, 120, 92);
+		later.lanternOff(111, 121, 93);
+		later.lanternOff(111, 122, 94);
 		require(later.remaining().equals(java.util.List.of(a, b, c)), "after the first phase lanterns are kept in lit order");
 
 		SimonSaysState done = new SimonSaysState();
-		done.lanternLit(111, 120, 92);
+		done.lanternOff(111, 120, 92);
 		require(done.getFirstPhase() && done.buttonClicked(110, 120, 92) == SimonSaysState.CORRECT && !done.getFirstPhase(),
 			"finishing the sequence ends the first phase");
 		done.restart();
@@ -182,6 +183,76 @@ public final class F7FeatureChecks {
 		require(!start.startClicked(2, false), "outside the first phase start clicks are never blocked");
 		start.restart();
 		require(!start.startClicked(2, false), "ending the first phase clears the start click count");
+	}
+
+	/**
+	 * Double and triple skips: several lanterns at once, a click ahead of the head, repeated or out-of-list skip events.
+	 * Pointer model after Odin's Simon Says; skip observation by position after NoFrills.
+	 */
+	private static void checkSimonSaysSkips() {
+		long a = SimonSaysState.pack(110, 120, 92);
+		long b = SimonSaysState.pack(110, 121, 93);
+		long c = SimonSaysState.pack(110, 122, 94);
+		long d = SimonSaysState.pack(110, 123, 95);
+
+		// Clicking ahead completes everything up to and including the button, so the skipped steps stop being shown.
+		SimonSaysState ahead = new SimonSaysState();
+		ahead.endFirstPhase();
+		ahead.lanternOff(111, 120, 92);
+		ahead.lanternOff(111, 121, 93);
+		ahead.lanternOff(111, 122, 94);
+		ahead.lanternOff(111, 123, 95);
+		require(ahead.peek(110, 122, 94) == SimonSaysState.AHEAD && ahead.remaining().size() == 4, "peek does not change the list");
+		require(ahead.buttonClicked(110, 122, 94) == SimonSaysState.AHEAD, "a later button in the list is a click ahead");
+		require(ahead.remaining().equals(java.util.List.of(d)), "a click ahead completes the buttons before it: " + ahead.remaining());
+		require(ahead.buttonClicked(110, 122, 94) == SimonSaysState.WRONG, "a completed button is wrong when clicked again");
+		require(ahead.buttonClicked(110, 123, 95) == SimonSaysState.CORRECT && ahead.remaining().isEmpty(), "the last button finishes");
+
+		// A skip seen from the world removes that button only; repeats and unknown buttons change nothing.
+		SimonSaysState skip = new SimonSaysState();
+		skip.endFirstPhase();
+		skip.lanternOff(111, 120, 92);
+		skip.lanternOff(111, 121, 93);
+		skip.lanternOff(111, 122, 94);
+		skip.removeButton(110, 120, 92);
+		skip.removeButton(110, 120, 92);
+		require(skip.remaining().equals(java.util.List.of(b, c)), "a repeated skip event removes the button once: " + skip.remaining());
+		skip.removeButton(110, 123, 95);
+		require(skip.remaining().equals(java.util.List.of(b, c)), "a skip of a button outside the list changes nothing");
+		skip.removeButton(110, 121, 93);
+		skip.removeButton(110, 122, 94);
+		require(skip.remaining().isEmpty() && skip.next() == null, "a triple skip empties exactly the skipped buttons");
+
+		// The server's powered-button update confirms a click and is idempotent after the client click.
+		SimonSaysState powered = new SimonSaysState();
+		powered.endFirstPhase();
+		powered.lanternOff(111, 120, 92);
+		powered.lanternOff(111, 121, 93);
+		require(powered.buttonClicked(110, 120, 92) == SimonSaysState.CORRECT, "client click");
+		powered.buttonConfirmed(110, 120, 92);
+		require(powered.remaining().equals(java.util.List.of(b)), "the confirmation after a click removes nothing more");
+		powered.buttonConfirmed(110, 121, 93);
+		require(powered.remaining().isEmpty(), "a confirmation alone completes a button the client did not see");
+
+		// Repeated lantern events never duplicate; a new round clears the old list but keeps the phase.
+		SimonSaysState round = new SimonSaysState();
+		round.endFirstPhase();
+		round.lanternOff(111, 120, 92);
+		round.lanternOff(111, 120, 92);
+		require(round.remaining().size() == 1, "a lantern turning off twice is recorded once");
+		round.clearSequence();
+		require(round.remaining().isEmpty() && !round.getFirstPhase(), "a grid reset clears the list without restarting the first phase");
+
+		// Triple skip in the first phase: three lanterns, click order b then c (Odin: reverse, then drop the one before the last).
+		SimonSaysState triple = new SimonSaysState();
+		triple.lanternOff(111, 120, 92);
+		triple.lanternOff(111, 121, 93);
+		triple.lanternOff(111, 122, 94);
+		require(triple.remaining().equals(java.util.List.of(b, c)), "triple skip click order: " + triple.remaining());
+		triple.lanternOff(111, 123, 95);
+		require(triple.remaining().equals(java.util.List.of(b, c, d)), "a fourth lantern in the first phase keeps its place: " + triple.remaining());
+		require(triple.buttonClicked(110, 122, 94) == SimonSaysState.AHEAD && triple.remaining().equals(java.util.List.of(d)),
+			"clicking the second button of a triple skip first completes both");
 	}
 
 	private static void require(boolean condition, String message) {

@@ -20,6 +20,10 @@ object PartyListBackend {
     private val membersLine = Pattern.compile("^Party (?:Moderators|Members):\\s*(.*)$")
     private val partyChat = Pattern.compile("^Party > (?:\\[[^]]*]\\s*)?([A-Za-z0-9_]{1,16}):")
     private val leaderTransfer = Pattern.compile("^.*?([A-Za-z0-9_]{1,16}) is now the party leader!$")
+    private val inviteSent = Pattern.compile("^(?:\\[[^]]+]\\s*)*([A-Za-z0-9_]{1,16}) invited .+ to the party!.*$")
+    private val transferred = Pattern.compile(
+        "^The party was transferred to (?:\\[[^]]+]\\s*)*([A-Za-z0-9_]{1,16}) (?:by|because) .*$",
+    )
     private val classInJoin = Pattern.compile(
         "^Party Finder > (?:\\[[^]]*]\\s*)?([A-Za-z0-9_]{1,16}) joined the dungeon group! \\((?:MM )?([A-Za-z]+) Level \\d+\\)$",
     )
@@ -78,6 +82,21 @@ object PartyListBackend {
             return
         }
 
+        // The leader is learned from chat alone, so no /pl is needed: a transfer names the new leader, and
+        // inviting someone to a party you were not already placed in means you lead it.
+        val transferLeader = leaderFromTransfer(message)
+        if (transferLeader != null) {
+            thisLeader(transferLeader)
+            return
+        }
+        if (leaderName == null && message.contains(" invited ")) {
+            val inviteLeader = leaderFromInvite(message, localName())
+            if (inviteLeader != null) {
+                thisLeader(inviteLeader)
+                return
+            }
+        }
+
         val join = joined.matcher(message)
         if (join.matches()) {
             addMember(join.group(1))
@@ -132,6 +151,21 @@ object PartyListBackend {
                 classJoin.group(2),
             )
         }
+    }
+
+    /** The new leader named by "The party was transferred to X by Y" / "... because Y left", else null. */
+    @JvmStatic
+    fun leaderFromTransfer(rawMessage: String?): String? {
+        val matcher = transferred.matcher(ChatText.plain(rawMessage ?: "").trim())
+        return if (matcher.matches()) matcher.group(1) else null
+    }
+
+    /** The local player when the line is their own "X invited Y to the party!"; only a leader can invite. */
+    @JvmStatic
+    fun leaderFromInvite(rawMessage: String?, localName: String?): String? {
+        if (localName == null) return null
+        val matcher = inviteSent.matcher(ChatText.plain(rawMessage ?: "").trim())
+        return if (matcher.matches() && matcher.group(1).equals(localName, ignoreCase = true)) localName else null
     }
 
     /** Returns the player named by a confirmed party-leave or kick chat message. */
@@ -303,7 +337,7 @@ object PartyListBackend {
     }
 
     private fun localName(): String? {
-        val player = Minecraft.getInstance().player ?: return null
+        val player = Minecraft.getInstance()?.player ?: return null
         return player.getGameProfile().name()
     }
 

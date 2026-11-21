@@ -31,10 +31,21 @@ public final class NoRenderChecks {
 		check(NoRenderRules.isBonePlatingDrop(true, "Bone Meal") && !NoRenderRules.isBonePlatingDrop(true, "Bone Meal x2")
 			&& !NoRenderRules.isBonePlatingDrop(false, "Bone Meal"), "bone plating hides only the plain bone meal item");
 
-		// Module declaration: twenty-one switches, all off, one per flag.
+		String soulWeaver = java.util.Base64.getEncoder().encodeToString(
+			("{\"textures\":{\"SKIN\":{\"url\":\"http://textures.minecraft.net/texture/2f24ed6875304fa4a1f0c785b2cb6a6a72563e9f3e24ea55e18178452119aa66\"}}}")
+				.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		check(NoRenderRules.isSoulWeaverTexture(soulWeaver) && !NoRenderRules.isSoulWeaverTexture("")
+			&& !NoRenderRules.isSoulWeaverTexture(null) && !NoRenderRules.isSoulWeaverTexture("not base64 !!")
+			&& !NoRenderRules.isSoulWeaverTexture(java.util.Base64.getEncoder().encodeToString("{\"url\":\"other\"}".getBytes())),
+			"only the Soul Weaver skull skin is recognised");
+
+		// Module declaration: twenty-seven switches (four of them the old No Fog toggles), all off, one per flag.
 		NoRenderModule module = NoRenderModule.INSTANCE;
-		check("No Render".equals(module.name()) && !module.defaultEnabled() && module.booleanSettings().size() == 21
-			&& NoRenderModule.Flag.values().length == 21, "No Render declares twenty-one switches and is off by default");
+		check("No Render".equals(module.name()) && !module.defaultEnabled() && module.booleanSettings().size() == 27
+			&& NoRenderModule.Flag.values().length == 27, "No Render declares twenty-seven switches and is off by default");
+		check(NoRenderModule.Flag.CLOUDS.getId().equals("clouds") && NoRenderModule.Flag.SOULWEAVER_SKULLS.getId().equals("soulweaverSkulls")
+			&& !module.active(NoRenderModule.Flag.CLOUDS) && !module.active(NoRenderModule.Flag.SOULWEAVER_SKULLS),
+			"No Render has Clouds and Soul Weaver Skulls switches that are inert while the module is off");
 		check(NoRenderModule.Flag.DARKNESS.getId().equals("darkness") && !module.active(NoRenderModule.Flag.DARKNESS), "No Render has a Darkness switch that is inert while the module is off");
 		check(module.booleanSettings().stream().anyMatch(setting -> setting.name().equals("Blindness"))
 			&& NoRenderModule.Flag.BLINDNESS.getId().equals("blindness"), "No Render has a Blindness switch");

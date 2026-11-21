@@ -8,7 +8,7 @@ import geiler.addons.client.dungeon.f7.DragonSpawnQueue
 import geiler.addons.client.dungeon.f7.F7Support
 import geiler.addons.client.dungeon.f7.PingTracker
 import geiler.addons.client.dungeon.f7.ProjectileSolver
-import geiler.addons.client.dungeon.odin.OdinDungeonPlayerRoster
+import geiler.addons.client.dungeon.helpers.DungeonPlayerRoster
 import geiler.addons.client.hud.HudElement
 import geiler.addons.client.mixin.LocalPlayerLastPositionAccessor
 import geiler.addons.client.module.BooleanSetting
@@ -107,7 +107,7 @@ class DragonStackAimerModule private constructor(private val s: Settings) : Modu
 
     private fun selfClassAllowed(): Boolean {
         val name = Minecraft.getInstance().player?.gameProfile?.name ?: return true
-        val entry = OdinDungeonPlayerRoster.snapshot().firstOrNull { it.name().equals(name, ignoreCase = true) }
+        val entry = DungeonPlayerRoster.snapshot().firstOrNull { it.name().equals(name, ignoreCase = true) }
         val dungeonClass = entry?.let { DungeonClass.parse(it.dungeonClass()) } ?: return true
         return dungeonClass == DungeonClass.ARCHER || dungeonClass == DungeonClass.BERSERK
     }
@@ -126,7 +126,7 @@ class DragonStackAimerModule private constructor(private val s: Settings) : Modu
         if (!active()) return
         queue.onParticle(
             packet.x, packet.y, packet.z, packet.count, packet.xDist, packet.yDist, packet.zDist, packet.maxSpeed,
-            packet.particle.type == ParticleTypes.FLAME, DungeonOdinAssistModule.INSTANCE.serverTicks().toInt(),
+            packet.particle.type == ParticleTypes.FLAME, DungeonAssistModule.INSTANCE.serverTicks().toInt(),
         )
     }
 
@@ -146,7 +146,7 @@ class DragonStackAimerModule private constructor(private val s: Settings) : Modu
             reset()
             diagnostics.event("WORLD_CHANGED aimerReset=true")
         }
-        val now = DungeonOdinAssistModule.INSTANCE.serverTicks()
+        val now = DungeonAssistModule.INSTANCE.serverTicks()
         if (lastServerTicks >= 0L && now < lastServerTicks) {
             // The run clock restarted (dungeon context blip): stored spawn ticks belong to the old clock.
             diagnostics.event("TICK_CLOCK_RESTARTED was=$lastServerTicks now=$now queued=${queue.queued.size}")

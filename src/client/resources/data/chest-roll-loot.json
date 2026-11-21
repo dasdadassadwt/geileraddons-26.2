@@ -1,1291 +1,1278 @@
 {
  "floors": {
-  "F7": {
+  "F1": {
    "Wood": [
-    {
-     "name": "Feather Falling VI",
-     "w": 29.91,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Infinite Quiver VI",
-     "w": 25.64,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Rejuvenate I",
-     "w": 25.64,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Bank I",
-     "w": 17.09,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Ultimate Jerry I",
-     "w": 0.85,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    }
+    {"name": "Necromancer's Brooch", "w": 0.7519, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Bank I", "w": 15.0376, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.7519, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 30.0752, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 30.0752, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 22.5564, "r": "RARE", "icon": "minecraft:enchanted_book"}
    ],
    "Gold": [
-    {
-     "name": "Rejuvenate I",
-     "w": 21.28,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Feather Falling VI",
-     "w": 13.3,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Ultimate Wise I",
-     "w": 10.64,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Infinite Quiver VI",
-     "w": 10.64,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Combo I",
-     "w": 8.51,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "No Pain No Gain I",
-     "w": 8.51,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Bank I",
-     "w": 7.98,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wisdom I",
-     "w": 7.98,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Precursor Gear",
-     "w": 3.72,
-     "r": "EPIC",
-     "icon": "minecraft:leather_chestplate"
-    },
-    {
-     "name": "Hot Potato Book",
-     "w": 2.66,
-     "r": "EPIC",
-     "icon": "minecraft:book"
-    },
-    {
-     "name": "Wither Catalyst",
-     "w": 2.66,
-     "r": "EPIC",
-     "icon": "minecraft:nether_star"
-    },
-    {
-     "name": "Wither Boots",
-     "w": 1.06,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_boots"
-    },
-    {
-     "name": "Ultimate Jerry I",
-     "w": 0.53,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    }
+    {"name": "Hot Potato Book", "w": 2.5381, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 10.1523, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 10.1523, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 5.0761, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Bank I", "w": 10.1523, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5076, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 22.8426, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 20.3046, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 17.7665, "r": "RARE", "icon": "minecraft:enchanted_book"}
    ],
    "Diamond": [
-    {
-     "name": "Rejuvenate I",
-     "w": 20.83,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Feather Falling VI",
-     "w": 13.02,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Ultimate Wise I",
-     "w": 10.42,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Infinite Quiver VI",
-     "w": 10.42,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Combo I",
-     "w": 8.33,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "No Pain No Gain I",
-     "w": 8.33,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Bank I",
-     "w": 7.81,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wisdom I",
-     "w": 7.81,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Precursor Gear",
-     "w": 4.17,
-     "r": "EPIC",
-     "icon": "minecraft:leather_chestplate"
-    },
-    {
-     "name": "Hot Potato Book",
-     "w": 2.6,
-     "r": "EPIC",
-     "icon": "minecraft:book"
-    },
-    {
-     "name": "Wither Catalyst",
-     "w": 2.6,
-     "r": "EPIC",
-     "icon": "minecraft:nether_star"
-    },
-    {
-     "name": "Wither Boots",
-     "w": 1.04,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_boots"
-    },
-    {
-     "name": "Soul Eater I",
-     "w": 1.04,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wither Helmet",
-     "w": 0.52,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_helmet"
-    },
-    {
-     "name": "Ultimate Jerry I",
-     "w": 0.52,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    }
+    {"name": "Bonzo's Mask", "w": 0.5714, "r": "RARE", "icon": "minecraft:leather_helmet", "id": "BONZO_MASK"},
+    {"name": "Red Nose", "w": 1.1429, "r": "RARE", "icon": "minecraft:redstone", "id": "RED_NOSE"},
+    {"name": "Balloon Snake", "w": 1.1429, "r": "RARE", "icon": "minecraft:lead", "id": "BALLOON_SNAKE"},
+    {"name": "Hot Potato Book", "w": 3.4286, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 11.4286, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 11.4286, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 6.8571, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Bank I", "w": 5.7143, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5714, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 22.8571, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 17.1429, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 17.1429, "r": "RARE", "icon": "minecraft:enchanted_book"}
    ],
    "Emerald": [
-    {
-     "name": "Rejuvenate II",
-     "w": 13.44,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Feather Falling VI",
-     "w": 10.75,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Ultimate Wise I",
-     "w": 10.75,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Infinite Quiver VI",
-     "w": 8.6,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Combo I",
-     "w": 8.6,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Bank I",
-     "w": 8.06,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wisdom I",
-     "w": 8.06,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Last Stand I",
-     "w": 5.38,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Ultimate Jerry II",
-     "w": 5.38,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Precursor Gear",
-     "w": 3.76,
-     "r": "EPIC",
-     "icon": "minecraft:leather_chestplate"
-    },
-    {
-     "name": "Soul Eater I",
-     "w": 3.23,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Hot Potato Book",
-     "w": 2.69,
-     "r": "EPIC",
-     "icon": "minecraft:book"
-    },
-    {
-     "name": "No Pain No Gain I",
-     "w": 2.69,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wither Catalyst",
-     "w": 2.69,
-     "r": "EPIC",
-     "icon": "minecraft:nether_star"
-    },
-    {
-     "name": "Wither Boots",
-     "w": 2.15,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_boots"
-    },
-    {
-     "name": "Wither Blood",
-     "w": 1.08,
-     "r": "EPIC",
-     "icon": "minecraft:redstone"
-    },
-    {
-     "name": "Wither Helmet",
-     "w": 1.08,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_helmet"
-    },
-    {
-     "name": "Wither Leggings",
-     "w": 0.54,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_leggings"
-    },
-    {
-     "name": "Wither Cloak Sword",
-     "w": 0.54,
-     "r": "LEGENDARY",
-     "icon": "minecraft:iron_sword"
-    }
+    {"name": "Bonzo's Staff", "w": 0.6993, "r": "RARE", "icon": "minecraft:blaze_rod", "id": "BONZO_STAFF"},
+    {"name": "Fuming Potato Book", "w": 1.3986, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Bonzo's Mask", "w": 1.3986, "r": "RARE", "icon": "minecraft:leather_helmet", "id": "BONZO_MASK"},
+    {"name": "Red Nose", "w": 2.0979, "r": "RARE", "icon": "minecraft:redstone", "id": "RED_NOSE"},
+    {"name": "Balloon Snake", "w": 1.3986, "r": "RARE", "icon": "minecraft:lead", "id": "BALLOON_SNAKE"},
+    {"name": "Hot Potato Book", "w": 4.8951, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 13.986, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 13.986, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 6.993, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Bank I", "w": 5.5944, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.6993, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 20.979, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 12.5874, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 12.5874, "r": "RARE", "icon": "minecraft:enchanted_book"}
    ],
    "Obsidian": [
-    {
-     "name": "Rejuvenate II",
-     "w": 16.18,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Ultimate Wise I",
-     "w": 12.95,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Combo I",
-     "w": 10.36,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Last Stand I",
-     "w": 9.71,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Precursor Gear",
-     "w": 5.18,
-     "r": "EPIC",
-     "icon": "minecraft:leather_chestplate"
-    },
-    {
-     "name": "Bank II",
-     "w": 4.85,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wisdom I",
-     "w": 4.85,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Soul Eater I",
-     "w": 4.53,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Fuming Potato Book",
-     "w": 4.53,
-     "r": "EPIC",
-     "icon": "minecraft:book"
-    },
-    {
-     "name": "Wither Boots",
-     "w": 4.53,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_boots"
-    },
-    {
-     "name": "Wither Catalyst",
-     "w": 4.53,
-     "r": "EPIC",
-     "icon": "minecraft:nether_star"
-    },
-    {
-     "name": "Hot Potato Book",
-     "w": 3.24,
-     "r": "EPIC",
-     "icon": "minecraft:book"
-    },
-    {
-     "name": "No Pain No Gain I",
-     "w": 3.24,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Ultimate Jerry II",
-     "w": 2.59,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wither Cloak Sword",
-     "w": 1.94,
-     "r": "LEGENDARY",
-     "icon": "minecraft:iron_sword"
-    },
-    {
-     "name": "Wither Blood",
-     "w": 1.94,
-     "r": "EPIC",
-     "icon": "minecraft:redstone"
-    },
-    {
-     "name": "Wither Helmet",
-     "w": 1.94,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_helmet"
-    },
-    {
-     "name": "Wither Leggings",
-     "w": 1.29,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_leggings"
-    },
-    {
-     "name": "Recombobulator 3000",
-     "w": 0.65,
-     "r": "LEGENDARY",
-     "icon": "minecraft:glowstone"
-    },
-    {
-     "name": "Wither Chestplate",
-     "w": 0.32,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_chestplate"
-    },
-    {
-     "name": "One For All I",
-     "w": 0.32,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    }
+    {"name": "Recombobulator 3000", "w": 2.8302, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Bonzo's Staff", "w": 0.9434, "r": "RARE", "icon": "minecraft:blaze_rod", "id": "BONZO_STAFF"},
+    {"name": "Fuming Potato Book", "w": 1.8868, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Bonzo's Mask", "w": 2.8302, "r": "RARE", "icon": "minecraft:leather_helmet", "id": "BONZO_MASK"},
+    {"name": "Red Nose", "w": 2.8302, "r": "RARE", "icon": "minecraft:redstone", "id": "RED_NOSE"},
+    {"name": "Balloon Snake", "w": 3.7736, "r": "RARE", "icon": "minecraft:lead", "id": "BALLOON_SNAKE"},
+    {"name": "Hot Potato Book", "w": 4.717, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 14.1509, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 14.1509, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 9.434, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Bank I", "w": 1.8868, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.9434, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 23.5849, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 7.5472, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 7.5472, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ]
+  },
+  "F2": {
+   "Wood": [
+    {"name": "Necromancer's Brooch", "w": 0.7812, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Bank I", "w": 15.625, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.7812, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 31.25, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 27.3438, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 23.4375, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Gold": [
+    {"name": "Scarf's Studies", "w": 1.0309, "r": "RARE", "icon": "minecraft:book", "id": "SCARF_STUDIES"},
+    {"name": "Hot Potato Book", "w": 2.5773, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 9.2784, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 9.2784, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 7.2165, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Ultimate Wise I", "w": 10.3093, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 7.732, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5155, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 23.1959, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 15.4639, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 12.8866, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Diamond": [
+    {"name": "Red Scarf", "w": 0.6369, "r": "RARE", "icon": "minecraft:paper", "id": "RED_SCARF"},
+    {"name": "Scarf's Studies", "w": 1.9108, "r": "RARE", "icon": "minecraft:book", "id": "SCARF_STUDIES"},
+    {"name": "Hot Potato Book", "w": 4.4586, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 9.5541, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 9.5541, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 8.9172, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Ultimate Wise I", "w": 12.7389, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 6.3694, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.6369, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 22.293, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 12.7389, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 9.5541, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Emerald": [
+    {"name": "Adaptive Blade", "w": 0.8929, "r": "EPIC", "icon": "minecraft:paper"},
+    {"name": "Fuming Potato Book", "w": 1.7857, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Red Scarf", "w": 0.8929, "r": "RARE", "icon": "minecraft:paper", "id": "RED_SCARF"},
+    {"name": "Scarf's Studies", "w": 3.5714, "r": "RARE", "icon": "minecraft:book", "id": "SCARF_STUDIES"},
+    {"name": "Hot Potato Book", "w": 6.25, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 8.9286, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.9286, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 8.9286, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Ultimate Wise I", "w": 17.8571, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 4.4643, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.8929, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 22.3214, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 8.9286, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 4.4643, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Obsidian": [
+    {"name": "Adaptive Blade", "w": 3.1746, "r": "EPIC", "icon": "minecraft:paper"},
+    {"name": "Recombobulator 3000", "w": 3.1746, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Adaptive Belt", "w": 4.7619, "r": "EPIC", "icon": "minecraft:leather", "id": "ADAPTIVE_BELT"},
+    {"name": "Fuming Potato Book", "w": 4.7619, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Red Scarf", "w": 1.5873, "r": "RARE", "icon": "minecraft:paper", "id": "RED_SCARF"},
+    {"name": "Scarf's Studies", "w": 6.3492, "r": "RARE", "icon": "minecraft:book", "id": "SCARF_STUDIES"},
+    {"name": "Hot Potato Book", "w": 7.9365, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 7.9365, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 7.9365, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 7.9365, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Ultimate Wise I", "w": 15.873, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 3.1746, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 23.8095, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ]
+  },
+  "F3": {
+   "Wood": [
+    {"name": "Necromancer's Brooch", "w": 1.6807, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Bank I", "w": 16.8067, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.8403, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 29.4118, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 25.2101, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 25.2101, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Gold": [
+    {"name": "Adaptive Boots", "w": 1.0526, "r": "EPIC", "icon": "minecraft:leather_boots", "id": "ADAPTIVE_BOOTS"},
+    {"name": "Hot Potato Book", "w": 2.6316, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 8.4211, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.4211, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 7.3684, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Ultimate Wise I", "w": 10.5263, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 7.8947, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 7.8947, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5263, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 21.0526, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 13.1579, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 10.5263, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Diamond": [
+    {"name": "Adaptive Helmet", "w": 1.2821, "r": "EPIC", "icon": "minecraft:leather_helmet", "id": "ADAPTIVE_HELMET"},
+    {"name": "Adaptive Boots", "w": 1.9231, "r": "EPIC", "icon": "minecraft:leather_boots", "id": "ADAPTIVE_BOOTS"},
+    {"name": "Hot Potato Book", "w": 4.4872, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Suspicious Vial", "w": 3.2051, "r": "RARE", "icon": "minecraft:paper", "id": "SUSPICIOUS_VIAL"},
+    {"name": "Combo I", "w": 8.9744, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.9744, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 8.9744, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Wisdom I", "w": 12.8205, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 9.6154, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 3.2051, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.641, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 19.2308, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 9.6154, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 6.4103, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Emerald": [
+    {"name": "Adaptive Chestplate", "w": 0.7299, "r": "EPIC", "icon": "minecraft:leather_chestplate", "id": "ADAPTIVE_CHESTPLATE"},
+    {"name": "Fuming Potato Book", "w": 0.7299, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Adaptive Leggings", "w": 0.7299, "r": "EPIC", "icon": "minecraft:leather_leggings", "id": "ADAPTIVE_LEGGINGS"},
+    {"name": "Adaptive Helmet", "w": 1.4599, "r": "EPIC", "icon": "minecraft:leather_helmet", "id": "ADAPTIVE_HELMET"},
+    {"name": "Adaptive Boots", "w": 1.4599, "r": "EPIC", "icon": "minecraft:leather_boots", "id": "ADAPTIVE_BOOTS"},
+    {"name": "Hot Potato Book", "w": 5.1095, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Suspicious Vial", "w": 3.6496, "r": "RARE", "icon": "minecraft:paper", "id": "SUSPICIOUS_VIAL"},
+    {"name": "Rejuvenate II", "w": 7.2993, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Combo I", "w": 7.2993, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 7.2993, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 3.6496, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Bank I", "w": 13.1387, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand I", "w": 7.2993, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 7.2993, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 7.2993, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 0.7299, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 13.1387, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 7.2993, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 3.6496, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Obsidian": [
+    {"name": "Adaptive Chestplate", "w": 1.1494, "r": "EPIC", "icon": "minecraft:leather_chestplate", "id": "ADAPTIVE_CHESTPLATE"},
+    {"name": "Recombobulator 3000", "w": 4.5977, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Fuming Potato Book", "w": 3.4483, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Adaptive Leggings", "w": 1.1494, "r": "EPIC", "icon": "minecraft:leather_leggings", "id": "ADAPTIVE_LEGGINGS"},
+    {"name": "Adaptive Helmet", "w": 2.2989, "r": "EPIC", "icon": "minecraft:leather_helmet", "id": "ADAPTIVE_HELMET"},
+    {"name": "Adaptive Boots", "w": 2.2989, "r": "EPIC", "icon": "minecraft:leather_boots", "id": "ADAPTIVE_BOOTS"},
+    {"name": "Hot Potato Book", "w": 5.7471, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Suspicious Vial", "w": 5.7471, "r": "RARE", "icon": "minecraft:paper", "id": "SUSPICIOUS_VIAL"},
+    {"name": "Combo I", "w": 5.7471, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 5.7471, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 4.5977, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Last Stand I", "w": 13.7931, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate II", "w": 13.7931, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank II", "w": 9.1954, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 9.1954, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 9.1954, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 1.1494, "r": "EPIC", "icon": "minecraft:enchanted_book"}
+   ]
+  },
+  "F4": {
+   "Wood": [
+    {"name": "Bank I", "w": 17.094, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.8547, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 29.9145, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 25.641, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 25.641, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Gold": [
+    {"name": "Rend I", "w": 1.0526, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Hot Potato Book", "w": 2.6316, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 8.4211, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.4211, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 7.3684, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Ultimate Wise I", "w": 10.5263, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 7.8947, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 7.8947, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5263, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 21.0526, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 13.1579, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 10.5263, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Diamond": [
+    {"name": "Spirit Stone", "w": 1.0309, "r": "EPIC", "icon": "minecraft:stone"},
+    {"name": "Rend I", "w": 1.0309, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Epic Spirit Pet", "w": 1.0309, "r": "EPIC", "icon": "minecraft:bone", "id": "SPIRIT;3"},
+    {"name": "Hot Potato Book", "w": 2.5773, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 8.2474, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.2474, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 7.2165, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Ultimate Wise I", "w": 10.3093, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 7.732, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 7.732, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5155, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 20.6186, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 12.8866, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 10.3093, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Emerald": [
+    {"name": "Spirit Boots", "w": 0.9009, "r": "EPIC", "icon": "minecraft:leather_boots"},
+    {"name": "Spirit Bone", "w": 0.9009, "r": "EPIC", "icon": "minecraft:bone", "id": "SPIRIT_BONE"},
+    {"name": "Fuming Potato Book", "w": 0.9009, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Legendary Spirit Pet", "w": 0.9009, "r": "LEGENDARY", "icon": "minecraft:bone", "id": "SPIRIT;4"},
+    {"name": "Spirit Stone", "w": 1.8018, "r": "EPIC", "icon": "minecraft:stone"},
+    {"name": "Rend I", "w": 1.8018, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Hot Potato Book", "w": 6.3063, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Rejuvenate II", "w": 10.8108, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Combo I", "w": 9.009, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 9.009, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 16.2162, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand I", "w": 9.009, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 9.009, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 9.009, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 0.9009, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 9.009, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 3.6036, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Obsidian": [
+    {"name": "Spirit Boots", "w": 1.2048, "r": "EPIC", "icon": "minecraft:leather_boots"},
+    {"name": "Spirit Shortbow", "w": 1.2048, "r": "EPIC", "icon": "minecraft:bow"},
+    {"name": "Spirit Sword", "w": 1.2048, "r": "EPIC", "icon": "minecraft:iron_sword", "id": "SPIRIT_SWORD"},
+    {"name": "Recombobulator 3000", "w": 3.6145, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Spirit Wing", "w": 2.4096, "r": "EPIC", "icon": "minecraft:feather", "id": "SPIRIT_WING"},
+    {"name": "Spirit Bone", "w": 2.4096, "r": "EPIC", "icon": "minecraft:bone", "id": "SPIRIT_BONE"},
+    {"name": "Fuming Potato Book", "w": 3.6145, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Legendary Spirit Pet", "w": 1.2048, "r": "LEGENDARY", "icon": "minecraft:bone", "id": "SPIRIT;4"},
+    {"name": "Spirit Stone", "w": 2.4096, "r": "EPIC", "icon": "minecraft:stone"},
+    {"name": "Rend II", "w": 2.4096, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Hot Potato Book", "w": 6.0241, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 6.0241, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 6.0241, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand I", "w": 14.4578, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate II", "w": 14.4578, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank II", "w": 9.6386, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 9.6386, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 9.6386, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 1.2048, "r": "EPIC", "icon": "minecraft:enchanted_book"}
+   ]
+  },
+  "F5": {
+   "Wood": [
+    {"name": "Bank I", "w": 17.094, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.8547, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 29.9145, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 25.641, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 25.641, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Gold": [
+    {"name": "Overload I", "w": 1.087, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Hot Potato Book", "w": 2.7174, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Lethality VI", "w": 2.7174, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Dark Orb", "w": 1.6304, "r": "RARE", "icon": "minecraft:ender_pearl", "id": "DARK_ORB"},
+    {"name": "Combo I", "w": 8.6957, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.6957, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 10.8696, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 8.1522, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 8.1522, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5435, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 21.7391, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 13.587, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 10.8696, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Diamond": [
+    {"name": "Shadow Assassin Boots", "w": 0.5348, "r": "EPIC", "icon": "minecraft:leather_boots", "id": "SHADOW_ASSASSIN_BOOTS"},
+    {"name": "Legion I", "w": 1.0695, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Overload I", "w": 1.0695, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Hot Potato Book", "w": 2.6738, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Lethality VI", "w": 2.6738, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Dark Orb", "w": 1.6043, "r": "RARE", "icon": "minecraft:ender_pearl", "id": "DARK_ORB"},
+    {"name": "Combo I", "w": 8.5561, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.5561, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 10.6952, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 8.0214, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 8.0214, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5348, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 21.3904, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 13.369, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 10.6952, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Emerald": [
+    {"name": "Warped Stone", "w": 0.0575, "r": "EPIC", "icon": "minecraft:stone"},
+    {"name": "Shadow Assassin Helmet", "w": 0.8626, "r": "EPIC", "icon": "minecraft:leather_helmet", "id": "SHADOW_ASSASSIN_HELMET"},
+    {"name": "Fuming Potato Book", "w": 0.8051, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Shadow Assassin Boots", "w": 1.3226, "r": "EPIC", "icon": "minecraft:leather_boots", "id": "SHADOW_ASSASSIN_BOOTS"},
+    {"name": "Legion I", "w": 1.7251, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Overload I", "w": 1.7251, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Hot Potato Book", "w": 6.038, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Lethality VI", "w": 4.3128, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Dark Orb", "w": 1.1501, "r": "RARE", "icon": "minecraft:ender_pearl", "id": "DARK_ORB"},
+    {"name": "Rejuvenate II", "w": 10.3508, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Combo I", "w": 8.6256, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.6256, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 15.5262, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand I", "w": 8.6256, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 8.6256, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 8.6256, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 0.8626, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 8.6256, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 3.4503, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Obsidian": [
+    {"name": "Livid Dagger", "w": 0.295, "r": "LEGENDARY", "icon": "minecraft:iron_sword", "id": "LIVID_DAGGER"},
+    {"name": "Shadow Assassin Cloak", "w": 1.1799, "r": "EPIC", "icon": "minecraft:leather_chestplate", "id": "SHADOW_ASSASSIN_CLOAK"},
+    {"name": "Shadow Assassin Leggings", "w": 1.1799, "r": "EPIC", "icon": "minecraft:leather_leggings", "id": "SHADOW_ASSASSIN_LEGGINGS"},
+    {"name": "Warped Stone", "w": 0.295, "r": "EPIC", "icon": "minecraft:stone"},
+    {"name": "Recombobulator 3000", "w": 1.7699, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Shadow Assassin Helmet", "w": 2.3599, "r": "EPIC", "icon": "minecraft:leather_helmet", "id": "SHADOW_ASSASSIN_HELMET"},
+    {"name": "Fuming Potato Book", "w": 2.6549, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Shadow Assassin Boots", "w": 3.5398, "r": "EPIC", "icon": "minecraft:leather_boots", "id": "SHADOW_ASSASSIN_BOOTS"},
+    {"name": "Legion I", "w": 4.7198, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Overload I", "w": 4.7198, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Hot Potato Book", "w": 5.8997, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Lethality VI", "w": 4.7198, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Dark Orb", "w": 3.5398, "r": "RARE", "icon": "minecraft:ender_pearl", "id": "DARK_ORB"},
+    {"name": "Combo I", "w": 5.8997, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 5.8997, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand I", "w": 11.7994, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate II", "w": 11.7994, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank II", "w": 8.8496, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 8.8496, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 8.8496, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 0.885, "r": "EPIC", "icon": "minecraft:enchanted_book"}
    ],
    "Bedrock": [
-    {
-     "name": "Precursor Gear",
-     "w": 8.54,
-     "r": "EPIC",
-     "icon": "minecraft:leather_chestplate"
-    },
-    {
-     "name": "Combo II",
-     "w": 7.11,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Last Stand II",
-     "w": 7.11,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Rejuvenate III",
-     "w": 7.11,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Infinite Quiver VII",
-     "w": 7.11,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Ultimate Wise II",
-     "w": 5.69,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Soul Eater I",
-     "w": 5.69,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Hot Potato Book",
-     "w": 5.69,
-     "r": "EPIC",
-     "icon": "minecraft:book"
-    },
-    {
-     "name": "Ultimate Jerry III",
-     "w": 4.27,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Bank III",
-     "w": 3.56,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wisdom II",
-     "w": 3.56,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wither Cloak Sword",
-     "w": 3.41,
-     "r": "LEGENDARY",
-     "icon": "minecraft:iron_sword"
-    },
-    {
-     "name": "Wither Blood",
-     "w": 3.41,
-     "r": "EPIC",
-     "icon": "minecraft:redstone"
-    },
-    {
-     "name": "Wither Helmet",
-     "w": 3.41,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_helmet"
-    },
-    {
-     "name": "Wither Boots",
-     "w": 3.41,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_boots"
-    },
-    {
-     "name": "Recombobulator 3000",
-     "w": 2.85,
-     "r": "LEGENDARY",
-     "icon": "minecraft:glowstone"
-    },
-    {
-     "name": "Fuming Potato Book",
-     "w": 2.85,
-     "r": "EPIC",
-     "icon": "minecraft:book"
-    },
-    {
-     "name": "Wither Catalyst",
-     "w": 2.85,
-     "r": "EPIC",
-     "icon": "minecraft:nether_star"
-    },
-    {
-     "name": "No Pain No Gain II",
-     "w": 2.85,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wither Shard",
-     "w": 2.49,
-     "r": "EPIC",
-     "icon": "minecraft:prismarine_shard"
-    },
-    {
-     "name": "Wither Leggings",
-     "w": 2.28,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_leggings"
-    },
-    {
-     "name": "Feather Falling VII",
-     "w": 2.28,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Auto Recombobulator",
-     "w": 0.57,
-     "r": "LEGENDARY",
-     "icon": "minecraft:glowstone"
-    },
-    {
-     "name": "Wither Chestplate",
-     "w": 0.57,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_chestplate"
-    },
-    {
-     "name": "One For All I",
-     "w": 0.57,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Implosion",
-     "w": 0.14,
-     "r": "LEGENDARY",
-     "icon": "minecraft:paper"
-    },
-    {
-     "name": "Shadow Warp",
-     "w": 0.14,
-     "r": "LEGENDARY",
-     "icon": "minecraft:paper"
-    },
-    {
-     "name": "Wither Shield",
-     "w": 0.14,
-     "r": "LEGENDARY",
-     "icon": "minecraft:paper"
-    },
-    {
-     "name": "Necron's Handle",
-     "w": 0.11,
-     "r": "LEGENDARY",
-     "icon": "minecraft:blaze_rod"
-    },
-    {
-     "name": "Goldor the Fish",
-     "w": 0.07,
-     "r": "RARE",
-     "icon": "minecraft:cod"
-    },
-    {
-     "name": "Maxor the Fish",
-     "w": 0.07,
-     "r": "RARE",
-     "icon": "minecraft:cod"
-    },
-    {
-     "name": "Storm the Fish",
-     "w": 0.07,
-     "r": "RARE",
-     "icon": "minecraft:cod"
-    }
+    {"name": "Shadow Fury", "w": 0.2625, "r": "LEGENDARY", "icon": "minecraft:paper", "id": "SHADOW_FURY"},
+    {"name": "Last Breath", "w": 0.2625, "r": "LEGENDARY", "icon": "minecraft:paper", "id": "LAST_BREATH"},
+    {"name": "Shadow Assassin Chestplate", "w": 0.5249, "r": "EPIC", "icon": "minecraft:leather_chestplate", "id": "SHADOW_ASSASSIN_CHESTPLATE"},
+    {"name": "Livid Dagger", "w": 1.0499, "r": "LEGENDARY", "icon": "minecraft:iron_sword", "id": "LIVID_DAGGER"},
+    {"name": "Shadow Assassin Cloak", "w": 1.3123, "r": "EPIC", "icon": "minecraft:leather_chestplate", "id": "SHADOW_ASSASSIN_CLOAK"},
+    {"name": "Shadow Assassin Leggings", "w": 1.3123, "r": "EPIC", "icon": "minecraft:leather_leggings", "id": "SHADOW_ASSASSIN_LEGGINGS"},
+    {"name": "Warped Stone", "w": 0.5249, "r": "EPIC", "icon": "minecraft:stone"},
+    {"name": "Recombobulator 3000", "w": 1.5748, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Shadow Assassin Helmet", "w": 2.6247, "r": "EPIC", "icon": "minecraft:leather_helmet", "id": "SHADOW_ASSASSIN_HELMET"},
+    {"name": "Shadow Assassin Boots", "w": 3.937, "r": "EPIC", "icon": "minecraft:leather_boots", "id": "SHADOW_ASSASSIN_BOOTS"},
+    {"name": "Fuming Potato Book", "w": 5.2493, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Legion I", "w": 5.2493, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Overload I", "w": 5.2493, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Dark Orb", "w": 7.874, "r": "RARE", "icon": "minecraft:ender_pearl", "id": "DARK_ORB"},
+    {"name": "Lethality VI", "w": 5.2493, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Combo II", "w": 5.2493, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain II", "w": 5.2493, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand II", "w": 11.811, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate III", "w": 11.811, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise II", "w": 10.4987, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom II", "w": 6.5617, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank III", "w": 5.2493, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry III", "w": 1.0499, "r": "EPIC", "icon": "minecraft:enchanted_book"}
+   ]
+  },
+  "F6": {
+   "Wood": [
+    {"name": "Bank I", "w": 17.094, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.8547, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 29.9145, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 25.641, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 25.641, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Gold": [
+    {"name": "Swarm I", "w": 1.1111, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Hot Potato Book", "w": 2.7778, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Giant Tooth", "w": 2.2222, "r": "EPIC", "icon": "minecraft:quartz", "id": "GIANT_TOOTH"},
+    {"name": "Combo I", "w": 8.8889, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.8889, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 11.1111, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 8.3333, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 8.3333, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5556, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 22.2222, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 13.8889, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 11.1111, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Diamond": [
+    {"name": "Necromancer Lord Boots", "w": 1.0582, "r": "LEGENDARY", "icon": "minecraft:leather_boots", "id": "NECROMANCER_LORD_BOOTS"},
+    {"name": "Swarm I", "w": 3.1746, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Giant Tooth", "w": 3.7037, "r": "EPIC", "icon": "minecraft:quartz", "id": "GIANT_TOOTH"},
+    {"name": "Hot Potato Book", "w": 2.6455, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 8.4656, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.4656, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 10.582, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 7.9365, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 7.9365, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5291, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 21.164, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 13.2275, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 10.582, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Emerald": [
+    {"name": "Necromancer Lord Helmet", "w": 1.0695, "r": "LEGENDARY", "icon": "minecraft:leather_helmet", "id": "NECROMANCER_LORD_HELMET"},
+    {"name": "Sadan's Brooch", "w": 1.0695, "r": "EPIC", "icon": "minecraft:gold_nugget", "id": "SADAN_BROOCH"},
+    {"name": "Necromancer Lord Boots", "w": 1.6043, "r": "LEGENDARY", "icon": "minecraft:leather_boots", "id": "NECROMANCER_LORD_BOOTS"},
+    {"name": "Swarm I", "w": 4.2781, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Giant Tooth", "w": 4.2781, "r": "EPIC", "icon": "minecraft:quartz", "id": "GIANT_TOOTH"},
+    {"name": "Hot Potato Book", "w": 2.6738, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "No Pain No Gain I", "w": 2.6738, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Combo I", "w": 8.5561, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 8.5561, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 10.6952, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 8.0214, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 8.0214, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand I", "w": 0.5348, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate II", "w": 13.369, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 13.369, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 10.6952, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Obsidian": [
+    {"name": "Summoning Ring", "w": 0.2232, "r": "RARE", "icon": "minecraft:paper", "id": "SUMMONING_RING"},
+    {"name": "Necromancer Sword", "w": 0.4464, "r": "LEGENDARY", "icon": "minecraft:iron_sword", "id": "NECROMANCER_SWORD"},
+    {"name": "Necromancer Lord Leggings", "w": 0.6696, "r": "LEGENDARY", "icon": "minecraft:leather_leggings", "id": "NECROMANCER_LORD_LEGGINGS"},
+    {"name": "Recombobulator 3000", "w": 1.3393, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Soulweaver Gloves", "w": 0.6696, "r": "EPIC", "icon": "minecraft:leather", "id": "SOULWEAVER_GLOVES"},
+    {"name": "Necromancer Lord Helmet", "w": 0.8929, "r": "LEGENDARY", "icon": "minecraft:leather_helmet", "id": "NECROMANCER_LORD_HELMET"},
+    {"name": "Sadan's Brooch", "w": 0.8929, "r": "EPIC", "icon": "minecraft:gold_nugget", "id": "SADAN_BROOCH"},
+    {"name": "Necromancer Lord Boots", "w": 1.3393, "r": "LEGENDARY", "icon": "minecraft:leather_boots", "id": "NECROMANCER_LORD_BOOTS"},
+    {"name": "Fuming Potato Book", "w": 2.0089, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Swarm I", "w": 3.3482, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Hot Potato Book", "w": 8.9286, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Giant Tooth", "w": 3.3482, "r": "EPIC", "icon": "minecraft:quartz", "id": "GIANT_TOOTH"},
+    {"name": "Combo I", "w": 8.9286, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.9286, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand I", "w": 13.3929, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate II", "w": 13.3929, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank II", "w": 10.0446, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 10.0446, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 10.0446, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 0.8929, "r": "EPIC", "icon": "minecraft:enchanted_book"}
+   ],
+   "Bedrock": [
+    {"name": "Precursor Eye", "w": 0.1125, "r": "LEGENDARY", "icon": "minecraft:ender_eye", "id": "PRECURSOR_EYE"},
+    {"name": "Giant's Sword", "w": 0.1875, "r": "LEGENDARY", "icon": "minecraft:iron_sword", "id": "GIANTS_SWORD"},
+    {"name": "Necromancer Lord Chestplate", "w": 0.3, "r": "LEGENDARY", "icon": "minecraft:leather_chestplate", "id": "NECROMANCER_LORD_CHESTPLATE"},
+    {"name": "Summoning Ring", "w": 0.375, "r": "RARE", "icon": "minecraft:paper", "id": "SUMMONING_RING"},
+    {"name": "Fel Skull", "w": 0.5624, "r": "LEGENDARY", "icon": "minecraft:player_head", "id": "FEL_SKULL"},
+    {"name": "Necromancer Sword", "w": 0.7499, "r": "LEGENDARY", "icon": "minecraft:iron_sword", "id": "NECROMANCER_SWORD"},
+    {"name": "Necromancer Lord Leggings", "w": 1.1249, "r": "LEGENDARY", "icon": "minecraft:leather_leggings", "id": "NECROMANCER_LORD_LEGGINGS"},
+    {"name": "Recombobulator 3000", "w": 3.7495, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Soulweaver Gloves", "w": 1.1249, "r": "EPIC", "icon": "minecraft:leather", "id": "SOULWEAVER_GLOVES"},
+    {"name": "Necromancer Lord Helmet", "w": 1.4998, "r": "LEGENDARY", "icon": "minecraft:leather_helmet", "id": "NECROMANCER_LORD_HELMET"},
+    {"name": "Sadan's Brooch", "w": 1.4998, "r": "EPIC", "icon": "minecraft:gold_nugget", "id": "SADAN_BROOCH"},
+    {"name": "Necromancer Lord Boots", "w": 2.2497, "r": "LEGENDARY", "icon": "minecraft:leather_boots", "id": "NECROMANCER_LORD_BOOTS"},
+    {"name": "Fuming Potato Book", "w": 7.4991, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Swarm I", "w": 5.6243, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Giant Tooth", "w": 1.8748, "r": "EPIC", "icon": "minecraft:quartz", "id": "GIANT_TOOTH"},
+    {"name": "Combo II", "w": 7.4991, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain II", "w": 6.5617, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand II", "w": 14.2482, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate III", "w": 14.2482, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise II", "w": 12.3735, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom II", "w": 8.4364, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank III", "w": 6.5617, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry III", "w": 1.4998, "r": "EPIC", "icon": "minecraft:enchanted_book"}
+   ]
+  },
+  "F7": {
+   "Wood": [
+    {"name": "Bank I", "w": 17.094, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.8547, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 29.9145, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 25.641, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 25.641, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Gold": [
+    {"name": "Wither Boots", "w": 1.0638, "r": "LEGENDARY", "icon": "minecraft:leather_boots", "id": "WITHER_BOOTS"},
+    {"name": "Hot Potato Book", "w": 2.6596, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Wither Catalyst", "w": 2.6596, "r": "RARE", "icon": "minecraft:nether_star", "id": "WITHER_CATALYST"},
+    {"name": "Precursor Gear", "w": 3.7234, "r": "EPIC", "icon": "minecraft:paper", "id": "PRECURSOR_GEAR"},
+    {"name": "Combo I", "w": 8.5106, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.5106, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 10.6383, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 7.9787, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 7.9787, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5319, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 21.2766, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 13.2979, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 10.6383, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Diamond": [
+    {"name": "Wither Helmet", "w": 0.5208, "r": "LEGENDARY", "icon": "minecraft:leather_helmet", "id": "WITHER_HELMET"},
+    {"name": "Soul Eater I", "w": 1.0417, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wither Boots", "w": 1.0417, "r": "LEGENDARY", "icon": "minecraft:leather_boots", "id": "WITHER_BOOTS"},
+    {"name": "Hot Potato Book", "w": 2.6042, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Wither Catalyst", "w": 2.6042, "r": "RARE", "icon": "minecraft:nether_star", "id": "WITHER_CATALYST"},
+    {"name": "Precursor Gear", "w": 4.1667, "r": "EPIC", "icon": "minecraft:paper", "id": "PRECURSOR_GEAR"},
+    {"name": "Combo I", "w": 8.3333, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.3333, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 10.4167, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 7.8125, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 7.8125, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5208, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 20.8333, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 13.0208, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 10.4167, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Emerald": [
+    {"name": "Wither Leggings", "w": 0.5376, "r": "LEGENDARY", "icon": "minecraft:leather_leggings", "id": "WITHER_LEGGINGS"},
+    {"name": "Wither Cloak Sword", "w": 0.5376, "r": "EPIC", "icon": "minecraft:leather_chestplate", "id": "WITHER_CLOAK"},
+    {"name": "Wither Blood", "w": 1.0753, "r": "EPIC", "icon": "minecraft:redstone", "id": "WITHER_BLOOD"},
+    {"name": "Wither Helmet", "w": 1.0753, "r": "LEGENDARY", "icon": "minecraft:leather_helmet", "id": "WITHER_HELMET"},
+    {"name": "Soul Eater I", "w": 3.2258, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wither Boots", "w": 2.1505, "r": "LEGENDARY", "icon": "minecraft:leather_boots", "id": "WITHER_BOOTS"},
+    {"name": "Hot Potato Book", "w": 2.6882, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "No Pain No Gain I", "w": 2.6882, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wither Catalyst", "w": 2.6882, "r": "RARE", "icon": "minecraft:nether_star", "id": "WITHER_CATALYST"},
+    {"name": "Precursor Gear", "w": 3.7634, "r": "EPIC", "icon": "minecraft:paper", "id": "PRECURSOR_GEAR"},
+    {"name": "Combo I", "w": 8.6022, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 8.6022, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 10.7527, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 8.0645, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 8.0645, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand I", "w": 5.3763, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate II", "w": 13.4409, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 10.7527, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 5.3763, "r": "EPIC", "icon": "minecraft:enchanted_book"}
+   ],
+   "Obsidian": [
+    {"name": "Wither Chestplate", "w": 0.3236, "r": "LEGENDARY", "icon": "minecraft:leather_chestplate", "id": "WITHER_CHESTPLATE"},
+    {"name": "One For All I", "w": 0.3236, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wither Leggings", "w": 1.2945, "r": "LEGENDARY", "icon": "minecraft:leather_leggings", "id": "WITHER_LEGGINGS"},
+    {"name": "Recombobulator 3000", "w": 0.6472, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Wither Cloak Sword", "w": 1.9417, "r": "EPIC", "icon": "minecraft:leather_chestplate", "id": "WITHER_CLOAK"},
+    {"name": "Wither Blood", "w": 1.9417, "r": "EPIC", "icon": "minecraft:redstone", "id": "WITHER_BLOOD"},
+    {"name": "Wither Helmet", "w": 1.9417, "r": "LEGENDARY", "icon": "minecraft:leather_helmet", "id": "WITHER_HELMET"},
+    {"name": "Soul Eater I", "w": 4.5307, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Fuming Potato Book", "w": 4.5307, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Wither Boots", "w": 4.5307, "r": "LEGENDARY", "icon": "minecraft:leather_boots", "id": "WITHER_BOOTS"},
+    {"name": "Wither Catalyst", "w": 4.5307, "r": "RARE", "icon": "minecraft:nether_star", "id": "WITHER_CATALYST"},
+    {"name": "Hot Potato Book", "w": 3.2362, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Precursor Gear", "w": 5.178, "r": "EPIC", "icon": "minecraft:paper", "id": "PRECURSOR_GEAR"},
+    {"name": "Combo I", "w": 10.356, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 3.2362, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate II", "w": 16.1812, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 12.945, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand I", "w": 9.7087, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank II", "w": 4.8544, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 4.8544, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 2.589, "r": "EPIC", "icon": "minecraft:enchanted_book"}
+   ],
+   "Bedrock": [
+    {"name": "Necron's Handle", "w": 0.1067, "r": "LEGENDARY", "icon": "minecraft:paper", "id": "NECRON_HANDLE"},
+    {"name": "Implosion", "w": 0.1423, "r": "EPIC", "icon": "minecraft:paper", "id": "IMPLOSION_SCROLL"},
+    {"name": "Shadow Warp", "w": 0.1423, "r": "EPIC", "icon": "minecraft:paper", "id": "SHADOW_WARP_SCROLL"},
+    {"name": "Wither Shield", "w": 0.1423, "r": "EPIC", "icon": "minecraft:paper", "id": "WITHER_SHIELD_SCROLL"},
+    {"name": "Auto Recombobulator", "w": 0.5692, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "AUTO_RECOMBOBULATOR"},
+    {"name": "Wither Chestplate", "w": 0.5692, "r": "LEGENDARY", "icon": "minecraft:leather_chestplate", "id": "WITHER_CHESTPLATE"},
+    {"name": "One For All I", "w": 0.5692, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Recombobulator 3000", "w": 2.8458, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Wither Leggings", "w": 2.2766, "r": "LEGENDARY", "icon": "minecraft:leather_leggings", "id": "WITHER_LEGGINGS"},
+    {"name": "Wither Cloak Sword", "w": 3.4149, "r": "EPIC", "icon": "minecraft:leather_chestplate", "id": "WITHER_CLOAK"},
+    {"name": "Wither Shard", "w": 2.49, "r": "EPIC", "icon": "minecraft:prismarine_shard"},
+    {"name": "Wither Blood", "w": 3.4149, "r": "EPIC", "icon": "minecraft:redstone", "id": "WITHER_BLOOD"},
+    {"name": "Wither Helmet", "w": 3.4149, "r": "LEGENDARY", "icon": "minecraft:leather_helmet", "id": "WITHER_HELMET"},
+    {"name": "Soul Eater I", "w": 5.6915, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Fuming Potato Book", "w": 2.8458, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Wither Boots", "w": 3.4149, "r": "LEGENDARY", "icon": "minecraft:leather_boots", "id": "WITHER_BOOTS"},
+    {"name": "Hot Potato Book", "w": 5.6915, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Wither Catalyst", "w": 2.8458, "r": "RARE", "icon": "minecraft:nether_star", "id": "WITHER_CATALYST"},
+    {"name": "Precursor Gear", "w": 8.5373, "r": "EPIC", "icon": "minecraft:paper", "id": "PRECURSOR_GEAR"},
+    {"name": "Combo II", "w": 7.1144, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain II", "w": 2.8458, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand II", "w": 7.1144, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate III", "w": 7.1144, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise II", "w": 5.6915, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry III", "w": 4.2686, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank III", "w": 3.5572, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom II", "w": 3.5572, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VII", "w": 7.1144, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VII", "w": 2.2766, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Goldor the Fish", "w": 0.0711, "r": "LEGENDARY", "icon": "minecraft:cod", "id": "GOLDOR_THE_FISH"},
+    {"name": "Maxor the Fish", "w": 0.0711, "r": "LEGENDARY", "icon": "minecraft:cod", "id": "MAXOR_THE_FISH"},
+    {"name": "Storm the Fish", "w": 0.0711, "r": "LEGENDARY", "icon": "minecraft:cod", "id": "STORM_THE_FISH"}
+   ]
+  },
+  "M1": {
+   "Wood": [
+    {"name": "Necromancer's Brooch", "w": 0.7519, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Bank I", "w": 15.0376, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.7519, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 30.0752, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 30.0752, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 22.5564, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Gold": [
+    {"name": "Hot Potato Book", "w": 2.5381, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 10.1523, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 10.1523, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 5.0761, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Bank I", "w": 10.1523, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5076, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 22.8426, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 20.3046, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 17.7665, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Diamond": [
+    {"name": "Bonzo's Mask", "w": 0.641, "r": "RARE", "icon": "minecraft:leather_helmet", "id": "BONZO_MASK"},
+    {"name": "Red Nose", "w": 1.2821, "r": "RARE", "icon": "minecraft:redstone", "id": "RED_NOSE"},
+    {"name": "Balloon Snake", "w": 1.9231, "r": "RARE", "icon": "minecraft:lead", "id": "BALLOON_SNAKE"},
+    {"name": "Hot Potato Book", "w": 3.8462, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 12.8205, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 12.8205, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 7.6923, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Bank I", "w": 6.4103, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.641, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 19.2308, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 16.0256, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 16.0256, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Emerald": [
+    {"name": "Bonzo's Staff", "w": 0.8621, "r": "RARE", "icon": "minecraft:blaze_rod", "id": "BONZO_STAFF"},
+    {"name": "Fuming Potato Book", "w": 1.7241, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Bonzo's Mask", "w": 1.7241, "r": "RARE", "icon": "minecraft:leather_helmet", "id": "BONZO_MASK"},
+    {"name": "Red Nose", "w": 2.5862, "r": "RARE", "icon": "minecraft:redstone", "id": "RED_NOSE"},
+    {"name": "Balloon Snake", "w": 2.5862, "r": "RARE", "icon": "minecraft:lead", "id": "BALLOON_SNAKE"},
+    {"name": "Hot Potato Book", "w": 6.0345, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 12.931, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 12.931, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 8.6207, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Bank I", "w": 6.8966, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.8621, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 17.2414, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 12.069, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 12.069, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Obsidian": [
+    {"name": "Recombobulator 3000", "w": 4.6512, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Master Skull - Tier 1", "w": 3.4884, "r": "COMMON", "icon": "minecraft:player_head", "id": "MASTER_SKULL_TIER_1"},
+    {"name": "Bonzo's Staff", "w": 1.1628, "r": "RARE", "icon": "minecraft:blaze_rod", "id": "BONZO_STAFF"},
+    {"name": "Fuming Potato Book", "w": 2.3256, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Bonzo's Mask", "w": 3.4884, "r": "RARE", "icon": "minecraft:leather_helmet", "id": "BONZO_MASK"},
+    {"name": "Red Nose", "w": 4.6512, "r": "RARE", "icon": "minecraft:redstone", "id": "RED_NOSE"},
+    {"name": "Balloon Snake", "w": 3.4884, "r": "RARE", "icon": "minecraft:lead", "id": "BALLOON_SNAKE"},
+    {"name": "Hot Potato Book", "w": 5.814, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 11.6279, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 11.6279, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 11.6279, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Bank I", "w": 2.3256, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 1.1628, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 17.4419, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 6.9767, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 6.9767, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ]
+  },
+  "M2": {
+   "Wood": [
+    {"name": "Necromancer's Brooch", "w": 0.7812, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Bank I", "w": 15.625, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.7812, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 31.25, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 27.3438, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 23.4375, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Gold": [
+    {"name": "Scarf's Studies", "w": 1.0309, "r": "RARE", "icon": "minecraft:book", "id": "SCARF_STUDIES"},
+    {"name": "Hot Potato Book", "w": 2.5773, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 9.2784, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 9.2784, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 7.2165, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Ultimate Wise I", "w": 10.3093, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 7.732, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5155, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 23.1959, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 15.4639, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 12.8866, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Diamond": [
+    {"name": "Red Scarf", "w": 0.6369, "r": "RARE", "icon": "minecraft:paper", "id": "RED_SCARF"},
+    {"name": "Scarf's Studies", "w": 1.9108, "r": "RARE", "icon": "minecraft:book", "id": "SCARF_STUDIES"},
+    {"name": "Hot Potato Book", "w": 4.4586, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 9.5541, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 9.5541, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 8.9172, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Ultimate Wise I", "w": 12.7389, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 6.3694, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.6369, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 22.293, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 12.7389, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 9.5541, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Emerald": [
+    {"name": "Adaptive Blade", "w": 0.9346, "r": "EPIC", "icon": "minecraft:paper"},
+    {"name": "Fuming Potato Book", "w": 1.8692, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Red Scarf", "w": 0.9346, "r": "RARE", "icon": "minecraft:paper", "id": "RED_SCARF"},
+    {"name": "Scarf's Studies", "w": 3.7383, "r": "RARE", "icon": "minecraft:book", "id": "SCARF_STUDIES"},
+    {"name": "Hot Potato Book", "w": 6.5421, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 9.3458, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 9.3458, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 9.3458, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Ultimate Wise I", "w": 18.6916, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 4.6729, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.9346, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 18.6916, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 9.3458, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 4.6729, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Obsidian": [
+    {"name": "Master Skull - Tier 2", "w": 4.8387, "r": "COMMON", "icon": "minecraft:player_head", "id": "MASTER_SKULL_TIER_2"},
+    {"name": "Recombobulator 3000", "w": 4.8387, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Adaptive Blade", "w": 3.2258, "r": "EPIC", "icon": "minecraft:paper"},
+    {"name": "Adaptive Belt", "w": 4.8387, "r": "EPIC", "icon": "minecraft:leather", "id": "ADAPTIVE_BELT"},
+    {"name": "Fuming Potato Book", "w": 4.8387, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Red Scarf", "w": 1.6129, "r": "RARE", "icon": "minecraft:paper", "id": "RED_SCARF"},
+    {"name": "Scarf's Studies", "w": 6.4516, "r": "RARE", "icon": "minecraft:book", "id": "SCARF_STUDIES"},
+    {"name": "Hot Potato Book", "w": 8.0645, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 8.0645, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.0645, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 8.0645, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Ultimate Wise I", "w": 16.129, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 3.2258, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 16.129, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ]
+  },
+  "M3": {
+   "Wood": [
+    {"name": "Necromancer's Brooch", "w": 1.6807, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Bank I", "w": 16.8067, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.8403, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 29.4118, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 25.2101, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 25.2101, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Gold": [
+    {"name": "Adaptive Boots", "w": 1.0526, "r": "EPIC", "icon": "minecraft:leather_boots", "id": "ADAPTIVE_BOOTS"},
+    {"name": "Hot Potato Book", "w": 2.6316, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 8.4211, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.4211, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 7.3684, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Ultimate Wise I", "w": 10.5263, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 7.8947, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 7.8947, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5263, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 21.0526, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 13.1579, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 10.5263, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Diamond": [
+    {"name": "Adaptive Helmet", "w": 1.2821, "r": "EPIC", "icon": "minecraft:leather_helmet", "id": "ADAPTIVE_HELMET"},
+    {"name": "Adaptive Boots", "w": 1.9231, "r": "EPIC", "icon": "minecraft:leather_boots", "id": "ADAPTIVE_BOOTS"},
+    {"name": "Hot Potato Book", "w": 4.4872, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Suspicious Vial", "w": 3.2051, "r": "RARE", "icon": "minecraft:paper", "id": "SUSPICIOUS_VIAL"},
+    {"name": "Combo I", "w": 8.9744, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.9744, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 8.9744, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Wisdom I", "w": 12.8205, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 9.6154, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 3.2051, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.641, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 19.2308, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 9.6154, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 6.4103, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Emerald": [
+    {"name": "Adaptive Chestplate", "w": 0.7299, "r": "EPIC", "icon": "minecraft:leather_chestplate", "id": "ADAPTIVE_CHESTPLATE"},
+    {"name": "Fuming Potato Book", "w": 0.7299, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Adaptive Leggings", "w": 0.7299, "r": "EPIC", "icon": "minecraft:leather_leggings", "id": "ADAPTIVE_LEGGINGS"},
+    {"name": "Adaptive Helmet", "w": 1.4599, "r": "EPIC", "icon": "minecraft:leather_helmet", "id": "ADAPTIVE_HELMET"},
+    {"name": "Adaptive Boots", "w": 1.4599, "r": "EPIC", "icon": "minecraft:leather_boots", "id": "ADAPTIVE_BOOTS"},
+    {"name": "Hot Potato Book", "w": 5.1095, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Suspicious Vial", "w": 3.6496, "r": "RARE", "icon": "minecraft:paper", "id": "SUSPICIOUS_VIAL"},
+    {"name": "Rejuvenate II", "w": 7.2993, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Combo I", "w": 7.2993, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 7.2993, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 3.6496, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Bank I", "w": 13.1387, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand I", "w": 7.2993, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 7.2993, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 7.2993, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 0.7299, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 13.1387, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 7.2993, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 3.6496, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Obsidian": [
+    {"name": "First Master Star", "w": 2.5316, "r": "EPIC", "icon": "minecraft:nether_star", "id": "FIRST_MASTER_STAR"},
+    {"name": "Adaptive Chestplate", "w": 1.2658, "r": "EPIC", "icon": "minecraft:leather_chestplate", "id": "ADAPTIVE_CHESTPLATE"},
+    {"name": "Master Skull - Tier 3", "w": 5.0633, "r": "UNCOMMON", "icon": "minecraft:player_head", "id": "MASTER_SKULL_TIER_3"},
+    {"name": "Recombobulator 3000", "w": 5.0633, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Fuming Potato Book", "w": 3.7975, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Adaptive Leggings", "w": 1.2658, "r": "EPIC", "icon": "minecraft:leather_leggings", "id": "ADAPTIVE_LEGGINGS"},
+    {"name": "Adaptive Helmet", "w": 2.5316, "r": "EPIC", "icon": "minecraft:leather_helmet", "id": "ADAPTIVE_HELMET"},
+    {"name": "Adaptive Boots", "w": 2.5316, "r": "EPIC", "icon": "minecraft:leather_boots", "id": "ADAPTIVE_BOOTS"},
+    {"name": "Hot Potato Book", "w": 6.3291, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Suspicious Vial", "w": 6.3291, "r": "RARE", "icon": "minecraft:paper", "id": "SUSPICIOUS_VIAL"},
+    {"name": "Combo I", "w": 6.3291, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 6.3291, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 5.0633, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Last Stand I", "w": 10.1266, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate II", "w": 10.1266, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank II", "w": 7.5949, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 7.5949, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 7.5949, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 1.2658, "r": "EPIC", "icon": "minecraft:enchanted_book"}
+   ]
+  },
+  "M4": {
+   "Wood": [
+    {"name": "Bank I", "w": 17.094, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.8547, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 29.9145, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 25.641, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 25.641, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Gold": [
+    {"name": "Rend I", "w": 1.0526, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Hot Potato Book", "w": 2.6316, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 8.4211, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.4211, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 7.3684, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Ultimate Wise I", "w": 10.5263, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 7.8947, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 7.8947, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5263, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 21.0526, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 13.1579, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 10.5263, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Diamond": [
+    {"name": "Spirit Stone", "w": 1.0309, "r": "EPIC", "icon": "minecraft:stone"},
+    {"name": "Rend I", "w": 1.0309, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Epic Spirit Pet", "w": 1.0309, "r": "EPIC", "icon": "minecraft:bone", "id": "SPIRIT;3"},
+    {"name": "Hot Potato Book", "w": 2.5773, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 8.2474, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.2474, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Necromancer's Brooch", "w": 7.2165, "r": "RARE", "icon": "minecraft:gold_nugget", "id": "NECROMANCER_BROOCH"},
+    {"name": "Ultimate Wise I", "w": 10.3093, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 7.732, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 7.732, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5155, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 20.6186, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 12.8866, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 10.3093, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Emerald": [
+    {"name": "Spirit Boots", "w": 0.9009, "r": "EPIC", "icon": "minecraft:leather_boots"},
+    {"name": "Spirit Bone", "w": 0.9009, "r": "EPIC", "icon": "minecraft:bone", "id": "SPIRIT_BONE"},
+    {"name": "Fuming Potato Book", "w": 0.9009, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Legendary Spirit Pet", "w": 0.9009, "r": "LEGENDARY", "icon": "minecraft:bone", "id": "SPIRIT;4"},
+    {"name": "Spirit Stone", "w": 1.8018, "r": "EPIC", "icon": "minecraft:stone"},
+    {"name": "Rend I", "w": 1.8018, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Hot Potato Book", "w": 6.3063, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Rejuvenate II", "w": 10.8108, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Combo I", "w": 9.009, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 9.009, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 16.2162, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand I", "w": 9.009, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 9.009, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 9.009, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 0.9009, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 9.009, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 3.6036, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Obsidian": [
+    {"name": "Second Master Star", "w": 2.7304, "r": "EPIC", "icon": "minecraft:nether_star", "id": "SECOND_MASTER_STAR"},
+    {"name": "Spirit Mask", "w": 0.3413, "r": "EPIC", "icon": "minecraft:leather_helmet", "id": "SPIRIT_MASK"},
+    {"name": "Spirit Boots", "w": 1.3652, "r": "EPIC", "icon": "minecraft:leather_boots"},
+    {"name": "Spirit Shortbow", "w": 1.3652, "r": "EPIC", "icon": "minecraft:bow"},
+    {"name": "Spirit Sword", "w": 1.3652, "r": "EPIC", "icon": "minecraft:iron_sword", "id": "SPIRIT_SWORD"},
+    {"name": "Master Skull - Tier 3", "w": 4.0956, "r": "UNCOMMON", "icon": "minecraft:player_head", "id": "MASTER_SKULL_TIER_3"},
+    {"name": "Recombobulator 3000", "w": 4.0956, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Spirit Wing", "w": 2.7304, "r": "EPIC", "icon": "minecraft:feather", "id": "SPIRIT_WING"},
+    {"name": "Spirit Bone", "w": 2.7304, "r": "EPIC", "icon": "minecraft:bone", "id": "SPIRIT_BONE"},
+    {"name": "Fuming Potato Book", "w": 4.0956, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Legendary Spirit Pet", "w": 1.3652, "r": "LEGENDARY", "icon": "minecraft:bone", "id": "SPIRIT;4"},
+    {"name": "Spirit Stone", "w": 2.7304, "r": "EPIC", "icon": "minecraft:stone"},
+    {"name": "Rend II", "w": 2.7304, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Hot Potato Book", "w": 6.8259, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 6.8259, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 5.4608, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand I", "w": 10.9215, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate II", "w": 10.9215, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank II", "w": 8.1911, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 8.1911, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 8.1911, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 1.3652, "r": "EPIC", "icon": "minecraft:enchanted_book"}
+   ]
+  },
+  "M5": {
+   "Wood": [
+    {"name": "Bank I", "w": 17.094, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.8547, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 29.9145, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 25.641, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 25.641, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Gold": [
+    {"name": "Overload I", "w": 1.087, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Hot Potato Book", "w": 2.7174, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Lethality VI", "w": 2.7174, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Dark Orb", "w": 1.6304, "r": "RARE", "icon": "minecraft:ender_pearl", "id": "DARK_ORB"},
+    {"name": "Combo I", "w": 8.6957, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.6957, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 10.8696, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 8.1522, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 8.1522, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5435, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 21.7391, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 13.587, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 10.8696, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Diamond": [
+    {"name": "Shadow Assassin Boots", "w": 0.5348, "r": "EPIC", "icon": "minecraft:leather_boots", "id": "SHADOW_ASSASSIN_BOOTS"},
+    {"name": "Legion I", "w": 1.0695, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Overload I", "w": 1.0695, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Hot Potato Book", "w": 2.6738, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Lethality VI", "w": 2.6738, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Dark Orb", "w": 1.6043, "r": "RARE", "icon": "minecraft:ender_pearl", "id": "DARK_ORB"},
+    {"name": "Combo I", "w": 8.5561, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.5561, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 10.6952, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 8.0214, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 8.0214, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5348, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 21.3904, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 13.369, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 10.6952, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Emerald": [
+    {"name": "Warped Stone", "w": 0.0575, "r": "EPIC", "icon": "minecraft:stone"},
+    {"name": "Shadow Assassin Helmet", "w": 0.8626, "r": "EPIC", "icon": "minecraft:leather_helmet", "id": "SHADOW_ASSASSIN_HELMET"},
+    {"name": "Fuming Potato Book", "w": 0.8051, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Shadow Assassin Boots", "w": 1.3226, "r": "EPIC", "icon": "minecraft:leather_boots", "id": "SHADOW_ASSASSIN_BOOTS"},
+    {"name": "Legion I", "w": 1.7251, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Overload I", "w": 1.7251, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Hot Potato Book", "w": 6.038, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Lethality VI", "w": 4.3128, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Dark Orb", "w": 1.1501, "r": "RARE", "icon": "minecraft:ender_pearl", "id": "DARK_ORB"},
+    {"name": "Rejuvenate II", "w": 10.3508, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Combo I", "w": 8.6256, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.6256, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 15.5262, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand I", "w": 8.6256, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 8.6256, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 8.6256, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 0.8626, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 8.6256, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 3.4503, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Obsidian": [
+    {"name": "Livid Dagger", "w": 0.2924, "r": "LEGENDARY", "icon": "minecraft:iron_sword", "id": "LIVID_DAGGER"},
+    {"name": "Third Master Star", "w": 0.2924, "r": "EPIC", "icon": "minecraft:nether_star", "id": "THIRD_MASTER_STAR"},
+    {"name": "Shadow Assassin Cloak", "w": 1.1696, "r": "EPIC", "icon": "minecraft:leather_chestplate", "id": "SHADOW_ASSASSIN_CLOAK"},
+    {"name": "Shadow Assassin Leggings", "w": 1.1696, "r": "EPIC", "icon": "minecraft:leather_leggings", "id": "SHADOW_ASSASSIN_LEGGINGS"},
+    {"name": "Warped Stone", "w": 0.2924, "r": "EPIC", "icon": "minecraft:stone"},
+    {"name": "Recombobulator 3000", "w": 1.7544, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Master Skull - Tier 3", "w": 1.1696, "r": "UNCOMMON", "icon": "minecraft:player_head", "id": "MASTER_SKULL_TIER_3"},
+    {"name": "Shadow Assassin Helmet", "w": 2.3392, "r": "EPIC", "icon": "minecraft:leather_helmet", "id": "SHADOW_ASSASSIN_HELMET"},
+    {"name": "Fuming Potato Book", "w": 2.6316, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Shadow Assassin Boots", "w": 3.5088, "r": "EPIC", "icon": "minecraft:leather_boots", "id": "SHADOW_ASSASSIN_BOOTS"},
+    {"name": "Legion I", "w": 4.6784, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Overload I", "w": 4.6784, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Hot Potato Book", "w": 5.848, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Lethality VI", "w": 4.6784, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Dark Orb", "w": 2.924, "r": "RARE", "icon": "minecraft:ender_pearl", "id": "DARK_ORB"},
+    {"name": "Combo I", "w": 5.848, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 5.848, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand I", "w": 11.6959, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate II", "w": 11.6959, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank II", "w": 8.7719, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 8.7719, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 8.7719, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 0.8772, "r": "EPIC", "icon": "minecraft:enchanted_book"}
+   ],
+   "Bedrock": [
+    {"name": "Shadow Fury", "w": 0.3077, "r": "LEGENDARY", "icon": "minecraft:paper", "id": "SHADOW_FURY"},
+    {"name": "Last Breath", "w": 0.3077, "r": "LEGENDARY", "icon": "minecraft:paper", "id": "LAST_BREATH"},
+    {"name": "Shadow Assassin Chestplate", "w": 0.6154, "r": "EPIC", "icon": "minecraft:leather_chestplate", "id": "SHADOW_ASSASSIN_CHESTPLATE"},
+    {"name": "Livid Dagger", "w": 1.2308, "r": "LEGENDARY", "icon": "minecraft:iron_sword", "id": "LIVID_DAGGER"},
+    {"name": "Third Master Star", "w": 0.6154, "r": "EPIC", "icon": "minecraft:nether_star", "id": "THIRD_MASTER_STAR"},
+    {"name": "Shadow Assassin Cloak", "w": 1.5385, "r": "EPIC", "icon": "minecraft:leather_chestplate", "id": "SHADOW_ASSASSIN_CLOAK"},
+    {"name": "Shadow Assassin Leggings", "w": 1.5385, "r": "EPIC", "icon": "minecraft:leather_leggings", "id": "SHADOW_ASSASSIN_LEGGINGS"},
+    {"name": "Warped Stone", "w": 0.6154, "r": "EPIC", "icon": "minecraft:stone"},
+    {"name": "Recombobulator 3000", "w": 1.8462, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Master Skull - Tier 4", "w": 1.5385, "r": "UNCOMMON", "icon": "minecraft:player_head", "id": "MASTER_SKULL_TIER_4"},
+    {"name": "Shadow Assassin Helmet", "w": 3.0769, "r": "EPIC", "icon": "minecraft:leather_helmet", "id": "SHADOW_ASSASSIN_HELMET"},
+    {"name": "Shadow Assassin Boots", "w": 4.6154, "r": "EPIC", "icon": "minecraft:leather_boots", "id": "SHADOW_ASSASSIN_BOOTS"},
+    {"name": "Fuming Potato Book", "w": 6.1538, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Legion I", "w": 6.1538, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Overload I", "w": 6.1538, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Dark Orb", "w": 9.2308, "r": "RARE", "icon": "minecraft:ender_pearl", "id": "DARK_ORB"},
+    {"name": "Lethality VI", "w": 6.1538, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Combo II", "w": 4.6154, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain II", "w": 4.6154, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand II", "w": 10.7692, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate III", "w": 10.7692, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise II", "w": 9.2308, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom II", "w": 3.6923, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank III", "w": 3.0769, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry III", "w": 1.2308, "r": "EPIC", "icon": "minecraft:enchanted_book"}
+   ]
+  },
+  "M6": {
+   "Wood": [
+    {"name": "Bank I", "w": 17.094, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.8547, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 29.9145, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 25.641, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 25.641, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Gold": [
+    {"name": "Swarm I", "w": 1.1111, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Hot Potato Book", "w": 2.7778, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Giant Tooth", "w": 2.2222, "r": "EPIC", "icon": "minecraft:quartz", "id": "GIANT_TOOTH"},
+    {"name": "Combo I", "w": 8.8889, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.8889, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 11.1111, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 8.3333, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 8.3333, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5556, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 22.2222, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 13.8889, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 11.1111, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Diamond": [
+    {"name": "Necromancer Lord Boots", "w": 1.0582, "r": "LEGENDARY", "icon": "minecraft:leather_boots", "id": "NECROMANCER_LORD_BOOTS"},
+    {"name": "Swarm I", "w": 3.1746, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Giant Tooth", "w": 3.7037, "r": "EPIC", "icon": "minecraft:quartz", "id": "GIANT_TOOTH"},
+    {"name": "Hot Potato Book", "w": 2.6455, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Combo I", "w": 8.4656, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.4656, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 10.582, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 7.9365, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 7.9365, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5291, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 21.164, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 13.2275, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 10.582, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Emerald": [
+    {"name": "Necromancer Lord Helmet", "w": 1.0695, "r": "LEGENDARY", "icon": "minecraft:leather_helmet", "id": "NECROMANCER_LORD_HELMET"},
+    {"name": "Sadan's Brooch", "w": 1.0695, "r": "EPIC", "icon": "minecraft:gold_nugget", "id": "SADAN_BROOCH"},
+    {"name": "Necromancer Lord Boots", "w": 1.6043, "r": "LEGENDARY", "icon": "minecraft:leather_boots", "id": "NECROMANCER_LORD_BOOTS"},
+    {"name": "Swarm I", "w": 4.2781, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Giant Tooth", "w": 4.2781, "r": "EPIC", "icon": "minecraft:quartz", "id": "GIANT_TOOTH"},
+    {"name": "Hot Potato Book", "w": 2.6738, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "No Pain No Gain I", "w": 2.6738, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Combo I", "w": 8.5561, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 8.5561, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 10.6952, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 8.0214, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 8.0214, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand I", "w": 0.5348, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate II", "w": 13.369, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 13.369, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 10.6952, "r": "RARE", "icon": "minecraft:enchanted_book"}
+   ],
+   "Obsidian": [
+    {"name": "Fourth Master Star", "w": 0.6565, "r": "EPIC", "icon": "minecraft:nether_star", "id": "FOURTH_MASTER_STAR"},
+    {"name": "Summoning Ring", "w": 0.2188, "r": "RARE", "icon": "minecraft:paper", "id": "SUMMONING_RING"},
+    {"name": "Necromancer Sword", "w": 0.4376, "r": "LEGENDARY", "icon": "minecraft:iron_sword", "id": "NECROMANCER_SWORD"},
+    {"name": "Necromancer Lord Leggings", "w": 0.6565, "r": "LEGENDARY", "icon": "minecraft:leather_leggings", "id": "NECROMANCER_LORD_LEGGINGS"},
+    {"name": "Master Skull - Tier 4", "w": 1.3129, "r": "UNCOMMON", "icon": "minecraft:player_head", "id": "MASTER_SKULL_TIER_4"},
+    {"name": "Recombobulator 3000", "w": 1.3129, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Soulweaver Gloves", "w": 0.6565, "r": "EPIC", "icon": "minecraft:leather", "id": "SOULWEAVER_GLOVES"},
+    {"name": "Necromancer Lord Helmet", "w": 0.8753, "r": "LEGENDARY", "icon": "minecraft:leather_helmet", "id": "NECROMANCER_LORD_HELMET"},
+    {"name": "Sadan's Brooch", "w": 0.8753, "r": "EPIC", "icon": "minecraft:gold_nugget", "id": "SADAN_BROOCH"},
+    {"name": "Necromancer Lord Boots", "w": 1.3129, "r": "LEGENDARY", "icon": "minecraft:leather_boots", "id": "NECROMANCER_LORD_BOOTS"},
+    {"name": "Fuming Potato Book", "w": 1.9694, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Swarm I", "w": 3.2823, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Hot Potato Book", "w": 8.7527, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Giant Tooth", "w": 3.2823, "r": "EPIC", "icon": "minecraft:quartz", "id": "GIANT_TOOTH"},
+    {"name": "Combo I", "w": 8.7527, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.7527, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand I", "w": 13.1291, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate II", "w": 13.1291, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank II", "w": 9.8468, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 9.8468, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 9.8468, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 0.8753, "r": "EPIC", "icon": "minecraft:enchanted_book"}
+   ],
+   "Bedrock": [
+    {"name": "Precursor Eye", "w": 0.1108, "r": "LEGENDARY", "icon": "minecraft:ender_eye", "id": "PRECURSOR_EYE"},
+    {"name": "Giant's Sword", "w": 0.2216, "r": "LEGENDARY", "icon": "minecraft:iron_sword", "id": "GIANTS_SWORD"},
+    {"name": "Necromancer Lord Chestplate", "w": 0.2954, "r": "LEGENDARY", "icon": "minecraft:leather_chestplate", "id": "NECROMANCER_LORD_CHESTPLATE"},
+    {"name": "Fourth Master Star", "w": 0.3693, "r": "EPIC", "icon": "minecraft:nether_star", "id": "FOURTH_MASTER_STAR"},
+    {"name": "Summoning Ring", "w": 0.3693, "r": "RARE", "icon": "minecraft:paper", "id": "SUMMONING_RING"},
+    {"name": "Fel Skull", "w": 0.5539, "r": "LEGENDARY", "icon": "minecraft:player_head", "id": "FEL_SKULL"},
+    {"name": "Necromancer Sword", "w": 0.7386, "r": "LEGENDARY", "icon": "minecraft:iron_sword", "id": "NECROMANCER_SWORD"},
+    {"name": "Master Skull - Tier 4", "w": 0.3693, "r": "UNCOMMON", "icon": "minecraft:player_head", "id": "MASTER_SKULL_TIER_4"},
+    {"name": "Necromancer Lord Leggings", "w": 1.1078, "r": "LEGENDARY", "icon": "minecraft:leather_leggings", "id": "NECROMANCER_LORD_LEGGINGS"},
+    {"name": "Recombobulator 3000", "w": 4.4313, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Soulweaver Gloves", "w": 1.1078, "r": "EPIC", "icon": "minecraft:leather", "id": "SOULWEAVER_GLOVES"},
+    {"name": "Necromancer Lord Helmet", "w": 1.4771, "r": "LEGENDARY", "icon": "minecraft:leather_helmet", "id": "NECROMANCER_LORD_HELMET"},
+    {"name": "Sadan's Brooch", "w": 1.4771, "r": "EPIC", "icon": "minecraft:gold_nugget", "id": "SADAN_BROOCH"},
+    {"name": "Necromancer Lord Boots", "w": 2.2157, "r": "LEGENDARY", "icon": "minecraft:leather_boots", "id": "NECROMANCER_LORD_BOOTS"},
+    {"name": "Fuming Potato Book", "w": 7.3855, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Swarm I", "w": 5.5391, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Giant Tooth", "w": 1.8464, "r": "EPIC", "icon": "minecraft:quartz", "id": "GIANT_TOOTH"},
+    {"name": "Combo II", "w": 7.3855, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain II", "w": 6.4623, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand II", "w": 14.0325, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate III", "w": 14.0325, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise II", "w": 12.1861, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom II", "w": 8.3087, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank III", "w": 6.4623, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry III", "w": 1.4771, "r": "EPIC", "icon": "minecraft:enchanted_book"}
    ]
   },
   "M7": {
    "Wood": [
-    {
-     "name": "Feather Falling VI",
-     "w": 29.91,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Infinite Quiver VI",
-     "w": 25.64,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Rejuvenate I",
-     "w": 25.64,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Bank I",
-     "w": 17.09,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Ultimate Jerry I",
-     "w": 0.85,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    }
+    {"name": "Bank I", "w": 17.094, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.8547, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 29.9145, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 25.641, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 25.641, "r": "RARE", "icon": "minecraft:enchanted_book"}
    ],
    "Gold": [
-    {
-     "name": "Rejuvenate I",
-     "w": 21.28,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Feather Falling VI",
-     "w": 13.3,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Ultimate Wise I",
-     "w": 10.64,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Infinite Quiver VI",
-     "w": 10.64,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Combo I",
-     "w": 8.51,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "No Pain No Gain I",
-     "w": 8.51,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Bank I",
-     "w": 7.98,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wisdom I",
-     "w": 7.98,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Precursor Gear",
-     "w": 3.72,
-     "r": "EPIC",
-     "icon": "minecraft:leather_chestplate"
-    },
-    {
-     "name": "Hot Potato Book",
-     "w": 2.66,
-     "r": "EPIC",
-     "icon": "minecraft:book"
-    },
-    {
-     "name": "Wither Catalyst",
-     "w": 2.66,
-     "r": "EPIC",
-     "icon": "minecraft:nether_star"
-    },
-    {
-     "name": "Wither Boots",
-     "w": 1.06,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_boots"
-    },
-    {
-     "name": "Ultimate Jerry I",
-     "w": 0.53,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    }
+    {"name": "Wither Boots", "w": 1.0638, "r": "LEGENDARY", "icon": "minecraft:leather_boots", "id": "WITHER_BOOTS"},
+    {"name": "Hot Potato Book", "w": 2.6596, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Wither Catalyst", "w": 2.6596, "r": "RARE", "icon": "minecraft:nether_star", "id": "WITHER_CATALYST"},
+    {"name": "Precursor Gear", "w": 3.7234, "r": "EPIC", "icon": "minecraft:paper", "id": "PRECURSOR_GEAR"},
+    {"name": "Combo I", "w": 8.5106, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.5106, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 10.6383, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 7.9787, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 7.9787, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5319, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 21.2766, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 13.2979, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 10.6383, "r": "RARE", "icon": "minecraft:enchanted_book"}
    ],
    "Diamond": [
-    {
-     "name": "Rejuvenate I",
-     "w": 20.83,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Feather Falling VI",
-     "w": 13.02,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Ultimate Wise I",
-     "w": 10.42,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Infinite Quiver VI",
-     "w": 10.42,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Combo I",
-     "w": 8.33,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "No Pain No Gain I",
-     "w": 8.33,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Bank I",
-     "w": 7.81,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wisdom I",
-     "w": 7.81,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Precursor Gear",
-     "w": 4.17,
-     "r": "EPIC",
-     "icon": "minecraft:leather_chestplate"
-    },
-    {
-     "name": "Hot Potato Book",
-     "w": 2.6,
-     "r": "EPIC",
-     "icon": "minecraft:book"
-    },
-    {
-     "name": "Wither Catalyst",
-     "w": 2.6,
-     "r": "EPIC",
-     "icon": "minecraft:nether_star"
-    },
-    {
-     "name": "Wither Boots",
-     "w": 1.04,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_boots"
-    },
-    {
-     "name": "Soul Eater I",
-     "w": 1.04,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wither Helmet",
-     "w": 0.52,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_helmet"
-    },
-    {
-     "name": "Ultimate Jerry I",
-     "w": 0.52,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    }
+    {"name": "Wither Helmet", "w": 0.5208, "r": "LEGENDARY", "icon": "minecraft:leather_helmet", "id": "WITHER_HELMET"},
+    {"name": "Soul Eater I", "w": 1.0417, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wither Boots", "w": 1.0417, "r": "LEGENDARY", "icon": "minecraft:leather_boots", "id": "WITHER_BOOTS"},
+    {"name": "Hot Potato Book", "w": 2.6042, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Wither Catalyst", "w": 2.6042, "r": "RARE", "icon": "minecraft:nether_star", "id": "WITHER_CATALYST"},
+    {"name": "Precursor Gear", "w": 4.1667, "r": "EPIC", "icon": "minecraft:paper", "id": "PRECURSOR_GEAR"},
+    {"name": "Combo I", "w": 8.3333, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 8.3333, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 10.4167, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 7.8125, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 7.8125, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry I", "w": 0.5208, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate I", "w": 20.8333, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 13.0208, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 10.4167, "r": "RARE", "icon": "minecraft:enchanted_book"}
    ],
    "Emerald": [
-    {
-     "name": "Rejuvenate II",
-     "w": 13.44,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Feather Falling VI",
-     "w": 10.75,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Ultimate Wise I",
-     "w": 10.75,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Infinite Quiver VI",
-     "w": 8.6,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Combo I",
-     "w": 8.6,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Bank I",
-     "w": 8.06,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wisdom I",
-     "w": 8.06,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Last Stand I",
-     "w": 5.38,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Ultimate Jerry II",
-     "w": 5.38,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Precursor Gear",
-     "w": 3.76,
-     "r": "EPIC",
-     "icon": "minecraft:leather_chestplate"
-    },
-    {
-     "name": "Soul Eater I",
-     "w": 3.23,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Hot Potato Book",
-     "w": 2.69,
-     "r": "EPIC",
-     "icon": "minecraft:book"
-    },
-    {
-     "name": "No Pain No Gain I",
-     "w": 2.69,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wither Catalyst",
-     "w": 2.69,
-     "r": "EPIC",
-     "icon": "minecraft:nether_star"
-    },
-    {
-     "name": "Wither Boots",
-     "w": 2.15,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_boots"
-    },
-    {
-     "name": "Wither Blood",
-     "w": 1.08,
-     "r": "EPIC",
-     "icon": "minecraft:redstone"
-    },
-    {
-     "name": "Wither Helmet",
-     "w": 1.08,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_helmet"
-    },
-    {
-     "name": "Wither Leggings",
-     "w": 0.54,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_leggings"
-    },
-    {
-     "name": "Wither Cloak Sword",
-     "w": 0.54,
-     "r": "LEGENDARY",
-     "icon": "minecraft:iron_sword"
-    }
+    {"name": "Wither Leggings", "w": 0.5376, "r": "LEGENDARY", "icon": "minecraft:leather_leggings", "id": "WITHER_LEGGINGS"},
+    {"name": "Wither Cloak Sword", "w": 0.5376, "r": "EPIC", "icon": "minecraft:leather_chestplate", "id": "WITHER_CLOAK"},
+    {"name": "Wither Blood", "w": 1.0753, "r": "EPIC", "icon": "minecraft:redstone", "id": "WITHER_BLOOD"},
+    {"name": "Wither Helmet", "w": 1.0753, "r": "LEGENDARY", "icon": "minecraft:leather_helmet", "id": "WITHER_HELMET"},
+    {"name": "Soul Eater I", "w": 3.2258, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wither Boots", "w": 2.1505, "r": "LEGENDARY", "icon": "minecraft:leather_boots", "id": "WITHER_BOOTS"},
+    {"name": "Hot Potato Book", "w": 2.6882, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "No Pain No Gain I", "w": 2.6882, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wither Catalyst", "w": 2.6882, "r": "RARE", "icon": "minecraft:nether_star", "id": "WITHER_CATALYST"},
+    {"name": "Precursor Gear", "w": 3.7634, "r": "EPIC", "icon": "minecraft:paper", "id": "PRECURSOR_GEAR"},
+    {"name": "Combo I", "w": 8.6022, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VI", "w": 8.6022, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 10.7527, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank I", "w": 8.0645, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 8.0645, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand I", "w": 5.3763, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate II", "w": 13.4409, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VI", "w": 10.7527, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 5.3763, "r": "EPIC", "icon": "minecraft:enchanted_book"}
    ],
    "Obsidian": [
-    {
-     "name": "Rejuvenate II",
-     "w": 16.18,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Ultimate Wise I",
-     "w": 12.95,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Combo I",
-     "w": 10.36,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Last Stand I",
-     "w": 9.71,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Precursor Gear",
-     "w": 5.18,
-     "r": "EPIC",
-     "icon": "minecraft:leather_chestplate"
-    },
-    {
-     "name": "Bank II",
-     "w": 4.85,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wisdom I",
-     "w": 4.85,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Soul Eater I",
-     "w": 4.53,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Fuming Potato Book",
-     "w": 4.53,
-     "r": "EPIC",
-     "icon": "minecraft:book"
-    },
-    {
-     "name": "Wither Boots",
-     "w": 4.53,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_boots"
-    },
-    {
-     "name": "Wither Catalyst",
-     "w": 4.53,
-     "r": "EPIC",
-     "icon": "minecraft:nether_star"
-    },
-    {
-     "name": "Hot Potato Book",
-     "w": 3.24,
-     "r": "EPIC",
-     "icon": "minecraft:book"
-    },
-    {
-     "name": "No Pain No Gain I",
-     "w": 3.24,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Ultimate Jerry II",
-     "w": 2.59,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wither Cloak Sword",
-     "w": 1.94,
-     "r": "LEGENDARY",
-     "icon": "minecraft:iron_sword"
-    },
-    {
-     "name": "Wither Blood",
-     "w": 1.94,
-     "r": "EPIC",
-     "icon": "minecraft:redstone"
-    },
-    {
-     "name": "Wither Helmet",
-     "w": 1.94,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_helmet"
-    },
-    {
-     "name": "Wither Leggings",
-     "w": 1.29,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_leggings"
-    },
-    {
-     "name": "Recombobulator 3000",
-     "w": 0.65,
-     "r": "LEGENDARY",
-     "icon": "minecraft:glowstone"
-    },
-    {
-     "name": "Wither Chestplate",
-     "w": 0.32,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_chestplate"
-    },
-    {
-     "name": "One For All I",
-     "w": 0.32,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    }
+    {"name": "Fifth Master Star", "w": 0.1506, "r": "EPIC", "icon": "minecraft:nether_star", "id": "FIFTH_MASTER_STAR"},
+    {"name": "Wither Chestplate", "w": 0.1506, "r": "LEGENDARY", "icon": "minecraft:leather_chestplate", "id": "WITHER_CHESTPLATE"},
+    {"name": "One For All I", "w": 0.1506, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Master Skull - Tier 4", "w": 0.6024, "r": "UNCOMMON", "icon": "minecraft:player_head", "id": "MASTER_SKULL_TIER_4"},
+    {"name": "Wither Leggings", "w": 0.6024, "r": "LEGENDARY", "icon": "minecraft:leather_leggings", "id": "WITHER_LEGGINGS"},
+    {"name": "Recombobulator 3000", "w": 0.3012, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Wither Cloak Sword", "w": 0.9036, "r": "EPIC", "icon": "minecraft:leather_chestplate", "id": "WITHER_CLOAK"},
+    {"name": "Wither Blood", "w": 0.9036, "r": "EPIC", "icon": "minecraft:redstone", "id": "WITHER_BLOOD"},
+    {"name": "Wither Helmet", "w": 0.9036, "r": "LEGENDARY", "icon": "minecraft:leather_helmet", "id": "WITHER_HELMET"},
+    {"name": "Soul Eater I", "w": 2.1084, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Fuming Potato Book", "w": 2.1084, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Wither Shard", "w": 52.7108, "r": "EPIC", "icon": "minecraft:prismarine_shard"},
+    {"name": "Wither Boots", "w": 2.1084, "r": "LEGENDARY", "icon": "minecraft:leather_boots", "id": "WITHER_BOOTS"},
+    {"name": "Wither Catalyst", "w": 2.1084, "r": "RARE", "icon": "minecraft:nether_star", "id": "WITHER_CATALYST"},
+    {"name": "Hot Potato Book", "w": 1.506, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Precursor Gear", "w": 2.4096, "r": "EPIC", "icon": "minecraft:paper", "id": "PRECURSOR_GEAR"},
+    {"name": "Combo I", "w": 4.8193, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain I", "w": 1.506, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate II", "w": 7.5301, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise I", "w": 6.0241, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand I", "w": 4.5181, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank II", "w": 2.259, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom I", "w": 2.259, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry II", "w": 1.2048, "r": "EPIC", "icon": "minecraft:enchanted_book"}
    ],
    "Bedrock": [
-    {
-     "name": "Precursor Gear",
-     "w": 8.54,
-     "r": "EPIC",
-     "icon": "minecraft:leather_chestplate"
-    },
-    {
-     "name": "Combo II",
-     "w": 7.11,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Last Stand II",
-     "w": 7.11,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Rejuvenate III",
-     "w": 7.11,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Infinite Quiver VII",
-     "w": 7.11,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Ultimate Wise II",
-     "w": 5.69,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Soul Eater I",
-     "w": 5.69,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Hot Potato Book",
-     "w": 5.69,
-     "r": "EPIC",
-     "icon": "minecraft:book"
-    },
-    {
-     "name": "Ultimate Jerry III",
-     "w": 4.27,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Bank III",
-     "w": 3.56,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wisdom II",
-     "w": 3.56,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wither Cloak Sword",
-     "w": 3.41,
-     "r": "LEGENDARY",
-     "icon": "minecraft:iron_sword"
-    },
-    {
-     "name": "Wither Blood",
-     "w": 3.41,
-     "r": "EPIC",
-     "icon": "minecraft:redstone"
-    },
-    {
-     "name": "Wither Helmet",
-     "w": 3.41,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_helmet"
-    },
-    {
-     "name": "Wither Boots",
-     "w": 3.41,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_boots"
-    },
-    {
-     "name": "Recombobulator 3000",
-     "w": 2.85,
-     "r": "LEGENDARY",
-     "icon": "minecraft:glowstone"
-    },
-    {
-     "name": "Fuming Potato Book",
-     "w": 2.85,
-     "r": "EPIC",
-     "icon": "minecraft:book"
-    },
-    {
-     "name": "Wither Catalyst",
-     "w": 2.85,
-     "r": "EPIC",
-     "icon": "minecraft:nether_star"
-    },
-    {
-     "name": "No Pain No Gain II",
-     "w": 2.85,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Wither Shard",
-     "w": 2.49,
-     "r": "EPIC",
-     "icon": "minecraft:prismarine_shard"
-    },
-    {
-     "name": "Wither Leggings",
-     "w": 2.28,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_leggings"
-    },
-    {
-     "name": "Feather Falling VII",
-     "w": 2.28,
-     "r": "RARE",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Auto Recombobulator",
-     "w": 0.57,
-     "r": "LEGENDARY",
-     "icon": "minecraft:glowstone"
-    },
-    {
-     "name": "Wither Chestplate",
-     "w": 0.57,
-     "r": "LEGENDARY",
-     "icon": "minecraft:netherite_chestplate"
-    },
-    {
-     "name": "One For All I",
-     "w": 0.57,
-     "r": "EPIC",
-     "icon": "minecraft:enchanted_book"
-    },
-    {
-     "name": "Implosion",
-     "w": 0.14,
-     "r": "LEGENDARY",
-     "icon": "minecraft:paper"
-    },
-    {
-     "name": "Shadow Warp",
-     "w": 0.14,
-     "r": "LEGENDARY",
-     "icon": "minecraft:paper"
-    },
-    {
-     "name": "Wither Shield",
-     "w": 0.14,
-     "r": "LEGENDARY",
-     "icon": "minecraft:paper"
-    },
-    {
-     "name": "Necron's Handle",
-     "w": 0.11,
-     "r": "LEGENDARY",
-     "icon": "minecraft:blaze_rod"
-    },
-    {
-     "name": "Goldor the Fish",
-     "w": 0.07,
-     "r": "RARE",
-     "icon": "minecraft:cod"
-    },
-    {
-     "name": "Maxor the Fish",
-     "w": 0.07,
-     "r": "RARE",
-     "icon": "minecraft:cod"
-    },
-    {
-     "name": "Storm the Fish",
-     "w": 0.07,
-     "r": "RARE",
-     "icon": "minecraft:cod"
-    }
+    {"name": "Implosion", "w": 0.1799, "r": "EPIC", "icon": "minecraft:paper", "id": "IMPLOSION_SCROLL"},
+    {"name": "Shadow Warp", "w": 0.1799, "r": "EPIC", "icon": "minecraft:paper", "id": "SHADOW_WARP_SCROLL"},
+    {"name": "Wither Shield", "w": 0.1799, "r": "EPIC", "icon": "minecraft:paper", "id": "WITHER_SHIELD_SCROLL"},
+    {"name": "Necron's Handle", "w": 0.1296, "r": "LEGENDARY", "icon": "minecraft:paper", "id": "NECRON_HANDLE"},
+    {"name": "Dark Claymore", "w": 0.072, "r": "LEGENDARY", "icon": "minecraft:iron_sword", "id": "DARK_CLAYMORE"},
+    {"name": "Auto Recombobulator", "w": 0.5758, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "AUTO_RECOMBOBULATOR"},
+    {"name": "Fifth Master Star", "w": 0.2159, "r": "EPIC", "icon": "minecraft:nether_star", "id": "FIFTH_MASTER_STAR"},
+    {"name": "Wither Chestplate", "w": 0.5758, "r": "LEGENDARY", "icon": "minecraft:leather_chestplate", "id": "WITHER_CHESTPLATE"},
+    {"name": "One For All I", "w": 0.5758, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Recombobulator 3000", "w": 3.5989, "r": "LEGENDARY", "icon": "minecraft:glowstone", "id": "RECOMBOBULATOR_3000"},
+    {"name": "Wither Leggings", "w": 2.3033, "r": "LEGENDARY", "icon": "minecraft:leather_leggings", "id": "WITHER_LEGGINGS"},
+    {"name": "Master Skull - Tier 5", "w": 0.1727, "r": "RARE", "icon": "minecraft:player_head", "id": "MASTER_SKULL_TIER_5"},
+    {"name": "Wither Cloak Sword", "w": 3.455, "r": "EPIC", "icon": "minecraft:leather_chestplate", "id": "WITHER_CLOAK"},
+    {"name": "Wither Blood", "w": 3.455, "r": "EPIC", "icon": "minecraft:redstone", "id": "WITHER_BLOOD"},
+    {"name": "Wither Helmet", "w": 3.455, "r": "LEGENDARY", "icon": "minecraft:leather_helmet", "id": "WITHER_HELMET"},
+    {"name": "Thunderlord VII", "w": 0.144, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Soul Eater I", "w": 5.7583, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Fuming Potato Book", "w": 2.8791, "r": "EPIC", "icon": "minecraft:book", "id": "FUMING_POTATO_BOOK"},
+    {"name": "Wither Boots", "w": 3.455, "r": "LEGENDARY", "icon": "minecraft:leather_boots", "id": "WITHER_BOOTS"},
+    {"name": "Hot Potato Book", "w": 5.7583, "r": "EPIC", "icon": "minecraft:book", "id": "HOT_POTATO_BOOK"},
+    {"name": "Wither Catalyst", "w": 2.8791, "r": "RARE", "icon": "minecraft:nether_star", "id": "WITHER_CATALYST"},
+    {"name": "Precursor Gear", "w": 8.6374, "r": "EPIC", "icon": "minecraft:paper", "id": "PRECURSOR_GEAR"},
+    {"name": "Combo II", "w": 7.1979, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "No Pain No Gain II", "w": 2.8791, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Last Stand II", "w": 7.1979, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Rejuvenate III", "w": 7.1979, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Wise II", "w": 5.7583, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Ultimate Jerry III", "w": 4.3187, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Bank III", "w": 3.5989, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Wisdom II", "w": 3.5989, "r": "EPIC", "icon": "minecraft:enchanted_book"},
+    {"name": "Infinite Quiver VII", "w": 7.1979, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Feather Falling VII", "w": 2.3033, "r": "RARE", "icon": "minecraft:enchanted_book"},
+    {"name": "Goldor the Fish", "w": 0.036, "r": "LEGENDARY", "icon": "minecraft:cod", "id": "GOLDOR_THE_FISH"},
+    {"name": "Maxor the Fish", "w": 0.036, "r": "LEGENDARY", "icon": "minecraft:cod", "id": "MAXOR_THE_FISH"},
+    {"name": "Storm the Fish", "w": 0.036, "r": "LEGENDARY", "icon": "minecraft:cod", "id": "STORM_THE_FISH"}
    ]
   }
  }

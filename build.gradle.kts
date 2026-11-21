@@ -56,6 +56,9 @@ dependencies {
 	// Skyblocker item value calculator (Apache-2.0), bundled into the mod jar.
 	implementation("net.azureaaron:networth-calculator:1.0.5")
 	include("net.azureaaron:networth-calculator:1.0.5")
+	// Legacy 1.8 item NBT to current components (Apache-2.0), the same fixer Skyblocker uses for NEU items; bundled into the jar.
+	implementation("net.azureaaron:legacy-item-dfu:1.0.4+26.2")
+	include("net.azureaaron:legacy-item-dfu:1.0.4+26.2")
 }
 
 tasks.processResources {

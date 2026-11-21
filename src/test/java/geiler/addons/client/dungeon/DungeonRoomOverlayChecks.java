@@ -2,8 +2,8 @@ package geiler.addons.client.dungeon;
 
 import com.google.gson.Gson;
 import geiler.addons.client.config.ModConfig;
-import geiler.addons.client.dungeon.odin.OdinDungeonPlayerMap;
-import geiler.addons.client.dungeon.odin.OdinDungeonMapProjection;
+import geiler.addons.client.dungeon.helpers.DungeonPlayerMap;
+import geiler.addons.client.dungeon.helpers.DungeonMapProjection;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -437,8 +437,8 @@ public final class DungeonRoomOverlayChecks {
 		var local = new DungeonRoomOverlayGeometry.PlayerMarker(1, 1, "Local", true);
 		var remote = new DungeonRoomOverlayGeometry.PlayerMarker(3, 2, "Teammate", false,
 			0.25, 0.75, "Mage", 90.0f);
-		var livingRoster = List.of(new OdinDungeonPlayerMap.TabPlayer("Local", "Archer", false),
-			new OdinDungeonPlayerMap.TabPlayer("Teammate", "Mage", false));
+		var livingRoster = List.of(new DungeonPlayerMap.TabPlayer("Local", "Archer", false),
+			new DungeonPlayerMap.TabPlayer("Teammate", "Mage", false));
 		var first = retention.merge(List.of(local, remote), livingRoster, 10);
 		check(first.players().equals(List.of(local, remote)) && first.confirmedRemote() == 1,
 			"fresh teammate marker remains in ordered projection and is cached");
@@ -449,8 +449,8 @@ public final class DungeonRoomOverlayChecks {
 			"a confirmed teammate position survives a brief missing decoration update");
 
 		var dead = retention.merge(List.of(local), List.of(
-			new OdinDungeonPlayerMap.TabPlayer("Local", "Archer", false),
-			new OdinDungeonPlayerMap.TabPlayer("Teammate", "Mage", true)), 31);
+			new DungeonPlayerMap.TabPlayer("Local", "Archer", false),
+			new DungeonPlayerMap.TabPlayer("Teammate", "Mage", true)), 31);
 		check(dead.players().stream().noneMatch(marker -> marker.name().equals("Teammate"))
 			&& dead.deadRemoved() == 1,
 			"a current DEAD roster row removes the retained teammate marker immediately");
@@ -471,8 +471,8 @@ public final class DungeonRoomOverlayChecks {
 
 		retention.merge(List.of(remote), livingRoster, 300);
 		var replacementRoster = retention.merge(List.of(), List.of(
-			new OdinDungeonPlayerMap.TabPlayer("Local", "Archer", false),
-			new OdinDungeonPlayerMap.TabPlayer("Other", "Tank", false)), 301);
+			new DungeonPlayerMap.TabPlayer("Local", "Archer", false),
+			new DungeonPlayerMap.TabPlayer("Other", "Tank", false)), 301);
 		check(replacementRoster.players().isEmpty() && replacementRoster.staleRosterRemoved() == 1,
 			"a complete current roster that no longer contains a teammate clears that identity");
 
@@ -779,7 +779,7 @@ public final class DungeonRoomOverlayChecks {
 		progress.reset();
 		check(progress.foundSecrets("2,3,8") == -1 && progress.currentRoomId() == null,
 			"new-run, disconnect, and world/floor resets clear room counts and attribution");
-		equals("2,7,8", OdinDungeonMapProjection.roomIdForSegments(List.of(8, 2, 7, 2)),
+		equals("2,7,8", DungeonMapProjection.roomIdForSegments(List.of(8, 2, 7, 2)),
 			"room progress keys are deterministic sorted map-grid segment IDs");
 	}
 
@@ -1094,9 +1094,9 @@ public final class DungeonRoomOverlayChecks {
 	}
 
 	private static void playerProjectionCrossesRoomBoundariesWithoutRoomSizedJumps() {
-		var before = geiler.addons.client.dungeon.odin.OdinDungeonPlayerMap.projectLoadedPosition(
+		var before = geiler.addons.client.dungeon.helpers.DungeonPlayerMap.projectLoadedPosition(
 			"Local", true, "Mage", -170.0, -184.0, 0.0f);
-		var after = geiler.addons.client.dungeon.odin.OdinDungeonPlayerMap.projectLoadedPosition(
+		var after = geiler.addons.client.dungeon.helpers.DungeonPlayerMap.projectLoadedPosition(
 			"Local", true, "Mage", -167.0, -184.0, 0.0f);
 		check(before != null && after != null, "loaded local position projects in both adjacent rooms");
 		double beforePixel = before.x() * 20.0 + before.offsetX() * 16.0;

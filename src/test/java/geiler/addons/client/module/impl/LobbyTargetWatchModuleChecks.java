@@ -20,7 +20,6 @@ public final class LobbyTargetWatchModuleChecks {
 		check("Lobby Target Watch".equals(module.configName()), "legacy persisted module key is preserved");
 		check(module.category() == Category.MISCELLANEOUS, "module stays in the Miscellaneous category");
 		check(!module.defaultEnabled() && !module.isEnabled(), "fresh-install module remains disabled");
-		check(module.isWorkInProgress(), "existing work-in-progress marker is preserved");
 
 		TextSetting legacyTargets = module.textSettings().stream()
 			.filter(setting -> "Watched Players".equals(setting.name()))

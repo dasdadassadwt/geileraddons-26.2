@@ -1,6 +1,6 @@
 package geiler.addons.client.module.impl;
 
-import geiler.addons.client.dungeon.odin.DungeonMaskProcTimers;
+import geiler.addons.client.dungeon.helpers.DungeonMaskProcTimers;
 import geiler.addons.client.module.BooleanSetting;
 import geiler.addons.client.module.Category;
 import geiler.addons.client.module.ChoiceSetting;
@@ -22,6 +22,8 @@ public final class InvincibilityTimerModuleChecks {
 	public static void run() {
 		checkIdentitySettingsAndVisibility();
 		checkTimerText();
+		checkHudRowState();
+		checkCenteredTitle();
 		checkPublishedHudBehavior();
 		checkProcSoundOutcomeClassification();
 		checkPartyMessageAndAlwaysShow();
@@ -35,15 +37,16 @@ public final class InvincibilityTimerModuleChecks {
 			module = Files.readString(Path.of("src", "client", "kotlin", "geiler", "addons", "client",
 				"module", "impl", "DungeonInvincibilityTimerModule.kt")).replace("\r\n", "\n");
 			dungeonRuntime = Files.readString(Path.of("src", "client", "kotlin", "geiler", "addons", "client",
-				"module", "impl", "DungeonOdinAssistModule.kt")).replace("\r\n", "\n");
+				"module", "impl", "DungeonAssistModule.kt")).replace("\r\n", "\n");
 		} catch (IOException error) {
 			throw new IllegalStateException("Could not read Invincibility Timers diagnostic source checks", error);
 		}
 		require(module.contains("override fun onEnable() {\n        diagnostics.enable(")
 			&& module.contains("override fun onDisable() {\n        diagnostics.disable()"),
 			"automatic diagnostics must follow the module enable/disable lifecycle");
-		require(module.contains("if (centered && reading.activeTicks > 0)"),
-			"the centered title shows only active invincibility; cooldowns stay on the HUD");
+		require(module.contains("if (centered && title != null)")
+				&& module.contains("TitleAlertStack.submitCountdown("),
+			"the centered title shows only active invincibility, re-submitted every tick; cooldowns stay on the HUD");
 		require(module.contains("Items.PLAYER_HEAD") && module.contains("READY_COLOR")
 				&& module.contains("COOLDOWN_HUD_COLOR") && module.contains("ACTIVE_HUD_COLOR"),
 			"the HUD draws a head icon per proc with gold active, red cooldown, and green ready text");
@@ -177,6 +180,45 @@ public final class InvincibilityTimerModuleChecks {
 			DungeonMaskProcTimers.Proc.PHOENIX, 0, 0);
 		require(DungeonInvincibilityTimerModule.timerText(idle, true) == null,
 			"idle procs have no active or cooldown output");
+	}
+
+	private static void checkHudRowState() {
+		DungeonMaskProcTimers.Proc bonzo = DungeonMaskProcTimers.Proc.BONZO;
+		DungeonInvincibilityTimerModule.RowState active = DungeonInvincibilityTimerModule.rowState(
+			new DungeonMaskProcTimers.Reading(bonzo, 40, 3600), true);
+		require(active == DungeonInvincibilityTimerModule.RowState.ACTIVE, "an active proc shows its active countdown");
+		for (boolean showCooldowns : new boolean[] {true, false}) {
+			DungeonInvincibilityTimerModule.RowState onCooldown = DungeonInvincibilityTimerModule.rowState(
+				new DungeonMaskProcTimers.Reading(bonzo, 0, 2000), showCooldowns);
+			require(onCooldown != DungeonInvincibilityTimerModule.RowState.READY,
+				"a proc on cooldown is never reported ready, whatever Show Cooldowns says");
+			require(onCooldown == (showCooldowns
+					? DungeonInvincibilityTimerModule.RowState.COOLDOWN : DungeonInvincibilityTimerModule.RowState.HIDDEN),
+				"a cooldown row follows Show Cooldowns by showing or hiding, never by turning into a ready check");
+		}
+		require(DungeonInvincibilityTimerModule.rowState(new DungeonMaskProcTimers.Reading(bonzo, 0, 0), true)
+				== DungeonInvincibilityTimerModule.RowState.READY
+			&& DungeonInvincibilityTimerModule.rowState(null, true) == DungeonInvincibilityTimerModule.RowState.READY,
+			"only a proc with no active time and no cooldown is ready");
+	}
+
+	private static void checkCenteredTitle() {
+		DungeonMaskProcTimers.Reading phoenix = new DungeonMaskProcTimers.Reading(
+			DungeonMaskProcTimers.Proc.PHOENIX, 80, 1200);
+		DungeonInvincibilityTimerModule.CenteredTitle one = DungeonInvincibilityTimerModule.centeredTitle(List.of(phoenix));
+		require(one != null && one.getTitle().equals("Phoenix Pet") && one.getSubtitle().equals("4.0s"),
+			"an active Phoenix proc titles the pet and counts the remaining time down");
+		DungeonInvincibilityTimerModule.CenteredTitle later = DungeonInvincibilityTimerModule.centeredTitle(List.of(
+			new DungeonMaskProcTimers.Reading(DungeonMaskProcTimers.Proc.PHOENIX, 30, 1200)));
+		require(later != null && later.getSubtitle().equals("1.5s"), "the subtitle tracks the live remaining ticks");
+		require(DungeonInvincibilityTimerModule.centeredTitle(List.of(
+				new DungeonMaskProcTimers.Reading(DungeonMaskProcTimers.Proc.BONZO, 0, 3000))) == null
+			&& DungeonInvincibilityTimerModule.centeredTitle(List.of()) == null,
+			"cooldown-only or empty readings produce no centered title");
+		DungeonInvincibilityTimerModule.CenteredTitle both = DungeonInvincibilityTimerModule.centeredTitle(List.of(
+			new DungeonMaskProcTimers.Reading(DungeonMaskProcTimers.Proc.BONZO, 60, 3600), phoenix));
+		require(both != null && both.getTitle().equals("Bonzo Mask") && both.getSubtitle().equals("3.0s · Phoenix Pet 4.0s"),
+			"the proc ending first leads and the others follow in the subtitle");
 	}
 
 	private static void checkPublishedHudBehavior() {

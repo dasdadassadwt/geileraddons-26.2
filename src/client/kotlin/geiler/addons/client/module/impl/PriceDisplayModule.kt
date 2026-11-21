@@ -9,9 +9,9 @@ import geiler.addons.client.module.ChoiceSetting
 import geiler.addons.client.module.Module
 import geiler.addons.client.module.ModuleAction
 import geiler.addons.client.module.Setting
+import geiler.addons.client.itemlist.ItemListRepository
 import geiler.addons.client.net.BoundedHttpBodyReader
 import geiler.addons.client.pricing.NetworthSupport
-import geiler.addons.client.pricing.NeuRecipeStore
 import geiler.addons.client.pricing.NeuRecipes
 import geiler.addons.client.pricing.PriceLines
 import geiler.addons.client.pricing.PriceItem
@@ -70,10 +70,13 @@ class PriceDisplayModule private constructor(private val s: Settings) : Module(
     @Volatile
     private var recipes: Map<String, Recipe> = emptyMap()
 
+    /** Set by the Item List while it is enabled: it needs Bazaar, Lowest BIN and NPC prices even with this module off. */
+    @Volatile
+    private var itemListDemand = false
+
     private var calculator: NeuRecipes.Calculator? = null
     private var calculatorMode: String? = null
     private var recipeStatus = "not loaded"
-    private var recipesFetching = false
     private val fetching = HashSet<Dataset>()
     private val loadedAt = HashMap<Dataset, Long>()
     private val status = HashMap<Dataset, String>()
@@ -83,7 +86,6 @@ class PriceDisplayModule private constructor(private val s: Settings) : Module(
         Thread(task, "geileraddons-price-display").also { it.isDaemon = true }
     }
     private var ticksSinceRefresh = REFRESH_TICKS
-    private var ticksSinceRecipeFailure = 0
     private var linesAdded = 0L
     private val diagnostics = ModuleDiagnostics(Category.VISUAL, { name() }, 8, 100L, 320)
 
@@ -106,10 +108,25 @@ class PriceDisplayModule private constructor(private val s: Settings) : Module(
         return island != Island.NONE && island != Island.OTHER
     }
 
+    /** The price data downloaded so far (empty maps until a data set arrives). */
+    fun prices(): PriceSnapshot = data
+
+    fun setItemListDemand(on: Boolean) {
+        itemListDemand = on
+    }
+
+    /** Set by the Visitor Shopping List while it is enabled: it prices what is short from the Bazaar, even with this module off. */
+    @Volatile
+    private var bazaarDemand = false
+
+    fun setBazaarDemand(on: Boolean) {
+        bazaarDemand = on
+    }
+
     private fun wanted(dataset: Dataset): Boolean = when (dataset) {
-        Dataset.NPC -> s.npcPrice.value()
-        Dataset.BAZAAR -> s.bazaarPrice.value() || craftingOn() || s.essenceCost.value() || s.estimatedValue.value()
-        Dataset.LOWEST_BIN -> s.lowestBin.value() || craftingOn() || s.estimatedValue.value()
+        Dataset.NPC -> s.npcPrice.value() || itemListDemand
+        Dataset.BAZAAR -> s.bazaarPrice.value() || itemListDemand || bazaarDemand || craftingOn() || s.essenceCost.value() || s.estimatedValue.value()
+        Dataset.LOWEST_BIN -> s.lowestBin.value() || itemListDemand || craftingOn() || s.estimatedValue.value()
         Dataset.ONE_DAY -> s.averageBin.value() && s.averageType.value() != "THREE_DAY"
         Dataset.THREE_DAY -> (s.averageBin.value() && s.averageType.value() != "ONE_DAY") || s.estimatedValue.value()
         Dataset.MOTES -> s.motesPrice.value() && HypixelModApi.currentIsland() == Island.THE_RIFT
@@ -121,53 +138,22 @@ class PriceDisplayModule private constructor(private val s: Settings) : Module(
     private fun craftingOn() = s.craftingCost.value() != "OFF"
 
     fun tick() {
-        if (!isEnabled()) return
-        diagnostics.advance()
+        val enabled = isEnabled()
+        if (!enabled && !itemListDemand && !bazaarDemand) return
+        if (enabled) diagnostics.advance()
         if (!onSkyblock()) return
         if (++ticksSinceRefresh >= REFRESH_TICKS) {
             ticksSinceRefresh = 0
             calculator = null
             refresh(force = false)
         }
-        if (craftingOn() && recipes.isEmpty() && !recipesFetching) {
-            if (ticksSinceRecipeFailure <= 0) {
-                ticksSinceRecipeFailure = REFRESH_TICKS * 5
-                loadRecipes()
-            } else ticksSinceRecipeFailure--
+        if (craftingOn() && recipes.isEmpty()) {
+            ItemListRepository.craftTable()?.let { recipes = it; recipeStatus = "ok shared ${it.size}" } ?: ItemListRepository.request()
         }
         diagnostics.status {
             "island=${HypixelModApi.currentIsland()} loaded=${status.entries.joinToString(",") { "${it.key}:${it.value}" }} " +
                 "recipes=${recipes.size}($recipeStatus) shards=${shardNames.size} shardsResolved=$shardsResolved " +
                 "shardsUnresolved=$shardsUnresolved linesAdded=$linesAdded suppressedEvents=$it"
-        }
-    }
-
-    /** Loads the saved recipe table, then downloads a fresh one when it is missing or a day old. */
-    @Synchronized
-    private fun loadRecipes() {
-        if (recipesFetching) return
-        recipesFetching = true
-        executor.execute {
-            var outcome: String
-            try {
-                val saved = NeuRecipeStore.readCache()
-                if (saved != null) recipes = saved.recipes
-                if (saved == null || saved.ageMillis > CACHEABLE_MILLIS * 24) {
-                    val fresh = NeuRecipeStore.download(client)
-                    recipes = fresh
-                    NeuRecipeStore.writeCache(fresh)
-                    outcome = "ok downloaded ${fresh.size}"
-                } else {
-                    outcome = "ok cached ${saved.recipes.size}"
-                }
-            } catch (exception: Exception) {
-                outcome = "failed ${exception.javaClass.simpleName}"
-            }
-            synchronized(this) {
-                recipeStatus = outcome
-                recipesFetching = false
-            }
-            Minecraft.getInstance().execute { diagnostics.event("RECIPES $outcome") }
         }
     }
 

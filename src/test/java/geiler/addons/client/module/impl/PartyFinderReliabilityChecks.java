@@ -26,6 +26,7 @@ public final class PartyFinderReliabilityChecks {
 		checkLookupAttempts();
 		checkPartyListRequestGate();
 		checkPartyListBackend();
+		checkLeaderFromChat();
 		checkDungeonRequestLimiter();
 		checkUnavailableDataCannotAuthorizeKick();
 	}
@@ -265,6 +266,37 @@ public final class PartyFinderReliabilityChecks {
 			PartySnapshot ended = PartyListBackend.snapshot();
 			check(!ended.inParty() && ended.members().isEmpty() && PartyListBackend.hasStableList(),
 				"an explicit no-party response clears the roster and marks it complete");
+		} finally {
+			PartyListBackend.clear();
+		}
+	}
+
+	/** Leader must be derivable from chat alone, without a /pl list (real Hypixel lines from a 2026-11-19 log). */
+	private static void checkLeaderFromChat() {
+		check("Me".equals(PartyListBackend.leaderFromInvite(
+				"[MVP+] Me invited [VIP] Pizza1 to the party! They have 60 seconds to accept.", "Me")),
+			"inviting someone makes the local player the party leader");
+		check(PartyListBackend.leaderFromInvite(
+				"[MVP+] Other invited [VIP] Pizza1 to the party! They have 60 seconds to accept.", "Me") == null
+			&& PartyListBackend.leaderFromInvite("Pizza1 joined the party.", "Me") == null
+			&& PartyListBackend.leaderFromInvite(
+				"[MVP+] Me invited [VIP] Pizza1 to the party! They have 60 seconds to accept.", null) == null,
+			"another player's invite, a join line, or an unknown local name do not set the leader");
+		check("Pizza1".equals(PartyListBackend.leaderFromTransfer(
+				"The party was transferred to [VIP] Pizza1 by [MVP+] Me")),
+			"a manual party transfer names the new leader");
+		check("Pizza1".equals(PartyListBackend.leaderFromTransfer(
+				"The party was transferred to [MVP+] Pizza1 because Me left")),
+			"a transfer caused by the leader leaving names the new leader");
+		check(PartyListBackend.leaderFromTransfer("Party > Pizza1: The party was transferred to X by Y") == null,
+			"party chat that quotes a transfer line is not a transfer");
+		PartyListBackend.clear();
+		try {
+			PartyListBackend.onChatMessage("Pizza1 joined the party.");
+			PartyListBackend.onChatMessage("The party was transferred to [VIP] Pizza1 by [MVP+] Me");
+			PartySnapshot snapshot = PartyListBackend.snapshot();
+			check("Pizza1".equals(snapshot.leaderName()) && snapshot.inParty(),
+				"the backend tracks the leader from a transfer line without /pl");
 		} finally {
 			PartyListBackend.clear();
 		}

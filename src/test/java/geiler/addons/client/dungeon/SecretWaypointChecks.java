@@ -205,8 +205,8 @@ public final class SecretWaypointChecks {
 
 	private record CategoryFixture(String idCategory, SecretWaypointCategoryRules.Category expected) { }
 	private record ExpectedDevonianCatalogResult(boolean available,
-		List<DevonianDungeonWaypointCatalog.Marker> markers, int roomCount,
-		Map<String, List<DevonianDungeonWaypointCatalog.Marker>> byRoom, String reason) { }
+		List<DungeonWaypointCatalog.Marker> markers, int roomCount,
+		Map<String, List<DungeonWaypointCatalog.Marker>> byRoom, String reason) { }
 
 	private static void checkRoomRelativeCatalog() {
 		assertJavaStaticMethod(SecretWaypointRoomCatalog.class, "materialize", List.class,
@@ -230,36 +230,36 @@ public final class SecretWaypointChecks {
 		assertEquals("RoomInstanceIdentity[floor=null, anchorRoomId=null, templateRecordId=null]",
 			nullIdentity.toString(), "room identities keep the Java record string format");
 
-		DevonianDungeonWaypointCatalog.CatalogResult catalog = DevonianDungeonWaypointCatalog.bundled();
-		assertRecordComponents(DevonianDungeonWaypointCatalog.Marker.class,
+		DungeonWaypointCatalog.CatalogResult catalog = DungeonWaypointCatalog.bundled();
+		assertRecordComponents(DungeonWaypointCatalog.Marker.class,
 			new Class<?>[] {String.class, String.class, String.class, int.class, int.class, int.class},
 			"id", "roomName", "category", "x", "y", "z");
-		assertKotlinValueShape(DevonianDungeonWaypointCatalog.CatalogResult.class,
+		assertKotlinValueShape(DungeonWaypointCatalog.CatalogResult.class,
 			new Class<?>[] {boolean.class, List.class, int.class, Map.class, String.class},
 			"available", "markers", "roomCount", "byRoom", "reason");
-		assertJavaStaticMethod(DevonianDungeonWaypointCatalog.class, "bundled",
-			DevonianDungeonWaypointCatalog.CatalogResult.class);
-		assertJavaStaticMethod(DevonianDungeonWaypointCatalog.class, "parse",
-			DevonianDungeonWaypointCatalog.CatalogResult.class, String.class);
+		assertJavaStaticMethod(DungeonWaypointCatalog.class, "bundled",
+			DungeonWaypointCatalog.CatalogResult.class);
+		assertJavaStaticMethod(DungeonWaypointCatalog.class, "parse",
+			DungeonWaypointCatalog.CatalogResult.class, String.class);
 		try {
-			DevonianDungeonWaypointCatalog.CatalogResult.class.getMethod("find", String.class, String.class);
+			DungeonWaypointCatalog.CatalogResult.class.getMethod("find", String.class, String.class);
 		} catch (NoSuchMethodException error) {
 			throw new AssertionError("Devonian catalog lookup keeps its Java API", error);
 		}
-		assertEquals(null, new DevonianDungeonWaypointCatalog.Marker(null, null, null, 0, 0, 0).roomName(),
+		assertEquals(null, new DungeonWaypointCatalog.Marker(null, null, null, 0, 0, 0).roomName(),
 			"the Java record boundary still permits null marker components");
-		assertTrue(Modifier.isPublic(DevonianDungeonWaypointCatalog.CatalogResult.class.getModifiers())
-			&& Modifier.isStatic(DevonianDungeonWaypointCatalog.CatalogResult.class.getModifiers()),
+		assertTrue(Modifier.isPublic(DungeonWaypointCatalog.CatalogResult.class.getModifiers())
+			&& Modifier.isStatic(DungeonWaypointCatalog.CatalogResult.class.getModifiers()),
 			"the Kotlin catalog value remains public and statically nested");
-		var fixtureMarker = new DevonianDungeonWaypointCatalog.Marker("fixture:chest:0", "Fixture", "chest", 1, 70, 2);
+		var fixtureMarker = new DungeonWaypointCatalog.Marker("fixture:chest:0", "Fixture", "chest", 1, 70, 2);
 		var sourceMarkers = new ArrayList<>(List.of(fixtureMarker));
 		var sourceRoomMarkers = new ArrayList<>(List.of(fixtureMarker));
-		var sourceByRoom = new LinkedHashMap<String, List<DevonianDungeonWaypointCatalog.Marker>>();
+		var sourceByRoom = new LinkedHashMap<String, List<DungeonWaypointCatalog.Marker>>();
 		sourceByRoom.put("fixture", sourceRoomMarkers);
-		var value = new DevonianDungeonWaypointCatalog.CatalogResult(true, sourceMarkers, 1, sourceByRoom, null);
+		var value = new DungeonWaypointCatalog.CatalogResult(true, sourceMarkers, 1, sourceByRoom, null);
 		var expectedValue = new ExpectedDevonianCatalogResult(true, List.of(fixtureMarker), 1,
 			Map.of("fixture", List.of(fixtureMarker)), "");
-		var equivalentValue = new DevonianDungeonWaypointCatalog.CatalogResult(true, List.of(fixtureMarker), 1,
+		var equivalentValue = new DungeonWaypointCatalog.CatalogResult(true, List.of(fixtureMarker), 1,
 			Map.of("fixture", List.of(fixtureMarker)), "");
 		sourceMarkers.clear();
 		sourceRoomMarkers.clear();
@@ -270,7 +270,7 @@ public final class SecretWaypointChecks {
 			&& value.hashCode() == expectedValue.hashCode()
 			&& value.toString().equals(expectedValue.toString().replaceFirst("^ExpectedDevonianCatalogResult", "CatalogResult")),
 			"Devonian catalog result retains record-style equality, hash, and text behavior");
-		var emptyValue = new DevonianDungeonWaypointCatalog.CatalogResult(false, null, 0, null, null);
+		var emptyValue = new DungeonWaypointCatalog.CatalogResult(false, null, 0, null, null);
 		assertEquals(List.of(), emptyValue.markers(), "null catalog markers normalize to an empty immutable list");
 		assertEquals(Map.of(), emptyValue.byRoom(), "null room indexes normalize to an empty immutable map");
 		assertEquals("", emptyValue.reason(), "null catalog reasons normalize to an empty string");
@@ -278,7 +278,7 @@ public final class SecretWaypointChecks {
 		assertEquals(121, catalog.roomCount(), "all verified source joins and the Blaze split are bundled");
 		assertEquals(452, catalog.markers().size(), "all supported category coordinates are retained");
 		assertEquals(108L, catalog.markers().stream().filter(marker -> marker.category().equals("chest"))
-			.map(DevonianDungeonWaypointCatalog.Marker::roomName).distinct().count(),
+			.map(DungeonWaypointCatalog.Marker::roomName).distinct().count(),
 			"chest catalog covers the source rooms that have chest coordinates");
 		assertEquals(238L, catalog.markers().stream().filter(marker -> marker.category().equals("chest")).count(),
 			"chest records use the shared source catalog");
@@ -292,27 +292,27 @@ public final class SecretWaypointChecks {
 			"the source's four redstone-key records remain distinct");
 		assertEquals(52L, catalog.markers().stream().filter(marker -> marker.category().equals("lever")).count(),
 			"lever records use the independent lever category");
-		assertEquals(new DevonianDungeonWaypointCatalog.Marker("devonian:waterfall:chest:0",
+		assertEquals(new DungeonWaypointCatalog.Marker("devonian:waterfall:chest:0",
 			"Waterfall", "chest", 34, 84, 23), catalog.find(" waterfall ", "chest").getFirst(),
 			"room lookup keeps the pinned canonical source coordinate");
-		assertTrue(catalog.find("Criss-Cross", "chest").contains(new DevonianDungeonWaypointCatalog.Marker(
+		assertTrue(catalog.find("Criss-Cross", "chest").contains(new DungeonWaypointCatalog.Marker(
 			"devonian:criss-cross:chest:0", "Criss-Cross", "chest", 15, 66, 6))
-			&& catalog.find("Criss-Cross", "lever").contains(new DevonianDungeonWaypointCatalog.Marker(
+			&& catalog.find("Criss-Cross", "lever").contains(new DungeonWaypointCatalog.Marker(
 				"devonian:criss-cross:lever:0", "Criss-Cross", "lever", 15, 75, 29)),
 			"the punctuation-only Devonian Criss Cross name maps to the unique local Criss-Cross room");
-		assertEquals(List.of(new DevonianDungeonWaypointCatalog.Marker("devonian:silver-sword:chest:0",
+		assertEquals(List.of(new DungeonWaypointCatalog.Marker("devonian:silver-sword:chest:0",
 			"Silver Sword", "chest", 18, 69, 13)), catalog.find("Silver Sword", "chest"),
 			"the corroborated Silvers Sword alias retains the pinned chest coordinate");
-		assertEquals(List.of(new DevonianDungeonWaypointCatalog.Marker("devonian:rail-track:chest:0",
+		assertEquals(List.of(new DungeonWaypointCatalog.Marker("devonian:rail-track:chest:0",
 			"Rail Track", "chest", 28, 63, 7)), catalog.find("Rail Track", "chest"),
 			"the corroborated Mini Rail Track alias retains the pinned chest coordinate");
-		assertEquals(List.of(new DevonianDungeonWaypointCatalog.Marker("devonian:rare-pillars:lever:0",
+		assertEquals(List.of(new DungeonWaypointCatalog.Marker("devonian:rare-pillars:lever:0",
 			"Rare Pillars", "lever", 24, 88, 3)), catalog.find("Rare Pillars", "lever"),
 			"the corroborated Pillars alias retains the pinned lever coordinate");
-		assertEquals(List.of(new DevonianDungeonWaypointCatalog.Marker("devonian:higher-blaze:chest:0",
+		assertEquals(List.of(new DungeonWaypointCatalog.Marker("devonian:higher-blaze:chest:0",
 			"Higher Blaze", "chest", 2, 68, 27)), catalog.find("Higher Blaze", "chest"),
 			"the independent Higher Blaze record selects the exact lower-height chest coordinate");
-		assertEquals(List.of(new DevonianDungeonWaypointCatalog.Marker("devonian:lower-blaze:chest:0",
+		assertEquals(List.of(new DungeonWaypointCatalog.Marker("devonian:lower-blaze:chest:0",
 			"Lower Blaze", "chest", 2, 118, 27)), catalog.find("Lower Blaze", "chest"),
 			"the independent Lower Blaze record selects the exact upper-height chest coordinate");
 		assertTrue(catalog.find("Blaze", "chest").isEmpty(),
@@ -321,16 +321,16 @@ public final class SecretWaypointChecks {
 			"unsupported category aliases are not introduced");
 
 		String header = "{\"version\":1,\"sourceProject\":\"Synnerz/devonian\",\"license\":\"GPL-3.0\","
-			+ "\"sourceRevision\":\"" + DevonianDungeonWaypointCatalog.SOURCE_REVISION + "\",\"waypoints\":[";
+			+ "\"sourceRevision\":\"" + DungeonWaypointCatalog.SOURCE_REVISION + "\",\"waypoints\":[";
 		String validMarker = "{\"id\":\"devonian:test-room:chest:0\",\"roomName\":\"Test Room\","
 			+ "\"category\":\"chest\",\"x\":1,\"y\":70,\"z\":2}";
-		assertTrue(DevonianDungeonWaypointCatalog.parse(header + validMarker + "]}").available(),
+		assertTrue(DungeonWaypointCatalog.parse(header + validMarker + "]}").available(),
 			"a bounded row with exact provenance and stable ID parses");
-		assertFalse(DevonianDungeonWaypointCatalog.parse(header + validMarker.replace("\"x\":1", "\"x\":1.5") + "]}").available(),
+		assertFalse(DungeonWaypointCatalog.parse(header + validMarker.replace("\"x\":1", "\"x\":1.5") + "]}").available(),
 			"fractional source coordinates are rejected");
-		assertFalse(DevonianDungeonWaypointCatalog.parse(header + validMarker.replace("chest", "wither") + "]}").available(),
+		assertFalse(DungeonWaypointCatalog.parse(header + validMarker.replace("chest", "wither") + "]}").available(),
 			"unknown source categories are rejected");
-		assertFalse(DevonianDungeonWaypointCatalog.parse(header + validMarker + "," + validMarker + "]}").available(),
+		assertFalse(DungeonWaypointCatalog.parse(header + validMarker + "," + validMarker + "]}").available(),
 			"duplicate stable marker IDs are rejected");
 
 		var firstCell = DungeonGridRules.cellAtOrigin(DungeonGridRules.GRID_MIN, DungeonGridRules.GRID_MIN);
@@ -354,7 +354,7 @@ public final class SecretWaypointChecks {
 		assertEquals("cell:0,0", identity.anchorRoomId(), "room identity preserves its canonical anchor cell");
 		assertEquals("devonian:waterfall:chest:0", identity.templateRecordId(),
 			"room identity preserves the exact source template record");
-		var redstone = new DevonianDungeonWaypointCatalog.Marker("devonian:waterfall:redstone:0",
+		var redstone = new DungeonWaypointCatalog.Marker("devonian:waterfall:redstone:0",
 			"Waterfall", "redstone", 34, 84, 23);
 		assertEquals("Redstone Key", SecretWaypointRoomCatalog.materialize("F1",
 			List.of(firstCell, secondCell, thirdCell, fourthCell), "Waterfall", orientation, List.of(redstone))
@@ -742,10 +742,10 @@ public final class SecretWaypointChecks {
 			new SecretWaypointStore.WaypointOverride("catalog:crypt", true, null);
 		SecretWaypointStore.CollectedWaypoint collected =
 			new SecretWaypointStore.CollectedWaypoint("F1", "cell:1,2", waypoint.id());
-		DevonianDungeonWaypointCatalog.Marker template =
-			new DevonianDungeonWaypointCatalog.Marker("devonian:test:chest:0", "Test", "chest", 1, 70, 2);
+		DungeonWaypointCatalog.Marker template =
+			new DungeonWaypointCatalog.Marker("devonian:test:chest:0", "Test", "chest", 1, 70, 2);
 		List<SecretWaypointStore.Waypoint> defaults = new ArrayList<>(List.of(waypoint));
-		List<DevonianDungeonWaypointCatalog.Marker> templates = new ArrayList<>(List.of(template));
+		List<DungeonWaypointCatalog.Marker> templates = new ArrayList<>(List.of(template));
 		List<SecretWaypointStore.Waypoint> runtimeDefaults = new ArrayList<>(List.of(waypoint));
 		List<SecretWaypointStore.Waypoint> personal = new ArrayList<>(List.of(waypoint));
 		Map<String, SecretWaypointStore.WaypointOverride> overrides = new LinkedHashMap<>();

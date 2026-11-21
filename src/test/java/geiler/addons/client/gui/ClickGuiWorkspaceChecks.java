@@ -13,12 +13,22 @@ public final class ClickGuiWorkspaceChecks {
 	public static void run() {
 		checkCategorySplit();
 		checkStateBanks();
+		checkSearchMemory();
+	}
+
+	private static void checkSearchMemory() {
+		long limit = ClickGuiState.SEARCH_MEMORY_MILLIS;
+		check(limit == 120_000L, "a Click GUI search is kept for two minutes");
+		check("wheat".equals(ClickGuiState.recallSearch("wheat", 1_000L, 1_000L + limit)), "a search at exactly two minutes is still recalled");
+		check(ClickGuiState.recallSearch("wheat", 1_000L, 1_001L + limit).isEmpty(), "a search older than two minutes is cleared");
+		check(ClickGuiState.recallSearch("  ", 1_000L, 2_000L).isEmpty() && ClickGuiState.recallSearch("wheat", 5_000L, 1_000L).isEmpty(),
+			"a blank search and a clock that went backwards recall nothing");
 	}
 
 	private static void checkCategorySplit() {
 		check(Category.Companion.of(Workspace.NORMAL).equals(List.of(
 			Category.F7, Category.ENCHANTING, Category.SLAYER, Category.HUNTING, Category.FISHING, Category.FARMING,
-			Category.FORAGING, Category.MINING, Category.KUUDRA, Category.MISCELLANEOUS, Category.VISUAL, Category.DEV)),
+			Category.FORAGING, Category.MINING, Category.KUUDRA, Category.TAB_WIDGETS, Category.MISCELLANEOUS, Category.VISUAL, Category.DEV)),
 			"the Normal workspace keeps the original categories in their original order");
 		check(Category.Companion.of(Workspace.MACROS).equals(List.of(
 			Category.ENGINE, Category.AREA_KILLER, Category.SIM)),

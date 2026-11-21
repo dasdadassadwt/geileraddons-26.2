@@ -1,7 +1,7 @@
 package geiler.addons.client.module.impl;
 
 import geiler.addons.client.dungeon.DungeonFloor;
-import geiler.addons.client.dungeon.odin.DungeonSplitTracker;
+import geiler.addons.client.dungeon.helpers.DungeonSplitTracker;
 
 import java.util.List;
 

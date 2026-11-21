@@ -5,7 +5,7 @@ import geiler.addons.client.dungeon.DungeonFloor
 import geiler.addons.client.dungeon.DungeonGuideSegments
 import geiler.addons.client.dungeon.DungeonSplitPersonalBestBook
 import geiler.addons.client.dungeon.DungeonSplitPersonalBestStore
-import geiler.addons.client.dungeon.odin.DungeonSplitTracker
+import geiler.addons.client.dungeon.helpers.DungeonSplitTracker
 import geiler.addons.client.hud.HudElement
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category

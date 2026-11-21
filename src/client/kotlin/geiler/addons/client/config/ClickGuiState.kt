@@ -36,6 +36,24 @@ object ClickGuiState {
         val favoriteModuleIds: MutableSet<String> = LinkedHashSet()
     }
 
+    /** The last module-grid search and when the GUI closed on it; kept [SEARCH_MEMORY_MILLIS] so a reopened GUI continues it. */
+    private var savedSearch = ""
+    private var savedSearchAt = 0L
+
+    const val SEARCH_MEMORY_MILLIS = 120_000L
+
+    /** [saved] while it is younger than [SEARCH_MEMORY_MILLIS] at [now], else an empty string. */
+    @JvmStatic
+    fun recallSearch(saved: String, savedAt: Long, now: Long): String =
+        if (saved.isNotBlank() && now - savedAt in 0..SEARCH_MEMORY_MILLIS) saved else ""
+
+    fun rememberSearch(query: String) {
+        savedSearch = query
+        savedSearchAt = System.currentTimeMillis()
+    }
+
+    fun recalledSearch(): String = recallSearch(savedSearch, savedSearchAt, System.currentTimeMillis())
+
     private val banks = EnumMap<Workspace, Bank>(Workspace::class.java).also { map ->
         for (workspace in Workspace.values()) map[workspace] = Bank(workspace)
     }

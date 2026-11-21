@@ -88,7 +88,7 @@ class GyroWandModule private constructor(private val settings: Settings) : Modul
     private fun mageMultiplier(): Double {
         if (!DungeonContextTracker.inDungeon()) return 1.0
         val client = Minecraft.getInstance()
-        val rows = DungeonClassTab.parseAll(DungeonOdinAssistModule.scoreTabLines(client))
+        val rows = DungeonClassTab.parseAll(DungeonAssistModule.scoreTabLines(client))
         return DungeonClassTab.mageCooldownMultiplier(rows, client.player?.name?.string)
     }
 

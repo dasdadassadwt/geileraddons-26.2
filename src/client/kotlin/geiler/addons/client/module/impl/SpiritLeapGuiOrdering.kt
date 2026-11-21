@@ -44,7 +44,7 @@ class SpiritLeapGuiOrdering private constructor() {
 
             val mouseX = client.mouseHandler.getScaledXPos(client.window).toInt()
             val mouseY = client.mouseHandler.getScaledYPos(client.window).toInt()
-            if (DungeonOdinAssistModule.INSTANCE.renderSpiritLeapScreen(
+            if (DungeonAssistModule.INSTANCE.renderSpiritLeapScreen(
                     graphics, client.font, graphics.guiWidth(), graphics.guiHeight(), screen, mouseX, mouseY,
                 )
             ) {

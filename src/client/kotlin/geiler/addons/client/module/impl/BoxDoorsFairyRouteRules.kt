@@ -3,7 +3,7 @@ package geiler.addons.client.module.impl
 import geiler.addons.client.dungeon.BloodDoorTraceRules
 import geiler.addons.client.dungeon.DungeonDoorTracker
 import geiler.addons.client.dungeon.DungeonMapGeometry
-import geiler.addons.client.dungeon.odin.OdinDungeonMapGrid
+import geiler.addons.client.dungeon.helpers.DungeonMapGrid
 import java.util.function.Function
 import net.minecraft.world.phys.Vec3
 
@@ -12,13 +12,13 @@ class BoxDoorsFairyRouteRules private constructor() {
     companion object {
         @JvmStatic
         fun mapCellAtMarker(
-            map: OdinDungeonMapGrid.ScanResult?,
+            map: DungeonMapGrid.ScanResult?,
             marker: DungeonMapGeometry.MapPoint?,
         ): MapCellResolution = BoxDoorsFairyRouteLogic.mapCellAtMarker(map, marker)
 
         @JvmStatic
         fun select(
-            map: OdinDungeonMapGrid.ScanResult?,
+            map: DungeonMapGrid.ScanResult?,
             currentMapCell: Int,
             currentWorldCell: Int,
             observedDoors: List<DungeonDoorTracker.Door>?,
@@ -26,7 +26,7 @@ class BoxDoorsFairyRouteRules private constructor() {
 
         @JvmStatic
         fun select(
-            map: OdinDungeonMapGrid.ScanResult?,
+            map: DungeonMapGrid.ScanResult?,
             currentMapCell: Int,
             currentWorldCell: Int,
             observedDoors: List<DungeonDoorTracker.Door>?,
@@ -37,7 +37,7 @@ class BoxDoorsFairyRouteRules private constructor() {
 
         @JvmStatic
         fun select(
-            map: OdinDungeonMapGrid.ScanResult?,
+            map: DungeonMapGrid.ScanResult?,
             currentMapCell: Int,
             offsetX: Int,
             offsetZ: Int,
@@ -46,7 +46,7 @@ class BoxDoorsFairyRouteRules private constructor() {
 
         @JvmStatic
         fun select(
-            map: OdinDungeonMapGrid.ScanResult?,
+            map: DungeonMapGrid.ScanResult?,
             currentMapCell: Int,
             offsetX: Int,
             offsetZ: Int,
@@ -234,7 +234,7 @@ class BoxDoorsFairyRouteRules private constructor() {
         mapToCell: Int,
         fromCell: Int,
         toCell: Int,
-        mapEdgeType: OdinDungeonMapGrid.DoorType?,
+        mapEdgeType: DungeonMapGrid.DoorType?,
         expectedType: DungeonDoorTracker.Type?,
         target: DungeonDoorTracker.Door?,
         offsetX: Int,
@@ -280,7 +280,7 @@ class BoxDoorsFairyRouteRules private constructor() {
         fun mapToCell(): Int = mapToCellValue
         fun fromCell(): Int = fromCellValue
         fun toCell(): Int = toCellValue
-        fun mapEdgeType(): OdinDungeonMapGrid.DoorType? = mapEdgeTypeValue
+        fun mapEdgeType(): DungeonMapGrid.DoorType? = mapEdgeTypeValue
         fun expectedType(): DungeonDoorTracker.Type? = expectedTypeValue
         fun target(): DungeonDoorTracker.Door? = targetValue
         fun offsetX(): Int = offsetXValue

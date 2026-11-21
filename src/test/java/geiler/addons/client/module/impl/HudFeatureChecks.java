@@ -1,9 +1,9 @@
 package geiler.addons.client.module.impl;
 
 import geiler.addons.client.dungeon.DungeonFloor;
-import geiler.addons.client.dungeon.odin.DungeonBloodCampTrackerChecks;
-import geiler.addons.client.dungeon.odin.DungeonMaskProcTimers;
-import geiler.addons.client.dungeon.odin.DungeonSplitTracker;
+import geiler.addons.client.dungeon.helpers.DungeonBloodCampTrackerChecks;
+import geiler.addons.client.dungeon.helpers.DungeonMaskProcTimers;
+import geiler.addons.client.dungeon.helpers.DungeonSplitTracker;
 import geiler.addons.client.farming.SlayerHourlyStats;
 import geiler.addons.client.hud.TitleAlertStackChecks;
 import geiler.addons.client.module.BooleanSetting;
@@ -194,7 +194,7 @@ public final class HudFeatureChecks {
 			&& module.configName().equals("Slayer Tracker")
 			&& module.description().equals("Counts Slayer bosses per hour.")
 			&& module.id().equals("slayer_tracker") && module.category() == Category.SLAYER
-			&& !module.defaultEnabled() && !module.isWorkInProgress(),
+			&& !module.defaultEnabled(),
 			"Slayer Tracker keeps its registered identity, category and default-off state and is no longer marked work in progress");
 
 		require(module.booleanSettings().stream().map(BooleanSetting::name).toList()

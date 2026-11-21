@@ -1,8 +1,8 @@
 package geiler.addons.client.mixin;
 
 import geiler.addons.client.dungeon.DungeonContextTracker;
-import geiler.addons.client.dungeon.odin.DungeonBoulderRules;
-import geiler.addons.client.module.impl.DungeonOdinAssistModule;
+import geiler.addons.client.dungeon.helpers.DungeonBoulderRules;
+import geiler.addons.client.module.impl.DungeonAssistModule;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
@@ -24,8 +24,8 @@ abstract class DungeonBoulderInteractionMixin {
 		InteractionResult result = callback.getReturnValue();
 		if (DungeonBoulderRules.shouldAdvanceInteraction(hand == InteractionHand.MAIN_HAND,
 			DungeonContextTracker.isClearPhase()))
-			DungeonOdinAssistModule.INSTANCE.observeBoulderClick(hit.getBlockPos());
+			DungeonAssistModule.INSTANCE.observeBoulderClick(hit.getBlockPos());
 		if (hand == InteractionHand.MAIN_HAND && result == InteractionResult.SUCCESS)
-			DungeonOdinAssistModule.INSTANCE.observeWaterBoardClick(hit.getBlockPos());
+			DungeonAssistModule.INSTANCE.observeWaterBoardClick(hit.getBlockPos());
 	}
 }

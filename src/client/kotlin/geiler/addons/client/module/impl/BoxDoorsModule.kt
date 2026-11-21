@@ -14,7 +14,7 @@ import geiler.addons.client.dungeon.DungeonGridRules
 import geiler.addons.client.dungeon.DungeonKeyRules
 import geiler.addons.client.dungeon.DungeonMapGeometry
 import geiler.addons.client.dungeon.DungeonMapRoomDetector
-import geiler.addons.client.dungeon.odin.OdinDungeonMapGrid
+import geiler.addons.client.dungeon.helpers.DungeonMapGrid
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.ColorSetting
@@ -74,7 +74,7 @@ class BoxDoorsModule private constructor(settings: Settings) : Module(
     private var enteredThroughWither = false
     private val witherTraceGrace = DungeonDoorTraceGrace()
     private val bloodTraceGrace = DungeonDoorTraceGrace()
-    private var fairyRouteMap: OdinDungeonMapGrid.ScanResult? = null
+    private var fairyRouteMap: DungeonMapGrid.ScanResult? = null
     private var fairyRouteMapLevel: ClientLevel? = null
     private var fairyRouteMapTick = Long.MIN_VALUE
     private var fairyRouteSelection: BoxDoorsFairyRouteRules.Selection? = null
@@ -191,7 +191,7 @@ class BoxDoorsModule private constructor(settings: Settings) : Module(
         val tick = level.gameTime
         if (fairyRouteMapLevel !== level || tick < fairyRouteMapTick || tick - fairyRouteMapTick >= 5) {
             val colors = DungeonMapRoomDetector.savedMapColors(client)
-            fairyRouteMap = if (colors == null) null else OdinDungeonMapGrid.scan(colors)
+            fairyRouteMap = if (colors == null) null else DungeonMapGrid.scan(colors)
             fairyRouteMapLevel = level
             fairyRouteMapTick = tick
         }
@@ -743,7 +743,7 @@ class BoxDoorsModule private constructor(settings: Settings) : Module(
 
         private fun routeMapInputDiagnostic(
             marker: DungeonMapGeometry.MapPoint?,
-            map: OdinDungeonMapGrid.ScanResult?,
+            map: DungeonMapGrid.ScanResult?,
             mapCell: BoxDoorsFairyRouteRules.MapCellResolution?,
             worldCell: DungeonGridRules.Cell?,
             currentWorldCell: Int,

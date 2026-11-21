@@ -1,4 +1,8 @@
 {
+  "key.category.geileraddons.item_list": "GeilerAddons Item List",
+  "key.geileraddons.item_list.recipe": "Show Recipe (hovered item)",
+  "key.geileraddons.item_list.uses": "Show Uses (hovered item)",
+  "key.geileraddons.item_list.favorite": "Toggle Favorite (hovered item)",
   "key.geileraddons.warp_to_latest_infested_plot": "Warp to Latest Infested Plot",
   "key.geileraddons.lock_hovered_inventory_slot": "Lock Hovered Inventory Slot",
   "key.geileraddons.bind_inventory_slots": "Bind Inventory Slots"

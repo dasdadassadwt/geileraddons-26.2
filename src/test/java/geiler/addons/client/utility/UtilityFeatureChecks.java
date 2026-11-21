@@ -6,7 +6,9 @@ import geiler.addons.client.module.Category;
 import geiler.addons.client.module.ChoiceSetting;
 import geiler.addons.client.module.ColorSetting;
 import geiler.addons.client.module.Setting;
+import geiler.addons.client.module.impl.PerformanceHudModule;
 import geiler.addons.client.module.impl.SystemClockHudModule;
+import geiler.addons.client.performance.PerformanceHudRules;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -27,6 +29,7 @@ public final class UtilityFeatureChecks {
 		checkClockFormatting();
 		checkClockHudModuleContract();
 		checkClockHudVisibilityLifecycle();
+		checkPerformanceHud();
 		checkTimerCompletionPresentation();
 		checkSupplyPlanning();
 		checkLobbyWatch();
@@ -80,8 +83,7 @@ public final class UtilityFeatureChecks {
 		check(module.name().equals("System Clock") && module.configName().equals("System Clock")
 			&& module.displayName().equals("System Clock") && module.id().equals("system_clock")
 			&& module.description().equals("Shows the current local system time.")
-			&& module.category() == Category.MISCELLANEOUS && !module.defaultEnabled()
-			&& !module.isWorkInProgress(),
+			&& module.category() == Category.MISCELLANEOUS && !module.defaultEnabled(),
 			"System Clock keeps its persisted identity, category, and disabled fresh-install default");
 		check(module.groups().size() == 1 && module.groups().getFirst().name() == null
 			&& module.groups().getFirst().settings().stream().map(Setting::name).toList().equals(List.of(
@@ -122,6 +124,41 @@ public final class UtilityFeatureChecks {
 			check(module.visible(), "enabling System Clock makes its live clock visible on the HUD");
 			module.setEnabled(false);
 			check(!module.visible(), "disabling System Clock immediately hides its live clock again");
+		} finally {
+			module.setEnabled(wasEnabled);
+		}
+	}
+
+	private static void checkPerformanceHud() {
+		check(PerformanceHudRules.lines(true, true, true, 42, 19.84, 144).equals(
+			List.of("Ping: 42ms", "TPS: 19.8", "FPS: 144")), "performance HUD formats all three stats");
+		check(PerformanceHudRules.lines(true, true, true, null, null, 60).equals(
+			List.of("Ping: --", "TPS: --", "FPS: 60")), "performance HUD shows -- for unavailable ping and TPS");
+		check(PerformanceHudRules.lines(false, true, false, 5, 20.0, 60).equals(List.of("TPS: 20.0")),
+			"performance HUD lists only enabled stats");
+		check(PerformanceHudRules.lines(false, false, false, 5, 20.0, 60).isEmpty(),
+			"performance HUD with every stat off has no lines");
+		check(PerformanceHudRules.lines(true, false, false, -3, null, 0).equals(List.of("Ping: 0ms")),
+			"performance HUD clamps negative ping to zero");
+
+		PerformanceHudModule module = PerformanceHudModule.INSTANCE;
+		check(module.name().equals("Performance HUD") && module.id().equals("performance_hud")
+			&& module.category() == Category.MISCELLANEOUS && !module.defaultEnabled(),
+			"Performance HUD keeps its identity, category, and disabled fresh-install default");
+		check(module.groups().getFirst().settings().stream().map(Setting::name).toList().equals(List.of(
+			"Show Ping", "Show TPS", "Show FPS", "Style", "Text Color")),
+			"Performance HUD keeps its settings in order");
+		check(module.booleanSettings().stream().allMatch(BooleanSetting::rawValue),
+			"Performance HUD shows every stat by default");
+		check(module.choiceSettings().getFirst().value().equals("Click GUI")
+			&& module.choiceSettings().getFirst().choices().equals(List.of("Click GUI", "Text")),
+			"Performance HUD defaults to the Click GUI style with a Text alternative");
+		boolean wasEnabled = module.isEnabled();
+		try {
+			module.setEnabled(false);
+			check(!module.visible(), "the Performance HUD stays hidden while its module is disabled");
+			module.setEnabled(true);
+			check(module.visible(), "enabling Performance HUD makes it visible on the HUD");
 		} finally {
 			module.setEnabled(wasEnabled);
 		}

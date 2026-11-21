@@ -1497,6 +1497,9 @@ public final class ChatReplyCommandChecks {
 		check(ChatReplyCommandRules.incomingPartyActionCommand(warp, none, "Self").isEmpty()
 			&& ChatReplyCommandRules.incomingPartyActionCommand(warp, null, "Self").isEmpty(),
 			"leader-only actions do nothing while the leader is unknown (Odin does the same)");
+		var ownWarp = ChatReplyCommandRules.parse("Party > [MVP+] Self: !warp", "!").orElseThrow();
+		check(ChatReplyCommandRules.incomingPartyActionCommand(ownWarp, selfLeads, "Self").equals(Optional.of("party warp")),
+			"the local player's own party message is a valid command source");
 		var allinv = ChatReplyCommandRules.parse("Party > Alice: !allinv", "!").orElseThrow();
 		check(ChatReplyCommandRules.incomingPartyActionCommand(allinv, selfLeads, "Self")
 			.equals(Optional.of("party settings allinvite")), "allinvite runs for the known leader");

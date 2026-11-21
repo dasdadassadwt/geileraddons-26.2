@@ -85,6 +85,19 @@ object CritterSafari {
     private var announcedAllButMacaw = false
     private var announcedAllDone = false
 
+    private var lastWorld: Any? = null
+    var instanceResets = 0
+        private set
+
+    /** Whether the world object changed under a live run while still in the Safari, i.e. the player warped to a new instance. */
+    @JvmStatic
+    fun worldSwapped(inSafari: Boolean, hasRun: Boolean, previous: Any?, current: Any?): Boolean =
+        inSafari && hasRun && previous != null && current != null && previous !== current
+
+    /** Whether a critter counts toward the nearby tally: in line of sight, or anywhere in range with Count Through Walls on. */
+    @JvmStatic
+    fun countsNearby(visible: Boolean, throughWalls: Boolean): Boolean = visible || throughWalls
+
     fun sightings(): List<CritterSighting> = sightingList
 
     fun inSafari(): Boolean = HypixelModApi.currentIsland() == Island.SAFARI
@@ -139,14 +152,23 @@ object CritterSafari {
         }
         flushOutbox()
 
+        val world: Any? = Minecraft.getInstance().level
         if (inSafari()) {
             if (ticksAway >= AWAY_TICKS) arrivalStartsRun = true
             ticksAway = 0
             if (arrivalStartsRun) {
                 arrivalStartsRun = false
                 startRun("arrival")
+            } else if (worldSwapped(true, run != null, lastWorld, world)) {
+                // Warping to another Safari instance keeps the island, so only the world object tells the runs apart.
+                instanceResets++
+                sightingList.clear()
+                previousIds = emptySet()
+                startRun("instance")
             }
+            lastWorld = world
         } else {
+            lastWorld = world
             ticksAway++
             val quiet = System.currentTimeMillis() - lastEventMillis >= RECENT_ACTIVITY_MILLIS
             if (run != null && quiet && ticksAway >= LEAVE_GRACE_TICKS) endRun()
@@ -212,7 +234,8 @@ object CritterSafari {
             return
         }
         val counts = HashMap<Critter, Int>()
-        for (s in sightingList) if (s.visible) counts.merge(s.critter, 1, Int::plus)
+        val throughWalls = CritterTrackerModule.INSTANCE.nearbyThroughWalls()
+        for (s in sightingList) if (countsNearby(s.visible, throughWalls)) counts.merge(s.critter, 1, Int::plus)
         run.setNearby(counts)
     }
 
@@ -344,7 +367,7 @@ object CritterSafari {
     /** Bounded, player-free state for the diagnostic STATUS lines. */
     fun summary(): String {
         val r = run
-        return "inSafari=${inSafari()} run=${if (r == null) "none" else "open"} startedBy=$startedBy " +
+        return "inSafari=${inSafari()} run=${if (r == null) "none" else "open"} startedBy=$startedBy instanceResets=$instanceResets " +
             "party=${r?.partyUnique() ?: 0}/${CritterSpecies.count()} own=${r?.ownUnique() ?: 0} " +
             "catches=${r?.partyTotal() ?: 0} shards=${r?.totalShards() ?: 0} trades=${trades.all().size} " +
             "sightings=${sightingList.size} mounds=${CritterSafariWorld.moundCount()} " +

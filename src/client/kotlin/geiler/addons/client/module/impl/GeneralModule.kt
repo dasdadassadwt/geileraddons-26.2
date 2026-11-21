@@ -19,6 +19,7 @@ class GeneralModule private constructor(settings: Settings) : Module(
     Category.MISCELLANEOUS,
     settings.chatTriggersInTextScreens,
     settings.checkForUpdates,
+    settings.autoUpdate,
     settings.islandDetectionApi,
     settings.availabilityNotices,
     settings.supplyMessages,
@@ -42,6 +43,7 @@ class GeneralModule private constructor(settings: Settings) : Module(
 
     private val chatTriggersInTextScreensSetting = settings.chatTriggersInTextScreens
     private val checkForUpdatesSetting = settings.checkForUpdates
+    private val autoUpdateSetting = settings.autoUpdate
     private val islandDetectionApiSetting = settings.islandDetectionApi
     private val availabilityNoticesSetting = settings.availabilityNotices
     private val supplyMessagesSetting = settings.supplyMessages
@@ -58,7 +60,7 @@ class GeneralModule private constructor(settings: Settings) : Module(
         group(
             SettingGroup("Macros", settings.chatTriggersInTextScreens),
             SettingGroup("Island Detection", settings.islandDetectionApi),
-            SettingGroup("Updates", settings.checkForUpdates),
+            SettingGroup("Updates", settings.checkForUpdates, settings.autoUpdate),
             SettingGroup("Click GUI", settings.availabilityNotices, settings.supplyMessages),
             SettingGroup.folded(
                 "Timer Settings",
@@ -84,6 +86,9 @@ class GeneralModule private constructor(settings: Settings) : Module(
         val chatTriggersInTextScreens = BooleanSetting("Chat Triggers In Text Screens", false)
         val supplyMessages = BooleanSetting("Supply Command Messages", true)
         val checkForUpdates = BooleanSetting("Check for Updates", true)
+
+        /** Off by default: it downloads and installs a new jar, so it only runs when the player turns it on. */
+        val autoUpdate = BooleanSetting("Auto Update", false)
 
         /**
          * On by default. Every island-gated module depends on it, so turning it off makes those
@@ -122,6 +127,8 @@ class GeneralModule private constructor(settings: Settings) : Module(
     fun chatTriggersInTextScreens(): BooleanSetting = chatTriggersInTextScreensSetting
 
     fun checkForUpdates(): BooleanSetting = checkForUpdatesSetting
+
+    fun autoUpdate(): BooleanSetting = autoUpdateSetting
 
     fun availabilityNotices(): BooleanSetting = availabilityNoticesSetting
 

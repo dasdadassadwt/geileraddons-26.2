@@ -1,6 +1,6 @@
 package geiler.addons.client.dungeon
 
-import geiler.addons.client.dungeon.odin.OdinDungeonMapCoreScanner
+import geiler.addons.client.dungeon.helpers.DungeonMapCoreScanner
 import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.world.level.block.Blocks
@@ -11,7 +11,7 @@ class DungeonMimicChestDetector private constructor() {
     companion object {
         /** Performs bounded reads only from the current room's already-loaded chunks on the client thread. */
         @JvmStatic
-        fun detect(client: Minecraft?, scanner: OdinDungeonMapCoreScanner?): List<BlockPos> {
+        fun detect(client: Minecraft?, scanner: DungeonMapCoreScanner?): List<BlockPos> {
             if (client == null || !client.isSameThread()) return emptyList()
             val level = client.level ?: return emptyList()
             if (client.player == null
@@ -27,7 +27,7 @@ class DungeonMimicChestDetector private constructor() {
             val room = core.data ?: return emptyList()
             if (core.highestBlock <= 0) return emptyList()
 
-            val catalog = DevonianDungeonWaypointCatalog.bundled()
+            val catalog = DungeonWaypointCatalog.bundled()
             if (!catalog.available()) return emptyList()
             val roomChests = catalog.find(room.name(), "chest")
             if (roomChests.isEmpty()) return emptyList()

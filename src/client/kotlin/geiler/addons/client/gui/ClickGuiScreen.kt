@@ -178,6 +178,12 @@ data class ClickGuiCategorySelectionPlan(
 
 /** Drawing helpers shared by the Click GUI category rail and settings controls. */
 object ClickGuiScreenRenderBehavior {
+    /** Side of the smoothed toolbar icon PNGs (octicon-gear-16 and friends); the title screen reuses the gear. */
+    const val TOOLBAR_ICON_TEXTURE_SIZE = 128
+
+    /** Side of the favorite-heart PNGs (smoothed, `blur` in their .mcmeta). */
+    const val FAVORITE_TEXTURE_SIZE = 64
+
     @JvmStatic
     fun drawScaledText(
         graphics: GuiGraphicsExtractor,
@@ -246,8 +252,11 @@ object ClickGuiScreenRenderBehavior {
         val pose = graphics.pose()
         pose.pushMatrix()
         pose.translate(left.toFloat(), top.toFloat())
-        pose.scale(iconSize / 96.0f, iconSize / 96.0f)
-        graphics.blit(RenderPipelines.GUI_TEXTURED, icon, 0, 0, 0f, 0f, 96, 96, 96, 96, color)
+        pose.scale(iconSize / FAVORITE_TEXTURE_SIZE.toFloat(), iconSize / FAVORITE_TEXTURE_SIZE.toFloat())
+        graphics.blit(
+            RenderPipelines.GUI_TEXTURED, icon, 0, 0, 0f, 0f,
+            FAVORITE_TEXTURE_SIZE, FAVORITE_TEXTURE_SIZE, FAVORITE_TEXTURE_SIZE, FAVORITE_TEXTURE_SIZE, color,
+        )
         pose.popMatrix()
     }
 
@@ -358,7 +367,9 @@ object ClickGuiScreenRenderBehavior {
         groupName: String,
         collapsed: Boolean,
         depth: Int,
-        togglePosition: Float,
+        toggleOn: Boolean,
+        toggleLead: Float,
+        toggleTrail: Float,
         textScale: Float,
         textHeight: Int,
         groupIndent: Int,
@@ -400,13 +411,16 @@ object ClickGuiScreenRenderBehavior {
             textScale,
         )
         if (toggleBounds != null) {
-            GuiTheme.toggleSwitch(
+            GuiTheme.liquidSwitch(
                 graphics,
                 toggleBounds.x(),
                 toggleBounds.y(),
                 toggleBounds.w(),
                 toggleBounds.h(),
-                togglePosition,
+                toggleOn,
+                toggleLead,
+                toggleTrail,
+                false,
             )
         }
     }
@@ -421,7 +435,9 @@ object ClickGuiScreenRenderBehavior {
         hoverable: Boolean,
         pulse: Float,
         displayName: String,
-        togglePosition: Float,
+        toggleOn: Boolean,
+        toggleLead: Float,
+        toggleTrail: Float,
         textScale: Float,
         textHeight: Int,
         switchWidth: Int,
@@ -453,7 +469,7 @@ object ClickGuiScreenRenderBehavior {
         )
         val switchX = bounds.x() + bounds.w() - switchWidth - 14
         val switchY = bounds.y() + (bounds.h() - switchHeight) / 2
-        GuiTheme.toggleSwitch(graphics, switchX, switchY, switchWidth, switchHeight, togglePosition)
+        GuiTheme.liquidSwitch(graphics, switchX, switchY, switchWidth, switchHeight, toggleOn, toggleLead, toggleTrail, false)
     }
 
     @JvmStatic
@@ -497,17 +513,7 @@ object ClickGuiScreenRenderBehavior {
             textScale,
         )
         val fieldColor = choiceFieldColor(hovered, pulse)
-        GuiTheme.roundedRectBordered(
-            graphics,
-            field.x(),
-            field.y(),
-            field.w(),
-            field.h(),
-            4,
-            fieldColor,
-            fieldColor,
-            GuiTheme.BORDER,
-        )
+        GuiTheme.roundedRect(graphics, field.x(), field.y(), field.w(), field.h(), 4, fieldColor)
         val value = textFit(font, displayValue, field.w() - 12)
         drawCenteredScaledText(
             graphics,

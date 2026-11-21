@@ -22,6 +22,8 @@ object SlotItemOverlays {
         geiler.addons.client.module.impl.HotfTreeHelperModule.INSTANCE.drawSlotHighlights(graphics, slots)
         geiler.addons.client.module.impl.MiningSolversModule.INSTANCE.drawFossilOverlay(graphics, slots)
         geiler.addons.client.module.impl.GreenhouseHelperModule.INSTANCE.drawSlotHighlights(graphics, slots)
+        geiler.addons.client.module.impl.MiningCommissionsModule.INSTANCE.drawSlotHighlights(graphics, slots)
+        geiler.addons.client.module.impl.VisitorShoppingListModule.INSTANCE.drawSlotHighlights(graphics, slots)
         val module = ItemRarityBackgroundsModule.INSTANCE
         if (!module.isEnabled()) return
         for (slot in slots) if (slot.isActive) module.drawSlotBackground(graphics, slot, slot.x, slot.y)

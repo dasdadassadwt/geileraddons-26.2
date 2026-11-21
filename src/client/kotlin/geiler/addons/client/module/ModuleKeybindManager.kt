@@ -183,7 +183,7 @@ object ModuleKeybindManager {
             if (!module.showsKeybindControl()) continue
             if (!module.keybind().matches(event)) continue
             if (module === DungeonHelperModule.INSTANCE) DungeonHelperModule.INSTANCE.openEditorFromKeybind()
-            else {
+            else if (module.togglesOnKeybind()) {
                 module.toggle()
                 reportModuleToggle(module)
             }
@@ -229,7 +229,7 @@ object ModuleKeybindManager {
             if (!module.showsKeybindControl()) continue
             if (!module.keybind().matchesMouse(event.button(), event.modifiers())) continue
             if (module === DungeonHelperModule.INSTANCE) DungeonHelperModule.INSTANCE.openEditorFromKeybind()
-            else {
+            else if (module.togglesOnKeybind()) {
                 module.toggle()
                 reportModuleToggle(module)
             }

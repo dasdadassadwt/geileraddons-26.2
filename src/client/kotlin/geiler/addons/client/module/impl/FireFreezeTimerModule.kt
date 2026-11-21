@@ -63,7 +63,7 @@ class FireFreezeTimerModule private constructor(private val s: Settings) : Modul
             lastServerTicks = -1L
             diagnostics.event("WORLD_CHANGED levelPresent=${level != null} timerReset=true")
         }
-        val now = DungeonOdinAssistModule.INSTANCE.serverTicks()
+        val now = DungeonAssistModule.INSTANCE.serverTicks()
         val delta = if (lastServerTicks < 0L || now < lastServerTicks) 0L else minOf(now - lastServerTicks, MAX_CATCH_UP)
         lastServerTicks = now
         val boss = inBoss()

@@ -227,7 +227,7 @@ class ItemCooldownsModule private constructor() : Module(
         if (multiplierTick != Long.MIN_VALUE && tick - multiplierTick < 20L) return cachedMultiplier
         multiplierTick = tick
         val client = Minecraft.getInstance()
-        val rows = DungeonClassTab.parseAll(DungeonOdinAssistModule.scoreTabLines(client))
+        val rows = DungeonClassTab.parseAll(DungeonAssistModule.scoreTabLines(client))
         cachedMultiplier = DungeonClassTab.mageCooldownMultiplier(rows, client.player?.name?.string)
         return cachedMultiplier
     }

@@ -15,7 +15,7 @@ import geiler.addons.client.dungeon.SecretWaypointCollectionRules
 import geiler.addons.client.dungeon.SecretWaypointCollectionTracker
 import geiler.addons.client.dungeon.SecretWaypointRoomCatalog
 import geiler.addons.client.dungeon.SecretWaypointStore
-import geiler.addons.client.dungeon.odin.OdinDungeonMapCoreScanner
+import geiler.addons.client.dungeon.helpers.DungeonMapCoreScanner
 import geiler.addons.client.gui.SecretWaypointEditorScreen
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
@@ -148,7 +148,7 @@ class SecretWaypointsModule private constructor(private val settings: Settings) 
         private const val LEVER_SCAN_PERIOD_TICKS = 10L
     }
 
-    private val roomCoreScanner = OdinDungeonMapCoreScanner()
+    private val roomCoreScanner = DungeonMapCoreScanner()
     private val collectionTracker = SecretWaypointCollectionTracker()
     private val clickedHighlights = LinkedHashMap<String, ClickHighlight>()
     private val recentlyChimedMarkers = LinkedHashMap<String, Long>()

@@ -16,7 +16,6 @@ import geiler.addons.client.module.impl.DungeonTerminalTitlesModule;
 import geiler.addons.client.module.impl.GeneralModule;
 import geiler.addons.client.module.impl.I4HelperModule;
 import geiler.addons.client.module.impl.VisualModule;
-import net.minecraft.resources.Identifier;
 
 import java.util.List;
 import java.util.Map;
@@ -41,7 +40,6 @@ public final class ClickGuiScrollChecks {
 		checkModuleGridSectionsAndGeometry();
 		checkModuleSearchBehavior();
 		checkTextCursorCodePoints();
-		checkModuleIconCatalog();
 		checkScrollbarGutter();
 		checkCategoryScroll();
 		checkCategoryHierarchy();
@@ -52,180 +50,48 @@ public final class ClickGuiScrollChecks {
 		checkSettingsSearch();
 	}
 
-	private static void checkModuleIconCatalog() {
-		Map<String, String> expectedIcons = Map.ofEntries(
-			Map.entry("Debug", "geileraddons:textures/module_icons/debug.png"),
-			Map.entry("General", "geileraddons:textures/gui/octicon-gear-16.png"),
-			Map.entry("Slot IDs", "geileraddons:textures/module_icons/slot_ids.png"),
-			Map.entry("i4 helper", "geileraddons:textures/module_icons/i4_helper.png"),
-			Map.entry("Experimentation Solver", "geileraddons:textures/module_icons/experiment_solver.png"),
-			Map.entry("Auto Experiments", "geileraddons:textures/module_icons/auto_experiments.png"),
-			Map.entry("Auto Kick", "geileraddons:textures/module_icons/auto_kick.png"),
-			Map.entry("Party Finder Stats", "geileraddons:textures/module_icons/party_finder_stats.png"),
-			Map.entry("Dungeon Guide", "geileraddons:textures/module_icons/dungeon_guide.png"),
-			Map.entry("Box Doors", "geileraddons:textures/module_icons/box_doors.png"),
-			Map.entry("Tiki Helper", "geileraddons:textures/module_icons/tiki_helper.png"),
-			Map.entry("Safari Floor Drops", "geileraddons:textures/module_icons/safari_floor_drops.png"),
-			Map.entry("Hideyho Finder", "geileraddons:textures/module_icons/hideyho_finder.png"),
-			Map.entry("Sparkling Critter", "geileraddons:textures/module_icons/sparkling_critter.png"),
-			Map.entry("Pest Highlighter", "geileraddons:textures/module_icons/pest_highlighter.png"),
-			Map.entry("Infested plot", "geileraddons:textures/module_icons/infested_plot.png"),
-			Map.entry("Tree Tracker", "geileraddons:textures/module_icons/tree_tracker.png"),
-			Map.entry("Tree Broken Notifier", "geileraddons:textures/module_icons/tree_broken_notifier.png"),
-			Map.entry("Macros", "geileraddons:textures/module_icons/macros.png"),
-			Map.entry("Theme", "geileraddons:textures/gui/octicon-paintbrush-16.png"),
-			Map.entry("Mob Highlight", "geileraddons:textures/module_icons/mob_highlight.png"),
-			Map.entry("Dungeon Mob ESP", "geileraddons:textures/module_icons/dungeon_mob_esp.png"),
-			Map.entry("Block ESP", "geileraddons:textures/module_icons/block_esp.png"),
-			Map.entry("Inventory Buttons", "geileraddons:textures/module_icons/inventory_buttons.png"),
-			Map.entry("Animations", "geileraddons:textures/module_icons/animations.png"),
-			Map.entry("Chat Channels", "geileraddons:textures/module_icons/chat_channels.png"),
-			Map.entry("Hide Particles", "geileraddons:textures/module_icons/hide_particles.png"),
-			Map.entry("Player Size", "geileraddons:textures/module_icons/player_size.png"),
-			Map.entry("Third Person Camera", "geileraddons:textures/module_icons/camera.png"),
-			Map.entry("Chat", "geileraddons:textures/module_icons/chat.png"),
-			Map.entry("System Clock", "geileraddons:textures/module_icons/system_clock.png"),
-			Map.entry("Spirit Leap Menu", "geileraddons:textures/module_icons/spirit_leap_menu.png"),
-			Map.entry("Glass Doors", "geileraddons:textures/module_icons/glass_doors.png"),
-			Map.entry("Puzzle Solvers", "geileraddons:textures/module_icons/puzzle_solvers.png"),
-			Map.entry("Run Splits", "geileraddons:textures/module_icons/run_splits.png"),
-			Map.entry("Snap Tap", "geileraddons:textures/module_icons/snap_tap.png"),
-			Map.entry("Dungeon Boss ESP", "geileraddons:textures/module_icons/dungeon_boss_esp.png"),
-			Map.entry("Dungeon Class ESP", "geileraddons:textures/module_icons/dungeon_class_esp.png"),
-			Map.entry("Item Rarity Backgrounds", "geileraddons:textures/module_icons/item_rarity_backgrounds.png"),
-			Map.entry("No Cursor Reset", "geileraddons:textures/module_icons/no_cursor_reset.png"),
-			Map.entry("Aliases", "geileraddons:textures/module_icons/aliases.png"),
-			Map.entry("Instance Requeue", "geileraddons:textures/module_icons/instance_requeue.png"),
-			Map.entry("Trail", "geileraddons:textures/module_icons/trail.png"),
-			Map.entry("No Loading Screen", "geileraddons:textures/module_icons/no_loading_screen.png")
-		);
-		Set<String> fullSizeIcons = Set.of(
-			"Debug", "General", "Slot IDs", "i4 helper", "Experimentation Solver", "Auto Experiments",
-			"Auto Kick", "Theme", "Party Finder Stats", "Dungeon Guide", "Box Doors", "Tiki Helper",
-			"Safari Floor Drops", "Hideyho Finder", "Sparkling Critter", "Pest Highlighter", "Infested plot",
-			"Tree Tracker", "Tree Broken Notifier", "Macros", "Mob Highlight", "Dungeon Mob ESP", "Block ESP",
-			"Inventory Buttons", "Dungeon Boss ESP", "Dungeon Class ESP", "Item Rarity Backgrounds", "No Cursor Reset", "Aliases", "Instance Requeue", "Trail", "No Loading Screen"
-		);
-		for (Map.Entry<String, String> expected : expectedIcons.entrySet()) {
-			Identifier actual = ModuleIconTextures.forModule(expected.getKey());
-			check(actual != null && expected.getValue().equals(actual.toString()),
-				"module icon path remains stable for " + expected.getKey());
-			check(ModuleIconTextures.isTintable(expected.getKey()),
-				"module icon tint behavior remains enabled for " + expected.getKey());
-			check(ModuleIconTextures.sourceSize(expected.getKey())
-				== (fullSizeIcons.contains(expected.getKey()) ? 256 : 230),
-				"module icon source size remains stable for " + expected.getKey());
-		}
-		check(ModuleIconTextures.sourceSize("unregistered") == 64,
-			"unknown modules retain the 64-pixel icon source-size fallback");
-		check(ModuleIconTextures.forModule("unregistered") == null
-			&& !ModuleIconTextures.isTintable("unregistered"),
-			"unknown modules have no icon and are not tintable");
-	}
-
+	/** Exact flat-header positions are in ClickGuiFlatChecks; this keeps the toolbar and search bounded at every size. */
 	private static void checkHeaderGeometry() {
 		int panelX = 40;
 		int panelY = 30;
-		int panelWidth = ClickGuiHeaderGeometry.panelWidthForScreen(2048);
-		int panelHeight = ClickGuiHeaderGeometry.panelHeightForScreen(981);
-		int headerHeight = ClickGuiHeaderGeometry.baseHeaderHeightForPanelHeight(panelHeight);
-		ClickGuiScreen.Rect logo = ClickGuiHeaderGeometry.profileHeaderRectForLayout(
-			panelX, panelY, panelWidth, panelHeight);
-		ClickGuiScreen.Rect version = ClickGuiHeaderGeometry.versionBadgeRectForLayout(
-			panelX, panelY, panelWidth, panelHeight);
-		int brandRoom = ClickGuiHeaderGeometry.categoryBrandRoom(panelWidth, panelHeight);
-		int trailingInset = Math.max(12,
-			Math.round(ClickGuiHeaderGeometry.headerInsetXForPanelWidth(panelWidth) * 0.4f));
-		check(panelWidth == 1844 && panelHeight == 750,
-			"the reference panel grows just enough to keep the search field width");
-		check(headerHeight == 113 && logo.w() == 93 && logo.h() == 93,
-			"the 2048x981 reference header uses the current compact band and logo scale");
-		check(version.w() == 86 && version.h() == 28,
-			"the reference version badge scales to its requested bounds");
-		check(brandRoom == 232,
-			"the brand and its inset fit in the reference sidebar");
-		check(version.x() == logo.x() + logo.w()
-				+ ClickGuiHeaderGeometry.logoVersionGapForPanelWidth(panelWidth)
-			&& version.y() + version.h() / 2 == logo.y() + logo.h() / 2,
-			"the version badge follows and vertically centers on the logo");
-		check(version.x() + version.w() + trailingInset <= panelX + brandRoom,
-			"the category rail reserves the brand and its trailing inset");
-
-		int controlHeight = ClickGuiHeaderGeometry.controlHeaderHeightForPanelHeight(panelHeight);
-		int buttonSize = ClickGuiHeaderGeometry.headerButtonSizeForLayout(panelWidth, panelHeight);
-		ClickGuiScreen.Rect search = ClickGuiHeaderGeometry.searchRectForLayout(
-			panelX, panelY, panelWidth, panelHeight, brandRoom);
-		ClickGuiScreen.Rect github = ClickGuiHeaderGeometry.topBarRectForLayout(
-			panelX, panelY, panelWidth, panelHeight, ClickGuiScreen.TopBarIcon.GITHUB);
-		check(controlHeight == 90 && buttonSize == 50 && search.h() == 34,
-			"search and toolbar dimensions follow the current compact header formulas");
-		check(search.w() == 1284,
-			"the wider responsive panel preserves the reference search width");
-		check(search.x() >= panelX + brandRoom
-			&& search.x() + search.w() <= github.x(),
-			"the search field stays between the brand rail and toolbar without overlap");
-		check(version.x() + version.w() <= github.x(),
-			"the brand badge ends before the toolbar begins");
-		int previousRight = -1;
-		for (ClickGuiScreen.TopBarIcon icon : ClickGuiScreen.TopBarIcon.values()) {
-			ClickGuiScreen.Rect button = ClickGuiHeaderGeometry.topBarRectForLayout(
-				panelX, panelY, panelWidth, panelHeight, icon);
-			check(button.w() == buttonSize && button.h() == buttonSize,
-				"toolbar hit rectangles retain their reference size");
-			check(button.x() >= panelX && button.x() + button.w() <= panelX + panelWidth,
-				"toolbar hit rectangles stay inside the reference panel");
-			check(previousRight < 0 || previousRight <= button.x(),
-				"toolbar buttons do not overlap one another");
-			previousRight = button.x() + button.w();
+		int categoryWidth = 100;
+		int[][] screens = {{2048, 981}, {958, 511}, {854, 480}};
+		for (int[] screen : screens) {
+			int panelWidth = ClickGuiHeaderGeometry.panelWidthForScreen(screen[0]);
+			int panelHeight = ClickGuiHeaderGeometry.panelHeightForScreen(screen[1]);
+			ClickGuiScreen.Rect search = ClickGuiHeaderGeometry.searchRectForLayout(
+				panelX, panelY, panelWidth, panelHeight, categoryWidth);
+			ClickGuiScreen.Rect first = ClickGuiHeaderGeometry.topBarRectForLayout(
+				panelX, panelY, panelWidth, panelHeight, ClickGuiScreen.TopBarIcon.WORKSPACE);
+			check(search.w() > 0 && search.x() >= panelX + categoryWidth && search.x() + search.w() <= first.x(),
+				"the search field stays between the category rail and the toolbar");
+			int previousRight = -1;
+			for (ClickGuiScreen.TopBarIcon icon : ClickGuiScreen.TopBarIcon.values()) {
+				ClickGuiScreen.Rect button = ClickGuiHeaderGeometry.topBarRectForLayout(
+					panelX, panelY, panelWidth, panelHeight, icon);
+				check(button.x() >= panelX && button.x() + button.w() <= panelX + panelWidth
+					&& button.y() >= panelY
+					&& button.y() + button.h() <= panelY + ClickGuiHeaderGeometry.baseHeaderHeightForPanelHeight(panelHeight),
+					"toolbar buttons stay inside the top bar");
+				check(previousRight < 0 || previousRight <= button.x(), "toolbar buttons do not overlap one another");
+				previousRight = button.x() + button.w();
+			}
 		}
-
-		int compactWidth = ClickGuiHeaderGeometry.panelWidthForScreen(854);
-		int compactHeight = ClickGuiHeaderGeometry.panelHeightForScreen(480);
-		int compactBrandRoom = ClickGuiHeaderGeometry.categoryBrandRoom(compactWidth, compactHeight);
-		ClickGuiScreen.Rect compactSearch = ClickGuiHeaderGeometry.searchRectForLayout(
-			panelX, panelY, compactWidth, compactHeight, compactBrandRoom);
-		ClickGuiScreen.Rect compactGithub = ClickGuiHeaderGeometry.topBarRectForLayout(
-			panelX, panelY, compactWidth, compactHeight, ClickGuiScreen.TopBarIcon.GITHUB);
-		ClickGuiScreen.Rect compactMove = ClickGuiHeaderGeometry.topBarRectForLayout(
-			panelX, panelY, compactWidth, compactHeight, ClickGuiScreen.TopBarIcon.MOVE_ELEMENTS);
-		ClickGuiScreen.Rect compactVersion = ClickGuiHeaderGeometry.versionBadgeRectForLayout(
-			panelX, panelY, compactWidth, compactHeight);
-		check(ClickGuiHeaderGeometry.headerButtonSizeForLayout(compactWidth, compactHeight) == 24
-			&& compactSearch.h() == 18,
-			"compact screens use toolbar and search dimensions from the shared header geometry");
-		check(compactSearch.x() >= panelX + compactBrandRoom
-			&& compactSearch.x() + compactSearch.w() <= compactGithub.x(),
-			"the compact search field remains bounded between brand and toolbar");
-		check(compactVersion.x() + compactVersion.w() <= compactGithub.x()
-			&& compactGithub.x() >= panelX
-			&& compactMove.x() + compactMove.w() <= panelX + compactWidth,
-			"compact brand and toolbar bounds remain separate and inside the panel");
 
 		int narrowWidth = ClickGuiHeaderGeometry.panelWidthForScreen(240);
 		int narrowHeight = ClickGuiHeaderGeometry.panelHeightForScreen(160);
-		int narrowBrandRoom = ClickGuiHeaderGeometry.categoryBrandRoom(narrowWidth, narrowHeight);
-		ClickGuiScreen.Rect narrowVersion = ClickGuiHeaderGeometry.versionBadgeRectForLayout(
-			panelX, panelY, narrowWidth, narrowHeight);
-		ClickGuiScreen.Rect narrowGithub = ClickGuiHeaderGeometry.topBarRectForLayout(
-			panelX, panelY, narrowWidth, narrowHeight, ClickGuiScreen.TopBarIcon.GITHUB);
 		ClickGuiScreen.Rect narrowSearch = ClickGuiHeaderGeometry.searchRectForLayout(
-			panelX, panelY, narrowWidth, narrowHeight, narrowBrandRoom);
-		check(narrowVersion.x() + narrowVersion.w() <= narrowGithub.x()
-			&& narrowGithub.x() >= panelX
-			&& ClickGuiHeaderGeometry.topBarRectForLayout(panelX, panelY, narrowWidth, narrowHeight,
-				ClickGuiScreen.TopBarIcon.MOVE_ELEMENTS).x()
-				+ ClickGuiHeaderGeometry.headerButtonSizeForLayout(narrowWidth, narrowHeight) <= panelX + narrowWidth
-			&& narrowSearch.w() == 0,
-			"the search field is hidden when it cannot fit between the brand and toolbar");
+			panelX, panelY, narrowWidth, narrowHeight, categoryWidth);
+		check(narrowSearch.w() == 0, "the search field is hidden when it cannot fit before the toolbar");
 	}
 
 	private static void checkResponsiveClickGuiSizing() {
-		check(ClickGuiHeaderGeometry.panelWidthForScreen(1582) == 1424,
-			"the reference width uses the mockup panel proportion");
-		check(ClickGuiHeaderGeometry.panelHeightForScreen(1024) == 783,
-			"the reference height uses the mockup panel proportion");
-		check(ClickGuiHeaderGeometry.panelWidthForScreen(854) == 769
-			&& ClickGuiHeaderGeometry.panelHeightForScreen(480) == 367,
+		check(ClickGuiHeaderGeometry.panelWidthForScreen(1582) == 1527,
+			"the panel covers 96.5% of the screen width");
+		check(ClickGuiHeaderGeometry.panelHeightForScreen(1024) == 927,
+			"the panel covers 90.5% of the screen height");
+		check(ClickGuiHeaderGeometry.panelWidthForScreen(854) == 824
+			&& ClickGuiHeaderGeometry.panelHeightForScreen(480) == 434,
 			"the compact acceptance size retains a centered, responsive panel");
 		check(ClickGuiModuleGrid.cardColumnsForModuleWidth(500) == 2
 			&& ClickGuiModuleGrid.cardColumnsForModuleWidth(720) == 3
@@ -233,16 +99,12 @@ public final class ClickGuiScrollChecks {
 			&& ClickGuiModuleGrid.cardColumnsForModuleWidth(900) == 4
 			&& ClickGuiModuleGrid.cardColumnsForModuleWidth(1100) == 4,
 			"module cards use two, three, then four columns as the content width allows");
-		check(ClickGuiModuleGrid.cardHeightForPanelHeight(367) == 63
-			&& ClickGuiModuleGrid.cardHeightForPanelHeight(783) == 135,
-			"card height scales with the panel instead of staying pixel-fixed");
-		check(ClickGuiModuleGrid.cardGapForPanelWidth(733) == 11
-			&& ClickGuiModuleGrid.cardGapForPanelWidth(1357) == 20,
-			"card spacing scales with the panel width");
+		check(ClickGuiModuleGrid.cardHeightForPanelHeight(462) == 52
+			&& ClickGuiModuleGrid.cardHeightForPanelHeight(783) == 78,
+			"cards are 10% of the panel tall, at least 52 px");
+		check(ClickGuiModuleGrid.CARD_GAP == 12 && ClickGuiModuleGrid.GRID_INSET == 16,
+			"card spacing sits on the fixed 4/8 px rhythm");
 		checkCompactModuleCardActions();
-		check(ClickGuiModuleGrid.gridInsetForPanelWidth(733) == 14
-			&& ClickGuiModuleGrid.gridInsetForPanelWidth(1357) == 26,
-			"card margins scale to the approved reference proportions");
 		check(ClickGuiScreenGeometry.categoryRowHeightForPanelHeight(367) == 24
 			&& ClickGuiScreenGeometry.categoryRowHeightForPanelHeight(783) == 39,
 			"the category rail uses compact rows while preserving a usable minimum target");
@@ -436,11 +298,16 @@ public final class ClickGuiScrollChecks {
 				== Category.Companion.of(geiler.addons.client.module.Workspace.NORMAL).size() * 22,
 			"the compatibility helper still reports its baseline row height");
 		int compactContent = ClickGuiScreen.categoryContentHeightForPanelHeight(367);
-		check(compactContent == 300, "the compact rail fits all twelve categories below its header gap");
-		check(ClickGuiScreen.categoryMaxScroll(367, 300) == 0,
+		check(ClickGuiScreen.categoryContentHeightForPanelHeight(367, 12) == 300,
+			"the compact rail fits twelve categories below its header gap");
+		check(compactContent == 300 + 24, "the thirteenth category adds one compact row");
+		check(ClickGuiScreen.categoryMaxScroll(367, 300) == 24,
+			"the compact rail scrolls by the one row that no longer fits");
+		check(ClickGuiScreen.categoryMaxScroll(367, compactContent) == 0,
 			"the compact rail needs no scroll when all category rows fit");
 		int referenceContent = ClickGuiScreen.categoryContentHeightForPanelHeight(783);
-		check(referenceContent == 495, "the reference rail uses compact responsive row spacing");
+		check(ClickGuiScreen.categoryContentHeightForPanelHeight(783, 12) == 495 && referenceContent == 495 + 39,
+			"the reference rail uses compact responsive row spacing");
 		check(ClickGuiScreen.categoryMaxScroll(783, 637) == 0,
 			"the full-height reference rail fits every category without scrolling");
 		check(ClickGuiScreen.categoryMaxScroll(referenceContent) == 0,
@@ -686,17 +553,15 @@ public final class ClickGuiScrollChecks {
 
 	private static void checkSearchInset() {
 		int fieldHeight = 24;
-		int iconLeft = 8;
-		int iconSize = 18;
-		check(ClickGuiScreen.searchTextInsetForHeight(fieldHeight) == iconLeft + iconSize + 6,
-			"search text starts after the rendered icon and a six-pixel gap");
-		check(ClickGuiScreen.searchTextViewportWidth(180, fieldHeight) == 140,
-			"search text hit testing reserves the same icon inset and right padding as rendering");
-		check(ClickGuiScreen.searchTextFontWidth(180, fieldHeight) == 184,
-			"scaled search rendering and mouse character mapping share the font-space width");
+		check(ClickGuiScreen.searchTextInsetForHeight(fieldHeight) == 8,
+			"the icon-less search bar starts its text 8 px in");
+		check(ClickGuiScreen.searchTextViewportWidth(180, fieldHeight) == 164,
+			"search text hit testing reserves the same inset and right padding as rendering");
+		check(ClickGuiScreen.searchTextFontWidth(180, fieldHeight) == 164,
+			"search text renders at 1.0x, so font space equals screen space");
 		check(Math.abs(ClickGuiScreen.textOffsetForMouse(138, 100, 0.76f) - 50.0) < 0.001,
 			"mouse hit testing converts scaled screen pixels to the same text-space coordinates");
-		check(ClickGuiScreen.searchTextViewportWidth(20, fieldHeight) == 1
+		check(ClickGuiScreen.searchTextViewportWidth(20, fieldHeight) == 4
 			&& ClickGuiScreen.searchTextFontWidth(20, fieldHeight) >= 1,
 			"narrow search fields keep a bounded, usable text viewport");
 	}

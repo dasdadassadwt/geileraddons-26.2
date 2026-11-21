@@ -1,6 +1,6 @@
 package geiler.addons.client.dungeon
 
-import geiler.addons.client.dungeon.odin.DungeonSplitTracker
+import geiler.addons.client.dungeon.helpers.DungeonSplitTracker
 import java.util.Locale
 import kotlin.jvm.JvmStatic
 

@@ -107,7 +107,7 @@ object NeuRecipeStore {
         return recipes
     }
 
-    private class CappedInputStream(input: InputStream, private val limit: Long) : FilterInputStream(input) {
+    internal class CappedInputStream(input: InputStream, private val limit: Long) : FilterInputStream(input) {
         private var read = 0L
 
         override fun read(): Int {

@@ -57,8 +57,6 @@ class CropFeverTimerModule private constructor(settings: Settings) : Module(
         group(SettingGroup("Appearance", showBackground, textColor, backgroundColor, textScale))
     }
 
-    override fun isWorkInProgress(): Boolean = true
-
     override fun configName(): String = "Crop Fever Timer"
 
     override fun onEnable() {

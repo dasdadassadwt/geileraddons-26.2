@@ -191,7 +191,7 @@ class WitherDragonsModule private constructor(private val s: Settings) : Module(
             resetState()
             diagnostics.event("WORLD_CHANGED dragonsReset=true")
         }
-        val now = DungeonOdinAssistModule.INSTANCE.serverTicks()
+        val now = DungeonAssistModule.INSTANCE.serverTicks()
         if (lastServerTicks >= 0L && now < lastServerTicks) {
             diagnostics.event("TICK_CLOCK_RESTARTED was=$lastServerTicks now=$now tick=${tracker.currentTick}")
         }

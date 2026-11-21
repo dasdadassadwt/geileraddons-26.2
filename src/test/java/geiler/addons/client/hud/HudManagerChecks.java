@@ -41,6 +41,12 @@ public final class HudManagerChecks {
 			"a module without a toggle never hides its element");
 		require(HudManager.editorVisible(new FakeElement("offline_check_hud_none", 40, 20, null)),
 			"an element with no module is always shown");
+
+		// Right-click in Move Elements opens the owner's page even when the owner lists no settings (Discord mod-issues).
+		require(HudManager.settingsModule(new FakeElement("offline_check_hud_owner", 40, 20, fixed)) == fixed,
+			"a module with no settings still opens from right-click");
+		require(HudManager.settingsModule(new FakeElement("offline_check_hud_orphan", 40, 20, null)) == null,
+			"an element with no module has no page to open");
 	}
 
 	private static void require(boolean condition, String message) {

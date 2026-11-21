@@ -745,11 +745,11 @@ internal object DungeonMobEspSupport {
 }
 
 // Keep the module's existing Java-record-style calls source-compatible after these records move to Kotlin.
-internal fun DungeonDevonianMobTracker.Association.nameplateId() = nameplateId
-internal fun DungeonDevonianMobTracker.Association.bodyId() = bodyId
-internal fun DungeonDevonianMobTracker.Association.mobClass() = mobClass
-internal fun DungeonDevonianMobTracker.Association.starred() = starred
-internal fun DungeonDevonianMobTracker.Association.source() = source
+internal fun DungeonStarredMobTracker.Association.nameplateId() = nameplateId
+internal fun DungeonStarredMobTracker.Association.bodyId() = bodyId
+internal fun DungeonStarredMobTracker.Association.mobClass() = mobClass
+internal fun DungeonStarredMobTracker.Association.starred() = starred
+internal fun DungeonStarredMobTracker.Association.source() = source
 
 internal fun DungeonMobEspSupport.FelCandidate.entity() = entity
 internal fun DungeonMobEspSupport.FelCandidate.starred() = starred

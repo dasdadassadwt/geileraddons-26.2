@@ -1,7 +1,7 @@
 package geiler.addons.client.module.impl
 
-import geiler.addons.client.dungeon.odin.SpiritLeapLayout
-import geiler.addons.client.dungeon.odin.SpiritLeapRoster
+import geiler.addons.client.dungeon.helpers.SpiritLeapLayout
+import geiler.addons.client.dungeon.helpers.SpiritLeapRoster
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.multiplayer.ClientLevel

@@ -27,11 +27,11 @@ public final class ShadowAssassinAcceptanceChecks {
 	}
 
 	private static void checkUnstarredNameplateIdentityAndStarFilter() {
-		check(DungeonDevonianMobTracker.classifyNameplate("Shadow Assassin")
-			== DungeonDevonianMobTracker.MobClass.SHADOW_ASSASSIN
-			&& DungeonDevonianMobTracker.classifyNameplate("✯ Shadow Assassin")
-			== DungeonDevonianMobTracker.MobClass.SHADOW_ASSASSIN
-			&& DungeonDevonianMobTracker.classifyNameplate("Lost Adventurer") == null,
+		check(DungeonStarredMobTracker.classifyNameplate("Shadow Assassin")
+			== DungeonStarredMobTracker.MobClass.SHADOW_ASSASSIN
+			&& DungeonStarredMobTracker.classifyNameplate("✯ Shadow Assassin")
+			== DungeonStarredMobTracker.MobClass.SHADOW_ASSASSIN
+			&& DungeonStarredMobTracker.classifyNameplate("Lost Adventurer") == null,
 			"exact Shadow Assassin labels are identified independently from star evidence");
 		check(DungeonMobEspSupport.shouldAcceptMinibossProfile(false, false, false)
 			&& !DungeonMobEspSupport.shouldAcceptMinibossProfile(true, false, false)
@@ -40,17 +40,17 @@ public final class ShadowAssassinAcceptanceChecks {
 			"Only Starred filters ordinary minibosses but not the separate Shadow Assassin identity");
 
 		Object world = new Object();
-		DungeonDevonianMobTracker tracker = new DungeonDevonianMobTracker();
+		DungeonStarredMobTracker tracker = new DungeonStarredMobTracker();
 		tracker.onArmorStandSpawn(world, 501);
 		tracker.onNameplateMetadata(world, 501, "✯ Shadow Assassin");
 		var unstarred = tracker.resolveLoadedBodies(id -> id == 500).getFirst();
-		check(unstarred.mobClass() == DungeonDevonianMobTracker.MobClass.SHADOW_ASSASSIN
+		check(unstarred.mobClass() == DungeonStarredMobTracker.MobClass.SHADOW_ASSASSIN
 			&& !unstarred.starred() && unstarred.bodyId() == 500,
 			"an SA marker at glyph index zero resolves body ID -1 without claiming star evidence");
 
 		tracker.onNameplateMetadata(world, 501, "[Lv 100] ✯ Shadow Assassin 100,000❤");
 		var starred = tracker.resolveLoadedBodies(id -> id == 500).getFirst();
-		check(starred.mobClass() == DungeonDevonianMobTracker.MobClass.SHADOW_ASSASSIN
+		check(starred.mobClass() == DungeonStarredMobTracker.MobClass.SHADOW_ASSASSIN
 			&& starred.starred(),
 			"a later nameplate update upgrades star evidence without changing SA identity");
 	}

@@ -32,11 +32,17 @@ interface HudElement {
     /** Height of the editor sample; live elements can use their regular dimensions. */
     fun previewHeight(font: Font?): Int = height(font)
 
+    /** Whether Move Elements lists this element at all; a module with many optional panels hides the unused ones. */
+    fun editorListed(): Boolean = true
+
     /** Whether this element is active; Move Elements shows its name when it is inactive. */
     fun visible(): Boolean
 
     /** Preview source label for the bounded Move Elements diagnostic summary. */
     fun previewMode(): String = if (visible()) "live" else "label"
+
+    /** Draw before the vanilla hotbar and bars, so vanilla HUD pieces land on top of this element. */
+    fun rendersBehindVanillaHud(): Boolean = false
 
     /** Whether active content belongs on the live HUD; false is useful for editor-only previews. */
     fun renderOnHud(): Boolean = true

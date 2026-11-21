@@ -1,6 +1,6 @@
 package geiler.addons.client.module.impl
 
-import geiler.addons.client.dungeon.odin.SpiritLeapSelection
+import geiler.addons.client.dungeon.helpers.SpiritLeapSelection
 import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.inventory.ContainerInput
 import net.minecraft.world.inventory.Slot

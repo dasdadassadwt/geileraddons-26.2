@@ -30,6 +30,10 @@ import geiler.addons.client.module.impl.DungeonClassEspModule
 import geiler.addons.client.module.impl.DungeonEspSplitMigration
 import geiler.addons.client.module.impl.DungeonMobEspKeybindMigration
 import geiler.addons.client.module.impl.DungeonMobEspModule
+import geiler.addons.client.module.impl.NoFogMigration
+import geiler.addons.client.module.impl.NoRenderModule
+import geiler.addons.client.module.impl.ZoomKeybindMigration
+import geiler.addons.client.module.impl.ZoomModule
 import geiler.addons.client.module.impl.DungeonRoomOverlayModule
 import geiler.addons.client.module.impl.GardenPlotBordersModule
 import geiler.addons.client.module.impl.GeneralModule
@@ -131,6 +135,7 @@ object ModConfigCore {
             data.enabled, data.toggles, data.texts, data.numbers,
         )
         val migratedLegacyPresentation = ModConfigMigrations.migrateLegacyPlayerPresentation(data.enabled, data.toggles)
+        val migratedHideonwallEsp = ModConfigMigrations.migrateLegacyHideonwallEsp(data.enabled, data.toggles, data.colors)
         val migratedSecretSettings = ModConfigMigrations.migrateSecretSettingNames(
             data.toggles, data.colors, data.numbers, data.texts,
         )
@@ -204,6 +209,9 @@ object ModConfigCore {
             if (specialMobEspEnabled == true || oldGroupEnabled) DungeonMobEspModule.INSTANCE.setEnabled(true)
         }
         migrateDungeonEspSplit(data)
+        migrateNoFogIntoNoRender(data)
+        ZoomKeybindMigration.resolve(data.keybinds.containsKey(ZoomModule.INSTANCE.configName()), data.texts["Zoom.Zoom Key"])
+            ?.let { ZoomModule.INSTANCE.setKeybind(it) }
         val legacyFillOpacity = data.numbers["Garden Plot Borders.Fill Opacity"]
         if (legacyFillOpacity != null) {
             val alpha = Math.round(Math.max(0.0f, Math.min(100.0f, legacyFillOpacity)) * 2.55f)
@@ -261,7 +269,7 @@ object ModConfigCore {
         loadInventoryButtons(data)
         loadUiState(data)
         if (migratedChatWaypoints || legacyShowNames != null || migratedLegacyChatHud || migratedDungeonMapSettings || migratedLegacyTimer || migratedLegacyPresentation ||
-            migratedSecretSettings || migratedDungeonSettings || migratedBloodCampSettings || migratedDefaultTheme ||
+            migratedHideonwallEsp || migratedSecretSettings || migratedDungeonSettings || migratedBloodCampSettings || migratedDefaultTheme ||
             migratedDungeonSplitTiming || migratedDungeonMobEspKeybind || migratedRoomAlertSounds ||
             migratedDungeonRoomMapStyle || migratedDungeonHudPosition || migratedIconColor
         ) markDirty()
@@ -321,6 +329,15 @@ object ModConfigCore {
             DungeonEspSplitMigration.classEnabled(oldEnabled, toggles["Dungeon Mob ESP.Party Only Class Highlight"])
                 ?.let { classEsp.setEnabled(it) }
         }
+    }
+
+    /** No Fog was merged into No Render's Fog group; carry its saved toggles over once. */
+    private fun migrateNoFogIntoNoRender(data: ModConfig.Data) {
+        val module = NoRenderModule.INSTANCE
+        for ((name, value) in NoFogMigration.toggleValues(data.toggles, data.enabled)) {
+            module.booleanSettings().firstOrNull { it.name() == name }?.setValue(value)
+        }
+        if (NoFogMigration.enableNoRender(data.enabled)) module.setEnabled(true)
     }
 
     private fun migrateLegacyDungeonSplitTiming(data: ModConfig.Data): Boolean =
@@ -482,7 +499,7 @@ object ModConfigCore {
             module.booleanSettings().forEach { it.reset() }
             module.choiceSettings().forEach { it.reset() }
             module.textSettings().forEach { it.reset() }
-            module.setKeybind(ModuleKeybind.NONE)
+            module.setKeybind(module.defaultKeybind())
             module.setEnabled(module.defaultEnabled())
         }
         markDirty()
@@ -499,7 +516,7 @@ object ModConfigCore {
             module.booleanSettings().forEach { it.reset() }
             module.choiceSettings().forEach { it.reset() }
             module.textSettings().forEach { it.reset() }
-            module.setKeybind(ModuleKeybind.NONE)
+            module.setKeybind(module.defaultKeybind())
             module.setEnabled(module.defaultEnabled())
         }
         markDirty()
@@ -550,7 +567,8 @@ object ModConfigCore {
             // The Macros workspace keeps its modules in its own file.
             if (module.category().workspace != Workspace.NORMAL) continue
             data.enabled[module.configName()] = module.isEnabled()
-            if (module.showsKeybindControl() && module.keybind().isBound()) {
+            // A module with a default bind also saves unbound, or an unbound Zoom would come back as C.
+            if (module.showsKeybindControl() && (module.keybind().isBound() || module.defaultKeybind().isBound())) {
                 val savedKeybind = ModConfig.KeybindData()
                 savedKeybind.key = module.keybind().key().getName()
                 savedKeybind.modifiers = module.keybind().modifiers()

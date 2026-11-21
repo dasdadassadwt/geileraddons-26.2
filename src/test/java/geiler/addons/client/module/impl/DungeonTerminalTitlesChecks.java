@@ -1,6 +1,6 @@
 package geiler.addons.client.module.impl;
 
-import geiler.addons.client.dungeon.odin.DungeonTerminalBreakdown;
+import geiler.addons.client.dungeon.helpers.DungeonTerminalBreakdown;
 import geiler.addons.client.module.Category;
 import geiler.addons.client.module.Module;
 import geiler.addons.client.module.SettingGroup;

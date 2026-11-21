@@ -33,7 +33,7 @@ class CritterTrackerModule private constructor(private val settings: Settings) :
     "Tracks a Critter Safari run: dex progress, what is missing, Hunter trades, and shard value per run and per hour.",
     Category.HUNTING,
     settings.visibility, settings.progressPanel, settings.missingPanel, settings.tradePanel, settings.showHotspot,
-    settings.showCounts, settings.showNearby, settings.uniqueOnly, settings.shardValue, settings.priceMode,
+    settings.showCounts, settings.showNearby, settings.nearbyThroughWalls, settings.uniqueOnly, settings.shardValue, settings.priceMode,
     settings.textColor,
 ) {
     override fun isActive(): Boolean = isEnabled() && CritterSafari.inSafari()
@@ -44,6 +44,7 @@ class CritterTrackerModule private constructor(private val settings: Settings) :
     fun shardValueOn(): Boolean = settings.shardValue.value()
     fun countsOn(): Boolean = settings.showCounts.value()
     fun nearbyOn(): Boolean = settings.showNearby.value() && isEnabled()
+    fun nearbyThroughWalls(): Boolean = settings.nearbyThroughWalls.value()
 
     /** Flips the Progress Panel setting and returns its new value (the `/critters panel` quick toggle). */
     fun toggleProgressPanel(): Boolean {
@@ -160,7 +161,7 @@ class CritterTrackerModule private constructor(private val settings: Settings) :
         lastRunOpen = false
         diagnostics.enable(
             "visibility=${settings.visibility.value()} value=${settings.shardValue.value()} mode=${settings.priceMode.value()} " +
-                "uniqueOnly=${settings.uniqueOnly.value()} counts=${settings.showCounts.value()} nearby=${settings.showNearby.value()}",
+                "uniqueOnly=${settings.uniqueOnly.value()} counts=${settings.showCounts.value()} nearby=${settings.showNearby.value()} throughWalls=${settings.nearbyThroughWalls.value()}",
         )
     }
 
@@ -191,6 +192,7 @@ class CritterTrackerModule private constructor(private val settings: Settings) :
         val showHotspot = BooleanSetting("Show Hotspot", true)
         val showCounts = BooleanSetting("Show Wall And Mound Counts", true)
         val showNearby = BooleanSetting("Show Nearby Counts", false)
+        val nearbyThroughWalls = BooleanSetting("Count Through Walls", false)
         val uniqueOnly = BooleanSetting("Unique Catches Only", false)
         val shardValue = BooleanSetting("Track Shard Value", true)
         val priceMode = ChoiceSetting("Price Mode", "Instant Sell", "Instant Sell", "Sell Offer", "Both")

@@ -1,9 +1,9 @@
 package geiler.addons.client.module.impl
 
 import geiler.addons.client.gui.GuiTheme
+import geiler.addons.client.gui.InventorySurfaces
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
-import geiler.addons.client.module.ChoiceSetting
 import geiler.addons.client.module.Module
 import geiler.addons.client.module.NumberSetting
 import geiler.addons.client.module.Setting
@@ -50,8 +50,9 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
 ) {
     /** The item slots of one page (navigation row excluded) plus the search match for the last filter asked. */
     private class Page(val items: List<ItemStack>) {
-        private val names = items.map { if (it.isEmpty) "" else it.hoverName.string }
-        private val lore = items.map { stack -> lore(stack) }
+        // Built on the first search, not when the page is created: reading names and lore of every stored stack is slow.
+        private val names by lazy { items.map { if (it.isEmpty) "" else it.hoverName.string } }
+        private val lore by lazy { items.map { stack -> lore(stack) } }
         private var matchedFor: String? = null
         private var matched = BitSet()
 
@@ -91,6 +92,13 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
     private var scroll = 0.0
     private var closedAtMs = 0L
     private var loadedFor: UUID? = null
+    private var loadingFor: UUID? = null
+
+    /** What the worker read for [id]; picked up by [tick] on the client thread. */
+    private class LoadResult(val id: UUID, val loaded: StorageOverlayStore.Loaded?, val millis: Long)
+
+    @Volatile
+    private var loadResult: LoadResult? = null
     private var dirty = false
     private var saves = 0
     private var lastCommandMs = 0L
@@ -112,6 +120,8 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
 
     override fun onDisable() {
         save("disable")
+        loadingFor = null
+        loadResult = null
         current = null
         hidden = null
         loadedMenu = null
@@ -145,7 +155,7 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
             diagnostics.event("SKIP vanilla menu for backpack change title=${title.take(40)}")
             return
         }
-        ensureLoaded()
+        startLoad()
         if (System.currentTimeMillis() - closedAtMs > REOPEN_WINDOW_MS) {
             scroll = 0.0
             if (!s.rememberSearch.value()) search = ""
@@ -181,6 +191,8 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
     fun tick() {
         if (!isEnabled()) return
         diagnostics.advance()
+        startLoad()
+        applyLoad()
         val screen = current
         if (screen != null && ++screenTicks % CAPTURE_INTERVAL_TICKS == 0) capture(screen)
         // Saved shortly after the storage closes (not on every page switch), so a crash loses at most the last browse.
@@ -196,6 +208,8 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
         if (registries != null) save("disconnect", registries)
         pages.fill(null)
         loadedFor = null
+        loadingFor = null
+        loadResult = null
         dirty = false
         current = null
         hidden = null
@@ -210,17 +224,36 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
 
     private fun registries(): HolderLookup.Provider? = Minecraft.getInstance().player?.connection?.registryAccess()
 
-    /** Reads the saved cache of the signed-in player once; pages already captured this session are kept as fresher. */
-    private fun ensureLoaded() {
+    /**
+     * Starts reading the saved cache of the signed-in player, once, on a worker: the gzip read and the stack decode took about
+     * 600 ms on the client thread when the storage was first opened. Until [applyLoad] merges it, [save] writes nothing
+     * (`loadedFor` is unset), so an unfinished read can never overwrite the file with a partial cache.
+     */
+    private fun startLoad() {
         val player = Minecraft.getInstance().player ?: return
         val id = player.uuid
-        if (loadedFor == id) return
+        if (loadedFor == id || loadingFor == id) return
         if (loadedFor != null) pages.fill(null)
-        loadedFor = id
-        val started = System.nanoTime()
-        val loaded = StorageOverlayStore.load(id, player.connection.registryAccess())
+        loadedFor = null
+        loadingFor = id
+        val registries = player.connection.registryAccess()
+        LOADER.execute {
+            val started = System.nanoTime()
+            val loaded = StorageOverlayStore.load(id, registries)
+            loadResult = LoadResult(id, loaded, (System.nanoTime() - started) / 1_000_000)
+        }
+    }
+
+    /** Client thread: merges a finished read; pages already captured this session are kept as fresher. */
+    private fun applyLoad() {
+        val result = loadResult ?: return
+        loadResult = null
+        if (result.id != loadingFor) return
+        loadingFor = null
+        loadedFor = result.id
+        val loaded = result.loaded
         if (loaded == null) {
-            diagnostics.event("LOAD none (no saved cache)")
+            diagnostics.event("LOAD none (no saved cache) ms=${result.millis} thread=worker")
             return
         }
         var filled = 0
@@ -230,7 +263,7 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
                 filled++
             }
         }
-        diagnostics.event("LOAD pages=$filled dropped=${loaded.dropped} bytes=${loaded.bytes} ms=${(System.nanoTime() - started) / 1_000_000}")
+        diagnostics.event("LOAD pages=$filled dropped=${loaded.dropped} bytes=${loaded.bytes} ms=${result.millis} thread=worker")
     }
 
     private fun save(reason: String, registries: HolderLookup.Provider? = registries()) {
@@ -447,44 +480,13 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
         return true
     }
 
-    private fun labelColor(mc: Boolean) = if (mc) 0xFF404040.toInt() else GuiTheme.TEXT_PRIMARY
+    private fun labelColor(mc: Boolean) = InventorySurfaces.labelColor(mc)
 
-    private fun panelBackground(g: GuiGraphicsExtractor, r: Rect, mc: Boolean) {
-        if (mc) {
-            bevel(g, r, 0xFFC6C6C6.toInt(), 3)
-            g.outline(r.x - 1, r.y - 1, r.w + 2, r.h + 2, 0xFF000000.toInt())
-        } else {
-            GuiTheme.roundedRectBordered(g, r.x, r.y, r.w, r.h, GuiTheme.RADIUS, GuiTheme.PANEL_TOP, GuiTheme.PANEL_BOTTOM, GuiTheme.BORDER)
-            g.fill(r.x + GuiTheme.RADIUS, r.y + 1, r.x + r.w - GuiTheme.RADIUS, r.y + 2, GuiTheme.PANEL_HIGHLIGHT)
-        }
-    }
+    private fun panelBackground(g: GuiGraphicsExtractor, r: Rect, mc: Boolean) = InventorySurfaces.panel(g, r.x, r.y, r.w, r.h, mc)
 
-    private fun cardBackground(g: GuiGraphicsExtractor, r: Rect, open: Boolean, mc: Boolean) {
-        if (mc) {
-            bevel(g, r, 0xFFC6C6C6.toInt(), 2)
-            if (open) g.outline(r.x - 1, r.y - 1, r.w + 2, r.h + 2, 0xFFFFFF55.toInt())
-        } else {
-            GuiTheme.roundedRectBordered(g, r.x, r.y, r.w, r.h, GuiTheme.RADIUS_SMALL, GuiTheme.CARD_BG, GuiTheme.CARD_BG, GuiTheme.CARD_BORDER)
-            if (open) GuiTheme.roundedRectOutline(g, r.x - 1, r.y - 1, r.w + 2, r.h + 2, GuiTheme.RADIUS_SMALL + 1, GuiTheme.SLIDER_FILL)
-        }
-    }
+    private fun cardBackground(g: GuiGraphicsExtractor, r: Rect, open: Boolean, mc: Boolean) = InventorySurfaces.card(g, r.x, r.y, r.w, r.h, open, mc)
 
-    /** A raised vanilla-style surface: light top-left edge, dark bottom-right edge. */
-    private fun bevel(g: GuiGraphicsExtractor, r: Rect, face: Int, edge: Int) {
-        g.fill(r.x, r.y, r.x + r.w, r.y + r.h, 0xFF555555.toInt())
-        g.fill(r.x, r.y, r.x + r.w - edge, r.y + r.h - edge, 0xFFFFFFFF.toInt())
-        g.fill(r.x + edge, r.y + edge, r.x + r.w - edge, r.y + r.h - edge, face)
-    }
-
-    private fun slotBackground(g: GuiGraphicsExtractor, x: Int, y: Int, mc: Boolean) {
-        if (mc) {
-            g.fill(x - 1, y - 1, x + 17, y + 17, 0xFF373737.toInt())
-            g.fill(x, y, x + 17, y + 17, 0xFFFFFFFF.toInt())
-            g.fill(x, y, x + 16, y + 16, 0xFF8B8B8B.toInt())
-        } else {
-            g.fill(x - 1, y - 1, x + 17, y + 17, GuiTheme.CARD_BG)
-        }
-    }
+    private fun slotBackground(g: GuiGraphicsExtractor, x: Int, y: Int, mc: Boolean) = InventorySurfaces.slot(g, x, y, mc)
 
     private fun searchBox(g: GuiGraphicsExtractor, font: Font, r: Rect, mc: Boolean) {
         val caret = searchFocused && (System.currentTimeMillis() / 500L) % 2L == 0L
@@ -510,19 +512,8 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
         }
     }
 
-    private fun button(g: GuiGraphicsExtractor, font: Font, r: Rect, label: String, hover: Boolean, mc: Boolean) {
-        val textY = r.y + (r.h - font.lineHeight) / 2 + 1
-        if (mc) {
-            g.fill(r.x, r.y, r.x + r.w, r.y + r.h, 0xFF000000.toInt())
-            g.fill(r.x + 1, r.y + 1, r.x + r.w - 1, r.y + r.h - 1, if (hover) 0xFF7A86C8.toInt() else 0xFF6F6F6F.toInt())
-            g.fill(r.x + 1, r.y + 1, r.x + r.w - 1, r.y + 2, 0xFFA8A8A8.toInt())
-            g.fill(r.x + 1, r.y + r.h - 2, r.x + r.w - 1, r.y + r.h - 1, 0xFF3A3A3A.toInt())
-            g.text(font, label, r.x + (r.w - font.width(label)) / 2, textY, 0xFFFFFFFF.toInt(), true)
-        } else {
-            GuiTheme.roundedRect(g, r.x, r.y, r.w, r.h, GuiTheme.RADIUS_SMALL, if (hover) GuiTheme.BUTTON_HOVER else GuiTheme.BUTTON_BG)
-            g.text(font, label, r.x + (r.w - font.width(label)) / 2, textY, if (hover) GuiTheme.TEXT_ON_ACCENT else GuiTheme.TEXT_PRIMARY, false)
-        }
-    }
+    private fun button(g: GuiGraphicsExtractor, font: Font, r: Rect, label: String, hover: Boolean, mc: Boolean) =
+        InventorySurfaces.button(g, font, r.x, r.y, r.w, r.h, label, hover, mc)
 
     private fun emptyState(g: GuiGraphicsExtractor, font: Font, view: Rect, searching: Boolean, mc: Boolean) {
         val text = if (searching) "No page holds an item matching that search." else "No pages cached yet. Open a page once and it shows here."
@@ -556,7 +547,8 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
         val x = event.x()
         val y = event.y()
         searchFocused = lay.search.contains(x, y)
-        if (!lay.panel.contains(x, y) && !lay.inv.contains(x, y)) return false
+        // Outside both panels vanilla would treat the click as "outside the window" and throw a carried stack.
+        if (!lay.panel.contains(x, y) && !lay.inv.contains(x, y)) return true
         if (event.button() != 0 && event.button() != 1) return true
         if (searchFocused) return true
         if (event.button() == 0 && lay.home.contains(x, y)) {
@@ -612,7 +604,12 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
     }
 
     fun handleKey(screen: AbstractContainerScreen<*>, event: KeyEvent): Boolean {
-        if (!ownsScreen(screen) || !searchFocused) return false
+        if (!ownsScreen(screen)) return false
+        if (!searchFocused) {
+            // The vanilla hovered slot sits under the hidden slot grid; drop, swap and hotbar keys would hit it.
+            val options = Minecraft.getInstance().options
+            return options.keyDrop.matches(event) || options.keySwapOffhand.matches(event) || options.keyHotbarSlots.any { it.matches(event) }
+        }
         when (event.key()) {
             GLFW.GLFW_KEY_ESCAPE, GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> searchFocused = false
             GLFW.GLFW_KEY_BACKSPACE -> if (search.isNotEmpty()) {
@@ -641,18 +638,14 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
     }
 
     class Settings {
-        val style = ChoiceSetting(
-            "Style", STYLE_CLICK_GUI,
-            mapOf(STYLE_CLICK_GUI to "Click GUI", STYLE_MINECRAFT to "Minecraft"),
-            STYLE_CLICK_GUI, STYLE_MINECRAFT,
-        )
+        val style = InventorySurfaces.styleSetting()
         val pagesPerRow = NumberSetting("Pages Per Row", 1f, 6f, 3f, true)
         val rememberSearch = BooleanSetting("Remember Search", false)
     }
 
     companion object {
-        const val STYLE_CLICK_GUI = "CLICK_GUI"
-        const val STYLE_MINECRAFT = "MINECRAFT"
+        const val STYLE_CLICK_GUI = InventorySurfaces.STYLE_CLICK_GUI
+        const val STYLE_MINECRAFT = InventorySurfaces.STYLE_MINECRAFT
         private const val PAD = 8
         private const val GAP = 4
         private const val SECTION_GAP = 6
@@ -665,6 +658,9 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
         private const val COMMAND_GUARD_MS = 350L
         private const val REOPEN_WINDOW_MS = 1_500L
         private const val SAVE_DELAY_MS = 2_000L
+        private val LOADER = java.util.concurrent.Executors.newSingleThreadExecutor { task ->
+            Thread(task, "geileraddons-storage-load").also { it.isDaemon = true; it.priority = Thread.NORM_PRIORITY - 1 }
+        }
         private val SCREEN_SHADE = 0x70000000
         private val NOT_MATCHED = 0x99000000.toInt()
 

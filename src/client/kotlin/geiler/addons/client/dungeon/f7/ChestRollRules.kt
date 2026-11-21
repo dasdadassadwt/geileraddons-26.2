@@ -15,8 +15,11 @@ object ChestRollRules {
 
     enum class Phase { SPIN, SETTLE, REVEAL, DONE }
 
-    /** One card of the strip. [rarity] is 0 (common) to 5 (mythic); [icon] is a registry id used when there is no real stack. */
-    class Card(val name: String, val rarity: Int, val weight: Double, val icon: String)
+    /**
+     * One card of the strip. [rarity] is 0 (common) to 5 (mythic); [icon] is a registry id used when there is no real stack;
+     * [id] is the NEU internal name of the real item (empty for enchanted books, which are plain vanilla books in SkyBlock too).
+     */
+    class Card @JvmOverloads constructor(val name: String, val rarity: Int, val weight: Double, val icon: String, val id: String = "")
 
     private val TIER_TITLE = Regex("""^(Wood|Gold|Diamond|Emerald|Obsidian|Bedrock)(?: Chest)?$""")
     private val FLOOR_TITLE = Regex("""^(Master )?Catacombs - (?:Floor ([IVX]+|\d+)|Entrance)$""")
@@ -37,6 +40,21 @@ object ChestRollRules {
         val floor = if (number.isEmpty()) 0 else number.toIntOrNull() ?: roman(number)
         return (if (match.groupValues[1].isNotEmpty()) "M" else "F") + floor
     }
+
+    private val FLOOR_LABEL = Regex("""^[FM][1-7]$""")
+
+    /** The loot-pool key for a dungeon floor label ("F7", "M3", "Entrance"); null for anything else. */
+    @JvmStatic
+    fun floorKeyOf(label: String?): String? = when {
+        label == null -> null
+        label == "Entrance" -> "F0"
+        FLOOR_LABEL.matches(label) -> label
+        else -> null
+    }
+
+    /** The floor of the run you are in wins over the floor remembered from the last Croesus preview, which can be stale. */
+    @JvmStatic
+    fun pickFloor(dungeonFloor: String?, croesusFloor: String?): String? = dungeonFloor ?: croesusFloor
 
     private fun roman(text: String): Int {
         val values = mapOf('I' to 1, 'V' to 5, 'X' to 10)
@@ -109,10 +127,25 @@ object ChestRollRules {
         return if (best >= 0) best else bestEssence
     }
 
+    /** Reveal length from the slider's seconds, kept between 0.5 and 4 s. */
+    @JvmStatic
+    fun revealMs(seconds: Float): Long = (seconds * 1000f).toLong().coerceIn(500L, 4000L)
+
+    /** Progress of the item's grow-and-spin during the first [SPIN_END] of the reveal, eased out. */
+    @JvmStatic
+    fun revealSpin(fraction: Double): Double = easeOut(fraction / SPIN_END)
+
+    /** Fade-in of the name, rarity and description; it starts at [TEXT_START] of the reveal and is full at its end. */
+    @JvmStatic
+    fun revealText(fraction: Double): Double = easeOut((fraction - TEXT_START) / (1.0 - TEXT_START))
+
     /** Timing of one roll in milliseconds: the spin, a short settle on the winner, then the reveal. */
-    class Timeline(private val spinMs: Long, private val settleMs: Long = SETTLE_MS, private val revealMs: Long = REVEAL_MS) {
+    class Timeline @JvmOverloads constructor(private val spinMs: Long, private val settleMs: Long = SETTLE_MS, private val revealMs: Long = REVEAL_MS) {
         val revealStart = spinMs + settleMs
         private val end = revealStart + revealMs
+
+        /** 0 at the start of the reveal to 1 at its end; an empty reveal is already complete. */
+        fun revealFraction(t: Long): Double = if (revealMs <= 0) 1.0 else ((t - revealStart).toDouble() / revealMs).coerceIn(0.0, 1.0)
 
         fun phase(t: Long): Phase = when {
             t < spinMs -> Phase.SPIN
@@ -131,6 +164,62 @@ object ChestRollRules {
         fun spinProgress(t: Long): Double = easeOut(if (spinMs <= 0) 1.0 else t.toDouble() / spinMs)
     }
 
+    /**
+     * Decides when a chest screen starts a roll: the same content must be seen on two consecutive ticks (so every slot packet
+     * has arrived) and differ from the last handled content, so the first open and each reroll roll once. Null is empty content.
+     */
+    class ContentWatch {
+        private var handled: String? = null
+        private var candidate: String? = null
+
+        fun update(signature: String?): Boolean {
+            if (signature == null) {
+                reset()
+                return false
+            }
+            if (signature == handled) return false
+            if (signature != candidate) {
+                candidate = signature
+                return false
+            }
+            handled = signature
+            candidate = null
+            return true
+        }
+
+        fun reset() {
+            handled = null
+            candidate = null
+        }
+    }
+
+    /**
+     * Chests that already rolled, by tier and content, for a limited time. Reopening one (also from Croesus) must not roll
+     * again; a reroll has new content and still rolls. Oldest entries go first past [maxEntries].
+     */
+    class RolledChests(private val maxEntries: Int, private val ttlMs: Long) {
+        private val marks = LinkedHashMap<String, Long>()
+
+        fun size(): Int = marks.size
+
+        fun contains(key: String, now: Long): Boolean {
+            val at = marks[key] ?: return false
+            if (now - at > ttlMs) {
+                marks.remove(key)
+                return false
+            }
+            return true
+        }
+
+        fun mark(key: String, now: Long) {
+            marks.remove(key)
+            marks[key] = now
+            while (marks.size > maxEntries) marks.remove(marks.keys.first())
+        }
+
+        fun clear() = marks.clear()
+    }
+
     /** Loot pools by floor key ("F7", "M7"), then tier label ("Bedrock"). Rejects a non-positive weight. */
     @JvmStatic
     fun parseLoot(json: String): Map<String, Map<String, List<Card>>> {
@@ -142,13 +231,19 @@ object ChestRollRules {
                     val o = it.asJsonObject
                     val weight = o.get("w").asDouble
                     require(weight > 0) { "non-positive weight in $floor/$tier: ${o.get("name")}" }
-                    Card(o.get("name").asString, rarityIndex(o.get("r").asString), weight, o.get("icon").asString)
+                    Card(o.get("name").asString, rarityIndex(o.get("r").asString), weight, o.get("icon").asString, o.get("id")?.asString.orEmpty())
                 }
             }
         }
     }
 
     private const val EDGE_MARGIN = 4.0
-    const val SETTLE_MS = 700L
-    const val REVEAL_MS = 3500L
+    const val SETTLE_MS = 300L
+    const val REVEAL_MS = 1600L
+
+    /** Fraction of the reveal at which the item has finished growing and spinning; the reveal sound plays then. */
+    const val SPIN_END = 0.55
+
+    /** Fraction of the reveal at which the text starts to fade in, so it overlaps the end of the spin. */
+    const val TEXT_START = 0.4
 }

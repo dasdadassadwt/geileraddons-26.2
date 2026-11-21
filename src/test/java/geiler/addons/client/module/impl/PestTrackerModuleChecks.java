@@ -109,8 +109,7 @@ public final class PestTrackerModuleChecks {
 				&& "pest_tracker".equals(module.id())
 				&& module.category() == Category.FARMING
 				&& !module.defaultEnabled()
-				&& !module.isEnabled()
-				&& module.isWorkInProgress(),
+				&& !module.isEnabled(),
 			"module identity, default state, category, and work-in-progress status remain stable");
 
 		check(PestTrackerModule.INSTANCE == module && module.stats() != null
@@ -283,11 +282,11 @@ public final class PestTrackerModuleChecks {
 	private static void checkSettingsAndGroups() {
 		PestTrackerModule module = PestTrackerModule.INSTANCE;
 		check(names(module.booleanSettings()).equals(List.of(
-				"Show Totals", "Background", "Filter HUD by Held Tool", "Farming Tools", "Pest Vacuum",
+				"Show Totals", "Background", "Show Spray Timer", "Filter HUD by Held Tool", "Farming Tools", "Pest Vacuum",
 				"Pest Lasso", "Exclude AFK Gaps", "Use Custom Cooldown", "Finnegan Perk", "Pest Spawn Alert",
 				"Cooldown Warning Alert", "Cooldown Ready Alert", "Chat Alert", "Title Alert", "Sound Alert"))
 				&& module.booleanSettings().stream().map(BooleanSetting::rawValue).toList().equals(List.of(
-					false, true, true, true, true, false, true, false, false, false, false, false, true, false, false)),
+					false, true, true, true, true, true, false, true, false, false, false, false, false, true, false, false)),
 			"boolean setting IDs, order, and fresh-install defaults remain stable");
 
 		List<NumberSetting> numbers = module.numberSettings();
@@ -310,7 +309,7 @@ public final class PestTrackerModuleChecks {
 					"Use Custom Cooldown", "Custom Cooldown (s)", "Cooldown Warning Lead (s)",
 					"Finnegan Perk", "Exclude AFK Gaps", "AFK Gap Limit (s)"))
 				&& names(groups.get(2).settings()).equals(List.of(
-					"Filter HUD by Held Tool", "Farming Tools", "Pest Vacuum", "Pest Lasso", "Background"))
+					"Filter HUD by Held Tool", "Farming Tools", "Pest Vacuum", "Pest Lasso", "Background", "Show Spray Timer"))
 				&& names(groups.get(3).settings()).equals(List.of(
 					"Pest Spawn Alert", "Cooldown Warning Alert", "Cooldown Ready Alert",
 					"Chat Alert", "Title Alert", "Sound Alert"))

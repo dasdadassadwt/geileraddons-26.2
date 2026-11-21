@@ -51,9 +51,14 @@ object HudManager {
     /** Move Elements hides elements of disabled modules; modules without a toggle are always listed. */
     @JvmStatic
     fun editorVisible(element: HudElement): Boolean {
+        if (!element.editorListed()) return false
         val module = element.module() ?: return true
         return !module.showsToggleControl() || module.isEnabled()
     }
+
+    /** The page right-click opens in Move Elements. Every owner has one, whether or not it lists settings (the page still holds its toggle and keybind). */
+    @JvmStatic
+    fun settingsModule(element: HudElement): Module? = element.module()
 
     @JvmStatic
     fun category(element: HudElement): Category? = categories[element.id()]
@@ -162,7 +167,13 @@ object HudManager {
 
     /** Draws visible live-HUD elements; skipped while Move Elements has its own previews up. */
     @JvmStatic
-    fun render(graphics: GuiGraphicsExtractor) {
+    fun render(graphics: GuiGraphicsExtractor) = render(graphics, false)
+
+    /** The pass before the vanilla hotbar, for elements that sit behind the vanilla HUD. */
+    @JvmStatic
+    fun renderBehindVanilla(graphics: GuiGraphicsExtractor) = render(graphics, true)
+
+    private fun render(graphics: GuiGraphicsExtractor, behind: Boolean) {
         val mc = Minecraft.getInstance()
         if (mc.gui.hud.isHidden() || mc.gui.screen() is MoveUiScreen) return
         VisualModule.INSTANCE.refreshTheme()
@@ -176,6 +187,7 @@ object HudManager {
         val island = HypixelModApi.currentIsland()
         val now = System.nanoTime()
         for (element in elements) {
+            if (element.rendersBehindVanillaHud() != behind) continue
             val showing = element.renderOnHud() && element.visible()
             val idle = idleClock.idle(element.id(), showing, element.activitySignature(), now)
             if (!showing || idle || !HudExpiry.onIsland(element.hudIslands(), island)) continue

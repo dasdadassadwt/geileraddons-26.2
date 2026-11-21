@@ -1,8 +1,8 @@
 package geiler.addons.client.dungeon;
 
-import geiler.addons.client.dungeon.odin.OdinDungeonMapGrid;
-import geiler.addons.client.dungeon.odin.OdinDungeonPlayerMap;
-import geiler.addons.client.dungeon.odin.OdinDungeonPlayerRoster;
+import geiler.addons.client.dungeon.helpers.DungeonMapGrid;
+import geiler.addons.client.dungeon.helpers.DungeonPlayerMap;
+import geiler.addons.client.dungeon.helpers.DungeonPlayerRoster;
 
 import java.util.List;
 
@@ -44,9 +44,9 @@ public final class DungeonRoomPlayerProjectionChecks {
 			"one block of Z movement stays one block of map movement across the connector gap");
 		close(0.0, zAfter.x() - zBefore.x(), "Z movement does not alter the projected X coordinate");
 
-		var beforeCell = OdinDungeonPlayerMap.projectLoadedPosition("Local", true, "Mage",
+		var beforeCell = DungeonPlayerMap.projectLoadedPosition("Local", true, "Mage",
 			-168.01, -184.0, 0.0f);
-		var afterCell = OdinDungeonPlayerMap.projectLoadedPosition("Local", true, "Mage",
+		var afterCell = DungeonPlayerMap.projectLoadedPosition("Local", true, "Mage",
 			-167.99, -184.0, 0.0f);
 		require(beforeCell != null && afterCell != null && beforeCell.x() != afterCell.x(),
 			"the room-cell index can change without changing the continuous map position");
@@ -60,7 +60,7 @@ public final class DungeonRoomPlayerProjectionChecks {
 		DungeonRoomPlayerMarkerGeometry.MapPosition connector =
 			DungeonRoomPlayerMarkerGeometry.projectContinuousWorldPosition(-169.0, -169.0);
 		require(connector != null, "the inter-room connector block does not drop the player marker");
-		var connectorMarker = OdinDungeonPlayerMap.projectLoadedPosition("Local", true, "Mage",
+		var connectorMarker = DungeonPlayerMap.projectLoadedPosition("Local", true, "Mage",
 			-169.0, -169.0, 0.0f);
 		require(connectorMarker != null && connectorMarker.x() == 0 && connectorMarker.z() == 0
 			&& connectorMarker.offsetX() > 0.9 && connectorMarker.offsetZ() > 0.9,
@@ -93,18 +93,18 @@ public final class DungeonRoomPlayerProjectionChecks {
 	}
 
 	private static void pairsOrderedMapDecorationsOnlyWithACompleteRoster() {
-		var layout = new OdinDungeonMapGrid.Layout(true, 16, 20, 22, 22, null);
+		var layout = new DungeonMapGrid.Layout(true, 16, 20, 22, 22, null);
 		var frame = new DungeonMapRoomDetector.SavedMapDecoration(0, 0, 0, true);
 		var firstIcon = new DungeonMapRoomDetector.SavedMapDecoration(-34, 16, 4, false);
 		var secondIcon = new DungeonMapRoomDetector.SavedMapDecoration(80, 52, 8, false);
 		var roster = List.of(
-			new OdinDungeonPlayerMap.TabPlayer("Alice", "Mage", false),
-			new OdinDungeonPlayerMap.TabPlayer("Downed", "", true),
-			new OdinDungeonPlayerMap.TabPlayer("Bob", "Tank", false));
+			new DungeonPlayerMap.TabPlayer("Alice", "Mage", false),
+			new DungeonPlayerMap.TabPlayer("Downed", "", true),
+			new DungeonPlayerMap.TabPlayer("Bob", "Tank", false));
 		var local = new DungeonRoomOverlayGeometry.PlayerMarker(5, 5, "Local", true,
 			0.5, 0.5, "Healer", 25.0f);
 
-		var projection = OdinDungeonPlayerMap.projectWithDiagnostics(layout, roster,
+		var projection = DungeonPlayerMap.projectWithDiagnostics(layout, roster,
 			List.of(frame, firstIcon, secondIcon), List.of(local), "Local");
 		var markers = projection.players();
 		require(markers.size() == 3, "ordered map decorations show unloaded teammates and the local entity marker");
@@ -127,17 +127,17 @@ public final class DungeonRoomPlayerProjectionChecks {
 	}
 
 	private static void usesNamedLoadedPositionsWhenMapPairingIsUnavailable() {
-		var layout = new OdinDungeonMapGrid.Layout(true, 16, 20, 22, 22, null);
+		var layout = new DungeonMapGrid.Layout(true, 16, 20, 22, 22, null);
 		var roster = List.of(
-			new OdinDungeonPlayerMap.TabPlayer("Alice", "Mage", false),
-			new OdinDungeonPlayerMap.TabPlayer("Bob", "Archer", false));
+			new DungeonPlayerMap.TabPlayer("Alice", "Mage", false),
+			new DungeonPlayerMap.TabPlayer("Bob", "Archer", false));
 		var alice = new DungeonRoomOverlayGeometry.PlayerMarker(1, 2, "Alice", false,
 			0.25, 0.75, "Mage", 15.0f);
 		var local = new DungeonRoomOverlayGeometry.PlayerMarker(5, 5, "Local", true,
 			0.5, 0.5, "Healer", 25.0f);
 		var mismatchedIcon = new DungeonMapRoomDetector.SavedMapDecoration(80, 52, 8, false);
 
-		var projection = OdinDungeonPlayerMap.projectWithDiagnostics(layout, roster,
+		var projection = DungeonPlayerMap.projectWithDiagnostics(layout, roster,
 			List.of(mismatchedIcon), List.of(alice, local), "Local");
 		require(projection.players().size() == 2, "mismatched icon counts do not shift roster identities");
 		var mappedAlice = projection.players().getFirst();
@@ -152,9 +152,9 @@ public final class DungeonRoomPlayerProjectionChecks {
 
 	private static void usesCurrentTabOrderAndCachedDeadClass() {
 		var cached = List.of(
-			new OdinDungeonPlayerMap.TabPlayer("Alice", "Mage", false),
-			new OdinDungeonPlayerMap.TabPlayer("Bob", "Tank", false));
-		var current = OdinDungeonPlayerRoster.currentDungeonRows(List.of(
+			new DungeonPlayerMap.TabPlayer("Alice", "Mage", false),
+			new DungeonPlayerMap.TabPlayer("Bob", "Tank", false));
+		var current = DungeonPlayerRoster.currentDungeonRows(List.of(
 			"[1] [MVP+] Bob (DEAD)",
 			"[2] Alice (Archer L)",
 			"[3] Spectator (MVP++)"), cached);

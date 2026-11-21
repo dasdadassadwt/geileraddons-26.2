@@ -43,7 +43,7 @@ public final class PlayerNamesModuleChecks {
 		check("Player Names".equals(module.name()) && "Player Names".equals(module.configName())
 			&& "Applies hosted name profiles and local alias and style settings for your own name."
 				.equals(module.description())
-			&& module.category() == Category.VISUAL && !module.defaultEnabled() && module.isWorkInProgress(),
+			&& module.category() == Category.VISUAL && !module.defaultEnabled(),
 			"module identity, category, default state, and work-in-progress status remain stable");
 
 		check(names(module.booleanSettings()).equals(List.of(
@@ -99,7 +99,6 @@ public final class PlayerNamesModuleChecks {
 		check(module instanceof ModulePreview, "module keeps the Java-visible preview interface");
 		checkPublicMethod("configName");
 		checkPublicMethod("isSettingVisible", Setting.class);
-		checkPublicMethod("isWorkInProgress");
 		checkPublicMethod("tick");
 		checkPublicMethod("replaceRenderedName", String.class, Component.class);
 		checkPublicMethod("replaceKnownRenderedName", Component.class);
@@ -362,8 +361,8 @@ public final class PlayerNamesModuleChecks {
 			ownAlias.setValue("");
 
 			module.setEnabled(false);
-			check(module.replaceRenderedName(targetName, source) == source,
-				"disabled Player Names returns the original rendered component");
+			check("FriendlyTarget".equals(module.replaceRenderedName(targetName, source).getString()),
+				"disabled Player Names still applies another player's hosted alias");
 			module.setEnabled(true);
 			Component aliased = module.replaceRenderedName(targetName, source);
 			check("FriendlyTarget".equals(aliased.getString()) && hasColor(aliased, 0x123456),

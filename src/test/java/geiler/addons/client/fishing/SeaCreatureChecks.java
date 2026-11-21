@@ -18,7 +18,25 @@ public final class SeaCreatureChecks {
 		checkAlertText();
 		checkOwnClassification();
 		checkSeenSet();
+		checkCap();
 		System.out.println("Sea creature checks passed");
+	}
+
+	private static void checkCap() {
+		require(SeaCreatureCapRules.isLabel("[Lv600] Lord Jawbus 100M❤") && SeaCreatureCapRules.isLabel("[Lv5] Squid 200❤")
+				&& !SeaCreatureCapRules.isLabel("Lord Jawbus") && !SeaCreatureCapRules.isLabel("Squid [Lv5]") && !SeaCreatureCapRules.isLabel(""),
+			"a mob name tag starts with its level");
+		SeaCreatureCapRules.Tracker tracker = new SeaCreatureCapRules.Tracker();
+		require(tracker.add(1) && tracker.add(2) && !tracker.add(1) && tracker.count() == 2, "an entity is counted once");
+		require(tracker.retain(java.util.Set.of(2, 9)) == 1 && tracker.count() == 1, "an entity that is gone stops counting");
+		tracker.clear();
+		require(tracker.count() == 0, "clear empties the tracker");
+		for (int id = 0; id < SeaCreatureCapRules.MAX_TRACKED + 10; id++) tracker.add(id);
+		require(tracker.count() == SeaCreatureCapRules.MAX_TRACKED, "the tracker is bounded");
+		require("Sea Creatures: 3/5".equals(SeaCreatureCapRules.text(3, 5)) && "Sea Creatures: 3".equals(SeaCreatureCapRules.text(3, 0)),
+			"the label shows alive over the cap, or only alive when no cap is set");
+		require(SeaCreatureCapRules.atCap(5, 5) && SeaCreatureCapRules.atCap(6, 5) && !SeaCreatureCapRules.atCap(4, 5) && !SeaCreatureCapRules.atCap(9, 0),
+			"at the cap means alive reached a positive cap");
 	}
 
 	private static void checkCatalog() {

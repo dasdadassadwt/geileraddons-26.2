@@ -7,6 +7,7 @@ public final class TitleAlertStackChecks {
 	public static void run() {
 		TitleAlertStack stack = TitleAlertStack.INSTANCE;
 		stack.submit("room.clear", " ", 40, 0xFFFFFFFF);
+		stack.submitCountdown("invincibility.phoenix", " ", "4.0s", 4, 0xFFFFFFFF);
 		stack.clearSource("room.clear");
 		stack.clear();
 	}

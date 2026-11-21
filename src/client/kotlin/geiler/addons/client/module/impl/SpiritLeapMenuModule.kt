@@ -2,7 +2,7 @@ package geiler.addons.client.module.impl
 
 import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.dungeon.DungeonClass
-import geiler.addons.client.dungeon.odin.SpiritLeapIncomingPresentation
+import geiler.addons.client.dungeon.helpers.SpiritLeapIncomingPresentation
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.ChoiceSetting
@@ -69,7 +69,7 @@ class SpiritLeapMenuModule private constructor(private val settings: Settings) :
         SpiritLeapResourceReloadListener.setDiagnosticsEnabled(false)
         GeilerAddonsLog.setModuleDiagnosticsEnabled(Category.F7, name(), false)
         SpiritLeapPovRenderer.INSTANCE.close()
-        DungeonOdinAssistModule.INSTANCE.clearLeapRoster()
+        DungeonAssistModule.INSTANCE.clearLeapRoster()
         lastStatusTick = Long.MIN_VALUE
         lastStatus = null
         eventBudget.reset()

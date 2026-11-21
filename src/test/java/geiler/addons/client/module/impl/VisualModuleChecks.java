@@ -22,23 +22,24 @@ public final class VisualModuleChecks {
 	};
 	private static final String[] GROUP_NAMES = {"Colours", "Presets", "Click GUI", "Surfaces"};
 	private static final String[] PRESET_NAMES = {
-		"Tracker", "Amethyst", "Midnight", "Forest", "Aurora", "Ember", "Orchid", "Ice Glass", "Rose Glass"
+		"Onyx", "Tracker", "Amethyst", "Midnight", "Forest", "Aurora", "Ember", "Orchid", "Ice Glass", "Rose Glass"
 	};
 	private static final VisualModule.Preset[] PRESETS = {
-		VisualModule.Preset.TRACKER, VisualModule.Preset.AMETHYST, VisualModule.Preset.MIDNIGHT,
+		VisualModule.Preset.ONYX, VisualModule.Preset.TRACKER, VisualModule.Preset.AMETHYST, VisualModule.Preset.MIDNIGHT,
 		VisualModule.Preset.FOREST, VisualModule.Preset.AURORA, VisualModule.Preset.EMBER,
 		VisualModule.Preset.ORCHID, VisualModule.Preset.ICE_GLASS, VisualModule.Preset.ROSE_GLASS
 	};
 	private static final int[][] PRESET_COLORS = {
-		{0xA2071925, 0xFF3A8198, 0xFF27CDE5, 0xFFF3FBFF, 0xFFF3FBFF, 0xFF9DB9C6},
-		{0x9E1A1430, 0xFF826BAC, 0xFF9B78F3, 0xFFF8F2FF, 0xFFF8F2FF, 0xFFB1A3C8},
-		{0xB40B1220, 0x33A8C7FF, 0xFF3B82F6, 0xFFEAF2FF, 0xFFEAF2FF, 0xFF7E8FA8},
-		{0xA011211A, 0xFF5B9B76, 0xFF51C987, 0xFFF0FFF4, 0xFFF0FFF4, 0xFFA0C4AA},
-		{0x971A2635, 0xFF56A99B, 0xFF48DCC2, 0xFFF0FFFC, 0xFFF0FFFC, 0xFF9EC8C0},
-		{0x9D251718, 0xFFC77F66, 0xFFFF795F, 0xFFFFF5F0, 0xFFFFF5F0, 0xFFD2AAA0},
-		{0x9E1C1830, 0xFF967AC2, 0xFFE08EEB, 0xFFFFF4FF, 0xFFFFF4FF, 0xFFC4AACA},
-		{0x82142735, 0xFF71A7B6, 0xFF63DDF1, 0xFFF4FCFF, 0xFFF4FCFF, 0xFFB2D3DE},
-		{0x9D161B2B, 0xFFB6819B, 0xFFFF8EB7, 0xFFFFF5FA, 0xFFFFF5FA, 0xFFD2ADB9}
+		{0xF8080808, 0x00A8C7FF, 0xFF3B82F6, 0xFFEAF2FF, 0xFFEAF2FF, 0xFF7E8FA8},
+		{0xF0071925, 0x263A8198, 0xFF27CDE5, 0xFFF3FBFF, 0xFFF3FBFF, 0xFF9DB9C6},
+		{0xF01A1430, 0x26826BAC, 0xFF9B78F3, 0xFFF8F2FF, 0xFFF8F2FF, 0xFFB1A3C8},
+		{0xF00B1220, 0x26A8C7FF, 0xFF3B82F6, 0xFFEAF2FF, 0xFFEAF2FF, 0xFF7E8FA8},
+		{0xF011211A, 0x265B9B76, 0xFF51C987, 0xFFF0FFF4, 0xFFF0FFF4, 0xFFA0C4AA},
+		{0xF01A2635, 0x2656A99B, 0xFF48DCC2, 0xFFF0FFFC, 0xFFF0FFFC, 0xFF9EC8C0},
+		{0xF0251718, 0x26C77F66, 0xFFFF795F, 0xFFFFF5F0, 0xFFFFF5F0, 0xFFD2AAA0},
+		{0xF01C1830, 0x26967AC2, 0xFFE08EEB, 0xFFFFF4FF, 0xFFFFF4FF, 0xFFC4AACA},
+		{0xD0142735, 0x2671A7B6, 0xFF63DDF1, 0xFFF4FCFF, 0xFFF4FCFF, 0xFFB2D3DE},
+		{0xD0161B2B, 0x26B6819B, 0xFFFF8EB7, 0xFFFFF5FA, 0xFFFFF5FA, 0xFFD2ADB9}
 	};
 
 	private VisualModuleChecks() { }
@@ -86,8 +87,8 @@ public final class VisualModuleChecks {
 
 		check(names(theme.colorSettings()).equals(Arrays.asList(COLOR_IDS)),
 			"Theme color setting IDs and declaration order stay stable");
-		checkColor(theme, "Background", 0x810B1220);
-		checkColor(theme, "Border", 0xFF191D24);
+		checkColor(theme, "Background", 0xF8080808);
+		checkColor(theme, "Border", 0x00A8C7FF);
 		checkColor(theme, "Accent", 0xFF3B82F6);
 		checkColor(theme, "Text", 0xFFEAF2FF);
 		checkColor(theme, "Muted Text", 0xFF7E8FA8);
@@ -111,8 +112,8 @@ public final class VisualModuleChecks {
 		check(names(groups.get(0).settings()).equals(Arrays.asList(COLOR_IDS)),
 			"the Colours group retains the same rows and order");
 		check(names(groups.get(1).settings()).equals(Arrays.asList(PRESET_NAMES)),
-			"the Presets group retains all nine actions in order");
-		check(names(groups.get(2).settings()).equals(List.of("Style", "Motion"))
+			"the Presets group lists Onyx first, then the nine older presets");
+		check(names(groups.get(2).settings()).equals(List.of("Style", "Motion", "Lock GUI Scale"))
 			&& names(groups.get(3).settings()).equals(List.of("Theme Macro + Inventory Colors")),
 			"Click GUI and Surfaces retain their setting rows");
 		check(names(theme.actions()).equals(Arrays.asList(PRESET_NAMES)),

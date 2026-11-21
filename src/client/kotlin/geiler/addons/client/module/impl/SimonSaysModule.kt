@@ -118,21 +118,47 @@ class SimonSaysModule private constructor() : Module(
         }
         if (SimonSaysState.inLights(x, y, z)) {
             if (new.`is`(Blocks.SEA_LANTERN) && old?.`is`(Blocks.OBSIDIAN) == true) {
-                val before = state.remaining().size
                 state.lanternLit(x, y, z)
-                if (state.remaining().size != before) diagnostics.event("LANTERN y=$y z=$z sequence=${state.remaining().size}")
+                diagnostics.event("LANTERN_LIT y=$y z=$z sequence=${state.remaining().size}")
+            } else if (new.`is`(Blocks.OBSIDIAN) && old?.`is`(Blocks.SEA_LANTERN) == true) {
+                // Odin's order: the list is built as the lanterns turn off, which is what its first-phase rules assume.
+                val before = state.remaining().size
+                state.lanternOff(x, y, z)
+                diagnostics.event("LANTERN_OFF y=$y z=$z sequence=${state.remaining().size} added=${state.remaining().size != before} first=${state.firstPhase}")
             }
             return
         }
         if (SimonSaysState.inButtons(x, y, z)) {
             val eastIsLantern = level.getBlockState(pos.east()).`is`(Blocks.SEA_LANTERN)
             if (old?.isAir == true && new.isAir && eastIsLantern) {
-                state.skipHead()
-                diagnostics.event("SKIP sequence=${state.remaining().size}")
-            } else if (old?.`is`(Blocks.STONE_BUTTON) == true && new.isAir) {
+                // A skip: that one button is done. A double or triple skip sends one update per button, and repeats are harmless.
+                val before = state.remaining().size
                 state.removeButton(x, y, z)
+                diagnostics.event("SKIP y=$y z=$z sequence=${state.remaining().size} removed=${before - state.remaining().size}")
+            } else if (new.isAir) {
+                if (airButtonCount(level) > GRID_RESET_AIR) {
+                    if (state.remaining().isNotEmpty()) diagnostics.event("GRID_CLEARED dropped=${state.remaining().size}")
+                    state.clearSequence()
+                } else if (old?.`is`(Blocks.STONE_BUTTON) == true) {
+                    state.removeButton(x, y, z)
+                }
+            } else if (new.`is`(Blocks.STONE_BUTTON) && new.getValue(BlockStateProperties.POWERED) && old?.`is`(Blocks.STONE_BUTTON) == true) {
+                val before = state.remaining().size
+                state.buttonConfirmed(x, y, z)
+                if (state.remaining().size != before) diagnostics.event("CONFIRM y=$y z=$z left=${state.remaining().size}")
             }
         }
+    }
+
+    /** Button-grid positions that are air right now; more than eight means the device cleared the grid for a new round. */
+    private fun airButtonCount(level: net.minecraft.world.level.Level): Int {
+        var count = 0
+        val pos = BlockPos.MutableBlockPos()
+        for (y in 120..123) for (z in 92..95) {
+            pos.set(110, y, z)
+            if (level.getBlockState(pos).isAir) count++
+        }
+        return count
     }
 
     /** A right click on a block; returns true when it must be cancelled. */
@@ -148,24 +174,26 @@ class SimonSaysModule private constructor() : Module(
             return false
         }
         if (!SimonSaysState.inButtons(pos.x, pos.y, pos.z)) return false
+        val kind = state.peek(pos.x, pos.y, pos.z)
+        if (kind == SimonSaysState.WRONG || kind == SimonSaysState.AHEAD) {
+            val sneaking = Minecraft.getInstance().player?.isShiftKeyDown == true
+            // A click ahead is not the next button, so it is blocked like a wrong one; sneaking is how a skip is done.
+            if (blockWrong.value() && !(sneaking xor invertKey.value())) {
+                blocked++
+                diagnostics.event("BLOCKED kind=${if (kind == SimonSaysState.AHEAD) "ahead" else "wrong"} blocked=$blocked")
+                return true
+            }
+        }
         when (state.buttonClicked(pos.x, pos.y, pos.z)) {
-            SimonSaysState.CORRECT -> {
+            SimonSaysState.CORRECT, SimonSaysState.AHEAD -> {
                 clicksThisRound++
-                diagnostics.event("CLICK correct left=${state.remaining().size} round=$clicksThisRound")
+                diagnostics.event("CLICK ${if (kind == SimonSaysState.AHEAD) "ahead" else "correct"} left=${state.remaining().size} round=$clicksThisRound")
                 if (state.remaining().isEmpty()) {
                     if (announceProgress.value()) Minecraft.getInstance().player?.connection?.sendCommand("pc SS $clicksThisRound/4")
                     clicksThisRound = 0
                 }
             }
-            SimonSaysState.WRONG -> {
-                val sneaking = Minecraft.getInstance().player?.isShiftKeyDown == true
-                if (blockWrong.value() && !(sneaking xor invertKey.value())) {
-                    blocked++
-                    diagnostics.event("BLOCKED blocked=$blocked")
-                    return true
-                }
-                diagnostics.event("CLICK wrong")
-            }
+            SimonSaysState.WRONG -> diagnostics.event("CLICK wrong")
         }
         return false
     }
@@ -212,6 +240,7 @@ class SimonSaysModule private constructor() : Module(
 
     companion object {
         private const val NEAR_SQUARED = 225.0
+        private const val GRID_RESET_AIR = 8
         private const val START_X = 110
         private const val START_Y = 121
         private const val START_Z = 91

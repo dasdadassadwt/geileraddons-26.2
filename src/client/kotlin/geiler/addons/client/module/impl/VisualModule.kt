@@ -28,9 +28,9 @@ class VisualModule private constructor(settings: Settings) : Module(
     "Colours for the menu and every HUD panel. Pick a preset or build your own.",
     Category.VISUAL,
     settings.background, settings.border, settings.accent, settings.text, settings.muted,
-    settings.iconColor, settings.tracker, settings.amethyst, settings.midnight, settings.forest,
+    settings.iconColor, settings.onyx, settings.tracker, settings.amethyst, settings.midnight, settings.forest,
     settings.aurora, settings.ember, settings.orchid, settings.iceGlass, settings.roseGlass,
-    settings.guiStyle, settings.clickGuiMotion, settings.themeSurfaces,
+    settings.guiStyle, settings.clickGuiMotion, settings.lockGuiScale, settings.themeSurfaces,
 ) {
     private val background = settings.background
     private val border = settings.border
@@ -40,6 +40,7 @@ class VisualModule private constructor(settings: Settings) : Module(
     private val iconColor = settings.iconColor
     private val clickGuiMotion = settings.clickGuiMotion
     private val guiStyle = settings.guiStyle
+    private val lockGuiScale = settings.lockGuiScale
     private val themeSurfaces = settings.themeSurfaces
 
     private var lastBackground = 0
@@ -60,10 +61,10 @@ class VisualModule private constructor(settings: Settings) : Module(
         group(
             SettingGroup("Colours", settings.background, settings.border, settings.accent,
                 settings.text, settings.muted, settings.iconColor),
-            SettingGroup("Presets", settings.tracker, settings.amethyst, settings.midnight,
+            SettingGroup("Presets", settings.onyx, settings.tracker, settings.amethyst, settings.midnight,
                 settings.forest, settings.aurora, settings.ember, settings.orchid,
                 settings.iceGlass, settings.roseGlass),
-            SettingGroup("Click GUI", settings.guiStyle, settings.clickGuiMotion),
+            SettingGroup("Click GUI", settings.guiStyle, settings.clickGuiMotion, settings.lockGuiScale),
             SettingGroup("Surfaces", settings.themeSurfaces),
         )
 
@@ -77,15 +78,18 @@ class VisualModule private constructor(settings: Settings) : Module(
 
     /** Just a carrier so the constructor can both build the settings and keep references to them. */
     private class Settings {
-        val background = ColorSetting("Background", 11, 18, 32, 129)
-        val border = ColorSetting("Border", 25, 29, 36, 255)
+        // Defaults are the Onyx preset.
+        val background = ColorSetting("Background", 8, 8, 8, 248)
+        val border = ColorSetting("Border", 168, 199, 255, 0)
         val accent = ColorSetting("Accent", 59, 130, 246, 255)
         val text = ColorSetting("Text", 234, 242, 255, 255)
         val muted = ColorSetting("Muted Text", 126, 143, 168, 255)
         val iconColor = ColorSetting("Icon color", 234, 242, 255)
-        /** Modern is the sidebar-and-cards menu; Classic is one column of modules per category. */
+        /** Modern is the flat sidebar-and-cards menu; Classic is one column of modules per category. */
         val guiStyle = ChoiceSetting("Style", "Modern", "Modern", "Classic")
         val clickGuiMotion = ChoiceSetting("Motion", "Expressive", "None", "Reduced", "Expressive")
+        /** Draws the Modern menu as it looks at GUI scale 2 whatever the Minecraft GUI scale is. */
+        val lockGuiScale = BooleanSetting("Lock GUI Scale", true)
 
         /**
          * Renamed from "Theme Macro Colors", which did not describe what it does.
@@ -97,6 +101,7 @@ class VisualModule private constructor(settings: Settings) : Module(
          */
         val themeSurfaces = BooleanSetting("Theme Macro + Inventory Colors", true)
 
+        val onyx = ModuleAction("Onyx", Runnable { VisualModule.preset(Preset.ONYX) })
         val tracker = ModuleAction("Tracker", Runnable { VisualModule.preset(Preset.TRACKER) })
         val amethyst = ModuleAction("Amethyst", Runnable { VisualModule.preset(Preset.AMETHYST) })
         val midnight = ModuleAction("Midnight", Runnable { VisualModule.preset(Preset.MIDNIGHT) })
@@ -108,7 +113,10 @@ class VisualModule private constructor(settings: Settings) : Module(
         val roseGlass = ModuleAction("Rose Glass", Runnable { VisualModule.preset(Preset.ROSE_GLASS) })
     }
 
-    /** Preset background alpha is reduced to 75% of its former value; other channels stay unchanged. */
+    /**
+     * Presets for the flat menu: near-solid backgrounds (glass presets stay see-through) and faint lines, so the
+     * panel reads as one surface. Onyx, the default, hides the lines entirely.
+     */
     @JvmRecord
     data class Preset(
         val background: Int,
@@ -120,32 +128,38 @@ class VisualModule private constructor(settings: Settings) : Module(
     ) {
         companion object {
             @JvmField
-            val TRACKER = Preset(0xA2071925.toInt(), 0xFF3A8198.toInt(), 0xFF27CDE5.toInt(),
-                0xFFF3FBFF.toInt(), 0xFFF3FBFF.toInt(), 0xFF9DB9C6.toInt())
-            @JvmField
-            val AMETHYST = Preset(0x9E1A1430.toInt(), 0xFF826BAC.toInt(), 0xFF9B78F3.toInt(),
-                0xFFF8F2FF.toInt(), 0xFFF8F2FF.toInt(), 0xFFB1A3C8.toInt())
-            @JvmField
-            val MIDNIGHT = Preset(0xB40B1220.toInt(), 0x33A8C7FF.toInt(), 0xFF3B82F6.toInt(),
+            val ONYX = Preset(0xF8080808.toInt(), 0x00A8C7FF, 0xFF3B82F6.toInt(),
                 0xFFEAF2FF.toInt(), 0xFFEAF2FF.toInt(), 0xFF7E8FA8.toInt())
             @JvmField
-            val FOREST = Preset(0xA011211A.toInt(), 0xFF5B9B76.toInt(), 0xFF51C987.toInt(),
+            val TRACKER = Preset(0xF0071925.toInt(), 0x263A8198, 0xFF27CDE5.toInt(),
+                0xFFF3FBFF.toInt(), 0xFFF3FBFF.toInt(), 0xFF9DB9C6.toInt())
+            @JvmField
+            val AMETHYST = Preset(0xF01A1430.toInt(), 0x26826BAC, 0xFF9B78F3.toInt(),
+                0xFFF8F2FF.toInt(), 0xFFF8F2FF.toInt(), 0xFFB1A3C8.toInt())
+            @JvmField
+            val MIDNIGHT = Preset(0xF00B1220.toInt(), 0x26A8C7FF, 0xFF3B82F6.toInt(),
+                0xFFEAF2FF.toInt(), 0xFFEAF2FF.toInt(), 0xFF7E8FA8.toInt())
+            @JvmField
+            val FOREST = Preset(0xF011211A.toInt(), 0x265B9B76, 0xFF51C987.toInt(),
                 0xFFF0FFF4.toInt(), 0xFFF0FFF4.toInt(), 0xFFA0C4AA.toInt())
             @JvmField
-            val AURORA = Preset(0x971A2635.toInt(), 0xFF56A99B.toInt(), 0xFF48DCC2.toInt(),
+            val AURORA = Preset(0xF01A2635.toInt(), 0x2656A99B, 0xFF48DCC2.toInt(),
                 0xFFF0FFFC.toInt(), 0xFFF0FFFC.toInt(), 0xFF9EC8C0.toInt())
             @JvmField
-            val EMBER = Preset(0x9D251718.toInt(), 0xFFC77F66.toInt(), 0xFFFF795F.toInt(),
+            val EMBER = Preset(0xF0251718.toInt(), 0x26C77F66, 0xFFFF795F.toInt(),
                 0xFFFFF5F0.toInt(), 0xFFFFF5F0.toInt(), 0xFFD2AAA0.toInt())
             @JvmField
-            val ORCHID = Preset(0x9E1C1830.toInt(), 0xFF967AC2.toInt(), 0xFFE08EEB.toInt(),
+            val ORCHID = Preset(0xF01C1830.toInt(), 0x26967AC2, 0xFFE08EEB.toInt(),
                 0xFFFFF4FF.toInt(), 0xFFFFF4FF.toInt(), 0xFFC4AACA.toInt())
             @JvmField
-            val ICE_GLASS = Preset(0x82142735.toInt(), 0xFF71A7B6.toInt(), 0xFF63DDF1.toInt(),
+            val ICE_GLASS = Preset(0xD0142735.toInt(), 0x2671A7B6, 0xFF63DDF1.toInt(),
                 0xFFF4FCFF.toInt(), 0xFFF4FCFF.toInt(), 0xFFB2D3DE.toInt())
             @JvmField
-            val ROSE_GLASS = Preset(0x9D161B2B.toInt(), 0xFFB6819B.toInt(), 0xFFFF8EB7.toInt(),
+            val ROSE_GLASS = Preset(0xD0161B2B.toInt(), 0x26B6819B, 0xFFFF8EB7.toInt(),
                 0xFFFFF5FA.toInt(), 0xFFFFF5FA.toInt(), 0xFFD2ADB9.toInt())
+            /** Every built-in preset, in menu order. */
+            @JvmField
+            val ALL = listOf(ONYX, TRACKER, AMETHYST, MIDNIGHT, FOREST, AURORA, EMBER, ORCHID, ICE_GLASS, ROSE_GLASS)
         }
     }
 
@@ -279,6 +293,9 @@ class VisualModule private constructor(settings: Settings) : Module(
     fun clickGuiMotion(): ChoiceSetting = clickGuiMotion
 
     fun clickGuiStyleSetting(): ChoiceSetting = guiStyle
+
+    /** Whether the Modern menu keeps its GUI-scale-2 look at every Minecraft GUI scale. */
+    fun lockGuiScale(): BooleanSetting = lockGuiScale
 
     /** The menu layout: [ClickGuiStyle]. */
     fun clickGuiStyle(): ClickGuiStyle = ClickGuiStyle.fromSetting(guiStyle.value())

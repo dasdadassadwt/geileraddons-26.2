@@ -16,8 +16,8 @@ import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTexture
 import com.mojang.blaze3d.textures.GpuTextureView
 import com.mojang.serialization.JsonOps
-import geiler.addons.client.dungeon.odin.SpiritLeapLayout
-import geiler.addons.client.dungeon.odin.SpiritLeapRoster
+import geiler.addons.client.dungeon.helpers.SpiritLeapLayout
+import geiler.addons.client.dungeon.helpers.SpiritLeapRoster
 import geiler.addons.client.gui.access.GuiGraphicsExtractorScissorAccess
 import geiler.addons.client.mixin.FabricRenderingContextSupport
 import geiler.addons.client.mixin.GameRenderStateSpiritLeapAccessor
@@ -1656,7 +1656,7 @@ object SpiritLeapPovRenderer {
         val client = Minecraft.getInstance()
         val screen = client.gui.screen()
         val cards = if (screen is net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<*>) {
-            DungeonOdinAssistModule.INSTANCE.leapCards(screen)
+            DungeonAssistModule.INSTANCE.leapCards(screen)
         } else emptyList()
         SpiritLeapCameraHud.INSTANCE.draw(graphics, screenWidth, screenHeight, cards)
     }
@@ -1736,7 +1736,7 @@ object SpiritLeapPovRenderer {
         val screen = client.gui.screen()
         val cards: List<SpiritLeapRoster.Card> = if (active && client.level != null && client.player != null &&
             screen is net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<*>
-        ) DungeonOdinAssistModule.INSTANCE.leapCards(screen) else emptyList()
+        ) DungeonAssistModule.INSTANCE.leapCards(screen) else emptyList()
         if (active && client.level != null) refreshLoadedPlayerLookup(client.level!!) else clearLoadedPlayerLookup()
         if ((feedTargetCleanupPending || rendererCleanupPending) && shouldAttemptDeferredTargetCleanup(true, true)) {
             tryDeferredFeedTargetCleanup()
@@ -2455,7 +2455,7 @@ object SpiritLeapPovRenderer {
         if (!SpiritLeapMenuModule.INSTANCE.isEnabled() || !SpiritLeapMenuModule.povsEnabled() ||
             client.gui.screen() !is net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<*>) return false
         val screen = client.gui.screen() as net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<*>
-        val validatedSurface = DungeonOdinAssistModule.INSTANCE.shouldRenderSpiritLeapScreen(screen)
+        val validatedSurface = DungeonAssistModule.INSTANCE.shouldRenderSpiritLeapScreen(screen)
         if (validatedSurface) SpiritLeapSurfaceOwner.acquireAfterValidatedRender(screen)
         return validatedSurface || SpiritLeapSurfaceOwner.owns(screen)
     }

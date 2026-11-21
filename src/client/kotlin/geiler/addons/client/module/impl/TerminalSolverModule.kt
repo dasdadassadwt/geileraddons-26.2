@@ -231,7 +231,7 @@ class TerminalSolverModule private constructor(private val s: Settings) : Module
             if (current != null) clickSlot(slot, button, "auto", slot, at)
         }
         val handler = current
-        val now = DungeonOdinAssistModule.INSTANCE.serverTicks()
+        val now = DungeonAssistModule.INSTANCE.serverTicks()
         val delta = if (lastServerTicks < 0L || now < lastServerTicks) 0L else minOf(now - lastServerTicks, 40L)
         lastServerTicks = now
         if (handler != null) {

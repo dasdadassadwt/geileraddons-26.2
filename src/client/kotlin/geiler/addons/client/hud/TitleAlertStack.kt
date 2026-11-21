@@ -37,6 +37,18 @@ object TitleAlertStack {
         client.gui.hud.setSubtitle(subtitle)
     }
 
+    /**
+     * A title with a live countdown subtitle. Vanilla only draws a subtitle under a live title, so both are set
+     * together; callers re-submit every tick, which restarts the stay and wins back the line from other alerts.
+     */
+    fun submitCountdown(source: String?, title: String?, subtitle: String?, stayTicks: Int, colorArgb: Int) {
+        if (title.isNullOrBlank()) return
+        val hud = Minecraft.getInstance().gui.hud
+        hud.setTimes(0, stayTicks.coerceIn(1, 1200), 0)
+        hud.setTitle(Component.literal(title).withStyle { it.withColor(TextColor.fromRgb(colorArgb and 0x00FFFFFF)) })
+        hud.setSubtitle(Component.literal(subtitle.orEmpty()).withStyle { it.withColor(TextColor.fromRgb(colorArgb and 0x00FFFFFF)) })
+    }
+
     /** Clear requests are intentionally ignored because clearing could erase another module's alert. */
     @Suppress("UNUSED_PARAMETER")
     fun clearSource(source: String?) { }

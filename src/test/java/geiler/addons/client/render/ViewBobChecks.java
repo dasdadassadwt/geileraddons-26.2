@@ -22,6 +22,8 @@ public final class ViewBobChecks {
 		ViewBob.apply(side, 0.5f, 1.0f);
 		check(near(side[0], 0.5) && near(side[1], 0.0), "half a step along, the view has swung sideways and is back at height");
 
+		check(ViewBob.FRESH_NANOS >= 200_000_000L, "a capture survives a few slow frames so labels do not drop the bob for one frame");
+
 		double[] stale = {1.0, 1.0, -1.0};
 		ViewBob.apply(stale);
 		check(stale[0] == 1.0 && stale[1] == 1.0 && stale[2] == -1.0, "with no recent capture the transform is skipped");

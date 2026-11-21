@@ -24,7 +24,7 @@ class RelicTimerModule private constructor() : Module(
     private var lastLevel: Any? = null
     private val diagnostics = ModuleDiagnostics(Category.F7, { name() }, 8, 100L, 300)
 
-    private fun now(): Long = DungeonOdinAssistModule.INSTANCE.serverTicks()
+    private fun now(): Long = DungeonAssistModule.INSTANCE.serverTicks()
 
     override fun onEnable() {
         logic.reset()

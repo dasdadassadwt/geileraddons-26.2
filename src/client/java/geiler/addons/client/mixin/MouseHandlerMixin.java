@@ -81,6 +81,12 @@ public abstract class MouseHandlerMixin {
 		if (ModuleKeybindManager.handleMouseButtonEvent(Minecraft.getInstance(), action, button)) ci.cancel();
 	}
 
+	/** Zoom: scrolling while the zoom key is held changes the zoom instead of the hotbar slot. */
+	@Inject(method = "onScroll", at = @At("HEAD"), cancellable = true)
+	private void geileraddons$zoomScroll(long window, double xOffset, double yOffset, CallbackInfo ci) {
+		if (geiler.addons.client.module.impl.ZoomModule.INSTANCE.onScroll(yOffset)) ci.cancel();
+	}
+
 	@Redirect(method = "turnPlayer", at = @At(value = "INVOKE",
 		target = "Lnet/minecraft/client/player/LocalPlayer;turn(DD)V"))
 	private void geileraddons$holdFreeLook(LocalPlayer player, double yawDelta, double pitchDelta) {
