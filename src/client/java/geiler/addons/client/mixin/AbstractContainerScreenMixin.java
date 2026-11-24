@@ -124,6 +124,10 @@ public abstract class AbstractContainerScreenMixin {
 	private void geileraddons$clickExperimentSurface(MouseButtonEvent event, boolean doubleClick,
 		CallbackInfoReturnable<Boolean> cir) {
 		AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) (Object) this;
+		if (geiler.addons.client.rename.RenamePaintbrush.handleClick(screen, event)) {
+			cir.setReturnValue(true);
+			return;
+		}
 		if (geiler.addons.client.module.impl.ChestRollModule.INSTANCE.handleMouseClick(screen)) {
 			cir.setReturnValue(true);
 			return;

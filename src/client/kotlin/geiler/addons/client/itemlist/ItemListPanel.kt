@@ -3,10 +3,12 @@ package geiler.addons.client.itemlist
 import geiler.addons.client.access.AbstractContainerScreenAccess
 import geiler.addons.client.gui.GuiTheme
 import geiler.addons.client.gui.InventorySurfaces
+import geiler.addons.client.inventory.SkyblockRarity
 import geiler.addons.client.module.impl.PriceDisplayModule
 import geiler.addons.client.pricing.NeuRecipes
 import geiler.addons.client.pricing.PriceSnapshot
 import net.minecraft.client.Minecraft
+import net.minecraft.core.component.DataComponents
 import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
@@ -34,7 +36,13 @@ class ItemListPanel(private val host: Host) {
         /** Most rows the item grid may have; 0 fills the screen height. */
         fun rows(): Int
         fun event(text: String)
-        fun saveFavorites(favorites: List<String>, open: Boolean)
+        fun saveFavorites(favorites: List<String>, open: Boolean, sort: String)
+
+        /** Whether to color the slot behind each item by rarity. */
+        fun rarityBackgrounds(): Boolean
+
+        /** One rarity square (or disc, per the Item Rarity Backgrounds style) for an item drawn at [x], [y]. */
+        fun drawRarity(g: GuiGraphicsExtractor, rarity: SkyblockRarity, x: Int, y: Int)
     }
 
     private class Hit(val x: Int, val y: Int, val w: Int, val h: Int, val id: String?, val tip: Component?, val click: (Int) -> Unit)
@@ -44,12 +52,16 @@ class ItemListPanel(private val host: Host) {
     val favorites = ArrayList<String>()
     var open = true
 
+    /** One of `ItemListData.SORT_*`; saved with the favorites. */
+    var sort = ItemListData.SORT_BEST
+
     private var query = ""
     private var focused = false
     private var page = 0
     private var category = ItemListData.CAT_ALL
     private var results: List<Entry> = emptyList()
     private var resultsKey = ""
+    private var resultsBase = ""
     private var calc: Double? = null
     private var ghost = ""
     private var popup: Popup? = null
@@ -68,6 +80,12 @@ class ItemListPanel(private val host: Host) {
     private var calculatorFor: Any? = null
     private var calculatorMode = false
 
+    /** Double-click on the search bar: the query also searches the slots of the open screen (yellow bar). */
+    private var slotSearch = false
+    private var lastSearchClick = 0L
+    private var slotMatches = 0
+    private var slotTotal = 0
+
     var searches = 0L
         private set
     var searchNanosTotal = 0L
@@ -84,6 +102,8 @@ class ItemListPanel(private val host: Host) {
         private set
     var tooltips = 0L
         private set
+    private var drawNanosTotal = 0L
+    private var drawNanosMax = 0L
     val stackFailures: Int get() = ItemListRepository.compiled?.stacks?.failures ?: 0
     val stackFailureSample: List<String> get() = ItemListRepository.compiled?.stacks?.failedSample ?: emptyList()
     val stacksBuilt: Int get() = ItemListRepository.compiled?.stacks?.size ?: 0
@@ -99,19 +119,47 @@ class ItemListPanel(private val host: Host) {
     }
 
     private fun refresh(compiled: ItemListRepository.Compiled) {
-        val key = "$category\u0000$query\u0000${System.identityHashCode(compiled)}"
+        val snapshot = PriceDisplayModule.INSTANCE.prices()
+        val priceSort = sort == ItemListData.SORT_PRICE_ASC || sort == ItemListData.SORT_PRICE_DESC
+        // Prices load late and refresh now and then: a price sort re-sorts then, but keeps the page.
+        val base = "$category\u0000$query\u0000$sort\u0000${System.identityHashCode(compiled)}"
+        val key = if (priceSort) "$base\u0000${System.identityHashCode(snapshot)}${host.buyInstantly()}" else base
         if (key == resultsKey) return
         resultsKey = key
-        val snapshot = PriceDisplayModule.INSTANCE.prices()
         val started = System.nanoTime()
         calc = SearchCalculator.evaluate(query) { fn, arg -> priceOf(compiled, snapshot, fn, arg) }
-        results = compiled.search.search(if (calc != null) "" else query, category)
+        val found = compiled.search.search(if (calc != null) "" else query, category)
+        results = if (sort == ItemListData.SORT_BEST) found else ItemSearch.sort(found, sort) { id -> ItemPrices.unit(id, snapshot, host.buyInstantly()) }
         ghost = if (calc != null) "" else compiled.search.suggest(query)
         val elapsed = System.nanoTime() - started
         searches++
         searchNanosTotal += elapsed
         if (elapsed > searchNanosMax) searchNanosMax = elapsed
-        page = 0
+        if (base != resultsBase) page = 0
+        resultsBase = base
+    }
+
+    private fun sortLabel(mode: String): String = when (mode) {
+        ItemListData.SORT_NAME_ASC -> "A-Z"
+        ItemListData.SORT_NAME_DESC -> "Z-A"
+        ItemListData.SORT_PRICE_ASC -> "Price ^"
+        ItemListData.SORT_PRICE_DESC -> "Price v"
+        else -> "Best"
+    }
+
+    private fun sortTip(mode: String): String = when (mode) {
+        ItemListData.SORT_NAME_ASC -> "Name, A to Z"
+        ItemListData.SORT_NAME_DESC -> "Name, Z to A"
+        ItemListData.SORT_PRICE_ASC -> "Price, low to high (unpriced last)"
+        ItemListData.SORT_PRICE_DESC -> "Price, high to low (unpriced last)"
+        else -> "Best match (name order with no search)"
+    }
+
+    /** Left click: the next sort; right click: the previous one. */
+    private fun changeSort(button: Int) {
+        sort = ItemListData.nextSort(sort, if (button == 1) -1 else 1)
+        host.event("SORT $sort")
+        host.saveFavorites(favorites, open, sort)
     }
 
     private fun priceOf(compiled: ItemListRepository.Compiled, snapshot: PriceSnapshot, fn: String, arg: String): Double? {
@@ -134,7 +182,7 @@ class ItemListPanel(private val host: Host) {
     fun toggleOpen() {
         open = !open
         focused = false
-        host.saveFavorites(favorites, open)
+        host.saveFavorites(favorites, open, sort)
     }
 
     fun focusSearch() {
@@ -145,7 +193,7 @@ class ItemListPanel(private val host: Host) {
     private fun toggleFavorite(id: String, name: String) {
         if (!favorites.remove(id)) favorites.add(id)
         say((if (id in favorites) "Added to favorites: " else "Removed from favorites: ") + name)
-        host.saveFavorites(favorites, open)
+        host.saveFavorites(favorites, open, sort)
     }
 
     private fun openPopup(compiled: ItemListRepository.Compiled, id: String, recipes: Boolean) {
@@ -185,11 +233,32 @@ class ItemListPanel(private val host: Host) {
         return listBottom - listTop > 120
     }
 
-    private class AccessWrapper(val left: Int, val imageWidth: Int)
+    private class AccessWrapper(val left: Int, val top: Int, val imageWidth: Int)
 
     private fun accessOf(screen: AbstractContainerScreen<*>): AccessWrapper {
         val access = screen as AbstractContainerScreenAccess
-        return AccessWrapper(access.`geileraddons$getLeftPos`(), access.`geileraddons$getImageWidth`())
+        return AccessWrapper(access.`geileraddons$getLeftPos`(), access.`geileraddons$getTopPos`(), access.`geileraddons$getImageWidth`())
+    }
+
+    /** Outlines the slots whose item name or lore holds the query and dims the other items; every slot of the open screen counts. */
+    private fun drawSlotSearch(screen: AbstractContainerScreen<*>, g: GuiGraphicsExtractor) {
+        slotMatches = 0
+        slotTotal = 0
+        val terms = SlotSearch.terms(query)
+        if (!slotSearch || terms.isEmpty()) return
+        val access = accessOf(screen)
+        for (slot in screen.menu.slots) {
+            val stack = slot.item
+            if (stack.isEmpty) continue
+            slotTotal++
+            val x = access.left + slot.x
+            val y = access.top + slot.y
+            val lore = stack.get(DataComponents.LORE)?.lines()?.map { it.string } ?: emptyList()
+            if (SlotSearch.matches(terms, stack.hoverName.string, lore)) {
+                slotMatches++
+                g.outline(x - 1, y - 1, 18, 18, SEARCH_YELLOW)
+            } else g.fill(x, y, x + 16, y + 16, 0x99000000.toInt())
+        }
     }
 
     // ----- drawing ---------------------------------------------------------------------------------------------------
@@ -208,9 +277,11 @@ class ItemListPanel(private val host: Host) {
         stacks.beginFrame()
         refresh(compiled)
         draws++
+        val frameStarted = System.nanoTime()
         val access = accessOf(screen)
         var tooltip: Pair<ItemStack, Component?>? = null
         var plainTip: Component? = null
+        if (open) drawSlotSearch(screen, g)
         if (open && fits(screen, g.guiWidth(), g.guiHeight())) drawList(g, font, compiled, stacks, mouseX, mouseY)
         if (favorites.isNotEmpty()) drawFavorites(g, compiled, stacks, mouseX, mouseY, access.left)
         // The window sits on a dimmed screen and gets the last say over hover.
@@ -237,6 +308,10 @@ class ItemListPanel(private val host: Host) {
         } else plainTip = hit?.tip
         tooltip?.let { tooltips++; g.setTooltipForNextFrame(font, it.first, mouseX, mouseY) }
         plainTip?.let { g.setTooltipForNextFrame(font, it, mouseX, mouseY) }
+        // Time spent handing this frame's items and text to the GUI; the GPU work after that is not in it.
+        val drawNanos = System.nanoTime() - frameStarted
+        drawNanosTotal += drawNanos
+        if (drawNanos > drawNanosMax) drawNanosMax = drawNanos
         if (System.currentTimeMillis() < toastUntil) {
             g.text(font, toast, (g.guiWidth() - font.width(toast)) / 2, g.guiHeight() - 40, 0xFFFFFF55.toInt(), true)
         }
@@ -253,14 +328,22 @@ class ItemListPanel(private val host: Host) {
 
     private fun drawFavorites(g: GuiGraphicsExtractor, compiled: ItemListRepository.Compiled, stacks: LegacyItemStacks.Store, mouseX: Int, mouseY: Int, left: Int) {
         val cols = ((left - 2 * MARGIN) / CELL).coerceIn(1, 8)
-        var i = 0
-        for (id in favorites.toList()) {
-            val entry = compiled.byId[id] ?: continue
+        val shown = favorites.toList().mapNotNull { compiled.byId[it] }
+        // All rarity squares first, then all items: a fill between two items would push every later item up a layer.
+        if (host.rarityBackgrounds()) {
+            for ((i, entry) in shown.withIndex()) rarity(g, entry, MARGIN + (i % cols) * CELL, MARGIN + (i / cols) * CELL)
+        }
+        for ((i, entry) in shown.withIndex()) {
             val x = MARGIN + (i % cols) * CELL
             val y = MARGIN + (i / cols) * CELL
             cell(g, entry, stacks.get(entry), x, y, mouseX, mouseY) { button -> onEntryClick(compiled, entry, button) }
-            i++
         }
+    }
+
+    /** The rarity square behind the item of [entry] in the cell at [x], [y]; nothing for an entry with no rarity. */
+    private fun rarity(g: GuiGraphicsExtractor, entry: Entry, x: Int, y: Int) {
+        val color = entry.rarityColor ?: return
+        host.drawRarity(g, color, x + 1, y + 1)
     }
 
     private fun onEntryClick(compiled: ItemListRepository.Compiled, entry: Entry, button: Int) {
@@ -279,16 +362,29 @@ class ItemListPanel(private val host: Host) {
         val perPage = cols * rows
         val pages = maxOf(1, (results.size + perPage - 1) / perPage)
         page = page.coerceIn(0, pages - 1)
-        // Toolbar: arrows and the page counter only.
+        // Toolbar: the sort button on the left, the page arrows and counter centered (pushed right when the list is narrow).
+        val sortText = sortLabel(sort)
+        val sortW = font.width(sortText) + 8
+        val sortHover = mouseX >= listX && mouseX < listX + sortW && mouseY >= listTop && mouseY < listTop + 16
+        InventorySurfaces.button(g, font, listX, listTop, sortW, 16, sortText, sortHover, mc)
+        val sortHint = Component.literal("Sort: " + sortTip(sort)).append(Component.literal("\nClick: next sort, right click: previous").withStyle(net.minecraft.ChatFormatting.GRAY))
+        hits.add(Hit(listX, listTop, sortW, 16, null, sortHint) { button -> changeSort(button) })
         val label = "${page + 1}/$pages"
-        val mid = listX + listW / 2
-        val prevX = mid - 30 - 16
-        val nextX = mid + 30
+        val blockX = maxOf(listX + listW / 2 - 46, listX + sortW + 4)
+        val mid = blockX + 46
+        val prevX = blockX
+        val nextX = blockX + 76
         arrow(g, font, prevX, listTop, "<", mouseX, mouseY) { page = (page - 1 + pages) % pages }
         arrow(g, font, nextX, listTop, ">", mouseX, mouseY) { page = (page + 1) % pages }
         g.text(font, label, mid - font.width(label) / 2, listTop + 4, TEXT, true)
-        // Items float, no panel behind them.
+        // Items float, no panel behind them. All rarity squares first, then all items (see drawFavorites).
         val start = page * perPage
+        if (host.rarityBackgrounds()) {
+            for (i in 0 until perPage) {
+                val entry = results.getOrNull(start + i) ?: break
+                rarity(g, entry, listX + (i % cols) * CELL, gridY + (i / cols) * CELL)
+            }
+        }
         for (i in 0 until perPage) {
             val entry = results.getOrNull(start + i) ?: break
             val x = listX + (i % cols) * CELL
@@ -335,13 +431,23 @@ class ItemListPanel(private val host: Host) {
         if (mc) {
             g.fill(x - 1, y - 1, x + w + 1, y + SEARCH_H + 1, 0xFF000000.toInt())
             InventorySurfaces.bevel(g, x, y, w, SEARCH_H, 0xFF727272.toInt(), 1)
-            if (focused) g.outline(x - 1, y - 1, w + 2, SEARCH_H + 2, 0xFFFFFFFF.toInt())
+            if (slotSearch) g.outline(x - 1, y - 1, w + 2, SEARCH_H + 2, SEARCH_YELLOW)
+            else if (focused) g.outline(x - 1, y - 1, w + 2, SEARCH_H + 2, 0xFFFFFFFF.toInt())
         } else {
             GuiTheme.roundedRect(g, x, y, w, SEARCH_H, GuiTheme.RADIUS_SMALL, GuiTheme.BUTTON_BG)
-            if (focused) GuiTheme.roundedRectOutline(g, x, y, w, SEARCH_H, GuiTheme.RADIUS_SMALL, GuiTheme.SLIDER_FILL)
+            if (slotSearch) GuiTheme.roundedRectOutline(g, x, y, w, SEARCH_H, GuiTheme.RADIUS_SMALL, SEARCH_YELLOW)
+            else if (focused) GuiTheme.roundedRectOutline(g, x, y, w, SEARCH_H, GuiTheme.RADIUS_SMALL, GuiTheme.SLIDER_FILL)
         }
-        hits.add(Hit(x, y, w, SEARCH_H, null, null) { button ->
+        hits.add(Hit(x, y, w, SEARCH_H, null, Component.literal("Double-click: search the open inventory")) { button ->
             if (button == 1) setQuery("")
+            else if (button == 0) {
+                val now = System.currentTimeMillis()
+                if (now - lastSearchClick < DOUBLE_CLICK_MS) {
+                    slotSearch = !slotSearch
+                    host.event("SLOT_SEARCH ${if (slotSearch) "on" else "off"} query='${query.take(32)}'")
+                    lastSearchClick = 0L
+                } else lastSearchClick = now
+            }
             focused = true
         })
         val textY = y + (SEARCH_H - font.lineHeight) / 2 + 1
@@ -653,7 +759,9 @@ class ItemListPanel(private val host: Host) {
     }
 
     fun diagnosticsLine(): String =
-        "open=$open popup=${popup?.id} fav=${favorites.size} results=${results.size} searches=$searches " +
+        "open=$open slotSearch=$slotSearch slotMatches=$slotMatches/$slotTotal sort=$sort popup=${popup?.id} fav=${favorites.size} results=${results.size} searches=$searches " +
+            "drawAvgMs=${if (draws == 0L) 0 else drawNanosTotal / draws / 1000 / 1000.0} drawMaxMs=${drawNanosMax / 1000 / 1000.0} " +
+            "fallbackHeads=${ItemListRepository.compiled?.fallbacks ?: 0} paperLeft=${ItemListRepository.compiled?.paperLeft ?: 0} " +
             "searchAvgMs=${if (searches == 0L) 0 else searchNanosTotal / searches / 1000 / 1000.0} searchMaxMs=${searchNanosMax / 1000 / 1000.0} " +
             "recipeOpens=$recipeOpens usesOpens=$usesOpens popupErrors=$popupErrors stacks=$stacksBuilt stackFailures=$stackFailures draws=$draws tooltips=$tooltips"
 
@@ -670,6 +778,8 @@ class ItemListPanel(private val host: Host) {
         private const val MIN_COLS = 8
         private const val MAX_QUERY = 64
         private const val MAX_HISTORY = 20
+        private const val DOUBLE_CLICK_MS = 400L
+        private val SEARCH_YELLOW = 0xFFFFFF55.toInt()
         private const val POPUP_W = 380
         private const val POPUP_H = 240
         private const val COST_X = 222

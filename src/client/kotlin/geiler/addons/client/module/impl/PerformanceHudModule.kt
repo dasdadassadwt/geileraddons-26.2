@@ -10,26 +10,30 @@ import geiler.addons.client.module.ColorSetting
 import geiler.addons.client.module.Module
 import geiler.addons.client.module.ModuleSettingsSpec
 import geiler.addons.client.performance.PerformanceHudRules
+import geiler.addons.client.performance.PingTracker
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
+import net.minecraft.network.protocol.ping.ServerboundPingRequestPacket
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphicsExtractor
 
-/** A movable panel showing ping, TPS and FPS, each independently switchable. */
+/** A movable panel showing ping, TPS, FPS and memory, each independently switchable. */
 class PerformanceHudModule private constructor(settings: Settings) : Module(
     "Performance HUD",
-    "Shows ping, TPS and FPS as plain text or a Click GUI styled panel.",
+    "Shows ping, TPS, FPS and memory as plain text or a Click GUI styled panel.",
     Category.MISCELLANEOUS,
     false,
     settings.showPing,
     settings.showTps,
     settings.showFps,
+    settings.showMemory,
     settings.style,
     settings.textColor,
 ), HudElement {
     private val showPing = settings.showPing
     private val showTps = settings.showTps
     private val showFps = settings.showFps
+    private val showMemory = settings.showMemory
     private val style = settings.style
     private val textColor = settings.textColor
 
@@ -37,6 +41,7 @@ class PerformanceHudModule private constructor(settings: Settings) : Module(
         Category.MISCELLANEOUS, { name() }, MAX_DIAGNOSTIC_EVENTS_PER_TICK, STATUS_INTERVAL_TICKS, MAX_DIAGNOSTIC_LINE_CHARS,
     )
     private var renderedCallsSinceStatus = 0
+    private var pingRequestsSinceStatus = 0
     private var lastLines = "none"
 
     override fun id(): String = "performance_hud"
@@ -86,11 +91,19 @@ class PerformanceHudModule private constructor(settings: Settings) : Module(
 
     private fun tick() {
         if (!isEnabled()) return
+        val connection = Minecraft.getInstance().connection
+        if (showPing.value() && connection != null && PingTracker.shouldSend(System.nanoTime())) {
+            connection.send(ServerboundPingRequestPacket(System.nanoTime()))
+            if (pingRequestsSinceStatus < MAX_DIAGNOSTIC_COUNT) pingRequestsSinceStatus++
+        }
         diagnostics.advance()
         diagnostics.status { suppressed ->
             renderedCallsSinceStatus.let { calls ->
                 renderedCallsSinceStatus = 0
-                "intervalTicks=$STATUS_INTERVAL_TICKS ${diagnosticState(calls)} suppressedEvents=$suppressed"
+                val pings = pingRequestsSinceStatus
+                pingRequestsSinceStatus = 0
+                "intervalTicks=$STATUS_INTERVAL_TICKS ${diagnosticState(calls)} pingRequests=$pings " +
+                    "pingMs=${PingTracker.latestMs(System.nanoTime()) ?: "none"} suppressedEvents=$suppressed"
             }
         }
     }
@@ -99,11 +112,13 @@ class PerformanceHudModule private constructor(settings: Settings) : Module(
 
     private fun lines(): List<String> {
         val client = Minecraft.getInstance()
-        val uuid = client.player?.uuid
-        val ping = if (uuid == null) null else client.connection?.getPlayerInfo(uuid)?.latency
-        val tps = ChatTpsTracker.metrics(System.nanoTime()).currentTps
+        val now = System.nanoTime()
+        val tps = ChatTpsTracker.metrics(now).currentTps
+        val runtime = Runtime.getRuntime()
         return PerformanceHudRules.lines(
-            showPing.value(), showTps.value(), showFps.value(), ping, tps, client.fps,
+            showPing.value(), showTps.value(), showFps.value(), showMemory.value(),
+            PingTracker.latestMs(now), tps, client.fps,
+            (runtime.totalMemory() - runtime.freeMemory()) / MB, runtime.maxMemory() / MB,
         )
     }
 
@@ -134,7 +149,7 @@ class PerformanceHudModule private constructor(settings: Settings) : Module(
 
     private fun diagnosticState(liveRenderCalls: Int = renderedCallsSinceStatus): String =
         "enabled=${isEnabled()} style=${style.value()} ping=${showPing.value()} tps=${showTps.value()} " +
-            "fps=${showFps.value()} liveRenderCalls=$liveRenderCalls lastLines=$lastLines previewCalls=excluded"
+            "fps=${showFps.value()} memory=${showMemory.value()} liveRenderCalls=$liveRenderCalls lastLines=$lastLines previewCalls=excluded"
 
     /** Declared in `module-settings.json`; this module only binds behaviour to the setting ids. */
     private class Settings {
@@ -142,12 +157,14 @@ class PerformanceHudModule private constructor(settings: Settings) : Module(
         val showPing: BooleanSetting = spec.toggle("showPing")
         val showTps: BooleanSetting = spec.toggle("showTps")
         val showFps: BooleanSetting = spec.toggle("showFps")
+        val showMemory: BooleanSetting = spec.toggle("showMemory")
         val style: ChoiceSetting = spec.choice("style")
         val textColor: ColorSetting = spec.color("textColor")
     }
 
     companion object {
         private const val STYLE_PANEL = "Click GUI"
+        private const val MB = 1024L * 1024L
         private const val PADDING = 4
         private const val LINE_GAP = 2
         private const val STATUS_INTERVAL_TICKS = 100L

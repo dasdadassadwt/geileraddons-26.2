@@ -120,7 +120,7 @@ public final class PuzzleSolversMigrationChecks {
 		toggles.put("Dungeon Odin Helpers.Score Alert Sound", true);
 		toggles.put("Dungeon Odin Helpers.Show Tick Timing", true);
 		Map<String, Float> numbers = new HashMap<>();
-		numbers.put("Dungeon Odin Helpers.Score Alert Threshold 1", 270f);
+		numbers.put("Dungeon Odin Helpers.Score Alert Duration (Ticks)", 40f);
 		Map<String, int[]> colors = new HashMap<>();
 		Map<String, String> choices = new HashMap<>();
 		choices.put("Dungeon Odin Helpers.Count Source", "SERVER_PING_PACKETS");
@@ -138,9 +138,9 @@ public final class PuzzleSolversMigrationChecks {
 		check(Boolean.TRUE.equals(toggles.get(scorer.configName() + ".Score Alerts"))
 			&& Boolean.TRUE.equals(toggles.get(scorer.configName() + ".Play Sound")),
 			"legacy score-alert values migrate while current target values take precedence");
-		check(numbers.get(scorer.configName() + ".First Threshold") == 270f
+		check(numbers.get(scorer.configName() + ".Duration (Ticks)") == 40f
 			&& "Score reached".equals(texts.get(scorer.configName() + ".Alert Text")),
-			"legacy score thresholds and alert text preserve their typed-map destinations");
+			"legacy score duration and alert text preserve their typed-map destinations");
 		check(Boolean.TRUE.equals(toggles.get(splits.configName() + ".Show Count Value"))
 			&& Boolean.FALSE.equals(toggles.get(splits.configName() + ".Show Tick Time")),
 			"server-packet count mode preserves count display without enabling the tick-time row");

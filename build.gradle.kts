@@ -112,6 +112,21 @@ tasks.register<JavaExec>("offlineChecks") {
 	}
 }
 
+// Renders every cosmetic to build/cosmetic-previews (front, back, side, 3/4) to compare against the reference sheets.
+tasks.register<JavaExec>("cosmeticPreviews") {
+	dependsOn(tasks.named("testClasses"))
+	classpath = sourceSets.getByName("test").runtimeClasspath
+	mainClass = "geiler.addons.client.cosmetics.CosmeticPreviewRenderer"
+	args(layout.buildDirectory.dir("cosmetic-previews").get().asFile.path)
+}
+
+tasks.register<JavaExec>("cosmeticPreviewsE") {
+	dependsOn(tasks.named("testClasses"))
+	classpath = sourceSets.getByName("test").runtimeClasspath
+	mainClass = "geiler.addons.client.cosmetics.CosmeticPreviewE"
+	args(layout.buildDirectory.dir("cosmetic-previews").get().asFile.path)
+}
+
 tasks.register<JavaExec>("chatChannelsChecks") {
 	dependsOn(tasks.named("testClasses"))
 	classpath = sourceSets.getByName("test").runtimeClasspath

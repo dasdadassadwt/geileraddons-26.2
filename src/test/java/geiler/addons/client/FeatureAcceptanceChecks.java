@@ -27,6 +27,7 @@ import geiler.addons.client.module.impl.HideAllParticlesChecks;
 import geiler.addons.client.module.impl.BossBarPercentChecks;
 import geiler.addons.client.module.impl.HideF7BossSoundsChecks;
 import geiler.addons.client.module.impl.HidePlayersChecks;
+import geiler.addons.client.module.impl.HideSpamChecks;
 import geiler.addons.client.module.impl.SnapTapChecks;
 import geiler.addons.client.module.impl.MobHighlightChecks;
 import geiler.addons.client.module.impl.AutoExperimentsModuleChecks;
@@ -138,6 +139,7 @@ public final class FeatureAcceptanceChecks {
 		HideAllParticlesChecks.main(new String[0]);
 		HidePlayersChecks.main(new String[0]);
 		HideF7BossSoundsChecks.main(new String[0]);
+		HideSpamChecks.main(new String[0]);
 		BossBarPercentChecks.main(new String[0]);
 		SnapTapChecks.main(new String[0]);
 		PlayerNamesModuleChecks.run();

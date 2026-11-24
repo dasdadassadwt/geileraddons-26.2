@@ -166,17 +166,17 @@ public final class HudFeatureChecks {
 	private static void checkSlayerVisibilityAndSessionState() {
 		checkSlayerModuleDefaults();
 		long lastActive = 1_000_000_000L;
-		require(SlayerTrackerModule.shouldDisplayForQuestState(true, 0L, 0L),
-			"an active Slayer quest keeps the tracker visible");
-		require(SlayerTrackerModule.shouldDisplayForContext(true, false, true, 0L, 0L)
-			&& !SlayerTrackerModule.shouldDisplayForContext(true, true, true, 0L, 0L)
-			&& !SlayerTrackerModule.shouldDisplayForContext(false, false, true, 0L, 0L),
+		long window = 60_000_000_000L;
+		require(SlayerTrackerModule.shouldDisplayForActivity(true, 0L, 0L, window),
+			"a spawned Slayer boss keeps the tracker visible");
+		require(SlayerTrackerModule.shouldDisplayForContext(true, false, true, 0L, 0L, window)
+			&& !SlayerTrackerModule.shouldDisplayForContext(true, true, true, 0L, 0L, window)
+			&& !SlayerTrackerModule.shouldDisplayForContext(false, false, true, 0L, 0L, window),
 			"Slayer HUD visibility requires an active feature and hides during dungeons");
-		require(SlayerTrackerModule.shouldDisplayForQuestState(false, lastActive,
-			lastActive + 29_999_999_999L)
-			&& !SlayerTrackerModule.shouldDisplayForQuestState(false, lastActive, lastActive + 30_000_000_000L)
-			&& !SlayerTrackerModule.shouldDisplayForQuestState(false, 0L, lastActive),
-			"the Slayer HUD hides exactly 30 seconds after an idle quest and stays hidden without session activity");
+		require(SlayerTrackerModule.shouldDisplayForActivity(false, lastActive, lastActive + window - 1L, window)
+			&& !SlayerTrackerModule.shouldDisplayForActivity(false, lastActive, lastActive + window, window)
+			&& !SlayerTrackerModule.shouldDisplayForActivity(false, 0L, lastActive, window),
+			"the Slayer HUD hides once the idle window passes without slaying activity, and never shows without any");
 		SlayerHourlyStats stats = new SlayerHourlyStats();
 		stats.tick(true, 1_000_000_000L);
 		stats.tick(true, 2_000_000_000L);
@@ -202,8 +202,10 @@ public final class HudFeatureChecks {
 			"Slayer Tracker keeps only its stats and display toggles; alerts moved to Slayer Alerts");
 		require(module.booleanSettings().stream().allMatch(setting -> setting.name().equals("Background") == setting.rawValue()),
 			"Slayer Tracker keeps its toggle defaults");
-		require(module.choiceSettings().isEmpty() && module.numberSettings().isEmpty() && module.textSettings().isEmpty(),
-			"Slayer Tracker has no time display, title or alert text settings any more");
+		require(module.choiceSettings().isEmpty() && module.textSettings().isEmpty()
+			&& module.numberSettings().size() == 1 && module.numberSettings().get(0).name().equals("Idle Hide")
+			&& module.numberSettings().get(0).value() == 60f,
+			"Slayer Tracker has no time display, title or alert text settings, only the 60 s idle hide window");
 		require(module.actions().size() == 1
 			&& module.actions().getFirst().name().equals("Reset Session Stats"),
 			"Slayer Tracker keeps the session-reset action");
@@ -211,7 +213,7 @@ public final class HudFeatureChecks {
 		List<String> groupNames = module.groups().stream().map(SettingGroup::name).toList();
 		require(groupNames.equals(List.of("Stats", "Display")), "Slayer Tracker keeps its two settings sections");
 		require(groupSettings(module, "Stats").equals(List.of("Show Totals", "Reset Session Stats"))
-			&& groupSettings(module, "Display").equals(List.of("Background")),
+			&& groupSettings(module, "Display").equals(List.of("Background", "Idle Hide")),
 			"Slayer Tracker keeps each setting in the same visible section and order");
 	}
 

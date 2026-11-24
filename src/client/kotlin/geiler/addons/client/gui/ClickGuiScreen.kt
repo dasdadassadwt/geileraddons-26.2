@@ -68,7 +68,8 @@ object ClickGuiScreenCategoryBehavior {
 
     @JvmStatic
     fun isModuleCardVisible(module: Module?): Boolean =
-        module != null && module !== VisualModule.INSTANCE && module !== GeneralModule.INSTANCE
+        module != null && module !== VisualModule.INSTANCE && module !== GeneralModule.INSTANCE &&
+            module !== geiler.addons.client.module.impl.CosmeticsModule.INSTANCE
 
     @JvmStatic
     fun orderFavoriteModules(modules: List<Module>): List<Module> {

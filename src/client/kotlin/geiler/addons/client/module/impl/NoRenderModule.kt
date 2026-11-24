@@ -46,7 +46,7 @@ class NoRenderModule private constructor(private val settings: Settings) : Modul
         BONE_PLATING("bonePlating"), TREE_BITS("treeBits"), NAUSEA("nausea"), EXP_ORBS("expOrbs"),
         STUCK_ARROWS("stuckArrows"), BLINDNESS("blindness"), DARKNESS("darkness"),
         UNDERWATER_FOG("underwaterFog"), LAVA_FOG("lavaFog"), AIR_FOG("airFog"), DISTANCE_FOG("distanceFog"),
-        CLOUDS("clouds"), SOULWEAVER_SKULLS("soulweaverSkulls"),
+        CLOUDS("clouds"), SOULWEAVER_SKULLS("soulweaverSkulls"), NIGHT_VISION("nightVision"),
     }
 
     private val hits = LongArray(Flag.values().size)
@@ -77,6 +77,11 @@ class NoRenderModule private constructor(private val settings: Settings) : Modul
         if (player != null && on(Flag.DARKNESS) && player.hasEffect(net.minecraft.world.effect.MobEffects.DARKNESS)) {
             player.removeEffect(net.minecraft.world.effect.MobEffects.DARKNESS)
             hit(Flag.DARKNESS)
+        }
+        // Night vision brightens the world and turns the Nether fog bright red; also client-side only.
+        if (player != null && on(Flag.NIGHT_VISION) && player.hasEffect(net.minecraft.world.effect.MobEffects.NIGHT_VISION)) {
+            player.removeEffect(net.minecraft.world.effect.MobEffects.NIGHT_VISION)
+            hit(Flag.NIGHT_VISION)
         }
         diagnostics.status { "enabled=true flags=[${enabledFlags()}] hits=[${hitSummary()}] suppressedEvents=$it" }
     }

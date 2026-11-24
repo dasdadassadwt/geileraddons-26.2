@@ -1,7 +1,6 @@
 package geiler.addons.client.dungeon
 
-import geiler.addons.client.dungeon.helpers.DungeonScoreCalculator
-import geiler.addons.client.dungeon.helpers.DungeonScoreLogic
+import geiler.addons.client.dungeon.score.DungeonScoreCore
 
 /**
  * Text, colours and layout of the Map Info panel under the Dungeon Map. Follows the two-row "Full Hud" panel of Odin's
@@ -18,15 +17,7 @@ object DungeonMapInfoLogic {
     const val ROW_TWO_GAP = 4
     const val MIN_FIT_SCALE = 0.3f
 
-    /** The latest run data the panel reads; published by the dungeon tick whenever the panel is wanted. */
-    class RunSnapshot(
-        val floor: DungeonFloor?,
-        val stats: DungeonScoreCalculator.TabStats,
-        val score: DungeonScoreCalculator.ScoreEstimate,
-        val inBoss: Boolean,
-    )
-
-    /** Resolved values for one panel frame; unknown tab values already count as zero or "not done". */
+    /** Resolved values for one panel frame, read from the latched score state (never unknown, as in Odin). */
     data class Info(
         val secretsFound: Int,
         val secretsPercent: Double,
@@ -57,21 +48,20 @@ object DungeonMapInfoLogic {
     )
 
     @JvmStatic
-    fun info(run: RunSnapshot?, knownSecrets: Int): Info {
-        val stats = run?.stats
-        val floor = run?.floor
+    fun info(core: DungeonScoreCore, knownSecrets: Int): Info {
+        val floor = core.floor
         return Info(
-            secretsFound = stats?.secretsFound ?: 0,
-            secretsPercent = stats?.secretsPercent ?: 0.0,
-            deaths = stats?.deaths ?: 0,
-            crypts = stats?.crypts ?: 0,
-            mimic = stats?.mimic == true,
-            prince = stats?.prince == true,
-            batKillers = stats?.batKillers ?: 0,
-            paul = stats?.paul == true,
+            secretsFound = core.secretCount,
+            secretsPercent = core.secretsPercent.toDouble(),
+            deaths = core.deathCount,
+            crypts = core.cryptCount,
+            mimic = core.mimicKilled,
+            prince = core.princeKilled,
+            batKillers = core.numBatsKilled,
+            paul = core.isPaul,
             floorNumber = floor?.number() ?: 0,
-            requiredPercent = DungeonScoreLogic.requiredSecretPercentage(floor),
-            score = run?.score?.minimum(),
+            requiredPercent = if (floor == null) 0.0 else DungeonScoreCore.requiredPercentage(floor).toDouble(),
+            score = core.score,
             knownSecrets = knownSecrets,
         )
     }
@@ -86,7 +76,7 @@ object DungeonMapInfoLogic {
     /** Total secrets in the dungeon, derived from the found count and its percentage; zero until the first secret. */
     @JvmStatic
     fun totalSecrets(found: Int, percent: Double): Int =
-        if (found <= 0 || percent <= 0.0) 0 else Math.floor(100.0 / percent * found + 0.5).toInt()
+        if (found <= 0 || percent <= 0.0) 0 else Math.floor(100 / percent.toFloat() * found + 0.5).toInt()
 
     @JvmStatic
     fun bonusScore(crypts: Int, mimic: Boolean, prince: Boolean, batKillers: Int, paul: Boolean): Int =
@@ -97,7 +87,7 @@ object DungeonMapInfoLogic {
     fun neededSecrets(total: Int, requiredPercent: Double, bonus: Int, deaths: Int): Int {
         if (requiredPercent <= 0.0) return 0
         val penalty = Math.max(deaths * 2 - 1, 0)
-        return Math.ceil(total * requiredPercent * (40 - bonus + penalty) / 40.0).toInt()
+        return Math.ceil((total * requiredPercent.toFloat()) * (40 - bonus + penalty) / 40.0).toInt()
     }
 
     @JvmStatic

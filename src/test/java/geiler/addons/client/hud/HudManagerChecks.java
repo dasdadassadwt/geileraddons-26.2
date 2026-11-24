@@ -47,6 +47,19 @@ public final class HudManagerChecks {
 			"a module with no settings still opens from right-click");
 		require(HudManager.settingsModule(new FakeElement("offline_check_hud_orphan", 40, 20, null)) == null,
 			"an element with no module has no page to open");
+
+		// Title screen: item components are not bound, so a preview that builds an ItemStack throws an NPE.
+		require(!HudManager.safePreview("offline_check_preview_unbound", false, () -> { throw new NullPointerException(); }),
+			"an item-building preview is skipped, not crashed, while components are unbound");
+		require(HudManager.safePreview("offline_check_preview_ok", false, () -> { }),
+			"a preview that draws fine reports success while components are unbound");
+		boolean rethrown = false;
+		try {
+			HudManager.safePreview("offline_check_preview_bound", true, () -> { throw new NullPointerException(); });
+		} catch (NullPointerException expected) {
+			rethrown = true;
+		}
+		require(rethrown, "a real NPE in a preview still surfaces once components are bound");
 	}
 
 	private static void require(boolean condition, String message) {

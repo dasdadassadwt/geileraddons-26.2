@@ -16,10 +16,10 @@ public final class CodeStyleChecks {
 	private static final Path ROOT = Path.of("src/client/kotlin");
 	/** Separate screens that remain on purpose; new per-module hubs must be inline settings instead. */
 	private static final Set<String> SCREEN_ALLOWLIST = Set.of(
-		"BlockPickerScreen", "ClickGuiClassicScreen", "ClickGuiScreen", "ClickGuiScreenImpl", "ConfigResetScreen", "ConfigTransferScreen",
+		"BlockPickerScreen", "ClickGuiClassicScreen", "ClickGuiScreen", "ClickGuiScreenImpl", "ConfigResetScreen", "ConfigTransferScreen", "CosmeticsScreen",
 		"DungeonFloorPickerScreen", "DungeonGuideEditorScreen", "DungeonGuideStagesScreen", "FolderManagerScreen",
-		"GuiColorPickerScreen", "HotbarBindingCaptureScreen", "InventoryButtonPickerScreen", "InventoryButtonTextScreen", "MacroShareScreen", "MoveUiScreen",
-		"PlayerSizeEditorScreen", "ScoreboardFontImportScreen", "ScratchMacroEditorScreen", "SecretWaypointEditorScreen",
+		"GuiColorPickerScreen", "HotbarBindingCaptureScreen", "InventoryButtonPickerScreen", "InventoryButtonTextScreen", "ItemPickerScreen", "MacroShareScreen", "MoveUiScreen",
+		"PlayerSizeEditorScreen", "RenameScreen", "ScoreboardFontImportScreen", "ScratchMacroEditorScreen", "SecretWaypointEditorScreen",
 		"TikiCoordManagerScreen", "WaypointManagerScreen");
 	private static final int MAX_FACADE_PAIRS = 62;
 	private static final int MAX_FILE_LINES = 4300;

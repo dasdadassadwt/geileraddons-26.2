@@ -40,6 +40,12 @@ public abstract class ChatScreenMixin {
 		}
 	}
 
+	/** With chat open, HUD elements that have controls (the Spotify player) take clicks on themselves. */
+	@Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
+	private void geileraddons$clickHud(MouseButtonEvent event, boolean doubleClick, CallbackInfoReturnable<Boolean> cir) {
+		if (geiler.addons.client.hud.HudManager.click(event.x(), event.y(), event.button())) cir.setReturnValue(true);
+	}
+
 	@Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
 	private void geileraddons$selectChannelTab(MouseButtonEvent event, boolean doubleClick,
 		CallbackInfoReturnable<Boolean> cir) {

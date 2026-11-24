@@ -316,7 +316,7 @@ class CustomMainMenuModule private constructor() : Module(
         private const val PHOTO_CHECK_TICKS = 40
         private const val BUTTON_SIZE = 20
         private const val ICON_SIZE = 14
-        private const val BUTTON_MARGIN = 2
+        private const val BUTTON_MARGIN = 8
         /** Height vanilla gives the copyright line at the bottom of the title screen. */
         private const val COPYRIGHT_LINE = 12
         private val GEAR: Identifier = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/octicon-gear-16.png")

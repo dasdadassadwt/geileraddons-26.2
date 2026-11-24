@@ -51,7 +51,7 @@ public final class DungeonAssistModuleKotlinChecks {
 	}
 
 	private static void checkJavaEntryPoints() {
-		assertPublicMethod("tick", void.class, long.class, long.class, boolean.class);
+		assertPublicMethod("tick", void.class, long.class, long.class);
 		assertPublicMethod("render", void.class,
 			net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext.class);
 		assertPublicMethod("renderHud", void.class, net.minecraft.client.gui.GuiGraphicsExtractor.class);

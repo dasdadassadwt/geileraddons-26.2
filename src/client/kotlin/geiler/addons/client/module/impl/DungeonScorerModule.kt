@@ -12,16 +12,16 @@ import net.minecraft.network.chat.Component
 /** Score milestone alerts for dungeon runs. */
 class DungeonScorerModule private constructor() : Module(
     "Score Titles",
-    "Shows a brief title when the dungeon score reaches configured milestones.",
+    "Shows a title, and optionally a chat message, when the dungeon score reaches 270 and 300.",
     Category.F7,
     false,
     alerts,
-    firstThreshold,
-    secondThreshold,
     alertText,
     durationTicks,
     playSound,
     soundId,
+    chat270,
+    chat300,
     paulBonus,
 ), ModulePreview {
     private var notice: String? = null
@@ -50,8 +50,12 @@ class DungeonScorerModule private constructor() : Module(
         )
     }
 
+    fun recordChat(threshold: Int, score: Int) {
+        diagnostics.event("CHAT result=sent,threshold=$threshold,score=$score")
+    }
+
     override fun onEnable() {
-        diagnostics.enable("alerts=${alerts.value()},firstThreshold=${firstThreshold.intValue()}")
+        diagnostics.enable("alerts=${alerts.value()},chat270=${chat270.value()},chat300=${chat300.value()}")
     }
 
     override fun onDisable() {
@@ -62,8 +66,8 @@ class DungeonScorerModule private constructor() : Module(
         if (isEnabled()) {
             diagnostics.advance()
             diagnostics.status { suppressed ->
-                "alerts=${alerts.value()},firstThreshold=${firstThreshold.intValue()}" +
-                    ",secondThreshold=${secondThreshold.intValue()},durationTicks=${durationTicks.intValue()}" +
+                "alerts=${alerts.value()},chat270=${chat270.value()},chat300=${chat300.value()}" +
+                    ",durationTicks=${durationTicks.intValue()}" +
                     ",playSound=${playSound.value()},soundId=${bounded(soundId.value())}" +
                     ",paulBonus=${paulBonus.value()},suppressedEvents=$suppressed"
             }
@@ -82,7 +86,7 @@ class DungeonScorerModule private constructor() : Module(
 
     @Suppress("UNUSED_PARAMETER")
     override fun previewLines(font: Font, width: Int): List<Component> = listOf(
-        Component.literal("Milestones: ${firstThreshold.intValue()} / ${secondThreshold.intValue()}"),
+        Component.literal("Titles at 270 and 300"),
         Component.literal(previewNotice()),
     )
 
@@ -97,7 +101,7 @@ class DungeonScorerModule private constructor() : Module(
     ): Boolean {
         graphics.text(
             font,
-            Component.literal("Milestones: ${firstThreshold.intValue()} / ${secondThreshold.intValue()}"),
+            Component.literal("Titles at 270 and 300"),
             x,
             y,
             0xFFB8C0CC.toInt(),
@@ -108,7 +112,7 @@ class DungeonScorerModule private constructor() : Module(
 
     private fun previewNotice(): String {
         val template = alertText.value().trim().ifEmpty { "Score {score}" }
-        return template.replace("{score}", firstThreshold.intValue().toString())
+        return template.replace("{score}", "270")
     }
 
     private fun bounded(value: String?): String {
@@ -127,10 +131,10 @@ class DungeonScorerModule private constructor() : Module(
         val alerts = spec.toggle("alerts")
 
         @JvmField
-        val firstThreshold = spec.slider("firstThreshold")
+        val chat270 = spec.toggle("chat270")
 
         @JvmField
-        val secondThreshold = spec.slider("secondThreshold")
+        val chat300 = spec.toggle("chat300")
 
         @JvmField
         val alertText = spec.text("alertText")

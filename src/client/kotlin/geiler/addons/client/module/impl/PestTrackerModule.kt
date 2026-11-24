@@ -381,8 +381,8 @@ class PestTrackerModule private constructor(private val settings: Settings) : Mo
             farmingToolFilter.value(),
             vacuumFilter.value(),
             lassoFilter.value(),
-            main.hoverName.string,
-            off.hoverName.string,
+            geiler.addons.client.utility.SkyblockItems.realName(main),
+            geiler.addons.client.utility.SkyblockItems.realName(off),
         )
     }
 

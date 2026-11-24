@@ -149,11 +149,19 @@ public final class OfflineChecks {
 		step("DebugModuleChecks.run", () -> DebugModuleChecks.run());
 		step("PlayerNamesModuleChecks.run", () -> PlayerNamesModuleChecks.run());
 		step("PlayerPresentationModuleChecks.run", () -> PlayerPresentationModuleChecks.run());
+		step("CosmeticsChecks.run", () -> geiler.addons.client.cosmetics.CosmeticsChecks.run());
+		step("CosmeticsAChecks.run", () -> geiler.addons.client.cosmetics.CosmeticsAChecks.run());
+		step("CosmeticsBChecks.run", () -> geiler.addons.client.cosmetics.CosmeticsBChecks.run());
+		step("CosmeticsCChecks.run", () -> geiler.addons.client.cosmetics.CosmeticsCChecks.run());
+		step("CosmeticsDChecks.run", () -> geiler.addons.client.cosmetics.CosmeticsDChecks.run());
+		step("CosmeticsEChecks.run", () -> geiler.addons.client.cosmetics.CosmeticsEChecks.run());
+		step("CosmeticsFChecks.run", () -> geiler.addons.client.cosmetics.CosmeticsFChecks.run());
 		step("DungeonRoomAlertModuleChecks.run", () -> DungeonRoomAlertModuleChecks.run());
 		step("SlotIdsChecks.run", () -> SlotIdsChecks.run());
 		step("DungeonTerminalTitlesChecks.run", () -> DungeonTerminalTitlesChecks.run());
 		step("LobbyTargetWatchModuleChecks.run", () -> LobbyTargetWatchModuleChecks.run());
 		step("GeneralUtilityTimerChecks.run", () -> GeneralUtilityTimerChecks.run());
+		step("SharedTimerStoreChecks.run", () -> geiler.addons.client.utility.SharedTimerStoreChecks.run());
 		step("InvincibilityTimerModuleChecks.run", () -> InvincibilityTimerModuleChecks.run());
 		step("LividHelperModuleChecks.run", () -> LividHelperModuleChecks.run());
 		step("DungeonTerminalStatsModuleChecks.run", () -> DungeonTerminalStatsModuleChecks.run());
@@ -169,6 +177,7 @@ public final class OfflineChecks {
 		step("SafariFloorDropsChecks.run", () -> SafariFloorDropsChecks.run());
 		step("SparklingCritterModuleChecks.run", () -> SparklingCritterModuleChecks.run());
 		step("CritterSafariChecks.run", () -> geiler.addons.client.hunting.CritterSafariChecks.run());
+		step("HuntingTargetsChecks.run", () -> geiler.addons.client.hunting.HuntingTargetsChecks.run());
 		step("FishingBobberChecks.run", () -> geiler.addons.client.fishing.FishingBobberChecks.run());
 		step("FishingHookChecks.run", () -> geiler.addons.client.fishing.FishingHookChecks.run());
 		step("MiningTabTextChecks.run", () -> geiler.addons.client.mining.MiningTabTextChecks.run());
@@ -190,6 +199,10 @@ public final class OfflineChecks {
 		step("SlayerHudChecks.run", () -> geiler.addons.client.slayer.SlayerHudChecks.run());
 		step("LavaReplacementChecks.run", () -> geiler.addons.client.fishing.LavaReplacementChecks.run());
 		step("HudFeatureChecks.run", () -> HudFeatureChecks.run());
+		step("CarnivalChecks.run", () -> geiler.addons.client.carnival.CarnivalChecks.run());
+		step("CollectionTrackerChecks.run", () -> geiler.addons.client.collection.CollectionTrackerChecks.run());
+		step("SpotifyChecks.run", () -> geiler.addons.client.spotify.SpotifyChecks.run());
+		step("DojoChecks.run", () -> geiler.addons.client.dojo.DojoChecks.run());
 		step("checkFreshModuleEnableDefaults", () -> checkFreshModuleEnableDefaults());
 		step("SpiritLeapModuleEnabledMigrationChecks.run", () -> SpiritLeapModuleEnabledMigrationChecks.run());
 		step("PuzzleSolversMigrationChecks.run", () -> PuzzleSolversMigrationChecks.run());
@@ -211,6 +224,7 @@ public final class OfflineChecks {
 		step("AutoTermsChecks.run", () -> geiler.addons.client.dungeon.terminal.AutoTermsChecks.run());
 		step("PriceChecks.run", () -> geiler.addons.client.pricing.PriceChecks.run());
 		step("ItemListChecks.run", () -> geiler.addons.client.itemlist.ItemListChecks.run());
+		step("RenameChecks.run", () -> geiler.addons.client.rename.RenameChecks.run());
 		step("TermSimChecks.run", () -> geiler.addons.client.termsim.TermSimChecks.run());
 		step("CroesusChecks.run", () -> CroesusChecks.run());
 		step("ChestRollChecks.run", () -> geiler.addons.client.dungeon.f7.ChestRollChecks.run());
@@ -267,6 +281,7 @@ public final class OfflineChecks {
 		step("ItemCooldownChecks.run", () -> ItemCooldownChecks.run());
 		step("DungeonHelpersPortChecks.run", () -> DungeonHelpersPortChecks.run());
 		step("ContainerKeybindChecks.run", () -> ContainerKeybindChecks.run());
+		step("DungeonScoreStateChecks.run", () -> geiler.addons.client.dungeon.score.DungeonScoreStateChecks.run());
 		step("DungeonMapInfoChecks.run", () -> geiler.addons.client.dungeon.DungeonMapInfoChecks.run());
 		step("TreeNotifierChecks.main", () -> TreeNotifierChecks.main(args));
 		step("ForagingChecks.run", () -> geiler.addons.client.foraging.ForagingChecks.run());

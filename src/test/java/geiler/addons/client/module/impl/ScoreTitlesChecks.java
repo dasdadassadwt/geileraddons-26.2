@@ -34,7 +34,7 @@ public final class ScoreTitlesChecks {
 		check(module == DungeonScorerModule.INSTANCE, "the module singleton remains stable");
 		check("Score Titles".equals(module.name()) && "Scorer".equals(module.configName()),
 			"the display name and persisted module key remain stable");
-		check("Shows a brief title when the dungeon score reaches configured milestones.".equals(module.description())
+		check("Shows a title, and optionally a chat message, when the dungeon score reaches 270 and 300.".equals(module.description())
 			&& module.category() == Category.F7 && !module.defaultEnabled(),
 			"the description, category, and fresh-install state remain stable");
 		check(ModulePreview.class.isAssignableFrom(DungeonScorerModule.class),
@@ -42,12 +42,12 @@ public final class ScoreTitlesChecks {
 
 		assertStaticField("INSTANCE", DungeonScorerModule.class);
 		assertStaticField("alerts", BooleanSetting.class);
-		assertStaticField("firstThreshold", NumberSetting.class);
-		assertStaticField("secondThreshold", NumberSetting.class);
 		assertStaticField("alertText", TextSetting.class);
 		assertStaticField("durationTicks", NumberSetting.class);
 		assertStaticField("playSound", BooleanSetting.class);
 		assertStaticField("soundId", TextSetting.class);
+		assertStaticField("chat270", BooleanSetting.class);
+		assertStaticField("chat300", BooleanSetting.class);
 		assertStaticField("paulBonus", ChoiceSetting.class);
 		assertPublicMethod("showAlert", Void.TYPE, String.class, Long.TYPE);
 		assertPublicMethod("recordSoundOutcome", Void.TYPE, Long.TYPE, String.class, String.class);
@@ -74,20 +74,18 @@ public final class ScoreTitlesChecks {
 	private static void checkSettingsAndGroups() {
 		DungeonScorerModule module = DungeonScorerModule.INSTANCE;
 		List<BooleanSetting> booleans = module.booleanSettings();
-		assertNames(booleans, List.of("Score Alerts", "Play Sound"), "boolean setting IDs");
+		assertNames(booleans, List.of("Score Alerts", "Play Sound", "Chat Message at 270", "Chat Message at 300"),
+			"boolean setting IDs");
 		check(booleans.get(0) == DungeonScorerModule.alerts && booleans.get(0).rawValue()
-			&& booleans.get(1) == DungeonScorerModule.playSound && booleans.get(1).rawValue(),
-			"both boolean defaults and the Odin adapter fields remain shared");
+			&& booleans.get(1) == DungeonScorerModule.playSound && booleans.get(1).rawValue()
+			&& booleans.get(2) == DungeonScorerModule.chat270 && !booleans.get(2).rawValue()
+			&& booleans.get(3) == DungeonScorerModule.chat300 && booleans.get(3).rawValue(),
+			"boolean defaults: titles and sound on, chat at 270 off, chat at 300 on");
 
 		List<NumberSetting> numbers = module.numberSettings();
-		assertNames(numbers, List.of("First Threshold", "Second Threshold", "Duration (Ticks)"),
-			"number setting IDs");
-		assertNumber(numbers.get(0), 0f, 300f, 270f, "first score threshold");
-		assertNumber(numbers.get(1), 0f, 300f, 300f, "second score threshold");
-		assertNumber(numbers.get(2), 10f, 300f, 20f, "alert duration");
-		check(numbers.get(0) == DungeonScorerModule.firstThreshold
-			&& numbers.get(1) == DungeonScorerModule.secondThreshold
-			&& numbers.get(2) == DungeonScorerModule.durationTicks,
+		assertNames(numbers, List.of("Duration (Ticks)"), "number setting IDs");
+		assertNumber(numbers.get(0), 10f, 300f, 20f, "alert duration");
+		check(numbers.get(0) == DungeonScorerModule.durationTicks,
 			"the Odin adapter keeps the registered number setting instances");
 
 		List<TextSetting> texts = module.textSettings();
@@ -105,44 +103,35 @@ public final class ScoreTitlesChecks {
 		check(paul == DungeonScorerModule.paulBonus && "UNKNOWN".equals(paul.value())
 			&& paul.choices().equals(List.of("UNKNOWN", "NO", "YES")),
 			"Paul score input keeps its persisted values and default");
-		check("Unknown".equals(paul.displayValue()), "the default Paul label remains stable");
+		check("Auto (detect Paul)".equals(paul.displayValue()), "the default Paul label is Auto");
 
 		List<SettingGroup> groups = module.groups();
 		List<String> groupNames = new ArrayList<>();
 		for (SettingGroup group : groups) groupNames.add(group.name());
-		check(groupNames.equals(List.of("Milestones", "Presentation", "Score Inputs")),
+		check(groupNames.equals(List.of("Titles at 270 and 300", "Chat Messages", "Score Inputs")),
 			"setting group IDs changed: " + groupNames);
 		assertGroup(groups.get(0), DungeonScorerModule.alerts,
-			List.of("First Threshold", "Second Threshold"), "Milestones");
-		assertGroup(groups.get(1), null,
-			List.of("Alert Text", "Duration (Ticks)", "Play Sound", "Sound ID"), "Presentation");
+			List.of("Alert Text", "Duration (Ticks)", "Play Sound", "Sound ID"), "Titles at 270 and 300");
+		assertGroup(groups.get(1), null, List.of("Chat Message at 270", "Chat Message at 300"), "Chat Messages");
 		assertGroup(groups.get(2), null, List.of("Paul Score Bonus"), "Score Inputs");
 	}
 
 	private static void checkPreviewBehavior() {
 		DungeonScorerModule module = DungeonScorerModule.INSTANCE;
-		NumberSetting firstThreshold = DungeonScorerModule.firstThreshold;
-		NumberSetting secondThreshold = DungeonScorerModule.secondThreshold;
 		TextSetting alertText = DungeonScorerModule.alertText;
-		float oldFirst = firstThreshold.value();
-		float oldSecond = secondThreshold.value();
 		String oldText = alertText.value();
 		try {
 			check("Score 270".equals(previewNotice(module)),
 				"the settings preview keeps its default score alert text");
 
-			firstThreshold.setValue(245f);
-			secondThreshold.setValue(290f);
 			alertText.setValue("  Milestone {score}!  ");
-			check("Milestone 245!".equals(previewNotice(module)),
-				"the preview reflects threshold and alert-template changes with trimmed placeholder substitution");
+			check("Milestone 270!".equals(previewNotice(module)),
+				"the preview reflects alert-template changes with trimmed placeholder substitution");
 
 			alertText.setValue("  ");
-			check("Score 245".equals(previewNotice(module)),
+			check("Score 270".equals(previewNotice(module)),
 				"a blank alert template falls back to the default score message");
 		} finally {
-			firstThreshold.setValue(oldFirst);
-			secondThreshold.setValue(oldSecond);
 			alertText.setValue(oldText);
 		}
 	}

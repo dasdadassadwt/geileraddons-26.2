@@ -52,9 +52,13 @@ public final class ItemListChecks {
 		checkIndex();
 		checkSearch();
 		checkCalculator();
+		checkSlotSearch();
 		checkRepo();
 		checkLayout();
 		checkStacks();
+		checkSort();
+		checkRarityColor();
+		checkFallbacks();
 		checkRealRepository();
 	}
 
@@ -81,6 +85,49 @@ public final class ItemListChecks {
 		System.out.println("ItemListChecks real repository: " + repo.getEntries().size() + " items, " + store.getFailures() + " failures, "
 			+ millis + " ms, sample " + store.getFailedSample());
 		require(store.getFailures() * 100 < repo.getEntries().size(), "under one percent of real items fail to convert");
+	}
+
+	private static List<String> sorted(List<Entry> list, String mode, Map<String, Double> prices) {
+		List<String> ids = new ArrayList<>();
+		for (Entry e : ItemSearch.sort(list, mode, prices::get)) ids.add(e.getId());
+		return ids;
+	}
+
+	private static void checkSort() {
+		List<Entry> list = new ArrayList<>();
+		for (String json : List.of(HYPERION, AOTE, MITHRIL)) list.add(parsed(json).getEntry());
+		list.add(new Entry("DIAMOND", "Diamond", List.of(), "minecraft:diamond", 0, "", "", "", "VANILLA", null));
+		Map<String, Double> prices = Map.of("HYPERION", 9e8, "REFINED_MITHRIL", 50.0);
+		require(sorted(list, ItemListData.SORT_BEST, prices).equals(List.of("HYPERION", "ASPECT_OF_THE_END", "REFINED_MITHRIL", "DIAMOND")), "best match keeps the given order");
+		require(sorted(list, ItemListData.SORT_NAME_ASC, prices).equals(List.of("ASPECT_OF_THE_END", "DIAMOND", "HYPERION", "REFINED_MITHRIL")), "name A-Z");
+		require(sorted(list, ItemListData.SORT_NAME_DESC, prices).equals(List.of("REFINED_MITHRIL", "HYPERION", "DIAMOND", "ASPECT_OF_THE_END")), "name Z-A");
+		require(sorted(list, ItemListData.SORT_PRICE_ASC, prices).equals(List.of("REFINED_MITHRIL", "HYPERION", "ASPECT_OF_THE_END", "DIAMOND")), "price low-high, unpriced last by name");
+		require(sorted(list, ItemListData.SORT_PRICE_DESC, prices).equals(List.of("HYPERION", "REFINED_MITHRIL", "ASPECT_OF_THE_END", "DIAMOND")), "price high-low, unpriced last by name");
+		require(ItemListData.nextSort(ItemListData.SORT_PRICE_DESC, 1).equals(ItemListData.SORT_BEST) && ItemListData.nextSort(ItemListData.SORT_BEST, -1).equals(ItemListData.SORT_PRICE_DESC)
+			&& ItemListData.nextSort("junk", 1).equals(ItemListData.SORT_NAME_ASC), "sort modes cycle both ways and an unknown mode restarts");
+	}
+
+	private static void checkRarityColor() {
+		require(parsed(HYPERION).getEntry().getRarityColor() == geiler.addons.client.inventory.SkyblockRarity.LEGENDARY, "rarity maps to its color");
+		require(new Entry("X", "X", List.of(), "minecraft:stick", 0, "", "VERY SPECIAL", "", "MATERIAL", null).getRarityColor() == geiler.addons.client.inventory.SkyblockRarity.VERY_SPECIAL, "two-word rarity");
+		require(new Entry("D", "D", List.of(), "minecraft:stick", 0, "", "", "", "VANILLA", null).getRarityColor() == null, "no rarity, no color");
+	}
+
+	/** Former skull items that NEU now lists as paper get their head back; vanilla stand-ins; unknown ids stay paper. */
+	private static void checkFallbacks() {
+		bindComponents();
+		String model = "{ItemModel:\"hypixel_skyblock:item/abiphones/abiphone_basic\",ExtraAttributes:{id:\"X\"}}";
+		Entry phone = new Entry("ABIPHONE_BASIC", "§fAbiphone Basic", List.of("§7A device", "", "§f§lCOMMON"), "minecraft:paper", 0, model, "COMMON", "", "MATERIAL", null);
+		net.minecraft.world.item.ItemStack head = stack(phone);
+		require(head.is(net.minecraft.world.item.Items.PLAYER_HEAD) && head.has(net.minecraft.core.component.DataComponents.PROFILE), "a paper item with a texture becomes a head");
+		require(head.getHoverName().getString().equals("Abiphone Basic") && head.get(net.minecraft.core.component.DataComponents.LORE).lines().size() == 3, "the head keeps repository name and lore");
+		Entry lasso = new Entry("ABYSMAL_LASSO", "§5Abysmal Lasso", List.of(), "minecraft:paper", 0, model, "EPIC", "", "MATERIAL", null);
+		require(stack(lasso).is(net.minecraft.world.item.Items.LEAD), "a vanilla stand-in item");
+		Entry unknown = new Entry("NOT_IN_TABLE", "Nothing", List.of(), "minecraft:paper", 0, model, "COMMON", "", "MATERIAL", null);
+		require(stack(unknown).is(net.minecraft.world.item.Items.PAPER), "an id with no fallback stays paper");
+		Entry sword = new Entry("ABIPHONE_BASIC", "Not a phone", List.of(), "minecraft:diamond_sword", 0, "", "COMMON", "", "MATERIAL", null);
+		require(stack(sword).is(net.minecraft.world.item.Items.DIAMOND_SWORD), "only paper items are replaced");
+		require(ItemFallbacks.INSTANCE.getSize() > 700 && ItemFallbacks.INSTANCE.parse("{\"A\":\"minecraft:lead\",\"B\":\"dGV4\",\"C\":5}").size() == 2, "table loads; bad values are skipped");
 	}
 
 	private static Parsed parsed(String json) {
@@ -216,6 +263,16 @@ public final class ItemListChecks {
 		require(calc("(".repeat(100) + "1" + ")".repeat(100) + "+1") == null, "deep nesting is refused");
 		require(SearchCalculator.format(4_750_000.0).equals("4,750,000") && SearchCalculator.format(2.5).equals("2.5") && SearchCalculator.plain(4_750_000.0).equals("4750000"),
 			"formatting");
+	}
+
+	private static void checkSlotSearch() {
+		List<String> lore = List.of("Damage: +260", "Ability: Wither Impact");
+		require(SlotSearch.matches("hyperion", "Hyperion", lore) && SlotSearch.matches("HYPER", "hyperion", lore), "name match, case-insensitive");
+		require(SlotSearch.matches("wither impact", "Hyperion", lore), "lore match");
+		require(SlotSearch.matches("hyperion damage", "Hyperion", lore) && !SlotSearch.matches("hyperion bow", "Hyperion", lore), "words are ANDed over name and lore");
+		require(SlotSearch.matches("\"wither impact\"", "Hyperion", lore) && !SlotSearch.matches("\"impact wither\"", "Hyperion", lore), "quoted phrase stays one term");
+		require(SlotSearch.matches("", "Hyperion", lore) && SlotSearch.matches("   ", "Hyperion", lore), "blank query matches everything");
+		require(!SlotSearch.matches("necron", "Hyperion", List.of()), "no match without lore");
 	}
 
 	private static void checkLayout() {

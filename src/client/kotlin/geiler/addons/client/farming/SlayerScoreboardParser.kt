@@ -18,7 +18,10 @@ class SlayerScoreboardParser private constructor() {
             "sven packmaster",
             "voidgloom seraph",
             "inferno demonlord",
+            "riftstalker bloodfiend",
         )
+        private val PROGRESS_NUMBERS = Pattern.compile("([\\d,.]+[kKmM]?)\\s*/\\s*([\\d,.]+[kKmM]?)")
+        private const val QUEST_BLOCK_LINES = 4
 
         @JvmStatic
         fun parse(text: String?): State {
@@ -37,11 +40,34 @@ class SlayerScoreboardParser private constructor() {
             if (nonEmptyLines < 2) return State.INCOMPLETE
 
             val hasQuestHeader = normalized.contains("slayer quest")
-            if (hasQuestHeader && (QUEST_PROGRESS.matcher(normalized).matches() || containsQuestName(normalized))) {
+            // Only the rows under the quest header count: the sidebar's date row (11/23/26) also looks like "a/b".
+            val block = questBlock(lines)
+            if (hasQuestHeader && (QUEST_PROGRESS.matcher(block).matches() || containsQuestName(normalized))) {
                 return State.QUEST_ACTIVE
             }
             if (hasQuestHeader) return State.INCOMPLETE
             return State.NO_QUEST
+        }
+
+        /**
+         * The quest progress row under the "Slayer Quest" header ("1,200/2,000"), normalized, or null when the
+         * sidebar has no quest progress. A change of this value means the player is actually slaying.
+         */
+        @JvmStatic
+        fun progress(text: String?): String? {
+            if (text == null) return null
+            val matcher = PROGRESS_NUMBERS.matcher(questBlock(LINE_BREAK.split(text)))
+            return if (matcher.find()) "${matcher.group(1)}/${matcher.group(2)}" else null
+        }
+
+        /** The header row and the few rows below it, lowercased and stripped; empty when there is no header. */
+        private fun questBlock(lines: Array<String>): String {
+            for (index in lines.indices) {
+                if (!ChatText.stripForMatch(lines[index]).lowercase(Locale.ROOT).contains("slayer quest")) continue
+                val end = minOf(lines.size, index + 1 + QUEST_BLOCK_LINES)
+                return (index until end).joinToString(" ") { ChatText.stripForMatch(lines[it]).lowercase(Locale.ROOT) }
+            }
+            return ""
         }
 
         private fun containsQuestName(text: String): Boolean {

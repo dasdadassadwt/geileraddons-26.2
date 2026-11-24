@@ -45,8 +45,10 @@ public final class ClickGuiFlatChecks {
 		check(search.x() == gridLeft, "the search bar starts at the card grid's left edge");
 		check(search.x() + search.w() == first.x() - 8, "the search bar ends 8 px before the toolbar");
 		check(last.x() + last.w() == gridContentRight, "the toolbar ends at the card grid's right edge");
-		check(ClickGuiScreen.TopBarIcon.values().length == 5 && first.w() == 30 && first.y() == py + 5,
-			"five 30 px toolbar buttons sit centred in the top bar");
+		check(ClickGuiScreen.TopBarIcon.values().length == 6 && first.w() == 30 && first.y() == py + 5,
+			"six 30 px toolbar buttons sit centred in the top bar");
+		check(ClickGuiScreen.TopBarIcon.COSMETICS.ordinal() == ClickGuiScreen.TopBarIcon.THEME.ordinal() + 1,
+			"the Cosmetics button sits right of the Theme button");
 		check(search.h() == 21 && search.y() == py + 9, "the search bar is 21 px tall and centred");
 		ClickGuiScreen.Rect github = ClickGuiHeaderGeometry.topBarRectForLayout(px, py, panelW, panelH, ClickGuiScreen.TopBarIcon.GITHUB);
 		check(github.x() == first.x() + 38, "toolbar buttons are 8 px apart");

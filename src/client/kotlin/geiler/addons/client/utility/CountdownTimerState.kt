@@ -55,6 +55,36 @@ class CountdownTimerState {
         return true
     }
 
+    /** The state in wall-clock terms, so another game instance (or the next launch) can pick it up. */
+    fun snapshot(nowNanos: Long, nowEpochMs: Long): Snapshot? {
+        if (!configured) return null
+        val remainingMs = (remainingNanos(nowNanos) + 999_999L) / 1_000_000L
+        return Snapshot(initialDurationNanos / 1_000_000L, remainingMs, running, if (running) nowEpochMs + remainingMs else 0L)
+    }
+
+    /**
+     * Takes over a snapshot written elsewhere. A countdown that already ran out more than [STALE_COMPLETION_MS]
+     * ago (the game was closed) shows as complete without alerting again.
+     */
+    fun restore(snapshot: Snapshot, nowNanos: Long, nowEpochMs: Long) {
+        initialDurationNanos = snapshot.initialMs.coerceAtLeast(0L) * 1_000_000L
+        configured = true
+        startedAtNanos = nowNanos
+        if (snapshot.running) {
+            val leftMs = snapshot.endEpochMs - nowEpochMs
+            storedRemainingNanos = leftMs.coerceAtLeast(0L) * 1_000_000L
+            running = leftMs > -STALE_COMPLETION_MS
+            completionEmitted = !running
+            if (!running) storedRemainingNanos = 0L
+        } else {
+            storedRemainingNanos = snapshot.remainingMs.coerceAtLeast(0L) * 1_000_000L
+            running = false
+            completionEmitted = storedRemainingNanos == 0L
+        }
+    }
+
+    data class Snapshot(val initialMs: Long, val remainingMs: Long, val running: Boolean, val endEpochMs: Long)
+
     fun isConfigured(): Boolean = configured
 
     fun isRunning(): Boolean = running
@@ -79,7 +109,9 @@ class CountdownTimerState {
         return "Timer ${TimerDurationParser.formatSeconds(remainingSeconds(nowNanos))} ($state)"
     }
 
-    private companion object {
+    companion object {
+        const val STALE_COMPLETION_MS = 60_000L
+
         @JvmStatic
         private fun ceilSeconds(nanos: Long): Long {
             if (nanos <= 0L) return 0L

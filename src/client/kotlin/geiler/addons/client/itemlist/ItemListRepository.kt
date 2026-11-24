@@ -21,7 +21,7 @@ import java.util.concurrent.Executors
 object ItemListRepository {
     private const val RETRY_MILLIS = 5L * 60_000L
     private const val UPDATE_CHECK_MILLIS = 6L * 3_600_000L
-    private const val STACK_FORMAT = 1
+    private const val STACK_FORMAT = 2
     private val STACKS_PATH: java.nio.file.Path by lazy {
         net.fabricmc.loader.api.FabricLoader.getInstance().configDir.resolve("geileraddons").resolve("neu-item-stacks.nbt.gz")
     }
@@ -35,7 +35,11 @@ object ItemListRepository {
         val source: String,
         val buildMillis: Long,
         val stacks: LegacyItemStacks.Store,
-    )
+    ) {
+        /** Former skull items NEU lists as paper that got their head or stand-in item back, and the ones left as paper. */
+        val fallbacks: Int = entries.count { ItemFallbacks.covers(it) }
+        val paperLeft: Int = entries.count { ItemFallbacks.isPaperModel(it) } - fallbacks
+    }
 
     @Volatile
     var compiled: Compiled? = null

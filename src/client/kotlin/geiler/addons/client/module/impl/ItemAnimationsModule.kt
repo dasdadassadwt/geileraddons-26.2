@@ -296,7 +296,7 @@ class ItemAnimationsModule private constructor(settings: Settings) : Module(
     private fun swingMultiplier(): Float = Math.pow(2.0, swingSpeed.value().toDouble()).toFloat()
 
     private fun isTerminator(stack: ItemStack?): Boolean = stack != null && !stack.isEmpty &&
-        ChatText.plain(stack.hoverName.string).trim().equals("Terminator", ignoreCase = true)
+        ChatText.plain(geiler.addons.client.utility.SkyblockItems.realName(stack)).trim().equals("Terminator", ignoreCase = true)
 
     fun noReequipReset(): Boolean = isEnabled() && noReequipReset.value()
 

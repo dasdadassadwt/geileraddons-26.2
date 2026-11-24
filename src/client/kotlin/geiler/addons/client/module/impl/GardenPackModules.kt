@@ -394,7 +394,7 @@ class VisitorShoppingListModule private constructor() : Module(
     private fun rebuild() {
         val player = Minecraft.getInstance().player ?: return
         val held = (0 until player.inventory.containerSize).map { player.inventory.getItem(it) }.filter { !it.isEmpty }
-            .map { VisitorRules.Held(it.hoverName.string.replace(Regex("§."), "").trim(), it.count) }
+            .map { VisitorRules.Held(geiler.addons.client.utility.SkyblockItems.realName(it).replace(Regex("§."), "").trim(), it.count) }
         val bazaar = PriceDisplayModule.INSTANCE.prices().bazaar
         rows = VisitorRules.rows(needs, { VisitorRules.have(held, it) }, { name -> bazaar?.get(VisitorRules.bazaarId(name))?.buyPrice })
         icons = rows.mapNotNull { row ->

@@ -5,8 +5,11 @@ import com.google.gson.JsonObject
 import com.mojang.blaze3d.platform.InputConstants
 import geiler.addons.client.dungeon.ClientJsonFile
 import geiler.addons.client.gui.InventorySurfaces
+import geiler.addons.client.inventory.SkyblockRarity
+import geiler.addons.client.itemlist.ItemListData
 import geiler.addons.client.itemlist.ItemListPanel
 import geiler.addons.client.itemlist.ItemListRepository
+import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.ChoiceSetting
 import geiler.addons.client.module.ClientKeyMappingRegistrar
@@ -17,6 +20,7 @@ import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents
 import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.client.KeyMapping
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen
 import net.minecraft.resources.Identifier
@@ -30,10 +34,10 @@ import java.nio.file.Path
  */
 class ItemListModule private constructor() : Module(
     "Item List",
-    "REI-style SkyBlock item list beside inventories: search, recipes (R), uses (U), favorites (F) and prices.",
+    "REI-style SkyBlock item list beside inventories: search, recipes (R), uses (U), favorites (F) and prices. Double-click the search bar to search the open inventory.",
     Category.MISCELLANEOUS,
     false,
-    style, priceMode, columns, rows,
+    style, priceMode, columns, rows, rarity,
 ), ItemListPanel.Host {
     private val diagnostics = ModuleDiagnostics(Category.MISCELLANEOUS, { name() }, 8, 100L, 480)
     val panel = ItemListPanel(this)
@@ -42,7 +46,7 @@ class ItemListModule private constructor() : Module(
     override fun onEnable() {
         PriceDisplayModule.INSTANCE.setItemListDemand(true)
         loadSaved()
-        diagnostics.enable("columns=${columns()} rows=${rows()} style=${style.value()} priceMode=${priceMode.value()} favorites=${panel.favorites.size} open=${panel.open}")
+        diagnostics.enable("columns=${columns()} rows=${rows()} style=${style.value()} priceMode=${priceMode.value()} rarityBackgrounds=${rarity.value()} sort=${panel.sort} favorites=${panel.favorites.size} open=${panel.open}")
     }
 
     override fun onDisable() {
@@ -70,9 +74,14 @@ class ItemListModule private constructor() : Module(
 
     override fun event(text: String) = diagnostics.event(text)
 
-    override fun saveFavorites(favorites: List<String>, open: Boolean) {
+    override fun rarityBackgrounds(): Boolean = rarity.value()
+
+    override fun drawRarity(g: GuiGraphicsExtractor, rarity: SkyblockRarity, x: Int, y: Int) = ItemRarityBackgroundsModule.INSTANCE.drawRarity(g, rarity, x, y)
+
+    override fun saveFavorites(favorites: List<String>, open: Boolean, sort: String) {
         val root = JsonObject()
         root.addProperty("open", open)
+        root.addProperty("sort", sort)
         root.add("favorites", JsonArray().also { a -> favorites.forEach { a.add(it) } })
         ClientJsonFile.writeAsync(PATH, root.toString())
     }
@@ -82,6 +91,7 @@ class ItemListModule private constructor() : Module(
         loadedFavorites = true
         val root = ClientJsonFile.read(PATH, JsonObject::class.java) ?: return
         root.get("open")?.takeIf { it.isJsonPrimitive }?.let { panel.open = it.asBoolean }
+        root.get("sort")?.takeIf { it.isJsonPrimitive && it.asString in ItemListData.SORTS }?.let { panel.sort = it.asString }
         root.getAsJsonArray("favorites")?.forEach { if (it.isJsonPrimitive && panel.favorites.size < MAX_FAVORITES) panel.favorites.add(it.asString) }
     }
 
@@ -112,6 +122,7 @@ class ItemListModule private constructor() : Module(
         private val style = InventorySurfaces.styleSetting()
         private val columns = NumberSetting("Columns", 4f, 20f, 11f, true)
         private val rows = NumberSetting("Rows (0 = fill height)", 0f, 30f, 0f, true)
+        private val rarity = BooleanSetting("Rarity Backgrounds", true)
         private val priceMode = ChoiceSetting(
             "Craft Cost Prices", "SELL_ORDER",
             mapOf("SELL_ORDER" to "Buy Order", "BUY_ORDER" to "Buy Instantly"),

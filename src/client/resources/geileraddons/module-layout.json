@@ -17,7 +17,7 @@
     { "category": "MINING", "id": "dwarven-mines", "label": "Dwarven Mines", "modules": ["Goblin Highlighter"] },
     { "category": "MINING", "id": "glacite-tunnels", "label": "Glacite Tunnels", "modules": ["Glacite Guide", "Corpse Finder", "Mineshaft Timer"] },
     { "category": "MINING", "id": "general", "label": "General", "except": ["Crystal Hollows Helper", "Metal Detector", "Powder Chests", "Goblin Highlighter", "Glacite Guide", "Corpse Finder", "Mineshaft Timer"] },
-    { "category": "MISCELLANEOUS", "id": "chat-party", "label": "Chat & Party", "modules": ["Chat", "Chat Channels", "Party Commands"] },
+    { "category": "MISCELLANEOUS", "id": "chat-party", "label": "Chat & Party", "modules": ["Chat", "Chat Channels", "Party Commands", "Hide Spam"] },
     { "category": "MISCELLANEOUS", "id": "utilities", "label": "Utilities", "modules": ["Macros", "Borderless Fullscreen"] },
     { "category": "MISCELLANEOUS", "id": "inventory", "label": "Inventory", "modules": ["Slot Locking", "Wardrobe Keybinds", "Loadout Keybinds", "Pet Keybinds", "Command Keybinds", "Scrollable Tooltip", "Storage Overlay"] },
     { "category": "MISCELLANEOUS", "id": "player", "label": "Player", "modules": ["Auto Sprint", "Snap Tap", "Spring Boots", "Ragnarock"] },

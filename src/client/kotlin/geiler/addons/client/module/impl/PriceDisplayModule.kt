@@ -123,10 +123,26 @@ class PriceDisplayModule private constructor(private val s: Settings) : Module(
         bazaarDemand = on
     }
 
+    /** Set by the Collection Tracker while a tracker shows profit: it values items from the Bazaar and lowest BIN. */
+    @Volatile
+    private var collectionDemand = false
+
+    fun setCollectionDemand(on: Boolean) {
+        collectionDemand = on
+    }
+
+    /** Milliseconds since the Bazaar data last arrived, or null before it has. */
+    @Synchronized
+    fun bazaarAgeMillis(): Long? = loadedAt[Dataset.BAZAAR]?.let { System.currentTimeMillis() - it }
+
+    /** Milliseconds since the lowest BIN data last arrived, or null before it has. */
+    @Synchronized
+    fun lowestBinAgeMillis(): Long? = loadedAt[Dataset.LOWEST_BIN]?.let { System.currentTimeMillis() - it }
+
     private fun wanted(dataset: Dataset): Boolean = when (dataset) {
         Dataset.NPC -> s.npcPrice.value() || itemListDemand
-        Dataset.BAZAAR -> s.bazaarPrice.value() || itemListDemand || bazaarDemand || craftingOn() || s.essenceCost.value() || s.estimatedValue.value()
-        Dataset.LOWEST_BIN -> s.lowestBin.value() || itemListDemand || craftingOn() || s.estimatedValue.value()
+        Dataset.BAZAAR -> s.bazaarPrice.value() || itemListDemand || bazaarDemand || collectionDemand || craftingOn() || s.essenceCost.value() || s.estimatedValue.value()
+        Dataset.LOWEST_BIN -> s.lowestBin.value() || itemListDemand || collectionDemand || craftingOn() || s.estimatedValue.value()
         Dataset.ONE_DAY -> s.averageBin.value() && s.averageType.value() != "THREE_DAY"
         Dataset.THREE_DAY -> (s.averageBin.value() && s.averageType.value() != "ONE_DAY") || s.estimatedValue.value()
         Dataset.MOTES -> s.motesPrice.value() && HypixelModApi.currentIsland() == Island.THE_RIFT
@@ -139,7 +155,7 @@ class PriceDisplayModule private constructor(private val s: Settings) : Module(
 
     fun tick() {
         val enabled = isEnabled()
-        if (!enabled && !itemListDemand && !bazaarDemand) return
+        if (!enabled && !itemListDemand && !bazaarDemand && !collectionDemand) return
         if (enabled) diagnostics.advance()
         if (!onSkyblock()) return
         if (++ticksSinceRefresh >= REFRESH_TICKS) {
@@ -227,14 +243,14 @@ class PriceDisplayModule private constructor(private val s: Settings) : Module(
         val id = SkyblockItemIds.id(tag)
         if (id.isEmpty()) return
         val lore = stack.get(DataComponents.LORE)?.lines()?.map { it.string } ?: emptyList()
-        val count = maxOf(PriceLines.displayedCount(stack.hoverName.string, lore, lines.first().string) ?: stack.count, 1)
+        val count = maxOf(PriceLines.displayedCount(geiler.addons.client.utility.SkyblockItems.realName(stack), lore, lines.first().string) ?: stack.count, 1)
         val options = PriceOptions(
             s.npcPrice.value(), s.georgePrice.value(), s.motesPrice.value(), s.averageBin.value(),
             s.averageType.value(), s.lowestBin.value(), s.bazaarPrice.value(),
         )
         var apiId = SkyblockItemIds.apiId(tag)
         if (id == "ATTRIBUTE_SHARD") {
-            val shard = SkyblockItemIds.shardApiId(stack.hoverName.string, shardNames)
+            val shard = SkyblockItemIds.shardApiId(geiler.addons.client.utility.SkyblockItems.realName(stack), shardNames)
             if (shard != null) {
                 apiId = shard
                 shardsResolved++

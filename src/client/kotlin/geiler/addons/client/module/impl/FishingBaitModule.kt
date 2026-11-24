@@ -125,7 +125,7 @@ class FishingBaitModule private constructor(settings: Settings) : Module(
     private fun readBait(stack: ItemStack): Bait? {
         if (stack.isEmpty) return null
         val amount = FishingBaitRules.amount(SkyblockItems.loreLines(stack)) ?: return null
-        val id = SkyblockItems.skyBlockId(stack).ifEmpty { stack.hoverName.string }
+        val id = SkyblockItems.skyBlockId(stack).ifEmpty { geiler.addons.client.utility.SkyblockItems.realName(stack) }
         return Bait(stack.copyWithCount(1), stack.hoverName, id, amount)
     }
 

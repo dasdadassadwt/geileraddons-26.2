@@ -87,7 +87,7 @@
             "description": "Optional animated gradient settings. Requires gradient."
           },
           "effect": {
-            "description": "Legacy opaque metadata retained for compatibility; it does not change potion, gameplay, or rendering behavior.",
+            "description": "Opaque metadata older mod versions ignore. An object may hold cosmetics: {\"cosmetics\": {\"wings\"|\"head\"|\"halo\"|\"tail\": {\"style\", \"color\", \"color2\", \"size\", \"up\", \"back\", \"speed\"}}} (see README, Cosmetics). It never changes gameplay or server state.",
             "oneOf": [
               { "type": "string" },
               { "type": "number" },

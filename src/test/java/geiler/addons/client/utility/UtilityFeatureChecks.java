@@ -9,6 +9,7 @@ import geiler.addons.client.module.Setting;
 import geiler.addons.client.module.impl.PerformanceHudModule;
 import geiler.addons.client.module.impl.SystemClockHudModule;
 import geiler.addons.client.performance.PerformanceHudRules;
+import geiler.addons.client.performance.PingTracker;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -130,23 +131,40 @@ public final class UtilityFeatureChecks {
 	}
 
 	private static void checkPerformanceHud() {
-		check(PerformanceHudRules.lines(true, true, true, 42, 19.84, 144).equals(
-			List.of("Ping: 42ms", "TPS: 19.8", "FPS: 144")), "performance HUD formats all three stats");
-		check(PerformanceHudRules.lines(true, true, true, null, null, 60).equals(
+		check(PerformanceHudRules.lines(true, true, true, true, 42, 19.84, 144, 1024L, 4096L).equals(
+			List.of("Ping: 42ms", "TPS: 19.8", "FPS: 144", "Memory: 1024/4096 MB (25%)")),
+			"performance HUD formats all four stats");
+		check(PerformanceHudRules.lines(true, true, true, false, null, null, 60, 0L, 0L).equals(
 			List.of("Ping: --", "TPS: --", "FPS: 60")), "performance HUD shows -- for unavailable ping and TPS");
-		check(PerformanceHudRules.lines(false, true, false, 5, 20.0, 60).equals(List.of("TPS: 20.0")),
+		check(PerformanceHudRules.lines(false, true, false, false, 5, 20.0, 60, 0L, 0L).equals(List.of("TPS: 20.0")),
 			"performance HUD lists only enabled stats");
-		check(PerformanceHudRules.lines(false, false, false, 5, 20.0, 60).isEmpty(),
+		check(PerformanceHudRules.lines(false, false, false, false, 5, 20.0, 60, 0L, 0L).isEmpty(),
 			"performance HUD with every stat off has no lines");
-		check(PerformanceHudRules.lines(true, false, false, -3, null, 0).equals(List.of("Ping: 0ms")),
+		check(PerformanceHudRules.lines(true, false, false, false, -3, null, 0, 0L, 0L).equals(List.of("Ping: 0ms")),
 			"performance HUD clamps negative ping to zero");
+		check(PerformanceHudRules.lines(false, false, false, true, null, null, 0, 10L, 0L).equals(List.of("Memory: 10/0 MB (0%)")),
+			"performance HUD memory survives an unknown maximum");
+
+		final long ms = 1_000_000L;
+		PingTracker.reset();
+		check(PingTracker.latestMs(0L) == null, "ping is unknown before any pong");
+		check(PingTracker.shouldSend(0L) && !PingTracker.shouldSend(500L * ms),
+			"ping requests wait for the send interval");
+		PingTracker.onPong(0L, 87L * ms);
+		check(Integer.valueOf(87).equals(PingTracker.latestMs(100L * ms)), "pong round trip becomes the ping");
+		PingTracker.onPong(System.currentTimeMillis(), 200L * ms);
+		check(Integer.valueOf(87).equals(PingTracker.latestMs(300L * ms)),
+			"a pong echoing another clock (vanilla millis) is ignored");
+		check(PingTracker.shouldSend(2_100L * ms), "a new request goes out after the interval");
+		check(PingTracker.latestMs(20_000L * ms) == null, "an old ping sample goes stale");
+		PingTracker.reset();
 
 		PerformanceHudModule module = PerformanceHudModule.INSTANCE;
 		check(module.name().equals("Performance HUD") && module.id().equals("performance_hud")
 			&& module.category() == Category.MISCELLANEOUS && !module.defaultEnabled(),
 			"Performance HUD keeps its identity, category, and disabled fresh-install default");
 		check(module.groups().getFirst().settings().stream().map(Setting::name).toList().equals(List.of(
-			"Show Ping", "Show TPS", "Show FPS", "Style", "Text Color")),
+			"Show Ping", "Show TPS", "Show FPS", "Show Memory", "Style", "Text Color")),
 			"Performance HUD keeps its settings in order");
 		check(module.booleanSettings().stream().allMatch(BooleanSetting::rawValue),
 			"Performance HUD shows every stat by default");

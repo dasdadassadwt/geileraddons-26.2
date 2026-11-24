@@ -5,6 +5,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.JsonPrimitive
+import geiler.addons.client.inventory.SkyblockRarity
 import geiler.addons.client.pricing.Recipe
 
 /** One listed thing: a SkyBlock item, pet, enchanted book, mob, NPC or vanilla item. [lore] keeps colour codes. */
@@ -21,6 +22,12 @@ class Entry(
     val wikiUrl: String?,
 ) {
     val plainName: String = ItemListData.plain(name)
+
+    /** Lowercase name for sorting. */
+    val sortName: String = plainName.lowercase()
+
+    /** The rarity's background color, worked out once here so drawing never parses text; null when the entry has no rarity. */
+    val rarityColor: SkyblockRarity? = SkyblockRarity.entries.firstOrNull { it.display == rarity }
 }
 
 class Ingredient(val id: String, val amount: Double)
@@ -65,6 +72,21 @@ object ItemListData {
     const val KAT = "katgrade"
     const val ESSENCE = "essence"
     val TYPE_ORDER = listOf(CRAFTING, FORGE, NPC_SHOP, TRADE, DROPS, KAT, ESSENCE)
+
+    const val SORT_BEST = "BEST"
+    const val SORT_NAME_ASC = "NAME_ASC"
+    const val SORT_NAME_DESC = "NAME_DESC"
+    const val SORT_PRICE_ASC = "PRICE_ASC"
+    const val SORT_PRICE_DESC = "PRICE_DESC"
+    val SORTS = listOf(SORT_BEST, SORT_NAME_ASC, SORT_NAME_DESC, SORT_PRICE_ASC, SORT_PRICE_DESC)
+
+    /** The sort [step] places after [mode] (wraps); an unknown (saved) mode restarts at the first real sort. */
+    @JvmStatic
+    fun nextSort(mode: String, step: Int): String {
+        val at = SORTS.indexOf(mode)
+        if (at < 0) return SORT_NAME_ASC
+        return SORTS[(at + step + SORTS.size) % SORTS.size]
+    }
 
     const val CAT_ALL = "ALL"
     const val CAT_WEAPON = "WEAPON"

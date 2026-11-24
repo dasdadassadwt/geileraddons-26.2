@@ -15,8 +15,6 @@ public final class DungeonHelperChecks {
 	public static void main(String[] args) { run(); }
 
 	public static void run() {
-		checkScoreCalculatorJavaInteropAndValueSemantics();
-		checkScoreAlerts();
 		checkBossTimers();
 		checkTerminalCounts();
 		checkF7TerminalSections();
@@ -27,196 +25,9 @@ public final class DungeonHelperChecks {
 		checkSpecialMobGatesAndPartyPalette();
 	}
 
-	private static void checkScoreCalculatorJavaInteropAndValueSemantics() {
-		Class<DungeonScoreCalculator> calculator = DungeonScoreCalculator.class;
-		Class<DungeonScoreCalculator.ScoreEstimate> estimate = DungeonScoreCalculator.ScoreEstimate.class;
-		Class<DungeonScoreCalculator.TabStats> tabStats = DungeonScoreCalculator.TabStats.class;
-		Class<DungeonScoreCalculator.TeamSnapshot> teamSnapshot = DungeonScoreCalculator.TeamSnapshot.class;
-		Class<DungeonScoreCalculator.BonusSnapshot> bonusSnapshot = DungeonScoreCalculator.BonusSnapshot.class;
-		try {
-			check(Modifier.isPublic(calculator.getModifiers()) && Modifier.isFinal(calculator.getModifiers())
-				&& Modifier.isPrivate(calculator.getDeclaredConstructor().getModifiers()),
-				"the score calculator keeps its public final outer type and private constructor");
-			checkStaticMethod(calculator.getMethod("readTabLines", Iterable.class), tabStats, "readTabLines");
-			checkStaticMethod(calculator.getMethod("withBonusSignals", tabStats, bonusSnapshot), tabStats,
-				"withBonusSignals");
-			checkStaticMethod(calculator.getMethod("withTeamSignals", tabStats, teamSnapshot), tabStats,
-				"withTeamSignals");
-			checkStaticMethod(calculator.getMethod("calculate", DungeonFloor.class, tabStats,
-				Boolean.class, boolean.class), estimate, "calculate");
-			checkStaticMethod(calculator.getMethod("requiredSecretPercentage", DungeonFloor.class),
-				double.class, "requiredSecretPercentage");
-			check(DungeonScoreCalculator.Input.values().length == 14
-				&& DungeonScoreCalculator.Input.values()[0] == DungeonScoreCalculator.Input.FLOOR
-				&& DungeonScoreCalculator.Input.values()[13] == DungeonScoreCalculator.Input.INVALID_TAB_VALUE,
-				"score input enum names and order remain stable");
-
-			checkRecordComponents(tabStats, "secretsFound", "secretsPercent", "completedRooms", "clearedPercent",
-				"puzzleCount", "completedPuzzles", "observedPuzzleStatusRows", "deaths", "crypts", "mimic",
-				"prince", "batKillers", "paul");
-			checkRecordComponents(teamSnapshot, "floor", "clearedPercent");
-			checkRecordComponents(bonusSnapshot, "mimic", "prince", "batKillers", "paul");
-			tabStats.getConstructor(Integer.class, Double.class, Integer.class, Double.class, Integer.class,
-				int.class, int.class, Integer.class, Integer.class, Boolean.class, Boolean.class,
-				Integer.class, Boolean.class);
-			teamSnapshot.getConstructor(DungeonFloor.class, Double.class);
-			bonusSnapshot.getConstructor(Boolean.class, Boolean.class, Integer.class, Boolean.class);
-			check(Modifier.isPublic(bonusSnapshot.getField("UNKNOWN").getModifiers()),
-				"the public BonusSnapshot.UNKNOWN field remains Java-accessible");
-
-			check(!estimate.isRecord(), "normalized ScoreEstimate keeps its Java constructor and accessors without record metadata");
-			estimate.getConstructor(Integer.class, Integer.class, java.util.Set.class);
-			checkInstanceMethod(estimate.getMethod("minimum"), Integer.class, "ScoreEstimate.minimum");
-			checkInstanceMethod(estimate.getMethod("maximum"), Integer.class, "ScoreEstimate.maximum");
-			checkInstanceMethod(estimate.getMethod("unknownInputs"), java.util.Set.class, "ScoreEstimate.unknownInputs");
-			checkInstanceMethod(estimate.getMethod("available"), boolean.class, "ScoreEstimate.available");
-			checkInstanceMethod(estimate.getMethod("exact"), boolean.class, "ScoreEstimate.exact");
-			checkInstanceMethod(estimate.getMethod("exactScore"), java.util.OptionalInt.class, "ScoreEstimate.exactScore");
-
-			Class<DungeonScoreCalculator.RunSignals> signals = DungeonScoreCalculator.RunSignals.class;
-			check(Modifier.isPublic(signals.getConstructor().getModifiers()), "RunSignals keeps its public no-argument constructor");
-			checkInstanceMethod(signals.getMethod("resetUnknown"), void.class, "RunSignals.resetUnknown");
-			checkInstanceMethod(signals.getMethod("beginRun"), void.class, "RunSignals.beginRun");
-			checkInstanceMethod(signals.getMethod("observeTeamUpdate", String.class), boolean.class,
-				"RunSignals.observeTeamUpdate");
-			checkInstanceMethod(signals.getMethod("observePartyMessage", String.class, DungeonFloor.class),
-				boolean.class, "RunSignals.observePartyMessage");
-			checkInstanceMethod(signals.getMethod("observePaul", Boolean.class), void.class, "RunSignals.observePaul");
-			checkInstanceMethod(signals.getMethod("teamSnapshot"), teamSnapshot, "RunSignals.teamSnapshot");
-			checkInstanceMethod(signals.getMethod("snapshot"), bonusSnapshot, "RunSignals.snapshot");
-		} catch (ReflectiveOperationException exception) {
-			throw new AssertionError("Odin score calculator Java API changed", exception);
-		}
-
-		var stats = new DungeonScoreCalculator.TabStats(null, 75.0, 30, 85.0, 3,
-			2, 3, 1, 5, true, false, 2, null);
-		var sameStats = new DungeonScoreCalculator.TabStats(null, 75.0, 30, 85.0, 3,
-			2, 3, 1, 5, true, false, 2, null);
-		check(stats.equals(sameStats) && stats.hashCode() == new ExpectedTabStats(null, 75.0, 30, 85.0, 3,
-			2, 3, 1, 5, true, false, 2, null).hashCode()
-			&& stats.toString().equals("TabStats[secretsFound=null, secretsPercent=75.0, completedRooms=30, " +
-				"clearedPercent=85.0, puzzleCount=3, completedPuzzles=2, observedPuzzleStatusRows=3, " +
-				"deaths=1, crypts=5, mimic=true, prince=false, batKillers=2, paul=null]"),
-			"TabStats preserves Java record equality, hashCode, and toString behavior");
-		var team = new DungeonScoreCalculator.TeamSnapshot(null, 85.0);
-		check(team.equals(new DungeonScoreCalculator.TeamSnapshot(null, 85.0))
-			&& team.hashCode() == new ExpectedTeamSnapshot(null, 85.0).hashCode()
-			&& team.toString().equals("TeamSnapshot[floor=null, clearedPercent=85.0]"),
-			"TeamSnapshot preserves Java record equality, hashCode, and toString behavior");
-		var bonus = new DungeonScoreCalculator.BonusSnapshot(true, null, 2, false);
-		check(bonus.equals(new DungeonScoreCalculator.BonusSnapshot(true, null, 2, false))
-			&& bonus.hashCode() == new ExpectedBonusSnapshot(true, null, 2, false).hashCode()
-			&& bonus.toString().equals("BonusSnapshot[mimic=true, prince=null, batKillers=2, paul=false]"),
-			"BonusSnapshot preserves Java record equality, hashCode, and toString behavior");
-
-		var copiedInputs = new java.util.HashSet<DungeonScoreCalculator.Input>();
-		copiedInputs.add(DungeonScoreCalculator.Input.DEATHS);
-		copiedInputs.add(DungeonScoreCalculator.Input.FLOOR);
-		var estimateValue = new DungeonScoreCalculator.ScoreEstimate(201, 215, copiedInputs);
-		copiedInputs.clear();
-		var equivalentEstimate = new DungeonScoreCalculator.ScoreEstimate(201, 215,
-			java.util.Set.of(DungeonScoreCalculator.Input.DEATHS, DungeonScoreCalculator.Input.FLOOR));
-		check(estimateValue.unknownInputs().equals(equivalentEstimate.unknownInputs())
-			&& estimateValue.equals(equivalentEstimate) && equivalentEstimate.equals(estimateValue)
-			&& estimateValue.hashCode() == new ExpectedScoreEstimate(201, 215, estimateValue.unknownInputs()).hashCode()
-			&& estimateValue.toString().equals("ScoreEstimate[minimum=201, maximum=215, unknownInputs="
-				+ estimateValue.unknownInputs() + "]"),
-			"ScoreEstimate defensively copies its set and retains record value behavior");
-		var exactEstimate = new DungeonScoreCalculator.ScoreEstimate(287, 287, java.util.Set.of());
-		var unavailableEstimate = new DungeonScoreCalculator.ScoreEstimate(null, null, null);
-		check(exactEstimate.available() && exactEstimate.exact() && exactEstimate.exactScore().orElseThrow() == 287
-			&& !unavailableEstimate.available() && !unavailableEstimate.exact()
-			&& unavailableEstimate.exactScore().isEmpty() && unavailableEstimate.unknownInputs().isEmpty(),
-			"ScoreEstimate keeps exact/unavailable calculations and null/empty normalization");
-		assertUnmodifiable(estimateValue.unknownInputs(), "ScoreEstimate returns an immutable copied set");
-		assertUnmodifiable(unavailableEstimate.unknownInputs(), "ScoreEstimate returns an immutable empty set");
-		var nullElement = new java.util.HashSet<DungeonScoreCalculator.Input>();
-		nullElement.add(null);
-		boolean rejectedNullElement = false;
-		try {
-			new DungeonScoreCalculator.ScoreEstimate(null, null, nullElement);
-		} catch (NullPointerException expected) {
-			rejectedNullElement = true;
-		}
-		check(rejectedNullElement, "ScoreEstimate continues rejecting null members during defensive copying");
-	}
-
 	private static void checkStaticMethod(java.lang.reflect.Method method, Class<?> returnType, String label) {
 		check(method.getReturnType() == returnType && Modifier.isPublic(method.getModifiers())
-			&& Modifier.isStatic(method.getModifiers()), "score calculator retains its public static descriptor: " + label);
-	}
-
-	private static void checkRecordComponents(Class<?> type, String... expectedNames) {
-		var components = type.getRecordComponents();
-		check(type.isRecord() && components != null
-			&& java.util.Arrays.stream(components).map(java.lang.reflect.RecordComponent::getName).toList()
-				.equals(List.of(expectedNames)), "Java record component order remains stable: " + type.getSimpleName());
-	}
-
-	private static void assertUnmodifiable(java.util.Set<?> values, String message) {
-		boolean rejected = false;
-		try {
-			values.clear();
-		} catch (UnsupportedOperationException expected) {
-			rejected = true;
-		}
-		check(rejected, message);
-	}
-
-	private static void checkScoreAlerts() {
-		checkScoreAlertsJavaInterop();
-		DungeonScoreAlerts lateJoin = new DungeonScoreAlerts();
-		check(lateJoin.update(290, 270, 300, true).equals(List.of(270)),
-			"late join immediately reports a threshold already reached");
-		check(lateJoin.update(299, 270, 300, true).isEmpty()
-			&& lateJoin.update(300, 270, 300, true).equals(List.of(300)),
-			"upper default threshold fires once when reached");
-
-		DungeonScoreAlerts disabled = new DungeonScoreAlerts();
-		check(disabled.update(269, 270, 300, false).isEmpty()
-			&& disabled.update(270, 270, 300, false).isEmpty()
-			&& disabled.update(270, 270, 300, true).equals(List.of(270)),
-			"disabled alerts still sample and fire immediately when enabled above a threshold");
-
-		DungeonScoreAlerts configurable = new DungeonScoreAlerts();
-		check(configurable.update(279, 280, 300, true).isEmpty()
-			&& configurable.update(280, 280, 300, true).equals(List.of(280)),
-			"custom lower threshold fires on its crossing");
-		check(configurable.update(290, 285, 295, true).equals(List.of(285))
-			&& configurable.update(294, 285, 295, true).isEmpty()
-			&& configurable.update(295, 285, 295, true).equals(List.of(295)),
-			"updated thresholds below the run high-water fire once immediately");
-
-		DungeonScoreAlerts defaults = new DungeonScoreAlerts();
-		check(defaults.update(300).equals(List.of(270, 300)) && defaults.update(301).isEmpty(),
-			"the compatibility overload retains its original one-shot 270/300 thresholds");
-		DungeonScoreAlerts normalized = new DungeonScoreAlerts();
-		check(normalized.update(5, 301, -1, true).equals(List.of(0))
-			&& normalized.update(300, 301, -1, true).equals(List.of(300)),
-			"custom thresholds clamp to 0..300 and fire in normalized order");
-		DungeonScoreAlerts invalid = new DungeonScoreAlerts();
-		check(invalid.update(1_001, 270, 300, true).isEmpty()
-			&& invalid.update(270, 270, 300, true).equals(List.of(270)),
-			"out-of-range scores are ignored without changing run high-water state");
-		DungeonScoreAlerts nullEstimate = new DungeonScoreAlerts();
-		check(nullEstimate.update((DungeonScoreCalculator.ScoreEstimate) null, 270, 300, true).isEmpty(),
-			"a null score estimate remains unavailable through the Java-compatible facade");
-	}
-
-	private static void checkScoreAlertsJavaInterop() {
-		Class<DungeonScoreAlerts> alerts = DungeonScoreAlerts.class;
-		try {
-			check(Modifier.isPublic(alerts.getConstructor().getModifiers()),
-				"the Java-compatible score tracker retains its public no-argument constructor");
-			checkInstanceMethod(alerts.getMethod("update", int.class), List.class, "update(score)");
-			checkInstanceMethod(alerts.getMethod("update", int.class, int.class, int.class, boolean.class),
-				List.class, "update(score, thresholds, emitAlerts)");
-			checkInstanceMethod(alerts.getMethod("update", DungeonScoreCalculator.ScoreEstimate.class,
-				int.class, int.class, boolean.class), List.class, "update(estimate, thresholds, emitAlerts)");
-			checkInstanceMethod(alerts.getMethod("reset"), void.class, "reset");
-		} catch (ReflectiveOperationException exception) {
-			throw new AssertionError("score alerts Java API changed", exception);
-		}
+			&& Modifier.isStatic(method.getModifiers()), "public static descriptor remains stable: " + label);
 	}
 
 	private static void checkInstanceMethod(java.lang.reflect.Method method, Class<?> returnType, String label) {
@@ -780,17 +591,6 @@ public final class DungeonHelperChecks {
 	private static void check(boolean condition, String message) {
 		if (!condition) throw new AssertionError(message);
 	}
-
-	private record ExpectedTabStats(Integer secretsFound, Double secretsPercent, Integer completedRooms,
-		Double clearedPercent, Integer puzzleCount, int completedPuzzles, int observedPuzzleStatusRows,
-		Integer deaths, Integer crypts, Boolean mimic, Boolean prince, Integer batKillers, Boolean paul) { }
-
-	private record ExpectedTeamSnapshot(DungeonFloor floor, Double clearedPercent) { }
-
-	private record ExpectedBonusSnapshot(Boolean mimic, Boolean prince, Integer batKillers, Boolean paul) { }
-
-	private record ExpectedScoreEstimate(Integer minimum, Integer maximum,
-		java.util.Set<DungeonScoreCalculator.Input> unknownInputs) { }
 
 	private record Milestone(DungeonFloor floor, String message, String segment) { }
 }

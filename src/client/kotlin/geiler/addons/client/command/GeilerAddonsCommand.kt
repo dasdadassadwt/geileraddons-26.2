@@ -121,6 +121,7 @@ object GeilerAddonsCommand {
             WaypointCommands.appendTo(root)
             geiler.addons.client.module.impl.CrystalHollowsCommands.appendTo(root)
             geiler.addons.client.termsim.TermSimCommand.appendTo(root)
+            geiler.addons.client.rename.AnyRenameCommand.appendTo(root)
             val registeredRoot = dispatcher.register(root)
             for (alias in arrayOf("Ga", "gA", "GA")) {
                 dispatcher.register(

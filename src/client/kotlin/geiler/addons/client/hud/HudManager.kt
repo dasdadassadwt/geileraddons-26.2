@@ -1,5 +1,6 @@
 package geiler.addons.client.hud
 
+import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.gui.MoveUiScreen
 import geiler.addons.client.location.HypixelModApi
 import geiler.addons.client.module.Category
@@ -8,6 +9,7 @@ import geiler.addons.client.module.impl.VisualModule
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.world.item.Items
 import java.util.HashMap
 import java.util.LinkedHashMap
 
@@ -161,8 +163,38 @@ object HudManager {
         graphics.pose().translate(x.toFloat(), y.toFloat())
         val scale = scale(element)
         graphics.pose().scale(scale, scale)
-        if (preview) element.renderPreview(graphics, font, 0, 0) else element.render(graphics, font, 0, 0)
-        graphics.pose().popMatrix()
+        try {
+            if (preview) safePreview(element.id()) { element.renderPreview(graphics, font, 0, 0) }
+            else element.render(graphics, font, 0, 0)
+        } finally {
+            graphics.pose().popMatrix()
+        }
+    }
+
+    private val skippedPreviews = HashSet<String>()
+
+    /**
+     * Runs a preview draw. Item default components are bound only once a world loads, so on the title screen
+     * any preview that builds an ItemStack throws; that preview is skipped (false) instead of crashing the game.
+     */
+    @JvmStatic
+    fun safePreview(name: String, draw: Runnable): Boolean =
+        safePreview(name, Items.DIAMOND.builtInRegistryHolder().areComponentsBound(), draw)
+
+    @JvmStatic
+    fun safePreview(name: String, componentsBound: Boolean, draw: Runnable): Boolean {
+        try {
+            draw.run()
+            return true
+        } catch (e: NullPointerException) {
+            if (componentsBound) throw e
+            // Once per element, so a frame-rate loop cannot flood the log.
+            if (skippedPreviews.add(name)) {
+                GeilerAddonsLog.write(Category.DEV, "HUD Preview", 0L,
+                    "PREVIEW_SKIPPED element=$name reason=item-components-unbound")
+            }
+            return false
+        }
     }
 
     /** Draws visible live-HUD elements; skipped while Move Elements has its own previews up. */
@@ -194,6 +226,29 @@ object HudManager {
             renderElement(element, graphics, font, x(element, font, width), y(element, font, height), false)
         }
         graphics.disableScissor()
+    }
+
+    /**
+     * Offers a click (GUI coordinates, chat open) to the topmost live element under it; true when one consumed it.
+     * Only elements that are showing right now can be clicked.
+     */
+    @JvmStatic
+    fun click(mouseX: Double, mouseY: Double, button: Int): Boolean {
+        val mc = Minecraft.getInstance()
+        if (mc.gui.hud.isHidden()) return false
+        val font = mc.font
+        val width = mc.window.guiScaledWidth
+        val height = mc.window.guiScaledHeight
+        val island = HypixelModApi.currentIsland()
+        for (element in elements.asReversed()) {
+            if (!element.renderOnHud() || !element.visible() || !HudExpiry.onIsland(element.hudIslands(), island)) continue
+            val x = x(element, font, width)
+            val y = y(element, font, height)
+            val scale = scale(element)
+            if (mouseX < x || mouseY < y || mouseX >= x + scaledWidth(element, font) || mouseY >= y + scaledHeight(element, font)) continue
+            if (element.mouseClicked((mouseX - x) / scale, (mouseY - y) / scale, button)) return true
+        }
+        return false
     }
 
     @JvmStatic

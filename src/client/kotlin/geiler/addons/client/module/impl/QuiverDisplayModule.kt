@@ -68,7 +68,7 @@ class QuiverDisplayModule private constructor() : Module(
                 if (stack.isEmpty || !QuiverRules.isArrowItem(BuiltInRegistries.ITEM.getKey(stack.item).toString())) continue
                 val lore = stack.get(DataComponents.LORE)?.lines()?.map { it.string } ?: continue
                 val count = QuiverRules.arrowsRemaining(lore) ?: continue
-                found = QuiverRules.text(stack.hoverName.string, count)
+                found = QuiverRules.text(geiler.addons.client.utility.SkyblockItems.realName(stack), count)
                 break
             }
         }

@@ -243,7 +243,6 @@ object ModConfigMigrations {
         changed = copyLegacySettings(toggles, oldPrefix, scorer,
             "Score Alerts 270/300" to "Score Alerts", "Score Alert Sound" to "Play Sound") || changed
         changed = copyLegacySettings(numbers, oldPrefix, scorer,
-            "Score Alert Threshold 1" to "First Threshold", "Score Alert Threshold 2" to "Second Threshold",
             "Score Alert Duration (Ticks)" to "Duration (Ticks)") || changed
         changed = copyLegacySettings(texts, oldPrefix, scorer,
             "Score Alert Text" to "Alert Text", "Score Alert Sound ID" to "Sound ID") || changed

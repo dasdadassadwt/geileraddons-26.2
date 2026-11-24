@@ -1,6 +1,7 @@
 package geiler.addons.client.module.impl
 
 import geiler.addons.client.inventory.ItemBackgrounds
+import geiler.addons.client.inventory.SkyblockRarity
 import geiler.addons.client.inventory.SlotInfoGrace
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
@@ -107,6 +108,9 @@ class ItemRarityBackgroundsModule private constructor(
         if (!isEnabled() || stack.isEmpty) return
         drawInfo(graphics, ItemBackgrounds.info(stack), x, y)
     }
+
+    /** One rarity square or disc for the Item List: this module's style, opacity and legacy colors, drawn even while the module itself is off. */
+    fun drawRarity(graphics: GuiGraphicsExtractor, rarity: SkyblockRarity, x: Int, y: Int) = fill(graphics, x, y, rarity.color(settings.legacyColors.value()))
 
     /** A container slot: a same-item stack that briefly lacks SkyBlock data keeps its last background (see [SlotInfoGrace]). */
     fun drawSlotBackground(graphics: GuiGraphicsExtractor, slot: Slot, x: Int, y: Int) {

@@ -226,7 +226,7 @@ object ChatCommandReplyBackend {
             ChatReplyCommandRules.Command.HOLDING -> "Holding: " + if (player.getMainHandItem().isEmpty) {
                 "Nothing :("
             } else {
-                ChatText.stripForMatch(player.getMainHandItem().getHoverName().string)
+                ChatText.stripForMatch(geiler.addons.client.utility.SkyblockItems.realName(player.getMainHandItem()))
             }
             ChatReplyCommandRules.Command.CUSTOM_REPLY -> {
                 val expanded = ChatReplyTags.expand(

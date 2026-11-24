@@ -124,8 +124,9 @@ object LegacyItemStacks {
             TypeReferences.LEGACY_ITEM_STACK, Dynamic(ops, root), LegacyItemStackFixer.getFirstVersion(), LegacyItemStackFixer.getLatestVersion(),
         )
         var problem = ""
-        val stack = ItemStack.CODEC.parse(fixed).resultOrPartial { problem = it }.orElse(ItemStack.EMPTY)
-        if (stack.isEmpty) throw IllegalStateException("codec rejected ${entry.mcId}:${entry.damage}: ${problem.take(300)} fixed=${fixed.value.toString().take(300)}")
+        val converted = ItemStack.CODEC.parse(fixed).resultOrPartial { problem = it }.orElse(ItemStack.EMPTY)
+        if (converted.isEmpty) throw IllegalStateException("codec rejected ${entry.mcId}:${entry.damage}: ${problem.take(300)} fixed=${fixed.value.toString().take(300)}")
+        val stack = ItemFallbacks.apply(entry, converted)
         stack.set(DataComponents.CUSTOM_NAME, legacyText(entry.name))
         stack.set(DataComponents.LORE, ItemLore(entry.lore.map { legacyText(it) }))
         val extra = stack.get(DataComponents.CUSTOM_DATA)?.copyTag()?.getCompoundOrEmpty("ExtraAttributes") ?: CompoundTag()

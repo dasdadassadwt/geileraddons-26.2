@@ -229,6 +229,14 @@ public final class SlayerAlertChecks {
 		check(SlayerScoreboardParser.parse("Slayer Quest\nRevenant Horror\nCombat XP: 1,200/2,000")
 			== SlayerScoreboardParser.State.QUEST_ACTIVE,
 			"Slayer quest XP in the sidebar activates tracking before a boss spawns");
+		check(SlayerScoreboardParser.parse("11/23/26 m12AB\nSlayer Quest\nCleanup\nPurse: 5") == SlayerScoreboardParser.State.INCOMPLETE,
+			"the sidebar date row is not Slayer quest progress");
+		check("1,200/2,000".equals(SlayerScoreboardParser.progress("11/23/26 m12AB\nSlayer Quest\nRevenant Horror IV\n(1,200/2,000) Combat XP")),
+			"quest progress is read from the rows under the quest header, not the date row");
+		check(SlayerScoreboardParser.progress("11/23/26 m12AB\nVillage\nPurse: 1,234") == null,
+			"no quest header means no quest progress");
+		check(SlayerScoreboardParser.parse("Slayer Quest\nRiftstalker Bloodfiend III\nNothing") == SlayerScoreboardParser.State.QUEST_ACTIVE,
+			"the Rift vampire quest counts as an active quest");
 		check(SlayerScoreboardParser.parse("Slayer Quest\n") == SlayerScoreboardParser.State.INCOMPLETE,
 			"a partial sidebar snapshot does not look like an idle quest");
 		check(SlayerScoreboardParser.parse("Village\nPurse: 1,234\nBits: 50")

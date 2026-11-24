@@ -178,6 +178,27 @@ class ItemSearch(
             "hype" to "HYPERION", "term" to "TERMINATOR", "juju" to "JUJU_SHORTBOW", "valk" to "VALKYRIE", "gdrag" to "GOLDEN_DRAGON;4",
         )
 
+        /** [entries] ordered by [mode] (`ItemListData.SORT_*`); best match keeps the list as given. Entries with no [price] go last in both price orders. */
+        @JvmStatic
+        fun sort(entries: List<Entry>, mode: String, price: (String) -> Double?): List<Entry> {
+            val byName = compareBy<Entry>({ it.sortName }, { it.id })
+            return when (mode) {
+                ItemListData.SORT_NAME_ASC -> entries.sortedWith(byName)
+                ItemListData.SORT_NAME_DESC -> entries.sortedWith(byName.reversed())
+                ItemListData.SORT_PRICE_ASC, ItemListData.SORT_PRICE_DESC -> {
+                    val prices = HashMap<String, Double>()
+                    for (entry in entries) price(entry.id)?.let { prices[entry.id] = it }
+                    val sign = if (mode == ItemListData.SORT_PRICE_ASC) 1 else -1
+                    val (priced, unpriced) = entries.partition { it.id in prices }
+                    priced.sortedWith { a, b ->
+                        val c = prices.getValue(a.id).compareTo(prices.getValue(b.id)) * sign
+                        if (c != 0) c else byName.compare(a, b)
+                    } + unpriced.sortedWith(byName)
+                }
+                else -> entries
+            }
+        }
+
         /** First letters of each word of [name]: "aspect of the end" gives "aote". */
         @JvmStatic
         fun acronym(name: String): String =

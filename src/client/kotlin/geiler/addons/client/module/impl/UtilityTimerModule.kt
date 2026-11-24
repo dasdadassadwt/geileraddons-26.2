@@ -5,6 +5,7 @@ import geiler.addons.client.hud.HudElement
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.Module
 import geiler.addons.client.utility.CountdownTimerState
+import geiler.addons.client.utility.SharedTimerStore
 import geiler.addons.client.utility.TimerCompletionPresentation
 import geiler.addons.client.utility.TimerDurationParser
 import net.minecraft.client.Minecraft
@@ -28,6 +29,7 @@ class UtilityTimerModule private constructor() : HudElement {
         private const val DIAGNOSTIC_DETAIL_WINDOW_NANOS = 50_000_000L
         private const val DIAGNOSTIC_STATUS_INTERVAL_TICKS = 20L
         private const val DIAGNOSTIC_HEARTBEAT_TICKS = 100L
+        private const val SHARED_POLL_TICKS = 20L
         private const val HUD_COLOR = 0xFFFFD166.toInt()
     }
 
@@ -39,6 +41,14 @@ class UtilityTimerModule private constructor() : HudElement {
     private var lastStatusTick = Long.MIN_VALUE
     private var lastStatusLine: String? = null
 
+    // Shared across game instances and launches through SharedTimerStore.
+    private val instanceId = java.util.UUID.randomUUID().toString()
+    private val sharedPath = SharedTimerStore.defaultPath()
+    private var sharedRevision = 0L
+    private var sharedModifiedMs = Long.MIN_VALUE
+    private var sharedPollTick = Long.MIN_VALUE
+    private var sharedErrorLogged = false
+
     fun state(): CountdownTimerState = timer
 
     fun setTimer(seconds: Long) {
@@ -46,6 +56,7 @@ class UtilityTimerModule private constructor() : HudElement {
         syncDiagnosticOwnership()
         lastStatusLine = null
         recordDetail("SET duration_s=$seconds")
+        publish()
     }
 
     fun pauseTimer(): Boolean {
@@ -53,6 +64,7 @@ class UtilityTimerModule private constructor() : HudElement {
         if (timer.isConfigured()) {
             recordDetail("PAUSE changed=$changed remaining_s=${timer.remainingSeconds(System.nanoTime())}")
         }
+        if (changed) publish()
         return changed
     }
 
@@ -61,6 +73,7 @@ class UtilityTimerModule private constructor() : HudElement {
         if (timer.isConfigured()) {
             recordDetail("RESUME changed=$changed remaining_s=${timer.remainingSeconds(System.nanoTime())}")
         }
+        if (changed) publish()
         return changed
     }
 
@@ -69,6 +82,7 @@ class UtilityTimerModule private constructor() : HudElement {
         if (changed) {
             lastStatusLine = null
             recordDetail("RESET duration_s=${timer.initialDurationSeconds()}")
+            publish()
         }
         return changed
     }
@@ -79,6 +93,7 @@ class UtilityTimerModule private constructor() : HudElement {
         syncDiagnosticOwnership()
         val now = System.nanoTime()
         rollDiagnosticWindow(now)
+        pollShared(now)
         if (timer.tick(now)) completeTimer()
         maybeWriteStatus(now)
     }
@@ -148,6 +163,43 @@ class UtilityTimerModule private constructor() : HudElement {
                 "title_ticks=${presentation.titleDurationTicks} " +
                 "sound=${presentation.playSound} sound_submitted=$soundSubmitted",
         )
+    }
+
+    /** Writes the current state for the other instances; a failed write keeps the local timer working. */
+    private fun publish() {
+        val snapshot = timer.snapshot(System.nanoTime(), System.currentTimeMillis()) ?: return
+        sharedRevision = SharedTimerStore.nextRevision(sharedRevision, System.currentTimeMillis())
+        try {
+            SharedTimerStore.write(sharedPath, SharedTimerStore.Record(sharedRevision, instanceId, snapshot))
+            sharedModifiedMs = SharedTimerStore.modifiedMs(sharedPath)
+            writeSync("save", "self")
+        } catch (exception: java.io.IOException) {
+            if (!sharedErrorLogged) {
+                sharedErrorLogged = true
+                GeilerAddonsLog.write(Category.MISCELLANEOUS, DIAGNOSTIC_MODULE, diagnosticTick, "SYNC save_failed ${exception.javaClass.simpleName}")
+            }
+        }
+    }
+
+    /** Once a second: if the shared file changed and holds a newer record from another instance, take it over. */
+    private fun pollShared(now: Long) {
+        val last = sharedPollTick
+        if (last != Long.MIN_VALUE && diagnosticTick - last < SHARED_POLL_TICKS) return
+        sharedPollTick = diagnosticTick
+        val modified = SharedTimerStore.modifiedMs(sharedPath)
+        if (modified < 0L || modified == sharedModifiedMs) return
+        sharedModifiedMs = modified
+        val record = SharedTimerStore.read(sharedPath)
+        if (!SharedTimerStore.shouldApply(record, sharedRevision, instanceId)) return
+        timer.restore(record!!.timer, now, System.currentTimeMillis())
+        sharedRevision = record.revision
+        lastStatusLine = null
+        syncDiagnosticOwnership()
+        writeSync(if (last == Long.MIN_VALUE) "load" else "apply", "other")
+    }
+
+    private fun writeSync(action: String, source: String) {
+        if (timer.isConfigured()) writeDiagnostic("SYNC $action revision=$sharedRevision source=$source")
     }
 
     private fun previewLine(): String = if (timer.isConfigured()) line() else PREVIEW_LINE

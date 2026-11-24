@@ -948,7 +948,7 @@ class BoxDoorsModule private constructor(settings: Settings) : Module(
             for (slot in 0 until player.inventory.containerSize) {
                 val stack = player.inventory.getItem(slot)
                 if (stack.isEmpty) continue
-                val displayName = stack.hoverName.string
+                val displayName = geiler.addons.client.utility.SkyblockItems.realName(stack)
                 if (!wither) wither = DungeonKeyRules.isMatchingKey(displayName, DungeonDoorTracker.Type.WITHER)
                 if (!blood) blood = DungeonKeyRules.isMatchingKey(displayName, DungeonDoorTracker.Type.BLOOD)
                 if (wither && blood) break
@@ -956,7 +956,7 @@ class BoxDoorsModule private constructor(settings: Settings) : Module(
             if (!wither || !blood) {
                 val carried = player.containerMenu.carried
                 if (!carried.isEmpty) {
-                    val displayName = carried.hoverName.string
+                    val displayName = geiler.addons.client.utility.SkyblockItems.realName(carried)
                     if (!wither) wither = DungeonKeyRules.isMatchingKey(displayName, DungeonDoorTracker.Type.WITHER)
                     if (!blood) blood = DungeonKeyRules.isMatchingKey(displayName, DungeonDoorTracker.Type.BLOOD)
                 }

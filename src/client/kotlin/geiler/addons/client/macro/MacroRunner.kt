@@ -799,7 +799,7 @@ object MacroRunner {
 
     private fun itemMatches(stack: ItemStack?, wanted: String?, contains: Boolean): Boolean {
         if (stack == null || stack.isEmpty) return false
-        val actual = ChatText.stripForMatch(stack.hoverName.string)
+        val actual = ChatText.stripForMatch(geiler.addons.client.utility.SkyblockItems.realName(stack))
         val needle = ChatText.stripForMatch(wanted ?: "")
         return MacroFlowRules.itemNameMatchesAny(actual, needle, contains)
     }

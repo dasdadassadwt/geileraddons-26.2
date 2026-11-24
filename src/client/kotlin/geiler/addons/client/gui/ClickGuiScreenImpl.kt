@@ -4,6 +4,7 @@ import geiler.addons.client.config.ClickGuiState
 import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.config.ModConfig
 import geiler.addons.client.macro.MacroTriggerContext
+import geiler.addons.client.hud.HudManager
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.Workspace
@@ -606,6 +607,7 @@ class ClickGuiScreen @JvmOverloads constructor(
     private fun githubRect(panelX: Int, panelY: Int): Rect = topBarRect(panelX, panelY, TopBarIcon.GITHUB)
     private fun settingsGearRect(panelX: Int, panelY: Int): Rect = topBarRect(panelX, panelY, TopBarIcon.SETTINGS)
     private fun themeRect(panelX: Int, panelY: Int): Rect = topBarRect(panelX, panelY, TopBarIcon.THEME)
+    private fun cosmeticsRect(panelX: Int, panelY: Int): Rect = topBarRect(panelX, panelY, TopBarIcon.COSMETICS)
     private fun moveElementsRect(panelX: Int, panelY: Int): Rect = topBarRect(panelX, panelY, TopBarIcon.MOVE_ELEMENTS)
     private fun settingsBackRect(x: Int, panelY: Int): Rect = settingsHeaderSurfaceRect(x, panelY)
 
@@ -659,26 +661,15 @@ class ClickGuiScreen @JvmOverloads constructor(
         }
     }
 
-    private fun openGeneralSettings() {
-        val general = GeneralModule.INSTANCE
-        if (!ModuleManager.contains(general.category(), general)) return
+    /** Toolbar shortcut: opens one module's settings page (General, Theme). */
+    private fun openModulePage(module: Module, interaction: String) {
+        if (!ModuleManager.contains(module.category(), module)) return
         setSearchQuery("")
-        val target = ViewState(general.category(), general, ClickGuiState.gridScroll(general.category()), 0, null)
+        val target = ViewState(module.category(), module, ClickGuiState.gridScroll(module.category()), 0, null)
         if (currentView() == target) return
-        markInteraction("General settings")
+        markInteraction(interaction)
         playClick()
-        requestNavigation(target, Integer.compare(indexOf(general.category()), indexOf(selectedCategory)))
-    }
-
-    private fun openThemeSettings() {
-        val theme = VisualModule.INSTANCE
-        if (!ModuleManager.contains(theme.category(), theme)) return
-        setSearchQuery("")
-        val target = ViewState(theme.category(), theme, ClickGuiState.gridScroll(theme.category()), 0, null)
-        if (currentView() == target) return
-        markInteraction("Theme settings")
-        playClick()
-        requestNavigation(target, Integer.compare(indexOf(theme.category()), indexOf(selectedCategory)))
+        requestNavigation(target, Integer.compare(indexOf(module.category()), indexOf(selectedCategory)))
     }
 
     private fun repositoryUrl(): String = FabricLoader.getInstance().getModContainer("geileraddons")
@@ -715,6 +706,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         renderTopBarButton(graphics, githubRect(panelX, panelY), TopBarIcon.GITHUB, "Open the GitHub page", mouseX, mouseY)
         renderTopBarButton(graphics, settingsGearRect(panelX, panelY), TopBarIcon.SETTINGS, "General settings", mouseX, mouseY)
         renderTopBarButton(graphics, themeRect(panelX, panelY), TopBarIcon.THEME, "Theme and colors", mouseX, mouseY)
+        renderTopBarButton(graphics, cosmeticsRect(panelX, panelY), TopBarIcon.COSMETICS, "Cosmetics", mouseX, mouseY)
         renderTopBarButton(graphics, moveElementsRect(panelX, panelY), TopBarIcon.MOVE_ELEMENTS, "Move HUD elements", mouseX, mouseY)
         val newer = UpdateChecker.newerVersion()
         if (newer != null) {
@@ -765,6 +757,7 @@ class ClickGuiScreen @JvmOverloads constructor(
             TopBarIcon.GITHUB -> ICON_GITHUB
             TopBarIcon.SETTINGS -> ICON_SETTINGS
             TopBarIcon.THEME -> ICON_THEME
+            TopBarIcon.COSMETICS -> ICON_COSMETICS
             TopBarIcon.MOVE_ELEMENTS -> ICON_MOVE
         }
         val iconSize = minOf(32, maxOf(16, bounds.w - 16))
@@ -1666,7 +1659,12 @@ class ClickGuiScreen @JvmOverloads constructor(
         val contentY = bounds.y + 5
         val contentWidth = maxOf(1, bounds.w - PADDING * 2)
         val contentHeight = maxOf(1, bounds.h - 8)
-        if (!preview.drawPreview(graphics, font, contentX, contentY, contentWidth, contentHeight)) {
+        var drawn = false
+        // Title screen: previews that build ItemStacks throw until a world binds item components; skip them.
+        val ran = HudManager.safePreview((preview as? Module)?.name() ?: "preview") {
+            drawn = preview.drawPreview(graphics, font, contentX, contentY, contentWidth, contentHeight)
+        }
+        if (ran && !drawn) {
             var lineY = contentY
             for (line in preview.previewLines(font, contentWidth)) {
                 for (wrapped in font.split(line, contentWidth)) {
@@ -2131,11 +2129,18 @@ class ClickGuiScreen @JvmOverloads constructor(
             return true
         }
         if (left && settingsGearRect(panelX, panelY).contains(mouseX, mouseY)) {
-            openGeneralSettings()
+            openModulePage(GeneralModule.INSTANCE, "General settings")
             return true
         }
         if (left && themeRect(panelX, panelY).contains(mouseX, mouseY)) {
-            openThemeSettings()
+            openModulePage(VisualModule.INSTANCE, "Theme settings")
+            return true
+        }
+        if (left && cosmeticsRect(panelX, panelY).contains(mouseX, mouseY)) {
+            persistView()
+            markInteraction("Cosmetics")
+            playClick()
+            beginClose(CosmeticsScreen(this))
             return true
         }
         if (left && moveElementsRect(panelX, panelY).contains(mouseX, mouseY)) {
@@ -3093,7 +3098,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         }
     }
 
-    enum class TopBarIcon { WORKSPACE, GITHUB, SETTINGS, THEME, MOVE_ELEMENTS }
+    enum class TopBarIcon { WORKSPACE, GITHUB, SETTINGS, THEME, COSMETICS, MOVE_ELEMENTS }
     private enum class PickerPart { SQUARE, HUE, ALPHA }
 
     companion object {
@@ -3101,6 +3106,8 @@ class ClickGuiScreen @JvmOverloads constructor(
         private val ICON_GITHUB = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/octicon-mark-github-16.png")
         private val ICON_SETTINGS = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/octicon-gear-16.png")
         private val ICON_THEME = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/octicon-paintbrush-16.png")
+        /** A wing with a sparkle, drawn for this mod (source: icons/cosmetics-wing-16.svg). */
+        private val ICON_COSMETICS = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/cosmetics-wing-16.png")
         private val ICON_MOVE = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/move-arrows-16.png")
         /** The Macros workspace button: a lightning bolt for "cheats", drawn for this mod. */
         private val ICON_CHEATS = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/cheats-bolt.png")

@@ -4,7 +4,6 @@ import geiler.addons.client.module.impl.I4HelperModule;
 import geiler.addons.client.module.impl.MimicAnnouncerModule;
 import geiler.addons.client.module.impl.BlessingDisplayModule;
 import geiler.addons.client.module.impl.CroesusModule;
-import geiler.addons.client.module.impl.SimonSaysModule;
 import geiler.addons.client.module.impl.RagnarockModule;
 import geiler.addons.client.module.impl.SafariFloorDropsModule;
 import geiler.addons.client.module.impl.SpringBootsModule;
@@ -19,6 +18,7 @@ import geiler.addons.client.dungeon.DungeonDoorTracker;
 import geiler.addons.client.dungeon.DungeonDoorBlockOverlayController;
 import geiler.addons.client.dungeon.DungeonMapRoomDetector;
 import geiler.addons.client.dungeon.helpers.DungeonPlayerRoster;
+import geiler.addons.client.dungeon.score.DungeonScoreState;
 import geiler.addons.client.chat.ChatTpsTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Hud;
@@ -77,6 +77,33 @@ public abstract class ClientPacketListenerMixin {
 	@Unique private BlockPos geileraddons$blockUpdatePositionBefore;
 	@Unique private BlockState geileraddons$blockUpdateStateBefore;
 
+	/** Any Rename rewrites received stacks before vanilla stores them; each hook is a no-op without overrides. */
+	@Inject(method = "handleContainerSetSlot", at = @At("HEAD"))
+	private void geileraddons$renameSlot(net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket packet,
+		CallbackInfo ci) {
+		geiler.addons.client.module.impl.AnyRenameModule.INSTANCE.onStack(packet.getItem());
+	}
+
+	@Inject(method = "handleContainerContent", at = @At("HEAD"))
+	private void geileraddons$renameContent(net.minecraft.network.protocol.game.ClientboundContainerSetContentPacket packet,
+		CallbackInfo ci) {
+		var module = geiler.addons.client.module.impl.AnyRenameModule.INSTANCE;
+		for (ItemStack stack : packet.items()) module.onStack(stack);
+		module.onStack(packet.carriedItem());
+	}
+
+	@Inject(method = "handleSetPlayerInventory", at = @At("HEAD"))
+	private void geileraddons$renamePlayerInventory(net.minecraft.network.protocol.game.ClientboundSetPlayerInventoryPacket packet,
+		CallbackInfo ci) {
+		geiler.addons.client.module.impl.AnyRenameModule.INSTANCE.onStack(packet.contents());
+	}
+
+	@Inject(method = "handleSetCursorItem", at = @At("HEAD"))
+	private void geileraddons$renameCursor(net.minecraft.network.protocol.game.ClientboundSetCursorItemPacket packet,
+		CallbackInfo ci) {
+		geiler.addons.client.module.impl.AnyRenameModule.INSTANCE.onStack(packet.contents());
+	}
+
 	@Inject(method = "handleSetTime", at = @At("TAIL"))
 	private void geileraddons$recordServerTpsSample(ClientboundSetTimePacket packet, CallbackInfo ci) {
 		ChatTpsTracker.record(packet.gameTime(), System.nanoTime());
@@ -117,6 +144,7 @@ public abstract class ClientPacketListenerMixin {
 	private void geileraddons$trackDungeonMinibossProfiles(ClientboundPlayerInfoUpdatePacket packet, CallbackInfo ci) {
 		DungeonMobEspModule.INSTANCE.onPlayerInfoUpdate(packet);
 		DungeonPlayerRoster.onPlayerInfoUpdate(packet);
+		DungeonScoreState.onPlayerInfoUpdate(packet);
 		CroesusModule.INSTANCE.onPlayerInfoUpdate(packet);
 	}
 
@@ -255,7 +283,6 @@ public abstract class ClientPacketListenerMixin {
 		geiler.addons.client.module.impl.CrystalHollowsHelperModule.INSTANCE.onBlockChange(packet.getPos(), packet.getBlockState());
 		SecretWaypointsModule.INSTANCE.onSecretBlockUpdate(geileraddons$blockUpdatePositionBefore,
 			geileraddons$blockUpdateStateBefore, packet.getBlockState());
-		SimonSaysModule.INSTANCE.onBlockChange(packet.getPos(), geileraddons$blockUpdateStateBefore, packet.getBlockState());
 		DungeonAssistModule.INSTANCE.onPuzzleBlockChange(geileraddons$blockUpdatePositionBefore,
 			geileraddons$blockUpdateStateBefore, packet.getPos(), packet.getBlockState());
 		geileraddons$blockUpdatePositionBefore = null;
@@ -315,6 +342,7 @@ public abstract class ClientPacketListenerMixin {
 	@Inject(method = "handlePongResponse", at = @At("HEAD"))
 	private void geileraddons$onPongResponse(net.minecraft.network.protocol.ping.ClientboundPongResponsePacket packet, CallbackInfo ci) {
 		geiler.addons.client.module.impl.DragonStackAimerModule.INSTANCE.onPong(packet.time());
+		geiler.addons.client.performance.PingTracker.onPong(packet.time(), System.nanoTime());
 	}
 
 	@Inject(method = "handleParticleEvent", at = @At("TAIL"))
@@ -323,6 +351,7 @@ public abstract class ClientPacketListenerMixin {
 		geiler.addons.client.module.impl.WitherDragonsModule.INSTANCE.onParticle(packet);
 		geiler.addons.client.module.impl.DragonStackAimerModule.INSTANCE.onParticle(packet);
 		geiler.addons.client.module.impl.HotspotRadarModule.INSTANCE.onParticle(packet);
+		geiler.addons.client.module.impl.DojoHelperModule.INSTANCE.onParticle(packet);
 	}
 
 	/** Terminal Solver replaces the terminal-complete pling while a terminal is open. */
@@ -380,8 +409,8 @@ public abstract class ClientPacketListenerMixin {
 	@Inject(method = "handleSetPlayerTeamPacket", at = @At("TAIL"))
 	private void geileraddons$observeDungeonTeamUpdate(ClientboundSetPlayerTeamPacket packet, CallbackInfo ci) {
 		if (packet == null) return;
-		packet.getParameters().ifPresent(parameters -> DungeonAssistModule.INSTANCE.onDungeonTeamUpdate(
-			parameters.playerPrefix().getString() + " " + parameters.playerSuffix().getString()));
+		packet.getParameters().ifPresent(parameters -> DungeonScoreState.onTeamUpdate(
+			parameters.playerPrefix().getString() + parameters.playerSuffix().getString()));
 	}
 
 	private record BlockChange(BlockPos position, BlockState oldState, BlockState state) {

@@ -15,7 +15,7 @@ import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.block.state.properties.BlockStateProperties
 
-/** Simon Says device solver (NoFrills' sequence tracking with Odin's start-button reset and progress message). */
+/** Simon Says device solver after Odin's Simon Says (sequence, SS skip first phase, start limit, progress message). */
 class SimonSaysModule private constructor() : Module(
     "Simon Says",
     "Shows the buttons of the Simon Says device in order in F7 and M7.",
@@ -28,27 +28,27 @@ class SimonSaysModule private constructor() : Module(
     private val thirdColor = spec.color("thirdColor")
     private val style = spec.choice("style")
     private val announceProgress = spec.toggle("announceProgress")
+    private val announceReset = spec.toggle("announceReset")
     private val blockWrong = spec.toggle("blockWrong")
     private val invertKey = spec.toggle("invertKey")
     private val blockWrongStart = spec.toggle("blockWrongStart")
     private val maxStartClicks = spec.slider("maxStartClicks")
 
     private val state = SimonSaysState()
-    private var clicksThisRound = 0
     private var blocked = 0
-    /** Sequence buttons that were not a stone button when drawn (diagnostics only). */
+    /** Frames that drew a step at its button spot because no stone button was there yet (diagnostics only). */
     private var missing = 0
     private var lastLevel: Any? = null
+    private var lastServerTicks = -1L
     private val diagnostics = ModuleDiagnostics(Category.F7, { name() }, 8, 100L, 300)
 
     override fun onEnable() {
         state.reset()
-        clicksThisRound = 0
         blocked = 0
         missing = 0
         diagnostics.enable(
             "blockWrong=${blockWrong.value()} blockWrongStart=${blockWrongStart.value()} maxStartClicks=${maxStartClicks.intValue()} " +
-                "announce=${announceProgress.value()} style=${style.value()}",
+                "announce=${announceProgress.value()} announceReset=${announceReset.value()} style=${style.value()}",
         )
     }
 
@@ -73,20 +73,26 @@ class SimonSaysModule private constructor() : Module(
         val level = Minecraft.getInstance().level
         if (level == null || !onFloor7()) {
             state.reset()
+            lastServerTicks = -1L
             return
         }
         diagnostics.advance()
         if (lastLevel !== level) {
             lastLevel = level
             state.reset()
-            clicksThisRound = 0
+            lastServerTicks = -1L
         }
-        // shortcut: client ticks stand in for Odin's server ticks (both 20/s); a lag spike can end the first phase early.
-        val wasFirstPhase = state.firstPhase
-        if (wasFirstPhase && nearDevice()) state.tick(stoneButtonCount(level))
-        if (wasFirstPhase && !state.firstPhase) diagnostics.event("FIRST_PHASE end=GRID_RESET sequence=${state.remaining().size}")
+        // Odin runs the grid-reset check on server ticks; replay the ones that passed since the last client tick.
+        val now = DungeonAssistModule.INSTANCE.serverTicks()
+        val delta = if (lastServerTicks < 0L || now < lastServerTicks) 0L else minOf(now - lastServerTicks, MAX_CATCH_UP)
+        lastServerTicks = now
+        if (state.firstPhase && delta > 0) {
+            val buttons = stoneButtonCount(level)
+            for (i in 0 until delta) state.serverTick(buttons)
+            if (!state.firstPhase) diagnostics.event("FIRST_PHASE end=GRID_RESET sequence=${state.size()}")
+        }
         diagnostics.status {
-            "enabled=true near=${nearDevice()} firstPhase=${state.firstPhase} sequence=${state.remaining().size} blocked=$blocked buttonMissing=$missing suppressedEvents=$it"
+            "enabled=true near=${nearDevice()} firstPhase=${state.firstPhase} sequence=${state.remaining().size}/${state.size()} serverTicks=$now blocked=$blocked buttonMissing=$missing suppressedEvents=$it"
         }
     }
 
@@ -101,52 +107,44 @@ class SimonSaysModule private constructor() : Module(
         return count
     }
 
-    /** A server block change; [old] is the state before it, if the chunk was loaded. */
-    fun onBlockChange(pos: BlockPos, old: BlockState?, new: BlockState) {
-        if (!isEnabled() || !onFloor7()) return
-        val level = Minecraft.getInstance().level ?: return
+    /**
+     * A client block change, from `LevelChunk.setBlockState` like Odin's `BlockUpdateEvent`: server updates (single and
+     * multi-block) and the client's own predicted button press. Only called when the state really changed.
+     */
+    fun onBlockChange(pos: BlockPos, old: BlockState, new: BlockState) {
         val x = pos.x
         val y = pos.y
         val z = pos.z
+        if (x !in 110..111 || y !in 120..123 || z !in 91..95) return
+        if (!isEnabled() || !onFloor7()) return
         if (x == START_X && y == START_Y && z == START_Z) {
             if (new.`is`(Blocks.STONE_BUTTON) && new.getValue(BlockStateProperties.POWERED)) {
-                state.restart()
-                clicksThisRound = 0
-                diagnostics.event("START_BUTTON reset firstPhase=true")
-            }
-            return
-        }
-        if (SimonSaysState.inLights(x, y, z)) {
-            if (new.`is`(Blocks.SEA_LANTERN) && old?.`is`(Blocks.OBSIDIAN) == true) {
-                state.lanternLit(x, y, z)
-                diagnostics.event("LANTERN_LIT y=$y z=$z sequence=${state.remaining().size}")
-            } else if (new.`is`(Blocks.OBSIDIAN) && old?.`is`(Blocks.SEA_LANTERN) == true) {
-                // Odin's order: the list is built as the lanterns turn off, which is what its first-phase rules assume.
-                val before = state.remaining().size
-                state.lanternOff(x, y, z)
-                diagnostics.event("LANTERN_OFF y=$y z=$z sequence=${state.remaining().size} added=${state.remaining().size != before} first=${state.firstPhase}")
-            }
-            return
-        }
-        if (SimonSaysState.inButtons(x, y, z)) {
-            val eastIsLantern = level.getBlockState(pos.east()).`is`(Blocks.SEA_LANTERN)
-            if (old?.isAir == true && new.isAir && eastIsLantern) {
-                // A skip: that one button is done. A double or triple skip sends one update per button, and repeats are harmless.
-                val before = state.remaining().size
-                state.removeButton(x, y, z)
-                diagnostics.event("SKIP y=$y z=$z sequence=${state.remaining().size} removed=${before - state.remaining().size}")
-            } else if (new.isAir) {
-                if (airButtonCount(level) > GRID_RESET_AIR) {
-                    if (state.remaining().isNotEmpty()) diagnostics.event("GRID_CLEARED dropped=${state.remaining().size}")
-                    state.clearSequence()
-                } else if (old?.`is`(Blocks.STONE_BUTTON) == true) {
-                    state.removeButton(x, y, z)
+                val deviceReset = state.startPowered()
+                diagnostics.event("START_BUTTON restart deviceReset=$deviceReset")
+                if (deviceReset && announceReset.value() && nearDevice()) {
+                    Minecraft.getInstance().player?.connection?.sendCommand("pc SS Reset!")
                 }
-            } else if (new.`is`(Blocks.STONE_BUTTON) && new.getValue(BlockStateProperties.POWERED) && old?.`is`(Blocks.STONE_BUTTON) == true) {
-                val before = state.remaining().size
-                state.buttonConfirmed(x, y, z)
-                if (state.remaining().size != before) diagnostics.event("CONFIRM y=$y z=$z left=${state.remaining().size}")
             }
+            return
+        }
+        if (z !in 92..95) return
+        if (x == 111) {
+            if (new.`is`(Blocks.OBSIDIAN) && old.`is`(Blocks.SEA_LANTERN)) {
+                val before = state.size()
+                state.lanternOff(x, y, z)
+                diagnostics.event("LANTERN_OFF y=$y z=$z sequence=${state.remaining()} added=${state.size() != before} first=${state.firstPhase}")
+            }
+            return
+        }
+        val level = Minecraft.getInstance().level ?: return
+        if (new.isAir) {
+            val before = state.size()
+            state.gridAir(airButtonCount(level))
+            if (before > 0 && state.size() == 0) diagnostics.event("GRID_CLEARED dropped=$before")
+        } else if (old.`is`(Blocks.STONE_BUTTON) && new.`is`(Blocks.STONE_BUTTON) && new.getValue(BlockStateProperties.POWERED)) {
+            val roundSize = state.size()
+            state.buttonPowered(x, y, z)
+            diagnostics.event("PRESSED y=$y z=$z round=$roundSize left=${state.remaining().size} first=${state.firstPhase}")
         }
     }
 
@@ -161,11 +159,14 @@ class SimonSaysModule private constructor() : Module(
         return count
     }
 
-    /** A right click on a block; returns true when it must be cancelled. */
+    /**
+     * A right click on a block (Odin's `BlockInteractEvent`); returns true when it must be cancelled. The pointer itself moves
+     * on the button's powered change, which the client predicts for its own press.
+     */
     fun onBlockUse(pos: BlockPos): Boolean {
-        if (!isEnabled() || !onFloor7() || !nearDevice()) return false
+        if (!isEnabled() || !onFloor7()) return false
+        val sneaking = Minecraft.getInstance().player?.isShiftKeyDown == true
         if (pos.x == START_X && pos.y == START_Y && pos.z == START_Z) {
-            val sneaking = Minecraft.getInstance().player?.isShiftKeyDown == true
             if (blockWrongStart.value() && state.startClicked(maxStartClicks.intValue(), sneaking)) {
                 blocked++
                 diagnostics.event("START_BLOCKED blocked=$blocked max=${maxStartClicks.intValue()}")
@@ -174,28 +175,25 @@ class SimonSaysModule private constructor() : Module(
             return false
         }
         if (!SimonSaysState.inButtons(pos.x, pos.y, pos.z)) return false
-        val kind = state.peek(pos.x, pos.y, pos.z)
-        if (kind == SimonSaysState.WRONG || kind == SimonSaysState.AHEAD) {
-            val sneaking = Minecraft.getInstance().player?.isShiftKeyDown == true
-            // A click ahead is not the next button, so it is blocked like a wrong one; sneaking is how a skip is done.
-            if (blockWrong.value() && !(sneaking xor invertKey.value())) {
-                blocked++
-                diagnostics.event("BLOCKED kind=${if (kind == SimonSaysState.AHEAD) "ahead" else "wrong"} blocked=$blocked")
-                return true
-            }
+        // Odin's progress message: clicking the round's last button reports the round length (sent before the block check).
+        if (announceProgress.value() && state.size() > 0 && state.isLast(pos.x, pos.y, pos.z)) {
+            Minecraft.getInstance().player?.connection?.sendCommand("pc SS ${state.size()}/4")
         }
-        when (state.buttonClicked(pos.x, pos.y, pos.z)) {
-            SimonSaysState.CORRECT, SimonSaysState.AHEAD -> {
-                clicksThisRound++
-                diagnostics.event("CLICK ${if (kind == SimonSaysState.AHEAD) "ahead" else "correct"} left=${state.remaining().size} round=$clicksThisRound")
-                if (state.remaining().isEmpty()) {
-                    if (announceProgress.value()) Minecraft.getInstance().player?.connection?.sendCommand("pc SS $clicksThisRound/4")
-                    clicksThisRound = 0
-                }
-            }
-            SimonSaysState.WRONG -> diagnostics.event("CLICK wrong")
+        // Odin blocks every grid click that is not the next button, also while no solution is known; sneaking overrides.
+        if (blockWrong.value() && !(sneaking xor invertKey.value()) && !state.isNext(pos.x, pos.y, pos.z)) {
+            blocked++
+            diagnostics.event("BLOCKED y=${pos.y} z=${pos.z} next=${state.next()?.let { BlockPos.of(it).toShortString() }} blocked=$blocked")
+            return true
         }
+        diagnostics.event("CLICK y=${pos.y} z=${pos.z} next=${state.isNext(pos.x, pos.y, pos.z)}")
         return false
+    }
+
+    /** Goldor's entry line starts P3: the start-click limit counts from zero again (Odin). */
+    fun onChatMessage(message: String) {
+        if (!isEnabled() || message != GOLDOR) return
+        state.resetStartClicks()
+        diagnostics.event("GOLDOR startClicks=0")
     }
 
     /** Breaking a device block would desync the solver, so it is cancelled. */
@@ -220,15 +218,17 @@ class SimonSaysModule private constructor() : Module(
                 1 -> secondColor.argb()
                 else -> thirdColor.argb()
             }
-            // The real button shape: it follows the facing and shrinks while the button is pressed.
+            // The real button shape (follows the press). While the device still shows the order there is no button yet,
+            // so the step is drawn where the button will appear, as Odin does.
             val block = level.getBlockState(pos)
             val shape = if (block.`is`(Blocks.STONE_BUTTON)) block.getShape(level, pos) else null
-            if (shape == null || shape.isEmpty) {
+            val box = if (shape == null || shape.isEmpty) {
                 missing++
-                continue
+                SimonSaysState.buttonSpotBox(pos.x, pos.y, pos.z)
+            } else {
+                val b = shape.bounds()
+                SimonSaysState.highlightBox(pos.x, pos.y, pos.z, b.minX, b.minY, b.minZ, b.maxX, b.maxY, b.maxZ)
             }
-            val b = shape.bounds()
-            val box = SimonSaysState.highlightBox(pos.x, pos.y, pos.z, b.minX, b.minY, b.minZ, b.maxX, b.maxY, b.maxZ)
             EspRenderer.renderBox(
                 context.poseStack(), buffers,
                 box[0] - camera.x, box[1] - camera.y, box[2] - camera.z, box[3] - box[0], box[4] - box[1], box[5] - box[2],
@@ -240,10 +240,11 @@ class SimonSaysModule private constructor() : Module(
 
     companion object {
         private const val NEAR_SQUARED = 225.0
-        private const val GRID_RESET_AIR = 8
+        private const val MAX_CATCH_UP = 40L
         private const val START_X = 110
         private const val START_Y = 121
         private const val START_Z = 91
+        private const val GOLDOR = "[BOSS] Goldor: Who dares trespass into my domain?"
         private val spec = ModuleSettingsSpec.of("Simon Says")
 
         @JvmField

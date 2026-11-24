@@ -49,6 +49,9 @@ interface HudElement {
 
     fun render(graphics: GuiGraphicsExtractor, font: Font, x: Int, y: Int)
 
+    /** A click on the live element while chat is open, in unscaled element coordinates; true consumes it. */
+    fun mouseClicked(localX: Double, localY: Double, button: Int): Boolean = false
+
     /**
      * Editor rendering, which may provide a sample when the live widget has no current data.
      * Implementations can override this without changing the live-HUD renderer.

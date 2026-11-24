@@ -93,6 +93,7 @@ import geiler.addons.client.module.impl.GeneralModule
 import geiler.addons.client.module.impl.BossBarPercentModule
 import geiler.addons.client.module.impl.HideAllParticlesModule
 import geiler.addons.client.module.impl.HideF7BossSoundsModule
+import geiler.addons.client.module.impl.HideSpamModule
 import geiler.addons.client.module.impl.HidePlayersModule
 import geiler.addons.client.module.impl.AnimationFixModule
 import geiler.addons.client.module.impl.DisconnectFixModule
@@ -152,6 +153,9 @@ import geiler.addons.client.module.impl.HotfTreeHelperModule
 import geiler.addons.client.module.impl.HotmTreeHelperModule
 import geiler.addons.client.module.impl.ContestTimerHudModule
 import geiler.addons.client.module.impl.CritterAlertsModule
+import geiler.addons.client.module.impl.QueenAntAlertModule
+import geiler.addons.client.module.impl.BlueJayEspModule
+import geiler.addons.client.module.impl.LassoModule
 import geiler.addons.client.module.impl.CritterMarkersModule
 import geiler.addons.client.module.impl.CritterSafari
 import geiler.addons.client.module.impl.CritterTrackerModule
@@ -207,6 +211,8 @@ import geiler.addons.client.module.impl.PestTrackerModule
 import geiler.addons.client.module.impl.PlayerInventoryControlsModule
 import geiler.addons.client.module.impl.PlayerNamesModule
 import geiler.addons.client.module.impl.PlayerSizeModule
+import geiler.addons.client.module.impl.CosmeticsModule
+import geiler.addons.client.cosmetics.CosmeticsRenderLayer
 import geiler.addons.client.module.impl.SafariFloorDropsModule
 import geiler.addons.client.module.impl.ScoreboardModule
 import geiler.addons.client.module.impl.SecretClickedModule
@@ -218,6 +224,10 @@ import geiler.addons.client.module.impl.TabWidgetModule
 import geiler.addons.client.module.impl.SlayerBossHighlightModule
 import geiler.addons.client.module.impl.EndermanSlayerModule
 import geiler.addons.client.module.impl.BlazeSlayerModule
+import geiler.addons.client.module.impl.CarnivalModule
+import geiler.addons.client.module.impl.CollectionTrackerModule
+import geiler.addons.client.module.impl.SpotifyModule
+import geiler.addons.client.module.impl.DojoHelperModule
 import geiler.addons.client.module.impl.VampireSlayerModule
 import geiler.addons.client.slayer.SlayerBossTracker
 import geiler.addons.client.module.impl.SlotIdsModule
@@ -278,6 +288,7 @@ class GeilerAddonsClient : ClientModInitializer {
         SimRuntime.init()
         MacroRuntime.init()
         HudManager.register(TreeTrackerModule.INSTANCE, 0.01f, 0.10f)
+        HudManager.register(LassoModule.INSTANCE, 0.50f, 0.62f)
         HudManager.register(DungeonHelperModule.INSTANCE, 0.50f, 0.03f)
         HudManager.register(DungeonRoomOverlayModule.INSTANCE, 0.77f, 0.55f)
         HudManager.register(DungeonRunSplitsModule.INSTANCE, 0.03f, 0.22f)
@@ -316,6 +327,25 @@ class GeilerAddonsClient : ClientModInitializer {
         HudManager.register(PestTrackerModule.INSTANCE, 0.02f, 0.55f)
         HudManager.register(SlayerTrackerModule.INSTANCE, 0.02f, 0.72f)
         HudManager.register(SlayerHudModule.INSTANCE, 0.5f, 0.12f)
+        HudManager.register(CarnivalModule.INSTANCE.remainingFruitHud, 0.78f, 0.05f)
+        HudManager.register(CarnivalModule.INSTANCE.solverHud, 0.78f, 0.25f)
+        HudManager.register(CarnivalModule.INSTANCE.goalsHud, 0.02f, 0.05f)
+        HudManager.register(CarnivalModule.INSTANCE.lampHud, 0.02f, 0.25f)
+        HudManager.register(CarnivalModule.INSTANCE.tokenShopHud, 0.02f, 0.4f)
+        HudManager.register(SpotifyModule.INSTANCE, 0.98f, 0.02f)
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents.ENTITY_LOAD.register { entity, _ ->
+            DojoHelperModule.INSTANCE.onEntityLoad(entity)
+        }
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents.ENTITY_UNLOAD.register { entity, _ ->
+            DojoHelperModule.INSTANCE.onEntityUnload(entity)
+        }
+        net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.register { _, level, _, entity, _ ->
+            if (level.isClientSide) DojoHelperModule.INSTANCE.onAttack(entity)
+            net.minecraft.world.InteractionResult.PASS
+        }
+        net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register { _, level, _, entity, _ ->
+            if (level.isClientSide) CarnivalModule.INSTANCE.onEntityUse(entity) else net.minecraft.world.InteractionResult.PASS
+        }
         HudManager.register(CropFeverTimerModule.INSTANCE, 0.50f, 0.88f)
         HudManager.register(ScoreboardHudElement, Category.VISUAL, 0.98f, 0.30f)
         HudManager.register(SystemClockHudModule.INSTANCE, 0.01f, 0.03f)
@@ -349,6 +379,7 @@ class GeilerAddonsClient : ClientModInitializer {
         UpdateChecker.start()
         // Subscribe before joining a server; the official API owns channel registration.
         HypixelModApi.init()
+        CosmeticsRenderLayer.register()
 
         ClientSendMessageEvents.ALLOW_CHAT.register { message ->
             (!PartyCommandsModule.INSTANCE.isEnabled() || !PartyCommandsModule.handleLocalChatCommand(message)) &&
@@ -383,8 +414,12 @@ class GeilerAddonsClient : ClientModInitializer {
             SecretWaypointsModule.INSTANCE.onChatMessage(content)
             PestTrackerModule.INSTANCE.onChatMessage(content)
             SlayerTrackerModule.INSTANCE.onChatMessage(content)
+            if (!overlay) CarnivalModule.INSTANCE.onChatMessage(content)
+            if (!overlay) DojoHelperModule.INSTANCE.onChatMessage(content)
+            if (!overlay) CollectionTrackerModule.INSTANCE.onChat(message)
             CropFeverTimerModule.INSTANCE.onChatMessage(content)
             TickTimersModule.INSTANCE.onChatMessage(content)
+            SimonSaysModule.INSTANCE.onChatMessage(content)
             KuudraState.onChat(content)
             SupplyHelperModule.INSTANCE.onChatMessage(content)
             RareCropTitleModule.INSTANCE.onChatMessage(content)
@@ -429,7 +464,7 @@ class GeilerAddonsClient : ClientModInitializer {
             // Observers receive normalized lines even for overlays; vanilla still owns overlay rendering.
             val suppress = TreeNotifierModule.INSTANCE.onChatMessage(content, message)
             val hideVisitor = VisitorMessageHiderModule.INSTANCE.shouldHide(content)
-            overlay || (!suppress && !hideVisitor)
+            overlay || (!suppress && !hideVisitor && !HideSpamModule.INSTANCE.shouldHide(content))
         }
 
         ClientTickEvents.END_CLIENT_TICK.register { client ->
@@ -479,11 +514,7 @@ class GeilerAddonsClient : ClientModInitializer {
             DungeonRoomTracker.tick(client, mapGeometryConsumerEnabled)
             DungeonHelperModule.INSTANCE.tick()
             BoxDoorsModule.INSTANCE.tick(false)
-            DungeonAssistModule.INSTANCE.tick(
-                clientTick,
-                System.nanoTime(),
-                DungeonContextTracker.inDungeon() && !DungeonContextTracker.isMobEspPhase(),
-            )
+            DungeonAssistModule.INSTANCE.tick(clientTick, System.nanoTime())
             TickTimersModule.INSTANCE.tick()
             RelicTimerModule.INSTANCE.tick()
             FireFreezeTimerModule.INSTANCE.tick()
@@ -526,10 +557,17 @@ class GeilerAddonsClient : ClientModInitializer {
             CritterMarkersModule.INSTANCE.tick()
             CritterMarkersModule.INSTANCE.diagnose()
             CritterAlertsModule.INSTANCE.diagnose()
+            QueenAntAlertModule.INSTANCE.tick()
+            BlueJayEspModule.INSTANCE.tick()
+            LassoModule.INSTANCE.tick()
             PestHighlighterModule.INSTANCE.tick()
             GardenPlotBordersModule.INSTANCE.tick()
             PestTrackerModule.INSTANCE.tick()
             SlayerTrackerModule.INSTANCE.tick()
+            CarnivalModule.INSTANCE.tick()
+            CollectionTrackerModule.INSTANCE.tick()
+            SpotifyModule.INSTANCE.tick()
+            DojoHelperModule.INSTANCE.tick()
             if (SlayerBossHighlightModule.INSTANCE.isEnabled() || EndermanSlayerModule.INSTANCE.isEnabled() ||
                 BlazeSlayerModule.INSTANCE.isEnabled() || VampireSlayerModule.INSTANCE.isEnabled() ||
                 SlayerAlertsModule.INSTANCE.isEnabled() || SlayerHudModule.INSTANCE.isEnabled()
@@ -548,6 +586,7 @@ class GeilerAddonsClient : ClientModInitializer {
             HideAllParticlesModule.INSTANCE.tick(clientTick)
             HidePlayersModule.INSTANCE.tick()
             HideF7BossSoundsModule.INSTANCE.tick()
+            HideSpamModule.INSTANCE.tick()
             BossBarPercentModule.INSTANCE.tick()
             SnapTapModule.INSTANCE.tick(clientTick)
             AutoSprintModule.INSTANCE.tick()
@@ -634,12 +673,14 @@ class GeilerAddonsClient : ClientModInitializer {
             UtilityTimerModule.INSTANCE.tick()
             PlayerNamesModule.INSTANCE.tick()
             PlayerSizeModule.INSTANCE.tick()
+            CosmeticsModule.INSTANCE.tick()
             ScoreboardBackend.tick(client)
             MobHighlightModule.INSTANCE.tick()
             DungeonMobEspModule.INSTANCE.tick()
             DungeonBossEspModule.INSTANCE.tick()
             DungeonClassEspModule.INSTANCE.tick()
             ItemRarityBackgroundsModule.INSTANCE.tick()
+            geiler.addons.client.module.impl.AnyRenameModule.INSTANCE.tick()
             NoCursorResetModule.INSTANCE.tick()
             WindowIconController.sync(GeneralModule.INSTANCE.customWindowIcon().value())
             AliasesModule.INSTANCE.tick()
@@ -665,6 +706,8 @@ class GeilerAddonsClient : ClientModInitializer {
             StorageOverlayModule.INSTANCE.flush()
             PestTrackerModule.INSTANCE.persistFinalTotalsSnapshot()
             SlayerTrackerModule.INSTANCE.persistFinalTotalsSnapshot()
+            CollectionTrackerModule.INSTANCE.persistNow()
+            SpotifyModule.INSTANCE.shutdown()
             // Drain queued writes from feature-local stores and caches.
             ClientJsonFile.flush()
             GeilerAddonsLog.close()
@@ -681,6 +724,9 @@ class GeilerAddonsClient : ClientModInitializer {
             GardenPlotBordersModule.INSTANCE.onWorldChanged()
             PestTrackerModule.INSTANCE.onDisconnect()
             SlayerTrackerModule.INSTANCE.onWorldChanged()
+            CarnivalModule.INSTANCE.onWorldChanged()
+            CollectionTrackerModule.INSTANCE.onWorldChanged()
+            DojoHelperModule.INSTANCE.onWorldChanged()
             SlayerBossTracker.reset()
             CropFeverTimerModule.INSTANCE.onWorldChanged()
             LobbyTargetWatchModule.INSTANCE.onWorldChanged()
@@ -700,6 +746,8 @@ class GeilerAddonsClient : ClientModInitializer {
                 TemplePuzzlesModule.INSTANCE.render(context)
                 SweepOverlayModule.INSTANCE.render(context)
                 SparklingCritterModule.INSTANCE.render(context)
+                QueenAntAlertModule.INSTANCE.render(context)
+                BlueJayEspModule.INSTANCE.render(context)
                 CritterMarkersModule.INSTANCE.render(context)
                 SeaCreatureAlertModule.INSTANCE.render(context)
                 GeyserFishingModule.INSTANCE.render(context)
@@ -745,6 +793,8 @@ class GeilerAddonsClient : ClientModInitializer {
                 WitherDragonsModule.INSTANCE.render(context)
                 KingRelicModule.INSTANCE.render(context)
                 DragonStackAimerModule.INSTANCE.render(context)
+                CarnivalModule.INSTANCE.render(context)
+                DojoHelperModule.INSTANCE.render(context)
             } finally {
                 scope.close()
             }
@@ -780,6 +830,10 @@ class GeilerAddonsClient : ClientModInitializer {
         HudElementRegistry.addLast(GeilerAddons.id("dungeon_mob_esp")) { graphics, _ ->
             DungeonMobEspModule.INSTANCE.renderHud(graphics)
         }
+        HudElementRegistry.addLast(GeilerAddons.id("carnival_labels")) { graphics, _ ->
+            CarnivalModule.INSTANCE.renderHud(graphics)
+            DojoHelperModule.INSTANCE.renderHud(graphics)
+        }
         HudElementRegistry.addLast(GeilerAddons.id("enderman_slayer_labels")) { graphics, _ ->
             EndermanSlayerModule.INSTANCE.renderHud(graphics)
         }
@@ -797,6 +851,10 @@ class GeilerAddonsClient : ClientModInitializer {
         }
         HudElementRegistry.addLast(GeilerAddons.id("sparkling_labels")) { graphics, _ ->
             SparklingCritterModule.INSTANCE.renderHud(graphics)
+        }
+        HudElementRegistry.addLast(GeilerAddons.id("hunting_target_labels")) { graphics, _ ->
+            QueenAntAlertModule.INSTANCE.renderHud(graphics)
+            BlueJayEspModule.INSTANCE.renderHud(graphics)
         }
         HudElementRegistry.addLast(GeilerAddons.id("critter_marker_labels")) { graphics, _ ->
             CritterMarkersModule.INSTANCE.renderHud(graphics)
@@ -912,6 +970,9 @@ class GeilerAddonsClient : ClientModInitializer {
             registerModule(CritterTrackerModule.INSTANCE)
             registerModule(CritterMarkersModule.INSTANCE)
             registerModule(CritterAlertsModule.INSTANCE)
+            registerModule(QueenAntAlertModule.INSTANCE)
+            registerModule(BlueJayEspModule.INSTANCE)
+            registerModule(LassoModule.INSTANCE)
             registerModule(PestHighlighterModule.INSTANCE)
             registerModule(GardenPlotBordersModule.INSTANCE)
             registerModule(PestTrackerModule.INSTANCE)
@@ -929,12 +990,14 @@ class GeilerAddonsClient : ClientModInitializer {
             registerModule(HideAllParticlesModule.INSTANCE)
             registerModule(HidePlayersModule.INSTANCE)
             registerModule(HideF7BossSoundsModule.INSTANCE)
+            registerModule(HideSpamModule.INSTANCE)
             registerModule(BossBarPercentModule.INSTANCE)
             registerModule(ItemAnimationsModule.INSTANCE)
             registerModule(LobbyTargetWatchModule.INSTANCE)
             registerModule(PlayerInventoryControlsModule.INSTANCE)
             registerModule(PlayerNamesModule.INSTANCE)
             registerModule(PlayerSizeModule.INSTANCE)
+            registerModule(CosmeticsModule.INSTANCE)
             registerModule(ScoreboardModule.INSTANCE)
             registerModule(SystemClockHudModule.INSTANCE)
             registerModule(PerformanceHudModule.INSTANCE)
@@ -953,6 +1016,7 @@ class GeilerAddonsClient : ClientModInitializer {
             registerModule(DungeonBossEspModule.INSTANCE)
             registerModule(DungeonClassEspModule.INSTANCE)
             registerModule(ItemRarityBackgroundsModule.INSTANCE)
+            registerModule(geiler.addons.client.module.impl.AnyRenameModule.INSTANCE)
             registerModule(NoCursorResetModule.INSTANCE)
             registerModule(AliasesModule.INSTANCE)
             registerModule(InstanceRequeueModule.INSTANCE)
@@ -1038,6 +1102,10 @@ class GeilerAddonsClient : ClientModInitializer {
             registerModule(MiningEventsModule.INSTANCE)
             registerModule(HeatAndColdModule.INSTANCE)
             registerModule(TabWidgetModule.INSTANCE)
+            registerModule(CarnivalModule.INSTANCE)
+            registerModule(CollectionTrackerModule.INSTANCE)
+            registerModule(SpotifyModule.INSTANCE)
+            registerModule(DojoHelperModule.INSTANCE)
             // The Macros workspace: its modules live in their own categories and their own config file.
             registerModule(SpeedSimModule.INSTANCE)
             registerModule(JumpBoostModule.INSTANCE)

@@ -42,6 +42,7 @@
 		"HudDisableHotbarMixin",
 		"ScreenMixin",
 		"ClientPacketListenerMixin",
+		"LevelChunkSimonSaysMixin",
 		"ClientLevelMixin",
 		"ClientCommonPacketListenerMixin",
 		"ChatComponentPresentationAccessor",
@@ -69,6 +70,8 @@
 		"ItemSwingAnimationMixin",
 		"ItemAnimationPlayerMixin",
 		"PlayerAvatarSizeMixin",
+		"PlayerModelBodyShapeMixin",
+		"ModelPartArmorShapeMixin",
 		"PlayerNamesFontMixin",
 		"PlayerNameComponentVisualOrderMixin",
 		"PlayerNameTagMixin",
@@ -126,7 +129,8 @@
 		"MinecraftDoubleUseFixMixin",
 		"MinecraftItemCooldownMixin",
 		"ClientLevelGyroWandMixin",
-		"FluidStateModelSetMixin"
+		"FluidStateModelSetMixin",
+		"CapeLayerCosmeticMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

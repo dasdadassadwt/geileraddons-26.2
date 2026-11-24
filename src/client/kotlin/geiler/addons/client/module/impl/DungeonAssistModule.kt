@@ -3,10 +3,8 @@ package geiler.addons.client.module.impl
 import geiler.addons.client.access.PlayerTabOverlayAccess
 import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.dungeon.DungeonContextTracker
-import geiler.addons.client.dungeon.DungeonMapInfoLogic
 import geiler.addons.client.dungeon.DungeonFloor
 import geiler.addons.client.dungeon.DungeonGuideSegments
-import geiler.addons.client.dungeon.DungeonMapGeometry
 import geiler.addons.client.dungeon.DungeonMapRoomDetector
 import geiler.addons.client.dungeon.DungeonQueueFloorTracker
 import geiler.addons.client.dungeon.DungeonSplitPersonalBestBook
@@ -20,14 +18,15 @@ import geiler.addons.client.dungeon.helpers.DungeonLividReleaseRules
 import geiler.addons.client.dungeon.helpers.DungeonMaskProcTimers
 import geiler.addons.client.dungeon.helpers.DungeonBlazeOverlay
 import geiler.addons.client.dungeon.helpers.DungeonPuzzleObserver
-import geiler.addons.client.dungeon.helpers.DungeonScoreCalculator
 import geiler.addons.client.dungeon.helpers.DungeonPuzzleAutoSelectionRules
 import geiler.addons.client.dungeon.helpers.DungeonPuzzleLogic
 import geiler.addons.client.dungeon.helpers.DungeonPuzzlePersonalBestStore
 import geiler.addons.client.dungeon.helpers.DungeonPuzzleTimingTracker
 import geiler.addons.client.dungeon.helpers.DungeonPuzzleVisualRenderer
 import geiler.addons.client.dungeon.helpers.DungeonQuizRules
-import geiler.addons.client.dungeon.helpers.DungeonScoreAlerts
+import geiler.addons.client.dungeon.score.DungeonScoreState
+import geiler.addons.client.dungeon.score.ScoreTitleTracker
+import geiler.addons.client.dungeon.f7.F7Support
 import geiler.addons.client.dungeon.helpers.DungeonServerTickCounter
 import geiler.addons.client.dungeon.helpers.DungeonSoundRules
 import geiler.addons.client.dungeon.helpers.DungeonSplitEntryBuffer
@@ -256,8 +255,8 @@ class DungeonAssistModule private constructor() : Module(
     private val tpMazeTracer: BooleanSetting
     private val tpMazeTracerColor: ColorSetting
     private val scoreAlertsEnabled: BooleanSetting
-    private val scoreThresholdOne: NumberSetting
-    private val scoreThresholdTwo: NumberSetting
+    private val scoreChat270: BooleanSetting
+    private val scoreChat300: BooleanSetting
     private val scoreAlertText: TextSetting
     private val scoreAlertDurationTicks: NumberSetting
     private val scoreAlertSound: BooleanSetting
@@ -299,7 +298,7 @@ class DungeonAssistModule private constructor() : Module(
     private val healerKey: TextSetting
     private val mageKey: TextSetting
     private val tankKey: TextSetting
-    private val scoreTracker = DungeonScoreAlerts()
+    private val scoreTitles = ScoreTitleTracker()
     private val splitTracker = DungeonSplitTracker()
     private val splitEntryBuffer = DungeonSplitEntryBuffer()
     private val lividTracker = DungeonLividTracker()
@@ -354,12 +353,6 @@ class DungeonAssistModule private constructor() : Module(
     private var puzzleTimingLevel: Any? = null
     private var puzzlePersonalBestsLoaded = false
     private var lastPuzzleTimingRoomIdentity: String? = null
-    private var scoreRunKey: String? = null
-    private var scoreRunEntryKey: String? = null
-    private var scoreBloodDone: Boolean? = null
-    @Volatile private var mapRunInfo: DungeonMapInfoLogic.RunSnapshot? = null
-    private var scoreRunEntryObserved = false
-    private val scoreBonusSignals = DungeonScoreCalculator.RunSignals()
 
     init {
         // This object is only an event/HUD adapter. Visible module state and settings belong to the
@@ -371,8 +364,10 @@ class DungeonAssistModule private constructor() : Module(
         tpMazeTracer = DungeonPuzzleSolversModule.tpMazeTracer
         tpMazeTracerColor = DungeonPuzzleSolversModule.tpMazeTracerColor
         scoreAlertsEnabled = DungeonScorerModule.alerts
-        scoreThresholdOne = DungeonScorerModule.firstThreshold
-        scoreThresholdTwo = DungeonScorerModule.secondThreshold
+        DungeonScoreState.onScore = { score -> onScoreChanged(score) }
+        DungeonScoreState.onReset = { scoreTitles.reset() }
+        scoreChat270 = DungeonScorerModule.chat270
+        scoreChat300 = DungeonScorerModule.chat300
         scoreAlertText = DungeonScorerModule.alertText
         scoreAlertDurationTicks = DungeonScorerModule.durationTicks
         scoreAlertSound = DungeonScorerModule.playSound
@@ -421,9 +416,9 @@ class DungeonAssistModule private constructor() : Module(
     }
 
     /** Called by the client tick hook. All Minecraft reads stay on the client thread. */
-    fun tick(clientTick: Long, nowNanos: Long, inBoss: Boolean) {
+    fun tick(clientTick: Long, nowNanos: Long) {
         try {
-            tickInternal(clientTick, nowNanos, inBoss)
+            tickInternal(clientTick, nowNanos)
         } finally {
             DungeonScorerModule.INSTANCE.tick(clientTick)
             recordPuzzleDiagnostics(clientTick)
@@ -509,8 +504,14 @@ class DungeonAssistModule private constructor() : Module(
         lastPuzzleDiagnosticEvent = diagnosticToken(event, 120)
     }
 
-    private fun tickInternal(clientTick: Long, nowNanos: Long, inBoss: Boolean) {
+    private fun tickInternal(clientTick: Long, nowNanos: Long) {
         lastClientTick = maxOf(0L, clientTick)
+        DungeonScoreState.core.paulOverride = when (scorePaulBonus.value()) {
+            "YES" -> true
+            "NO" -> false
+            else -> null
+        }
+        DungeonScoreState.tick(Minecraft.getInstance())
         serverTickCounter.onClientTick()
         val inDungeon = DungeonContextTracker.inDungeon()
         val floor = DungeonContextTracker.currentFloor()
@@ -534,33 +535,11 @@ class DungeonAssistModule private constructor() : Module(
         if (!inDungeon) {
             if (wasInDungeon) reset()
             wasInDungeon = false
-            mapRunInfo = null
             setPuzzleScanState(client, "inactive", "Dungeon context is inactive.")
             clearPuzzleGuidance()
             return
         }
         wasInDungeon = true
-        if (floor != null) {
-            val nextScoreRunKey = System.identityHashCode(client.level).toString() + "|" + floor.displayName() + "|" +
-                DungeonMapRoomDetector.current().mapId.toString()
-            if (scoreRunKey != nextScoreRunKey) {
-                scoreRunKey = nextScoreRunKey
-                if (scoreRunEntryObserved && scoreRunEntryKey == null) {
-                    // The entry chat already reset run state; bind that observation to the first map identity.
-                    scoreRunEntryKey = nextScoreRunKey
-                } else {
-                    scoreTracker.reset()
-                    scoreBloodDone = null
-                    scoreBonusSignals.resetUnknown()
-                    scoreRunEntryObserved = false
-                    scoreRunEntryKey = null
-                }
-            }
-        }
-        if (inBoss) scoreBloodDone = true
-        val mapReading = DungeonMapRoomDetector.current()
-        if (!inBoss && scoreBloodDone == null && mapReading != null && mapReading.geometry != null &&
-            mapReading.geometry.roomType() == DungeonMapGeometry.RoomType.BLOOD) scoreBloodDone = false
         if (runSplitsEnabled()) {
             val pendingEntry = splitEntryBuffer.consumeIfReady(
                 true,
@@ -591,63 +570,37 @@ class DungeonAssistModule private constructor() : Module(
             clearPuzzleGuidance()
         }
         if (!scorerEnabled() || !scoreAlertsEnabled.value()) DungeonScorerModule.INSTANCE.clearAlert()
-        val mapInfoWanted = DungeonRoomOverlayModule.INSTANCE.mapInfoWanted()
-        if (!scorerEnabled() && !mapInfoWanted) {
-            mapRunInfo = null
-            return
-        }
-        scoreBonusSignals.observePaul(
-            when (scorePaulBonus.value()) {
-                "YES" -> true
-                "NO" -> false
-                else -> null
-            },
-        )
-        val teamSignals = scoreBonusSignals.teamSnapshot()
-        val tabStats = DungeonScoreCalculator.withTeamSignals(
-            DungeonScoreCalculator.withBonusSignals(
-                DungeonScoreCalculator.readTabLines(scoreTabLines(client)), scoreBonusSignals.snapshot(),
-            ),
-            teamSignals,
-        )
-        val scoreFloor = floor ?: teamSignals.floor
-        val score = DungeonScoreCalculator.calculate(scoreFloor, tabStats, scoreBloodDone, inBoss)
-        mapRunInfo = DungeonMapInfoLogic.RunSnapshot(scoreFloor, tabStats, score, inBoss)
-        DungeonScorerModule.INSTANCE.traceInputs(
-            { "$tabStats|${score.minimum()}|${score.maximum()}|$scoreBloodDone|$inBoss" },
-            {
-                "SCORE_INPUTS tick=$clientTick range=${score.minimum()}..${score.maximum()} secrets=${tabStats.secretsFound} " +
-                    "rooms=${tabStats.completedRooms} cleared=${tabStats.clearedPercent} deaths=${tabStats.deaths} " +
-                    "crypts=${tabStats.crypts} puzzles=${tabStats.completedPuzzles}/${tabStats.puzzleCount} " +
-                    "bloodDone=$scoreBloodDone boss=$inBoss"
-            },
-        )
-        if (!scorerEnabled()) return
-        val crossed = scoreTracker.update(
-            score, scoreThresholdOne.intValue(), scoreThresholdTwo.intValue(), scoreAlertsEnabled.value(),
-        )
-        if (!scoreAlertsEnabled.value()) return
-        for (threshold in crossed) {
-            val template = scoreAlertText.value().trim()
-            val notice = (if (template.isEmpty()) "Score {score}" else template)
-                .replace("{score}", threshold.toString())
-            DungeonScorerModule.INSTANCE.showAlert(notice, clientTick + scoreAlertDurationTicks.intValue())
-            val configuredSoundId = scoreAlertSoundId.value()
-            val soundResult = if (scoreAlertSound.value()) {
-                playLocalSound(configuredSoundId, 1.0f)
-            } else {
-                "disabled"
-            }
-            DungeonScorerModule.INSTANCE.recordSoundOutcome(clientTick, soundResult, configuredSoundId)
+        if (scorerEnabled()) {
+            val core = DungeonScoreState.core
+            DungeonScorerModule.INSTANCE.traceInputs(
+                { core.summary() },
+                { "SCORE_INPUTS tick=$clientTick ${core.summary()} paulLookup=${DungeonScoreState.paulStatus()}" },
+            )
         }
     }
 
-    /** The latest score, tab and floor data for the Dungeon Map info panel; null outside a dungeon or when unwanted. */
-    fun mapRunInfo(): DungeonMapInfoLogic.RunSnapshot? = mapRunInfo
-
-    /** Captures Odin's authoritative team-prefix floor and clear-percent updates on the client thread. */
-    fun onDungeonTeamUpdate(teamText: String?) {
-        scoreBonusSignals.observeTeamUpdate(teamText)
+    /** A new live score arrived (client thread): fires the 270 and 300 titles and chat lines, once per run each. */
+    private fun onScoreChanged(score: Int) {
+        if (!scorerEnabled() || !DungeonContextTracker.inDungeon()) return
+        for (threshold in scoreTitles.update(score)) {
+            if (scoreAlertsEnabled.value()) {
+                val template = scoreAlertText.value().trim()
+                val notice = (if (template.isEmpty()) "Score {score}" else template)
+                    .replace("{score}", threshold.toString())
+                DungeonScorerModule.INSTANCE.showAlert(notice, lastClientTick + scoreAlertDurationTicks.intValue())
+                val configuredSoundId = scoreAlertSoundId.value()
+                val soundResult = if (scoreAlertSound.value()) playLocalSound(configuredSoundId, 1.0f) else "disabled"
+                DungeonScorerModule.INSTANCE.recordSoundOutcome(lastClientTick, soundResult, configuredSoundId)
+            }
+            val chatEnabled = if (threshold == ScoreTitleTracker.FIRST) scoreChat270.value() else scoreChat300.value()
+            if (chatEnabled) {
+                val core = DungeonScoreState.core
+                F7Support.message(
+                    "§b$score §ascore reached in §6${core.elapsedTime} §8|| §e${core.floor?.displayName() ?: "?"}§8.",
+                )
+                DungeonScorerModule.INSTANCE.recordChat(threshold, score)
+            }
+        }
     }
 
     /** Called for incoming chat after Quiz tracking has identified an accepted choice. */
@@ -693,24 +646,8 @@ class DungeonAssistModule private constructor() : Module(
         }
         val inDungeon = DungeonContextTracker.inDungeon()
         val floor = if (inDungeon) DungeonContextTracker.currentFloor() else null
-        scoreBonusSignals.observePartyMessage(plain, floor)
+        DungeonScoreState.onChat(plain)
         val splitPhase = DungeonGuideSegments.fromChat(floor ?: DungeonQueueFloorTracker.currentFloor(), plain)
-        if (splitPhase != null) {
-            when (splitPhase.segmentId) {
-                "ENTRY" -> {
-                    scoreBloodDone = false
-                    scoreRunEntryObserved = true
-                    scoreRunEntryKey = null
-                    scoreBonusSignals.beginRun()
-                    scoreTracker.reset()
-                }
-                "BLOOD_CLEAR", "BOSS_ENTRY", "COMPLETE", "BONZO_SIKE", "BONZO", "SCARF_MINIONS",
-                "SCARF", "GUARDIANS", "PROFESSOR", "PROFESSOR_TRANSFORMED", "TRANSFORMED_PROFESSOR",
-                "THORN", "LIVID", "TERRACOTTAS", "SADAN_GIANTS", "SADAN", "MAXOR", "STORM",
-                "TERMINALS", "GOLDOR", "NECRON", "WITHER_KING" -> scoreBloodDone = true
-                else -> Unit
-            }
-        }
         if (runSplitsEnabled() && splitPhase != null && "ENTRY" == splitPhase.segmentId) {
             if (inDungeon && floor != null) {
                 val priorState = splitStartPriorState()
@@ -2362,13 +2299,7 @@ class DungeonAssistModule private constructor() : Module(
         notePuzzleDiagnosticEvent("lifecycle-reset=level-load-or-disconnect")
         setPuzzleScanState(Minecraft.getInstance(), "inactive", "Puzzle observation state was reset.")
         SpiritLeapPovRenderer.INSTANCE.close()
-        scoreTracker.reset()
-        scoreRunKey = null
-        scoreRunEntryKey = null
-        scoreBloodDone = null
-        scoreRunEntryObserved = false
-        scoreBonusSignals.resetUnknown()
-        mapRunInfo = null
+        scoreTitles.reset()
         puzzleObserver.reset()
         puzzleTimingTracker.onLevelLoad()
         puzzleTimingLevel = null
@@ -2463,8 +2394,6 @@ class DungeonAssistModule private constructor() : Module(
 
     private class Settings {
         val scoreAlerts = BooleanSetting("Score Alerts 270/300", true)
-        val scoreThresholdOne = NumberSetting("Score Alert Threshold 1", 0f, 300f, 270f, true)
-        val scoreThresholdTwo = NumberSetting("Score Alert Threshold 2", 0f, 300f, 300f, true)
         val scoreAlertText = TextSetting("Score Alert Text", "Score {score}", 80)
         val scoreAlertDurationTicks = NumberSetting("Score Alert Duration (Ticks)", 10f, 300f, 100f, true)
         val scoreAlertSound = BooleanSetting("Score Alert Sound", false)

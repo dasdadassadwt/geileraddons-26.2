@@ -39,14 +39,16 @@ public final class NoRenderChecks {
 			&& !NoRenderRules.isSoulWeaverTexture(java.util.Base64.getEncoder().encodeToString("{\"url\":\"other\"}".getBytes())),
 			"only the Soul Weaver skull skin is recognised");
 
-		// Module declaration: twenty-seven switches (four of them the old No Fog toggles), all off, one per flag.
+		// Module declaration: twenty-eight switches (four of them the old No Fog toggles), all off, one per flag.
 		NoRenderModule module = NoRenderModule.INSTANCE;
-		check("No Render".equals(module.name()) && !module.defaultEnabled() && module.booleanSettings().size() == 27
-			&& NoRenderModule.Flag.values().length == 27, "No Render declares twenty-seven switches and is off by default");
+		check("No Render".equals(module.name()) && !module.defaultEnabled() && module.booleanSettings().size() == 28
+			&& NoRenderModule.Flag.values().length == 28, "No Render declares twenty-eight switches and is off by default");
 		check(NoRenderModule.Flag.CLOUDS.getId().equals("clouds") && NoRenderModule.Flag.SOULWEAVER_SKULLS.getId().equals("soulweaverSkulls")
 			&& !module.active(NoRenderModule.Flag.CLOUDS) && !module.active(NoRenderModule.Flag.SOULWEAVER_SKULLS),
 			"No Render has Clouds and Soul Weaver Skulls switches that are inert while the module is off");
 		check(NoRenderModule.Flag.DARKNESS.getId().equals("darkness") && !module.active(NoRenderModule.Flag.DARKNESS), "No Render has a Darkness switch that is inert while the module is off");
+		check(NoRenderModule.Flag.NIGHT_VISION.getId().equals("nightVision") && !module.active(NoRenderModule.Flag.NIGHT_VISION)
+			&& module.booleanSettings().stream().anyMatch(setting -> setting.name().equals("Night Vision")), "No Render has a Night Vision switch that is inert while the module is off");
 		check(module.booleanSettings().stream().anyMatch(setting -> setting.name().equals("Blindness"))
 			&& NoRenderModule.Flag.BLINDNESS.getId().equals("blindness"), "No Render has a Blindness switch");
 		check(!module.active(NoRenderModule.Flag.BLINDNESS), "a disabled No Render module never hides blindness");

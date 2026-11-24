@@ -15,6 +15,7 @@ import geiler.addons.client.module.ModuleAction
 import geiler.addons.client.module.Setting
 import geiler.addons.client.module.SettingGroup
 import geiler.addons.client.module.BooleanSetting
+import geiler.addons.client.module.NumberSetting
 import geiler.addons.client.slayer.SlayerSidebar
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
@@ -33,12 +34,15 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
 ), HudElement {
     private val totalMode = settings.totalMode
     private val showBackground = settings.showBackground
+    private val idleWindow = settings.idleWindow
     private val stats = SlayerHourlyStats()
     private val sidebarLifecycle = SlayerQuestSidebarLifecycle()
     private var lastLevel: ClientLevel? = null
     private var scoreboardPollTicks = 0
     private var questActive = false
-    private var lastQuestActiveNanos = 0L
+    private var lastActivityNanos = 0L
+    private var bossActive = false
+    private var lastProgress: String? = null
     private var bossCountedForQuest = false
     private var bossSeenForQuest = false
     private var lastStatsSaveNanos = 0L
@@ -75,7 +79,7 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
 
         group(
             SettingGroup("Stats", settings.totalMode, settings.resetSessionAction),
-            SettingGroup("Display", settings.showBackground),
+            SettingGroup("Display", settings.showBackground, settings.idleWindow),
         )
     }
 
@@ -93,7 +97,7 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
             val previousLevelPresent = lastLevel != null
             lastLevel = level
             questActive = false
-            lastQuestActiveNanos = 0L
+            bossActive = false
             sidebarLifecycle.reset()
             bossCountedForQuest = false
             bossSeenForQuest = false
@@ -111,7 +115,11 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
 
         if (scoreboardPollTicks++ >= SCOREBOARD_POLL_TICKS) {
             scoreboardPollTicks = 0
-            val board = SlayerScoreboardParser.parse(SlayerSidebar.read(level.scoreboard))
+            val sidebarText = SlayerSidebar.read(level.scoreboard)
+            val board = SlayerScoreboardParser.parse(sidebarText)
+            observeProgress(SlayerScoreboardParser.progress(sidebarText), now)
+            bossActive = board == SlayerScoreboardParser.State.BOSS_ACTIVE
+            if (bossActive) lastActivityNanos = now
             if (board != lastObservedBoardState) {
                 diagnosticEvent("SIDEBAR state=${board.name} previous=${lastObservedBoardState?.name ?: "none"}")
                 lastObservedBoardState = board
@@ -148,8 +156,8 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
                 }
             }
         }
-        stats.tick(questActive, now)
-        if (questActive) lastQuestActiveNanos = now
+        // Only time spent actually slaying counts; an accepted quest idling on the sidebar does not.
+        stats.tick(questActive && slaying(now), now)
 
         persistTotalsIfDue(now)
         tickDiagnostics(now)
@@ -169,6 +177,7 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
             SlayerChatParser.Event.QUEST_STARTED -> {
                 questStartMessages = saturatedIncrement(questStartMessages)
                 questActive = sidebarLifecycle.onQuestStarted().questActive
+                lastActivityNanos = now
                 bossCountedForQuest = false
                 bossSeenForQuest = false
                 diagnosticEvent("QUEST_STARTED source=chat")
@@ -201,6 +210,7 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
         }
         lastLevel = null
         questActive = false
+        bossActive = false
         sidebarLifecycle.reset()
         bossCountedForQuest = false
         bossSeenForQuest = false
@@ -289,7 +299,8 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
 
     override fun visible(): Boolean {
         return shouldDisplayForContext(
-            isActive(), DungeonContextTracker.inDungeon(), questActive, lastQuestActiveNanos, System.nanoTime(),
+            isActive(), DungeonContextTracker.inDungeon(), bossActive, lastActivityNanos, System.nanoTime(),
+            idleWindowNanos(),
         )
     }
 
@@ -352,6 +363,7 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
         if (bossCountedForQuest) return
         if (!bossSeenForQuest && !questActive) return
         stats.recordKill(nowNanos)
+        lastActivityNanos = nowNanos
         bossCountedForQuest = true
         bossSeenForQuest = false
         cachedLines = null
@@ -359,6 +371,21 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
         diagnosticEvent("BOSS_COMPLETED questActive=$questActive")
         persistTotalsNow()
     }
+
+    /** A quest progress change (kills toward the boss) is slaying activity; the first reading is only a baseline. */
+    private fun observeProgress(progress: String?, now: Long) {
+        if (progress == null) return
+        val previous = lastProgress
+        lastProgress = progress
+        if (previous != null && previous != progress) {
+            lastActivityNanos = now
+            diagnosticEvent("QUEST_PROGRESS")
+        }
+    }
+
+    private fun idleWindowNanos(): Long = idleWindow.value().toLong() * SECOND_NANOS
+
+    private fun slaying(now: Long): Boolean = shouldDisplayForActivity(bossActive, lastActivityNanos, now, idleWindowNanos())
 
     private fun lines(): Array<String> {
         val second = System.nanoTime() / SECOND_NANOS
@@ -419,11 +446,12 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
 
     private fun diagnosticState(nowNanos: Long): String {
         val mc = Minecraft.getInstance()
-        val idleAgeSeconds = if (lastQuestActiveNanos <= 0L) -1L
-            else maxOf(0L, nowNanos - lastQuestActiveNanos) / SECOND_NANOS
+        val idleAgeSeconds = if (lastActivityNanos <= 0L) -1L
+            else maxOf(0L, nowNanos - lastActivityNanos) / SECOND_NANOS
         return "enabled=${isEnabled()} active=${isActive()} worldPresent=${mc.level != null} " +
             "playerPresent=${mc.player != null} inDungeon=${DungeonContextTracker.inDungeon()} " +
-            "hudVisible=${visible()} questActive=$questActive idleAgeSeconds=$idleAgeSeconds " +
+            "hudVisible=${visible()} questActive=$questActive bossActive=$bossActive idleAgeSeconds=$idleAgeSeconds " +
+            "idleWindowSeconds=${idleWindow.value().toInt()} progressSeen=${lastProgress != null} " +
             "sidebar=${lastObservedBoardState?.name ?: "none"} sidebarPollTicks=$scoreboardPollTicks " +
             "bossSeenForQuest=$bossSeenForQuest bossCounted=$bossCountedForQuest " +
             "sessionKills=${stats.sessionKills()} sessionActiveSeconds=${stats.sessionActiveNanos() / SECOND_NANOS} " +
@@ -449,7 +477,6 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
         private const val SECOND_NANOS = 1_000_000_000L
         private const val STATS_SAVE_INTERVAL_NANOS = 5_000_000_000L
         private const val SCOREBOARD_POLL_TICKS = 5
-        private const val IDLE_HIDE_NANOS = 30_000_000_000L
         private const val STATUS_INTERVAL_TICKS = 100L
         private const val MAX_DIAGNOSTIC_COUNT = 1_000_000
         private const val MAX_DIAGNOSTIC_EVENTS_PER_TICK = 16
@@ -459,21 +486,26 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
         @JvmField
         val INSTANCE = SlayerTrackerModule(Settings())
 
+        /**
+         * Slaying activity: the boss is up, or quest progress, a quest start or a kill happened within the window.
+         * An accepted quest that only sits on the sidebar is not activity.
+         */
         @JvmStatic
-        fun shouldDisplayForQuestState(questActive: Boolean, lastQuestActiveNanos: Long, nowNanos: Long): Boolean {
-            if (questActive) return true
-            val idleNanos = nowNanos - lastQuestActiveNanos
-            return lastQuestActiveNanos > 0L && idleNanos >= 0L && idleNanos < IDLE_HIDE_NANOS
+        fun shouldDisplayForActivity(bossActive: Boolean, lastActivityNanos: Long, nowNanos: Long, windowNanos: Long): Boolean {
+            if (bossActive) return true
+            val idleNanos = nowNanos - lastActivityNanos
+            return lastActivityNanos > 0L && idleNanos >= 0L && idleNanos < windowNanos
         }
 
         @JvmStatic
         fun shouldDisplayForContext(
             active: Boolean,
             inDungeon: Boolean,
-            questActive: Boolean,
-            lastQuestActiveNanos: Long,
+            bossActive: Boolean,
+            lastActivityNanos: Long,
             nowNanos: Long,
-        ): Boolean = active && !inDungeon && shouldDisplayForQuestState(questActive, lastQuestActiveNanos, nowNanos)
+            windowNanos: Long,
+        ): Boolean = active && !inDungeon && shouldDisplayForActivity(bossActive, lastActivityNanos, nowNanos, windowNanos)
 
         private fun resetSession() {
             INSTANCE.resetSessionStats()
@@ -495,10 +527,11 @@ class SlayerTrackerModule private constructor(settings: Settings) : Module(
         val allSettings = ArrayList<Setting>()
         val totalMode = BooleanSetting("Show Totals", false)
         val showBackground = BooleanSetting("Background", true)
+        val idleWindow = NumberSetting("Idle Hide", "Hide After Idle (s)", 10f, 600f, 60f, true)
         val resetSessionAction = ModuleAction("Reset Session Stats", Runnable { SlayerTrackerModule.resetSession() })
 
         init {
-            allSettings.addAll(listOf(totalMode, showBackground, resetSessionAction))
+            allSettings.addAll(listOf(totalMode, showBackground, idleWindow, resetSessionAction))
         }
     }
 }

@@ -23,5 +23,7 @@ public abstract class ClientLevelWorldWatchMixin {
 		final BlockPos pos, final BlockState oldState, final BlockState newState, final int flags, final CallbackInfo info
 	) {
 		WorldWatch.blockChanged((ClientLevel) (Object) this, pos, oldState, newState);
+		geiler.addons.client.module.impl.CarnivalModule.INSTANCE.onBlockChanged(pos, oldState, newState);
+		geiler.addons.client.module.impl.DojoHelperModule.INSTANCE.onBlockChanged(pos, newState);
 	}
 }

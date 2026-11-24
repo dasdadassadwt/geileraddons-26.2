@@ -37,7 +37,7 @@ public final class DungeonAcceptanceChecks {
 		DungeonSplitPersonalBestChecks.run();
 		DungeonRunSplitsServerTickChecks.run();
 		DungeonPuzzleTimingTrackerChecks.run();
-		checkScoreAndSplits();
+		checkSplits();
 		DungeonHelperChecks.run();
 		checkSpiritLeapSelection();
 		SpiritLeapMenuChecks.run();
@@ -87,100 +87,7 @@ public final class DungeonAcceptanceChecks {
 			"Three Weirdos returns no chest when the parsed clues do not uniquely agree");
 	}
 
-	private static void checkScoreAndSplits() {
-		DungeonScoreCalculator.TabStats scoreTab = DungeonScoreCalculator.readTabLines(List.of(
-			" Secrets Found: 30", " Secrets Found: 75%", " Completed Rooms: 30", "Cleared: 85% (12)",
-			"Puzzles: (3)", "Puzzle A: [✔]", "Puzzle B: [✔]", "Puzzle C: [✖]", "Team Deaths: 2", "Crypts: 5",
-			"Mimic: Yes", "Prince: Yes", "Bat Killers: 3", "Paul: Yes", "Score: 300"));
-		DungeonScoreCalculator.ScoreEstimate score = DungeonScoreCalculator.calculate(
-			DungeonFloor.F5, scoreTab, true, true);
-		require(scoreTab.secretsFound() == 30 && scoreTab.secretsPercent() == 75.0
-			&& scoreTab.completedRooms() == 30 && score.exactScore().orElseThrow() == 287,
-			"a sidebar-style Score total cannot override the locally calculated tab-stat score");
-		var sidebarOnly = DungeonScoreCalculator.readTabLines(List.of("Score: 300"));
-		var unavailable = DungeonScoreCalculator.calculate(DungeonFloor.F5, sidebarOnly, null, false);
-		DungeonScoreAlerts sidebarOnlyAlerts = new DungeonScoreAlerts();
-		require(!unavailable.available()
-			&& unavailable.unknownInputs().contains(DungeonScoreCalculator.Input.SECRETS_FOUND)
-			&& unavailable.unknownInputs().contains(DungeonScoreCalculator.Input.DEATHS)
-			&& sidebarOnlyAlerts.update(unavailable, 270, 300, true).isEmpty(),
-			"a final sidebar total alone leaves core inputs unavailable and cannot trigger score alerts");
-		var bloodUnknown = DungeonScoreCalculator.calculate(DungeonFloor.F5, scoreTab, null, false);
-		var bloodPending = DungeonScoreCalculator.calculate(DungeonFloor.F5, scoreTab, false, false);
-		require(bloodUnknown.available() && bloodUnknown.equals(bloodPending)
-			&& !bloodUnknown.unknownInputs().contains(DungeonScoreCalculator.Input.BLOOD_STATUS),
-			"a blood room not yet seen counts as pending blood, so the score shows before blood is done");
-		DungeonScoreCalculator.TabStats paulUnknown = new DungeonScoreCalculator.TabStats(
-			scoreTab.secretsFound(), scoreTab.secretsPercent(), scoreTab.completedRooms(), scoreTab.clearedPercent(),
-			scoreTab.puzzleCount(), scoreTab.completedPuzzles(), scoreTab.observedPuzzleStatusRows(),
-			scoreTab.deaths(), scoreTab.crypts(), scoreTab.mimic(),
-			scoreTab.prince(), scoreTab.batKillers(), null);
-		DungeonScoreCalculator.ScoreEstimate partial = DungeonScoreCalculator.calculate(
-			DungeonFloor.F5, paulUnknown, true, true);
-		require(partial.minimum() == 277 && partial.maximum() == 287
-			&& partial.unknownInputs().contains(DungeonScoreCalculator.Input.PAUL)
-			&& partial.exactScore().isEmpty(), "unknown Paul state remains a typed score range, not a fabricated total");
-		var incompletePuzzleRows = DungeonScoreCalculator.readTabLines(List.of(
-			"Secrets Found: 30", "Secrets Found: 75%", "Completed Rooms: 30", "Cleared: 85% (12)",
-			"Puzzles: (3)", "Puzzle A: [✔]", "Puzzle B: [✔]", "Team Deaths: 2", "Crypts: 5",
-			"Mimic: Yes", "Prince: Yes", "Bat Killers: 3", "Paul: Yes"));
-		var partialPuzzles = DungeonScoreCalculator.calculate(DungeonFloor.F5, incompletePuzzleRows, true, true);
-		require(partialPuzzles.minimum() < partialPuzzles.maximum()
-			&& partialPuzzles.unknownInputs().contains(DungeonScoreCalculator.Input.PUZZLE_STATUS_ROWS),
-			"missing puzzle-status rows widen the score range rather than counting unseen puzzles as incomplete");
-		DungeonScoreCalculator.RunSignals teamSignals = new DungeonScoreCalculator.RunSignals();
-		require(teamSignals.observeTeamUpdate("The Catacombs (F6) Cleared: 85% (12)"),
-			"team-prefix updates capture Odin's floor and cleared percent");
-		var teamSnapshot = teamSignals.teamSnapshot();
-		var noTabClear = DungeonScoreCalculator.readTabLines(List.of("Puzzles: (0)"));
-		require(teamSnapshot.floor() == DungeonFloor.F6 && teamSnapshot.clearedPercent() == 85.0
-			&& DungeonScoreCalculator.withTeamSignals(noTabClear, teamSnapshot).clearedPercent() == 85.0,
-			"team-prefix floor/clear state supplements missing tab rows");
-		var noClearScore = DungeonScoreCalculator.calculate(DungeonFloor.F5,
-			new DungeonScoreCalculator.TabStats(scoreTab.secretsFound(), scoreTab.secretsPercent(),
-				scoreTab.completedRooms(), null, scoreTab.puzzleCount(), scoreTab.completedPuzzles(),
-				scoreTab.observedPuzzleStatusRows(), scoreTab.deaths(), scoreTab.crypts(), scoreTab.mimic(),
-				scoreTab.prince(), scoreTab.batKillers(), scoreTab.paul()), true, true);
-		require(noClearScore.exactScore().orElseThrow() == 284,
-			"missing clear percentage uses Odin's documented 36-room fallback");
-		DungeonScoreCalculator.RunSignals signals = new DungeonScoreCalculator.RunSignals();
-		signals.beginRun();
-		signals.observePartyMessage("Party > [MVP+] ArcherOne: Mimic killed!", DungeonFloor.F6);
-		signals.observePartyMessage("Party > [MVP+] TankOne: Prince slain", DungeonFloor.F6);
-		signals.observePartyMessage("Party > [MVP+] MageOne: Bat killed", DungeonFloor.F6);
-		signals.observePartyMessage("Party > [MVP+] MageOne: Bat killed!", DungeonFloor.F6);
-		DungeonScoreCalculator.BonusSnapshot observed = signals.snapshot();
-		require(Boolean.TRUE.equals(observed.mimic()) && Boolean.TRUE.equals(observed.prince())
-			&& observed.batKillers() == 1 && observed.paul() == null,
-			"run-local party signals track Odin bonus events and count each bat killer once");
-		DungeonScoreAlerts alerts = new DungeonScoreAlerts();
-		var score269 = exactScore(269);
-		var score270 = exactScore(270);
-		var score301 = exactScore(301);
-		require(alerts.update(score269, 270, 300, true).isEmpty()
-			&& alerts.update(score270, 270, 300, true).equals(List.of(270)),
-			"score alert fires once when crossing 270");
-		require(alerts.update(score270, 270, 300, true).isEmpty()
-			&& alerts.update(exactScore(300), 270, 300, true).equals(List.of(300)),
-			"score alert fires once when crossing 300");
-		alerts.reset();
-		require(alerts.update(score269, 270, 300, true).isEmpty()
-			&& alerts.update(score301, 270, 300, true).equals(List.of(270, 300)),
-			"one local update that passes both score thresholds emits each alert once");
-		alerts.reset();
-		require(alerts.update(score301, 270, 300, true).equals(List.of(270, 300))
-			&& alerts.update(exactScore(305), 270, 300, true).isEmpty(),
-			"the first enabled score observation fires already-reached thresholds once");
-		alerts.reset();
-		require(alerts.update(score301, 270, 300, false).isEmpty()
-			&& alerts.update(score301, 270, 300, true).equals(List.of(270, 300))
-			&& alerts.update(score301, 270, 300, true).isEmpty(),
-			"enabling alerts after crossing fires immediately once without repeating");
-		DungeonScoreAlerts rangeAlerts = new DungeonScoreAlerts();
-		require(rangeAlerts.update(partial, 270, 280, true).equals(List.of(270))
-			&& rangeAlerts.update(partial, 270, 280, true).isEmpty()
-			&& rangeAlerts.update(exactScore(280), 270, 280, true).equals(List.of(280)),
-			"a partial score range alerts only when its lower bound guarantees a threshold, then fires on later certainty");
+	private static void checkSplits() {
 		DungeonSplitTracker splits = new DungeonSplitTracker();
 		require(splits.observe(DungeonFloor.F5, "ENTRY", 1_000_000_000L, 20), "run starts at Entry");
 		require(splits.observePhase(DungeonFloor.F5, "BLOOD_OPEN", 4_000_000_000L, 80),
@@ -195,10 +102,6 @@ public final class DungeonAcceptanceChecks {
 		DungeonSplitTracker.Split total = splits.snapshot(9_000_000_000L, 180).getLast();
 		require(total.id().equals("COMPLETE") && total.elapsedNanos() == 8_000_000_000L,
 			"final split is measured from run entry, not the previous phase");
-	}
-
-	private static DungeonScoreCalculator.ScoreEstimate exactScore(int score) {
-		return new DungeonScoreCalculator.ScoreEstimate(score, score, Set.of());
 	}
 
 	private static void checkSpiritLeapSelection() {

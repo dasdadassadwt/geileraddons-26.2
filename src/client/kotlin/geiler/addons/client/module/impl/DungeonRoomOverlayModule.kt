@@ -8,6 +8,7 @@ import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.config.ModConfig
 import geiler.addons.client.dungeon.*
 import geiler.addons.client.dungeon.helpers.*
+import geiler.addons.client.dungeon.score.DungeonScoreState
 import geiler.addons.client.hud.HudElement
 import geiler.addons.client.module.*
 import geiler.addons.client.party.PartyListBackend
@@ -1122,7 +1123,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
 
     /** The panel is part of the map box except in the boss phase when it is set to hide there. */
     private fun mapInfoShown(): Boolean =
-        settings.mapInfo.value() && !(settings.mapInfoHideInBoss.value() && inBossPhase())
+        settings.mapInfo.value() && !(settings.mapInfoHideInBoss.value() && DungeonScoreState.core.inBoss)
 
     private fun mapInfoHeight(): Int = if (mapInfoShown()) DungeonMapInfoLogic.PANEL_HEIGHT else 0
 
@@ -1135,13 +1136,12 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
     /** Bounded evidence of what the Map Info panel is fed: counts and flags only, no names. */
     private fun mapInfoDiagnostics(): String {
         if (!settings.mapInfo.value()) return "off"
-        val run = DungeonAssistModule.INSTANCE.mapRunInfo() ?: return "shown=" + mapInfoShown() + ",data=none"
-        val info = DungeonMapInfoLogic.info(run, 0)
+        val info = DungeonMapInfoLogic.info(DungeonScoreState.core, 0)
         return "shown=" + mapInfoShown() + ",found=" + info.secretsFound + ",percent=" + info.secretsPercent +
             ",total=" + info.totalSecrets + ",needed=" + info.neededSecrets + ",deaths=" + info.deaths +
             ",crypts=" + info.crypts + ",mimic=" + info.mimic + ",prince=" + info.prince + ",bats=" + info.batKillers +
             ",paul=" + info.paul + ",floor=" + info.floorNumber + ",score=" + (info.score ?: "none") +
-            ",scoreRange=" + run.score.minimum() + "-" + run.score.maximum()
+            ",boss=" + DungeonScoreState.core.inBoss
     }
 
     /** Secrets of the rooms already opened on the map: the "known" part of the Unfound count. */
@@ -1159,7 +1159,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
     ) {
         if (!mapInfoShown()) return
         val info = if (preview) DungeonMapInfoLogic.sampleInfo()
-        else DungeonMapInfoLogic.info(DungeonAssistModule.INSTANCE.mapRunInfo(), knownSecrets(state))
+        else DungeonMapInfoLogic.info(DungeonScoreState.core, knownSecrets(state))
         val pose = graphics.pose()
         pose.pushMatrix()
         pose.translate(0f, layout.height.toFloat())
@@ -2229,7 +2229,7 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
     private fun holdingSpiritLeap(): Boolean {
         val client = Minecraft.getInstance()
         val player = client.player ?: return false
-        return player.mainHandItem.hoverName.string.lowercase(Locale.ROOT).contains("leap")
+        return geiler.addons.client.utility.SkyblockItems.realName(player.mainHandItem).lowercase(Locale.ROOT).contains("leap")
     }
 
     private fun layout(font: Font): DungeonRoomOverlayLayout.Layout =

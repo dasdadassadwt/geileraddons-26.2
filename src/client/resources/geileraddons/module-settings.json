@@ -25,6 +25,7 @@
         { "id": "showPing", "type": "toggle", "name": "Show Ping", "default": true },
         { "id": "showTps", "type": "toggle", "name": "Show TPS", "default": true },
         { "id": "showFps", "type": "toggle", "name": "Show FPS", "default": true },
+        { "id": "showMemory", "type": "toggle", "name": "Show Memory", "default": true },
         { "id": "style", "type": "dropdown", "name": "Style", "default": "Click GUI", "choices": ["Click GUI", "Text"] },
         { "id": "textColor", "type": "color", "name": "Text Color", "default": [255, 255, 255, 255] }
       ]
@@ -312,17 +313,17 @@
     "Score Titles": {
       "settings": [
         { "id": "alerts", "type": "toggle", "name": "Score Alerts", "default": true },
-        { "id": "firstThreshold", "type": "slider", "name": "First Threshold", "min": 0, "max": 300, "default": 270, "integer": true },
-        { "id": "secondThreshold", "type": "slider", "name": "Second Threshold", "min": 0, "max": 300, "default": 300, "integer": true },
         { "id": "alertText", "type": "text", "name": "Alert Text", "default": "Score {score}", "maxLength": 80 },
         { "id": "durationTicks", "type": "slider", "name": "Duration (Ticks)", "min": 10, "max": 300, "default": 20, "integer": true },
         { "id": "playSound", "type": "toggle", "name": "Play Sound", "default": true },
         { "id": "soundId", "type": "text", "name": "Sound ID", "default": "block.anvil.land", "maxLength": 96 },
-        { "id": "paulBonus", "type": "dropdown", "name": "Paul Score Bonus", "default": "UNKNOWN", "choices": ["UNKNOWN", "NO", "YES"], "labels": { "UNKNOWN": "Unknown", "NO": "No Paul bonus", "YES": "Paul bonus active" } }
+        { "id": "chat270", "type": "toggle", "name": "Chat Message at 270", "default": false },
+        { "id": "chat300", "type": "toggle", "name": "Chat Message at 300", "default": true },
+        { "id": "paulBonus", "type": "dropdown", "name": "Paul Score Bonus", "default": "UNKNOWN", "choices": ["UNKNOWN", "NO", "YES"], "labels": { "UNKNOWN": "Auto (detect Paul)", "NO": "No Paul bonus", "YES": "Paul bonus active" } }
       ],
       "groups": [
-        { "name": "Milestones", "toggle": "alerts", "settings": ["firstThreshold", "secondThreshold"] },
-        { "name": "Presentation", "settings": ["alertText", "durationTicks", "playSound", "soundId"] },
+        { "name": "Titles at 270 and 300", "toggle": "alerts", "settings": ["alertText", "durationTicks", "playSound", "soundId"] },
+        { "name": "Chat Messages", "settings": ["chat270", "chat300"] },
         { "name": "Score Inputs", "settings": ["paulBonus"] }
       ]
     },
@@ -443,6 +444,20 @@
         {"id": "distance", "type": "slider", "name": "Distance", "label": "Hide Within (blocks)", "min": 0, "max": 32, "default": 3}
       ]
     },
+    "Hide Spam": {
+      "settings": [
+        {"id": "cooldown", "type": "toggle", "name": "Ability Cooldown", "label": "Hide Ability Cooldown Messages", "default": true},
+        {"id": "blocks", "type": "toggle", "name": "Blocks In The Way", "label": "Hide \"There Are Blocks In The Way\"", "default": true},
+        {"id": "damage", "type": "toggle", "name": "Ability Damage", "label": "Hide Implosion, Molten Wave And Spirit Sceptre Damage", "default": true},
+        {"id": "healBreaker", "type": "toggle", "name": "Heal And Dungeon Breaker", "label": "Hide Heal And Dungeon Breaker Messages", "default": true},
+        {"id": "combo", "type": "toggle", "name": "Kill Combo", "label": "Hide Kill Combo Messages", "default": true},
+        {"id": "teleportPad", "type": "toggle", "name": "Teleport Pad", "label": "Hide Teleport Pad Messages", "default": true},
+        {"id": "mimic", "type": "toggle", "name": "Mimic", "label": "Hide Mimic Killed Messages (Dungeons)", "default": true},
+        {"id": "autopet", "type": "toggle", "name": "Autopet", "label": "Hide Autopet Equipped Messages", "default": true},
+        {"id": "lottery", "type": "toggle", "name": "Lottery", "label": "Hide Lottery Buff Messages", "default": true},
+        {"id": "skyMall", "type": "toggle", "name": "Sky Mall", "label": "Hide Sky Mall Buff Messages", "default": true}
+      ]
+    },
     "Hide F7 Boss Sounds": {
       "settings": [
         {"id": "cancelAboveCap", "type": "toggle", "name": "Cancel Above Cap", "label": "Cancel Sounds Louder Than 1", "default": false},
@@ -479,6 +494,7 @@
         {"id": "stuckArrows", "type": "toggle", "name": "Stuck Arrows", "default": false},
         {"id": "blindness", "type": "toggle", "name": "Blindness", "label": "Remove The Blindness Effect", "default": false},
         {"id": "darkness", "type": "toggle", "name": "Warden Darkness", "label": "Remove The Darkness Effect", "default": false},
+        {"id": "nightVision", "type": "toggle", "name": "Night Vision", "label": "Remove The Night Vision Effect (bright light, red Nether fog)", "default": false},
         {"id": "underwaterFog", "type": "toggle", "name": "Underwater Fog", "label": "Remove Underwater Fog", "default": false},
         {"id": "lavaFog", "type": "toggle", "name": "Lava Fog", "label": "Remove Lava Fog", "default": false},
         {"id": "airFog", "type": "toggle", "name": "Air Fog", "label": "Remove Nether, World And Effect Fog", "default": false},
@@ -487,7 +503,7 @@
         {"id": "soulweaverSkulls", "type": "toggle", "name": "Soul Weaver Skulls", "label": "Hide The Skulls From Soul Weaver's Gloves", "default": false}
       ],
       "groups": [
-        {"name": "Overlays & HUD", "settings": ["fireOverlay", "foodBar", "armorBar", "bossBar", "effectDisplay", "recipeBook", "nausea", "blindness", "darkness"]},
+        {"name": "Overlays & HUD", "settings": ["fireOverlay", "foodBar", "armorBar", "bossBar", "effectDisplay", "recipeBook", "nausea", "blindness", "darkness", "nightVision"]},
         {"name": "Entities", "settings": ["deadEntities", "lightning", "fallingBlocks", "entityFire", "guidedSheep", "bonePlating", "treeBits", "expOrbs", "stuckArrows", "soulweaverSkulls"]},
         {"name": "Particles", "settings": ["deadPoof", "mageBeam", "powderCoating"]},
         {"name": "Fog", "settings": ["underwaterFog", "lavaFog", "airFog", "distanceFog", "clouds"]}
@@ -826,6 +842,7 @@
         {"id": "thirdColor", "type": "color", "name": "Third Color", "default": [255, 85, 85, 128]},
         {"id": "style", "name": "Style", "type": "dropdown", "default": "FILLED_OUTLINE", "choices": ["FILLED", "OUTLINE", "FILLED_OUTLINE"], "labels": { "FILLED": "Filled", "OUTLINE": "Outline", "FILLED_OUTLINE": "Filled Outline" }},
         {"id": "announceProgress", "type": "toggle", "name": "Announce Progress", "label": "Announce Progress In Party", "default": false},
+        {"id": "announceReset", "type": "toggle", "name": "Announce Reset", "label": "Announce Device Reset In Party", "default": false},
         {"id": "blockWrong", "type": "toggle", "name": "Block Wrong Clicks", "default": false},
         {"id": "invertKey", "type": "toggle", "name": "Invert Shift", "label": "Block While Sneaking Instead", "default": false},
         {"id": "blockWrongStart", "type": "toggle", "name": "Block Wrong On Start", "label": "Limit Start Button Clicks In The First Phase", "default": false},
@@ -889,6 +906,44 @@
     "Missing Enchants": {
       "settings": [
         {"id": "color", "type": "color", "name": "Color", "default": [170, 170, 170]}
+      ]
+    },
+    "Carnival": {
+      "settings": [
+        {"id": "fruitDigging", "type": "toggle", "name": "Fruit Digging Helper", "default": true},
+        {"id": "showFound", "type": "toggle", "name": "Show Un-diggable Fruit", "default": false},
+        {"id": "foundColor", "type": "color", "name": "Found Color", "default": [85, 255, 85, 255]},
+        {"id": "showTreasure", "type": "toggle", "name": "Show Treasure/Anchor", "default": true},
+        {"id": "adjacentColor", "type": "color", "name": "Adjacent Color", "default": [255, 170, 0, 255]},
+        {"id": "showMines", "type": "toggle", "name": "Show Adjacent Mine Count", "default": true},
+        {"id": "minesColor", "type": "color", "name": "Mines Color", "default": [255, 85, 85, 255]},
+        {"id": "showGuesses", "type": "toggle", "name": "Show Fruit Guesses", "default": true},
+        {"id": "guessColor", "type": "color", "name": "Fruit Guess Color", "default": [85, 255, 255, 255]},
+        {"id": "showBestDig", "type": "toggle", "name": "Show Best Dig", "default": true},
+        {"id": "bestDigColor", "type": "color", "name": "Best Dig Color", "default": [85, 255, 85, 255]},
+        {"id": "remainingFruit", "type": "toggle", "name": "Remaining Fruit Display", "default": true},
+        {"id": "zombieShootout", "type": "toggle", "name": "Zombie Shootout Helper", "default": false},
+        {"id": "coloredHitboxes", "type": "toggle", "name": "Colored Hitboxes", "default": true},
+        {"id": "zombieTimer", "type": "toggle", "name": "Zombie Timer", "default": true},
+        {"id": "highestOnly", "type": "toggle", "name": "Highest Only", "default": false},
+        {"id": "coloredLine", "type": "toggle", "name": "Colored Line", "default": true},
+        {"id": "lampTimer", "type": "toggle", "name": "Lamp Timer", "default": true},
+        {"id": "ticketReminder", "type": "toggle", "name": "Reminder Daily Tickets", "default": true},
+        {"id": "showGoals", "type": "toggle", "name": "Show Goals", "default": true},
+        {"id": "doubleClickStart", "type": "toggle", "name": "Double Click to Start", "default": true},
+        {"id": "tokenShopHelper", "type": "toggle", "name": "Token Shop Helper", "default": true}
+      ],
+      "groups": [{"name": "Fruit Digging", "toggle": "fruitDigging", "settings": ["showFound", "foundColor", "showTreasure", "adjacentColor", "showMines", "minesColor", "showGuesses", "guessColor", "showBestDig", "bestDigColor", "remainingFruit"]}, {"name": "Zombie Shootout", "toggle": "zombieShootout", "settings": ["coloredHitboxes", "zombieTimer", "highestOnly", "coloredLine", "lampTimer"]}, {"name": "General", "settings": ["ticketReminder", "showGoals", "doubleClickStart", "tokenShopHelper"]}]
+    },
+    "Dojo Helper": {
+      "settings": [
+        {"id": "force", "type": "toggle", "name": "Force Helper", "default": true},
+        {"id": "stamina", "type": "toggle", "name": "Stamina Helper", "default": true},
+        {"id": "mastery", "type": "toggle", "name": "Mastery Helper", "default": true},
+        {"id": "discipline", "type": "toggle", "name": "Discipline Helper", "default": true},
+        {"id": "swiftness", "type": "toggle", "name": "Swiftness Helper", "default": true},
+        {"id": "control", "type": "toggle", "name": "Control Helper", "default": true},
+        {"id": "tenacity", "type": "toggle", "name": "Tenacity Helper", "default": true}
       ]
     }
   }
