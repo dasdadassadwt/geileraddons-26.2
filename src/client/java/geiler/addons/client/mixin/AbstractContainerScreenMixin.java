@@ -169,6 +169,7 @@ public abstract class AbstractContainerScreenMixin {
 		AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) (Object) this;
 		// Vanilla would read the release against its hidden slot layout and throw the carried stack (-999).
 		if (geiler.addons.client.module.impl.StorageOverlayModule.INSTANCE.ownsScreen(screen)) {
+			geiler.addons.client.module.impl.StorageOverlayModule.INSTANCE.handleMouseRelease(event);
 			cir.setReturnValue(true);
 			return;
 		}
@@ -191,6 +192,8 @@ public abstract class AbstractContainerScreenMixin {
 	private void geileraddons$dragStorageOverlay(MouseButtonEvent event, double dragX, double dragY,
 		CallbackInfoReturnable<Boolean> cir) {
 		if (geiler.addons.client.module.impl.StorageOverlayModule.INSTANCE.ownsScreen((AbstractContainerScreen<?>) (Object) this)) {
+			geiler.addons.client.module.impl.StorageOverlayModule.INSTANCE
+				.handleMouseDrag((AbstractContainerScreen<?>) (Object) this, event);
 			cir.setReturnValue(true);
 		}
 	}

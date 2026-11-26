@@ -1,6 +1,7 @@
 package geiler.addons.client.inventory
 
 import com.mojang.blaze3d.platform.InputConstants
+import geiler.addons.client.dungeon.DungeonContextTracker
 import geiler.addons.client.module.ClientKeyMappingRegistrar
 import geiler.addons.client.module.impl.PlayerInventoryControlsModule
 import net.minecraft.client.KeyMapping
@@ -234,6 +235,7 @@ object PlayerInventoryControlsRuntime {
         if (!isEnabled() || minecraft == null || minecraft.gui.screen() != null || minecraft.player == null) {
             return false
         }
+        if (!PlayerSlotLockRules.dropProtectionApplies(DungeonContextTracker.isRunStarted())) return false
         val player = minecraft.player ?: return false
         val selected = player.getInventory().getSelectedSlot()
         val current = currentSettings()

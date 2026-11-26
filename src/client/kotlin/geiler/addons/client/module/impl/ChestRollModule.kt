@@ -343,7 +343,7 @@ class ChestRollModule private constructor(private val s: Settings) : Module(
     private fun readItems(screen: AbstractContainerScreen<*>): List<Item> {
         val all = screen.menu.slots
         val out = ArrayList<Item>()
-        val prices = CroesusPrices.prices
+        val prices = CroesusModule.INSTANCE.effectivePrices()
         for ((index, slot) in all.subList(0, (all.size - PLAYER_SLOTS).coerceAtLeast(0)).withIndex()) {
             if (index > MAX_OPENED_SLOT) break
             val stack = slot.item

@@ -168,6 +168,53 @@ object ClickGuiTextEditing {
         return buildString(spaced.length) { for (ch in spaced) if (!Character.isISOControl(ch)) append(ch) }
     }
 
+    /** 0 = whitespace, 1 = letters, digits and underscore, 2 = everything else. */
+    private fun wordClass(codePoint: Int): Int = when {
+        Character.isWhitespace(codePoint) -> 0
+        Character.isLetterOrDigit(codePoint) || codePoint == '_'.code -> 1
+        else -> 2
+    }
+
+    /** Start of the word before [cursor]: skips spaces, then one run of the same character class. */
+    @JvmStatic
+    fun wordLeft(text: String?, cursor: Int): Int {
+        val value = text.orEmpty()
+        var i = clampCursor(value, cursor)
+        while (i > 0 && wordClass(value.codePointBefore(i)) == 0) i -= Character.charCount(value.codePointBefore(i))
+        if (i == 0) return 0
+        val kind = wordClass(value.codePointBefore(i))
+        while (i > 0 && wordClass(value.codePointBefore(i)) == kind) i -= Character.charCount(value.codePointBefore(i))
+        return i
+    }
+
+    /** Start of the next word after [cursor]: skips the current run, then the spaces behind it. */
+    @JvmStatic
+    fun wordRight(text: String?, cursor: Int): Int {
+        val value = text.orEmpty()
+        var i = clampCursor(value, cursor)
+        if (i < value.length) {
+            val kind = wordClass(value.codePointAt(i))
+            if (kind != 0) while (i < value.length && wordClass(value.codePointAt(i)) == kind) i += Character.charCount(value.codePointAt(i))
+        }
+        while (i < value.length && wordClass(value.codePointAt(i)) == 0) i += Character.charCount(value.codePointAt(i))
+        return i
+    }
+
+    /** The run of same-class characters under [index] (or just before it at the end of the text). */
+    @JvmStatic
+    fun wordRangeAt(text: String?, index: Int): Selection {
+        val value = text.orEmpty()
+        if (value.isEmpty()) return Selection(0, 0)
+        val at = clampCursor(value, index)
+        val probe = if (at < value.length) at else value.offsetByCodePoints(at, -1)
+        val kind = wordClass(value.codePointAt(probe))
+        var start = probe
+        while (start > 0 && wordClass(value.codePointBefore(start)) == kind) start -= Character.charCount(value.codePointBefore(start))
+        var end = probe
+        while (end < value.length && wordClass(value.codePointAt(end)) == kind) end += Character.charCount(value.codePointAt(end))
+        return Selection(start, end)
+    }
+
     /** A drag keeps the anchor it started with, otherwise it starts at the caret placed by the first click. */
     @JvmStatic
     fun dragAnchor(clickCursor: Int, existingAnchor: Int): Int = if (existingAnchor >= 0) existingAnchor else clickCursor

@@ -3,6 +3,7 @@ package geiler.addons.client
 import geiler.addons.GeilerAddons
 import geiler.addons.client.chat.ChatChannelsLocalStore
 import geiler.addons.client.chat.ChatCommandReplyBackend
+import geiler.addons.client.chat.ChatHelper
 import geiler.addons.client.command.CritterCommands
 import geiler.addons.client.command.GeilerAddonsCommand
 import geiler.addons.client.macros.MacroRuntime
@@ -185,6 +186,8 @@ import geiler.addons.client.module.impl.TerminalTimesModule
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback
 import geiler.addons.client.module.impl.TrappedChestEspModule
 import geiler.addons.client.module.impl.NoRenderModule
+import geiler.addons.client.module.impl.ArmorTransparencyModule
+import geiler.addons.client.module.impl.LegacyTexturesModule
 import geiler.addons.client.module.impl.RagnarockModule
 import geiler.addons.client.module.impl.SpringBootsModule
 import geiler.addons.client.module.impl.TerracottaTimerModule
@@ -390,7 +393,15 @@ class GeilerAddonsClient : ClientModInitializer {
         }
         ClientSendMessageEvents.ALLOW_COMMAND.register { command -> !AliasesModule.INSTANCE.intercept(command, true) }
         ClientSendMessageEvents.COMMAND.register(ChatCommandReplyBackend::onOutgoingCommand)
+        // Swallow a matching trigger before vanilla logs or renders it. Public player chat uses a
+        // different chat-type key, so this path can only match a /msg decoration.
+        ClientReceiveMessageEvents.ALLOW_CHAT.register { message, _, _, _, _ ->
+            !ChatHelper.interceptPlayerChat(message)
+        }
         ClientReceiveMessageEvents.ALLOW_GAME.register { message, overlay ->
+            // Before every observer: a matching message must leave no chat line, no history, and no
+            // feature diagnostic behind.
+            if (ChatHelper.interceptSystemChat(message, overlay)) return@register false
             val content = ChatText.plain(message.string).trim()
             DungeonContextTracker.onChatMessage(content)
             DungeonBloodCampModule.INSTANCE.onChatMessage(content, System.nanoTime(), clientTick)
@@ -596,6 +607,8 @@ class GeilerAddonsClient : ClientModInitializer {
             ScrollableTooltipModule.INSTANCE.tick()
             FreecamModule.INSTANCE.tick()
             NoRenderModule.INSTANCE.tick()
+            ArmorTransparencyModule.INSTANCE.tick()
+            LegacyTexturesModule.INSTANCE.tick()
             AnimationFixModule.INSTANCE.tick()
             DoubleUseFixModule.INSTANCE.tick()
             DisconnectFixModule.INSTANCE.tick()
@@ -1034,6 +1047,8 @@ class GeilerAddonsClient : ClientModInitializer {
             registerModule(ZoomModule.INSTANCE)
             registerModule(BorderlessFullscreenModule.INSTANCE)
             registerModule(NoRenderModule.INSTANCE)
+            registerModule(ArmorTransparencyModule.INSTANCE)
+            registerModule(LegacyTexturesModule.INSTANCE)
             registerModule(AnimationFixModule.INSTANCE)
             registerModule(DoubleUseFixModule.INSTANCE)
             registerModule(DisconnectFixModule.INSTANCE)

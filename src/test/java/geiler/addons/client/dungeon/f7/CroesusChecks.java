@@ -1,5 +1,7 @@
 package geiler.addons.client.dungeon.f7;
 
+import geiler.addons.client.pricing.BazaarProduct;
+
 import java.util.List;
 import java.util.Map;
 
@@ -33,6 +35,32 @@ public final class CroesusChecks {
 		checkChestCountText();
 		checkEssenceToggle();
 		checkKeyCost();
+		checkOdinColors();
+		checkLivePrices();
+	}
+
+	private static void checkOdinColors() {
+		require(CroesusRules.COLOR_FRESH == 0xFF55FF55 && CroesusRules.COLOR_OPENED == 0xFFFFAA00
+			&& CroesusRules.COLOR_NONE == 0xFFFF5555 && CroesusRules.COLOR_BEST == 0xFF00AA00
+			&& CroesusRules.COLOR_SECOND == 0xFFFFFF55 && CroesusRules.COLOR_KISMET == 0xFF55FFFF,
+			"slot colors are Odin's opaque Minecraft colors");
+	}
+
+	private static void checkLivePrices() {
+		Map<String, Double> base = Map.of("NECRON_HANDLE", 1.0, "WITHER_CATALYST", 2.0, "ENCHANTED_BOOK-ULTIMATE_LEGION-1", 3.0,
+			"ONLY_AVERAGE", 4.0, "ZERO_LIVE", 5.0);
+		Map<String, Double> bins = Map.of("NECRON_HANDLE", 100.0, "WITHER_CATALYST", 999.0);
+		Map<String, BazaarProduct> bazaar = Map.of(
+			"WITHER_CATALYST", new BazaarProduct("WITHER_CATALYST", 30.0, 20.0),
+			"ENCHANTMENT_ULTIMATE_LEGION_1", new BazaarProduct("ENCHANTMENT_ULTIMATE_LEGION_1", 50.0, 40.0),
+			"ZERO_LIVE", new BazaarProduct("ZERO_LIVE", 0.0, null));
+		Map<String, Double> offer = CroesusPrices.live(base, bins, bazaar, true);
+		require(offer.get("NECRON_HANDLE") == 100.0, "an auction item uses lowest BIN");
+		require(offer.get("WITHER_CATALYST") == 30.0, "Bazaar beats lowest BIN; sell offer is the buy price");
+		require(offer.get("ENCHANTED_BOOK-ULTIMATE_LEGION-1") == 50.0, "Bazaar books are found under the Croesus book key");
+		require(offer.get("ONLY_AVERAGE") == 4.0 && offer.get("ZERO_LIVE") == 5.0, "a missing or zero live price keeps the 7-day value");
+		require(CroesusPrices.live(base, bins, bazaar, false).get("WITHER_CATALYST") == 20.0, "instant sell is the sell price");
+		require(CroesusPrices.live(base, null, null, true).equals(base), "before live data arrives the 7-day values are used");
 	}
 
 	private static void checkEssenceToggle() {
@@ -72,7 +100,7 @@ public final class CroesusChecks {
 	}
 
 	private static void checkChestCountText() {
-		require(CroesusRules.chestCountText(true, true, 0) == null, "no Chest Count while no chest is unclaimed");
+		require("§6Chests: §a0".equals(CroesusRules.chestCountText(true, true, 0)), "zero is shown in a dungeon, as Odin does");
 		require(CroesusRules.chestCountText(true, true, -1) == null, "a negative count is hidden");
 		require("§6Chests: §a7".equals(CroesusRules.chestCountText(true, true, 7)), "a positive count is shown");
 		require(CroesusRules.chestCountText(false, true, 7) == null && CroesusRules.chestCountText(true, false, 7) == null,
@@ -172,11 +200,19 @@ public final class CroesusChecks {
 	private static void checkFormat() {
 		require("1,234,568".equals(CroesusRules.money(1_234_567.8)) && "-50".equals(CroesusRules.money(-50.0)),
 			"money is grouped and rounded");
-		List<String> lines = CroesusRules.hudLines(List.of(new CroesusRules.ChestResult("Bedrock", List.of(new CroesusRules.ChestItem("Wither Catalyst", 12_000_000.0)), 11_000_000.0, 0)), false);
-		require(lines.size() == 2 && lines.get(0).contains("Bedrock") && lines.get(0).contains("11,000,000") && lines.get(1).contains("Wither Catalyst"),
-			"HUD lines list the chest then its items");
-		require(CroesusRules.hudLines(List.of(new CroesusRules.ChestResult("Bedrock", List.of(new CroesusRules.ChestItem("X", 1.0)), 1.0, 0)), true).size() == 1,
-			"minimized HUD shows only the profit");
+		CroesusRules.ChestResult first = new CroesusRules.ChestResult("Bedrock",
+			List.of(new CroesusRules.ChestItem("Wither Catalyst", 12_000_000.0)), 11_000_000.0, 0);
+		CroesusRules.ChestResult second = new CroesusRules.ChestResult("Gold", List.of(), -5.0, 1);
+		List<CroesusRules.Row> rows = CroesusRules.rows(List.of(first, second), false);
+		require(rows.size() == 3 && rows.get(0).getChest() == first && rows.get(0).getText().contains("§211,000,000")
+			&& rows.get(1).getChest() == null && rows.get(1).getText().contains("Wither Catalyst")
+			&& rows.get(2).getText().contains("§c-5"), "the list shows each chest, then its items");
+		require(rows.get(0).getY() == 0 && rows.get(1).getY() == 9 && rows.get(2).getY() == 20
+			&& CroesusRules.rowsHeight(rows) == 31, "Odin's spacing: 9 px lines and 2 px after each chest");
+		require(CroesusRules.rows(List.of(first, second), true).size() == 2, "minimized shows only the profit");
+		require(CroesusRules.fitted(List.of(first, second), false, 31).size() == 3, "a list that fits keeps its items");
+		require(CroesusRules.fitted(List.of(first, second), false, 25).size() == 2, "a too tall list drops to profit only");
+		require(CroesusRules.fitted(List.of(first, second), false, 12).size() == 1, "and is cut off as a last resort");
 	}
 
 	private static void require(boolean condition, String message) {

@@ -52,6 +52,8 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
     showOnItem,
     alwaysShow,
     partyAnnounce,
+    poopPop,
+    poopVolume,
 ), ModulePreview {
     @Volatile
     private var readings: List<DungeonMaskProcTimers.Reading> = emptyList()
@@ -74,6 +76,7 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
             SettingGroup.switched("Sound", playProcSound, soundId, soundVolume, soundPitch),
             SettingGroup("Item Overlay", showOnItem),
             SettingGroup("Party Chat", partyAnnounce),
+            SettingGroup.switched("Poop Pop", poopPop, poopVolume),
         )
     }
 
@@ -87,6 +90,7 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
         if (setting === soundId || setting === soundVolume || setting === soundPitch) {
             return playProcSound.value()
         }
+        if (setting === poopVolume) return poopPop.value()
         return true
     }
 
@@ -117,6 +121,10 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
             val player = Minecraft.getInstance().player
             player?.connection?.sendCommand("pc ${partyMessage(proc)}")
             diagnostics.event("ANNOUNCE proc=${proc.name},result=${if (player != null) "sent" else "no_player"}")
+        }
+
+        if (PoopPop.shouldPlay(poopPop.value(), procEnabled(proc))) {
+            diagnostics.event("POOP proc=${proc.name},result=${PoopPop.play(poopVolume.value())},volume=${poopVolume.value()}")
         }
 
         val configuredSoundId = soundId.value()
@@ -443,6 +451,8 @@ class DungeonInvincibilityTimerModule private constructor() : DungeonTextHudModu
         private val showOnItem = BooleanSetting("Show On Item", false)
         private val alwaysShow = BooleanSetting("Always Show In Dungeon", false)
         private val partyAnnounce = BooleanSetting("Party Announce", false)
+        private val poopPop = BooleanSetting("Poop Pop", true)
+        private val poopVolume = NumberSetting("Poop Volume", 0f, 1f, 0.8f)
 
         @JvmField
         val INSTANCE = DungeonInvincibilityTimerModule()

@@ -73,6 +73,10 @@ object PlayerSlotLockRules {
     fun blocksWorldDrop(selectedHotbarIndex: Int, settings: PlayerInventoryControlsData?): Boolean =
         selectedHotbarIndex in 0..8 && settings?.isLocked(selectedHotbarIndex) == true
 
+    /** In a started dungeon run the drop key triggers class abilities and the server drops nothing. */
+    @JvmStatic
+    fun dropProtectionApplies(dungeonRunStarted: Boolean): Boolean = !dungeonRunStarted
+
     /** Persistent lock/link data only participates while the feature itself is enabled. */
     @JvmStatic
     fun shouldPreflightQuickMove(moduleEnabled: Boolean, hasProtectedSlots: Boolean): Boolean =

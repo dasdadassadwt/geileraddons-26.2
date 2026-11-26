@@ -22,6 +22,8 @@ object DungeonContextTracker {
     )
 
     private var inDungeon = false
+    /** True from Mort's map line until the world changes or the dungeon is left. */
+    private var runStarted = false
     /** Legacy pre-blood Clear phase, kept separate from Dungeon Mob ESP's longer gate. */
     private var clearPhase = false
     /** Preserves an explicit blood/boss signal that can arrive just before the first sidebar tick. */
@@ -58,6 +60,7 @@ object DungeonContextTracker {
         }
         if (level !== currentLevel) {
             level = currentLevel
+            runStarted = false
             // Keep the user's manual choice through Hypixel's brief transfer-level replacement.
             lastDungeonSignal = if (inDungeon) System.nanoTime() else 0L
             clearMapOverlayContext()
@@ -94,6 +97,7 @@ object DungeonContextTracker {
             )
         ) {
             inDungeon = false
+            runStarted = false
             clearPhase = false
             mobEspBossPhase = false
             bossLevel = null
@@ -145,6 +149,9 @@ object DungeonContextTracker {
 
     @JvmStatic
     fun inDungeon(): Boolean = inDungeon
+
+    @JvmStatic
+    fun isRunStarted(): Boolean = runStarted
 
     /**
      * Starts a map-only preload after an exact dungeon countdown cue and independent Catacombs
@@ -341,6 +348,7 @@ object DungeonContextTracker {
             return
         }
         if (normalized.contains("mort: here, i found this map when i first entered the dungeon.")) {
+            if (normalized.trim().startsWith("[npc] mort:")) runStarted = true
             clearPhase = inDungeon
             clearEspClosedForRun = false
             mobEspBossPhase = false
@@ -477,6 +485,7 @@ object DungeonContextTracker {
     private fun clear() {
         level = null
         inDungeon = false
+        runStarted = false
         clearPhase = false
         clearEspClosedForRun = false
         mobEspBossPhase = false

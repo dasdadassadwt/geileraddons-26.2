@@ -107,6 +107,8 @@ class ItemListModule private constructor() : Module(
                     if (active(screen)) panel.render(screen, graphics, mouseX, mouseY)
                 }
                 ScreenMouseEvents.allowMouseClick(screen).register { _, event -> !(active(screen) && panel.handleClick(screen, event)) }
+                ScreenMouseEvents.allowMouseDrag(screen).register { _, event, _, _ -> !(active(screen) && panel.handleDrag(event)) }
+                ScreenMouseEvents.allowMouseRelease(screen).register { _, event -> !(active(screen) && panel.handleRelease(event)) }
                 ScreenMouseEvents.allowMouseScroll(screen).register { _, x, y, _, vertical -> !(active(screen) && panel.handleScroll(x, y, vertical)) }
                 ScreenKeyboardEvents.allowKeyPress(screen).register { _, event ->
                     !(active(screen) && panel.handleKey(event, recipeKey, usesKey, favoriteKey))

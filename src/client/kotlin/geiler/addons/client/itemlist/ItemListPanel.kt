@@ -3,6 +3,8 @@ package geiler.addons.client.itemlist
 import geiler.addons.client.access.AbstractContainerScreenAccess
 import geiler.addons.client.gui.GuiTheme
 import geiler.addons.client.gui.InventorySurfaces
+import geiler.addons.client.gui.TextFieldInput
+import geiler.addons.client.gui.TextFieldModel
 import geiler.addons.client.inventory.SkyblockRarity
 import geiler.addons.client.module.impl.PriceDisplayModule
 import geiler.addons.client.pricing.NeuRecipes
@@ -55,8 +57,13 @@ class ItemListPanel(private val host: Host) {
     /** One of `ItemListData.SORT_*`; saved with the favorites. */
     var sort = ItemListData.SORT_BEST
 
-    private var query = ""
+    private val queryField = TextFieldModel(MAX_QUERY)
+    private val query: String get() = queryField.text
     private var focused = false
+    private var searchTextX = 0
+    private var searchTextW = 0
+    private var searchPress = false
+    private var searchDragging = false
     private var page = 0
     private var category = ItemListData.CAT_ALL
     private var results: List<Entry> = emptyList()
@@ -172,7 +179,7 @@ class ItemListPanel(private val host: Host) {
     }
 
     private fun setQuery(text: String) {
-        query = text.take(MAX_QUERY)
+        queryField.replaceAll(text)
     }
 
     private fun setCategory(value: String) {
@@ -447,20 +454,19 @@ class ItemListPanel(private val host: Host) {
                     host.event("SLOT_SEARCH ${if (slotSearch) "on" else "off"} query='${query.take(32)}'")
                     lastSearchClick = 0L
                 } else lastSearchClick = now
+                searchPress = true
             }
             focused = true
         })
         val textY = y + (SEARCH_H - font.lineHeight) / 2 + 1
         val result = calc?.let { "= " + SearchCalculator.format(it) }
         val room = w - 8 - (result?.let { font.width(it) + 6 } ?: 0)
-        var shown = query
-        while (shown.isNotEmpty() && font.width(shown) > room) shown = shown.substring(1)
-        g.text(font, shown, x + 4, textY, 0xFFFFFFFF.toInt(), true)
-        val after = x + 4 + font.width(shown)
-        if (ghost.length > query.length && ghost.lowercase().startsWith(query.trim().lowercase()) && result == null) {
+        searchTextX = x + 4
+        searchTextW = room
+        val after = TextFieldInput.draw(g, font, queryField, x + 4, textY, room, 0xFFFFFFFF.toInt(), 0xAA3366CC.toInt(), focused, true)
+        if (ghostApplies() && result == null) {
             g.text(font, ghost.substring(query.trim().length), after, textY, 0xFFAAAAAA.toInt(), true)
         }
-        if (focused && (System.currentTimeMillis() / 500) % 2 == 0L) g.fill(after, textY - 1, after + 1, textY + font.lineHeight - 1, 0xFFFFFFFF.toInt())
         if (result != null) g.text(font, result, x + w - 4 - font.width(result), textY, 0xFF55FF55.toInt(), true)
     }
 
@@ -689,9 +695,33 @@ class ItemListPanel(private val host: Host) {
             return false
         }
         focused = false
+        searchPress = false
         hit.click(event.button())
+        if (searchPress) {
+            searchPress = false
+            TextFieldInput.mousePressed(queryField, Minecraft.getInstance().font, event.x(), event.y(), searchTextX, searchTextW,
+                event.hasShiftDown(), 1)
+            searchDragging = true
+        }
         return true
     }
+
+    /** Extends the search selection while the mouse button is held after a press on the search bar. */
+    fun handleDrag(event: MouseButtonEvent): Boolean {
+        if (!searchDragging || event.button() != 0) return false
+        TextFieldInput.mouseDragged(queryField, Minecraft.getInstance().font, event.x(), searchTextX, searchTextW)
+        return true
+    }
+
+    fun handleRelease(event: MouseButtonEvent): Boolean {
+        if (!searchDragging || event.button() != 0) return false
+        searchDragging = false
+        return true
+    }
+
+    /** The grey completion only shows while the caret sits at the end of the text with nothing selected. */
+    private fun ghostApplies(): Boolean = !queryField.hasSelection() && queryField.cursor == query.length &&
+        ghost.length > query.length && ghost.lowercase().startsWith(query.trim().lowercase())
 
     fun handleScroll(mouseX: Double, mouseY: Double, vertical: Double): Boolean {
         if (popup != null) return true
@@ -704,7 +734,7 @@ class ItemListPanel(private val host: Host) {
 
     fun handleChar(event: CharacterEvent): Boolean {
         if (!focused) return false
-        if (event.isAllowedChatCharacter() && query.length < MAX_QUERY) setQuery(query + event.codepointAsString())
+        TextFieldInput.handleChar(queryField, event, "item-list-search")
         return true
     }
 
@@ -737,9 +767,12 @@ class ItemListPanel(private val host: Host) {
                     Minecraft.getInstance().keyboardHandler.clipboard = SearchCalculator.plain(it)
                     say("Copied " + SearchCalculator.format(it))
                 }
-                GLFW.GLFW_KEY_BACKSPACE -> setQuery(if (ctrl) "" else query.dropLast(1))
-                GLFW.GLFW_KEY_TAB, GLFW.GLFW_KEY_RIGHT -> if (ghost.length > query.trim().length && ghost.lowercase().startsWith(query.trim().lowercase())) setQuery(ghost)
-                GLFW.GLFW_KEY_V -> if (ctrl) setQuery(query + Minecraft.getInstance().keyboardHandler.clipboard.replace('\n', ' '))
+                GLFW.GLFW_KEY_TAB -> if (ghostApplies() && queryField.cursor == query.length) setQuery(ghost)
+                else -> {
+                    val takesGhost = key == GLFW.GLFW_KEY_RIGHT && !ctrl && !event.hasShiftDown() &&
+                        queryField.cursor == query.length && ghostApplies()
+                    if (takesGhost) setQuery(ghost) else TextFieldInput.handleKey(queryField, event, "item-list-search")
+                }
             }
             return true
         }

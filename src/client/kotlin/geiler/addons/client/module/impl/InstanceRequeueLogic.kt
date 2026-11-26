@@ -6,17 +6,25 @@ class InstanceRequeueLogic {
 
     private var blocked = false
 
-    /** Classifies one plain chat line. A party leave blocks the next requeue; the run end after it consumes the block. */
+    /** Which leave set the block, for diagnostics: "self", "member" or "none". */
+    var blockedBy = "none"
+        private set
+
+    /** Classifies one plain chat line. Anyone leaving the party blocks the next requeue; the run end after it consumes the block. */
     fun onChat(content: String, announceKick: Boolean, disableOnLeave: Boolean): Action {
         val line = content.trim()
         return when {
             KICK_LINES.contains(line) -> if (announceKick) Action.ANNOUNCE_KICK else Action.NONE
-            isPartyLeave(line) -> {
-                if (disableOnLeave) blocked = true
+            isPartyLeave(line) || MEMBER_LEFT.matches(line) -> {
+                if (disableOnLeave) {
+                    blocked = true
+                    blockedBy = if (isPartyLeave(line)) "self" else "member"
+                }
                 Action.NONE
             }
             line == RUN_END -> if (blocked) {
                 blocked = false
+                blockedBy = "none"
                 Action.NONE
             } else {
                 Action.SCHEDULE_REQUEUE
@@ -30,6 +38,7 @@ class InstanceRequeueLogic {
 
     fun reset() {
         blocked = false
+        blockedBy = "none"
     }
 
     companion object {
@@ -40,9 +49,20 @@ class InstanceRequeueLogic {
             "Exception Connecting:ReadTimeoutException : null",
         )
 
-        private fun isPartyLeave(line: String): Boolean =
+        private const val PLAYER = """(?:\[[^\]]+] )?[A-Za-z0-9_]{1,16}"""
+
+        /** Fully anchored, so a player typing the same words in a chat channel never matches. */
+        private val MEMBER_LEFT = Regex(
+            "$PLAYER has (?:left|been removed from) the party\\." +
+                "|Kicked $PLAYER because they were offline\\." +
+                "|$PLAYER was removed from your party because they disconnected\\.",
+        )
+
+        /** A line with ": " is a chat channel message, never the party notice itself. */
+        private fun isPartyLeave(line: String): Boolean = !line.contains(": ") && (
             line == "You left the party." || line.startsWith("You have been kicked from the party") ||
                 line.contains("The party was disbanded") || line.contains("has disbanded the party")
+            )
 
         @JvmStatic
         fun delayTicks(seconds: Int): Int = seconds.coerceIn(0, 30) * 20

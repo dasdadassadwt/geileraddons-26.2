@@ -1,0 +1,14 @@
+{
+	"poop.pop": {
+		"sounds": [
+			{ "name": "geileraddons:poop/squish", "volume": 1.0 }
+		],
+		"subtitle": "Poop"
+	},
+	"poop.toot": {
+		"sounds": [
+			{ "name": "geileraddons:poop/toot", "volume": 1.0 },
+			{ "name": "geileraddons:poop/rumble", "volume": 1.0 }
+		]
+	}
+}

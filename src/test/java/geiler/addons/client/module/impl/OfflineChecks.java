@@ -161,6 +161,7 @@ public final class OfflineChecks {
 		step("DungeonTerminalTitlesChecks.run", () -> DungeonTerminalTitlesChecks.run());
 		step("LobbyTargetWatchModuleChecks.run", () -> LobbyTargetWatchModuleChecks.run());
 		step("GeneralUtilityTimerChecks.run", () -> GeneralUtilityTimerChecks.run());
+		step("ChatHelperChecks.run", () -> geiler.addons.client.chat.ChatHelperChecks.run());
 		step("SharedTimerStoreChecks.run", () -> geiler.addons.client.utility.SharedTimerStoreChecks.run());
 		step("InvincibilityTimerModuleChecks.run", () -> InvincibilityTimerModuleChecks.run());
 		step("LividHelperModuleChecks.run", () -> LividHelperModuleChecks.run());
@@ -276,6 +277,8 @@ public final class OfflineChecks {
 		step("FreecamChecks.run", () -> FreecamChecks.run());
 		step("ScrollableTooltipChecks.run", () -> ScrollableTooltipChecks.run());
 		step("NoRenderChecks.run", () -> NoRenderChecks.run());
+		step("ArmorTransparencyChecks.run", () -> ArmorTransparencyChecks.run());
+		step("LegacyTexturesChecks.run", () -> LegacyTexturesChecks.run());
 		step("TabWidgetRulesChecks.run", () -> geiler.addons.client.tabwidget.TabWidgetRulesChecks.run());
 		step("GameFixChecks.run", () -> GameFixChecks.run());
 		step("ItemCooldownChecks.run", () -> ItemCooldownChecks.run());
@@ -339,6 +342,7 @@ public final class OfflineChecks {
 		step("ClickGuiFlatChecks.run", () -> geiler.addons.client.gui.ClickGuiFlatChecks.run());
 		step("ClickGuiClassicChecks.run", () -> geiler.addons.client.gui.ClickGuiClassicChecks.run());
 		step("ClickGuiTextSelectionChecks.run", () -> geiler.addons.client.gui.ClickGuiTextSelectionChecks.run());
+		step("TextFieldModelChecks.run", () -> geiler.addons.client.gui.TextFieldModelChecks.run());
 		step("ConfigProfileChecks.run", () -> ConfigProfileChecks.run());
 		step("TreeTrackerChecks.main", () -> TreeTrackerChecks.main(args));
 		step("InventoryButtonsModuleKotlinChecks.run", () -> InventoryButtonsModuleKotlinChecks.run());

@@ -1029,6 +1029,10 @@ class PartyFinderStatsModule private constructor(private val settings: Settings 
 
     private fun requestPartyList(snapshot: PartySnapshot?): Boolean {
         if (snapshot == null || !snapshot.inParty() || PartyListBackend.hasStableList()) return false
+        if (PartyListBackend.listResponsePending()) {
+            diagnostics.statusOnChange(20L) { "party_list_request outcome=waiting_for_open_response generation=${snapshot.generation()}" }
+            return false
+        }
         val mc = Minecraft.getInstance()
         val connection = mc.player?.connection
         if (connection == null) {

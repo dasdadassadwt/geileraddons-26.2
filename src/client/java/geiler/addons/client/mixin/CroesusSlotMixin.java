@@ -16,11 +16,12 @@ public abstract class CroesusSlotMixin {
 	private void geileraddons$croesusSlot(GuiGraphicsExtractor graphics, Slot slot, int mouseX, int mouseY,
 		CallbackInfo ci) {
 		AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) (Object) this;
-		CroesusModule croesus = CroesusModule.INSTANCE;
-		if (croesus.shouldHideSlot(screen, slot)) {
-			ci.cancel();
-			return;
-		}
-		croesus.drawSlotBackground(graphics, screen, slot);
+		if (CroesusModule.INSTANCE.onExtractSlot(graphics, screen, slot)) ci.cancel();
+	}
+
+	/** The profit list goes above the chest screen, which would cover or dim the normal HUD layer. */
+	@Inject(method = "extractTooltip", at = @At("HEAD"))
+	private void geileraddons$croesusList(GuiGraphicsExtractor graphics, int mouseX, int mouseY, CallbackInfo ci) {
+		CroesusModule.INSTANCE.drawOverScreen(graphics, (AbstractContainerScreen<?>) (Object) this);
 	}
 }

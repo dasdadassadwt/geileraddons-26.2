@@ -3,6 +3,7 @@ package geiler.addons.client.dungeon.f7
 import com.google.gson.JsonParser
 import geiler.addons.GeilerAddons
 import geiler.addons.client.net.BoundedHttpBodyReader
+import geiler.addons.client.pricing.BazaarProduct
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -22,6 +23,45 @@ object CroesusPrices {
     const val MAX_ENTRIES = 20_000
     private const val MAX_BYTES = 2_097_152
     private val TIMEOUT: Duration = Duration.ofSeconds(15)
+    private const val STALE_MILLIS = 3_600_000L
+    private const val RETRY_MILLIS = 60_000L
+    private val BAZAAR_BOOK = Regex("""^ENCHANTMENT_(.+)_(\d+)$""")
+
+    @Volatile
+    private var loadedAt = 0L
+
+    @Volatile
+    private var attemptedAt = 0L
+
+    /** Downloads again when the averages are an hour old or never arrived; failed attempts wait a minute. */
+    @JvmStatic
+    fun refreshIfStale(done: (String) -> Unit = {}) {
+        val now = System.currentTimeMillis()
+        if (now - loadedAt >= STALE_MILLIS && now - attemptedAt >= RETRY_MILLIS) refresh(done)
+    }
+
+    /**
+     * Live prices keyed like the 7-day file: [base], overlaid with lowest BIN, then with the Bazaar. [sellOffer] takes
+     * the Bazaar's buy price (what a sell offer earns), else its sell price (selling instantly). Zero or missing live
+     * values keep [base].
+     */
+    @JvmStatic
+    fun live(
+        base: Map<String, Double>,
+        lowestBin: Map<String, Double>?,
+        bazaar: Map<String, BazaarProduct>?,
+        sellOffer: Boolean,
+    ): Map<String, Double> {
+        val result = HashMap(base)
+        lowestBin?.forEach { (id, price) -> if (price > 0) result[id] = price }
+        bazaar?.forEach { (id, product) ->
+            val price = (if (sellOffer) product.buyPrice else product.sellPrice) ?: return@forEach
+            if (price <= 0) return@forEach
+            result[id] = price
+            BAZAAR_BOOK.find(id)?.destructured?.let { (name, level) -> result["ENCHANTED_BOOK-$name-$level"] = price }
+        }
+        return result
+    }
 
     class Parsed(val prices: Map<String, Double>, val error: String?)
 
@@ -90,6 +130,7 @@ object CroesusPrices {
     fun refresh(done: (String) -> Unit = {}) {
         if (fetching) return
         fetching = true
+        attemptedAt = System.currentTimeMillis()
         status = "loading"
         Thread({
             try {
@@ -101,6 +142,7 @@ object CroesusPrices {
                     val parsed = parse(String(response.body(), StandardCharsets.UTF_8))
                     if (parsed.error == null) {
                         prices = parsed.prices
+                        loadedAt = System.currentTimeMillis()
                         status = "${parsed.prices.size} prices, ${fetchKey(client)}"
                     } else {
                         status = "failed: ${parsed.error}"

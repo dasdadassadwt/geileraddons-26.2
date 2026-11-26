@@ -6,11 +6,13 @@ import geiler.addons.client.chat.ChatNativeSizeRules
 import geiler.addons.client.chat.ChatWindowLayoutRules
 import geiler.addons.client.config.GeilerAddonsLog
 import geiler.addons.client.config.ModConfig
+import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.Module
 import geiler.addons.client.module.ModuleSettingsSpec
 import geiler.addons.client.module.Setting
 import geiler.addons.client.module.SettingGroup
+import geiler.addons.client.module.TextSetting
 import geiler.addons.client.mixin.ChatComponentPresentationAccessor
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.components.ChatComponent
@@ -19,13 +21,15 @@ import kotlin.math.floor
 /** Extends Minecraft's native chat dimensions while retaining its renderer and interaction model. */
 class ChatModule private constructor(settings: Settings) : Module(
     "Chat",
-    "Extend native chat width and focused or unfocused height, and copy messages.",
+    "Extend native chat dimensions, copy messages, and handle direct messages.",
     Category.MISCELLANEOUS,
     false,
     settings.extraWidth,
     settings.extraFocusedHeight,
     settings.extraUnfocusedHeight,
     settings.copyOnRightClick,
+    settings.chatHelper,
+    settings.chatHelperTrigger,
     settings.legacyWindowWidth,
     settings.legacyWindowHeight,
 ) {
@@ -35,6 +39,8 @@ class ChatModule private constructor(settings: Settings) : Module(
     private val legacyWindowWidth = settings.legacyWindowWidth
     private val legacyWindowHeight = settings.legacyWindowHeight
     private val copyOnRightClick = settings.copyOnRightClick
+    private val chatHelperSetting = settings.chatHelper
+    private val chatHelperTriggerSetting = settings.chatHelperTrigger
 
     private var currentTick = 0L
     private var lastStatusTick = Long.MIN_VALUE
@@ -52,6 +58,7 @@ class ChatModule private constructor(settings: Settings) : Module(
         group(
             SettingGroup("Size", extraWidth, extraFocusedHeight, extraUnfocusedHeight),
             SettingGroup("Messages", copyOnRightClick),
+            SettingGroup("Chat Helper", chatHelperSetting, chatHelperTriggerSetting),
         )
     }
 
@@ -62,6 +69,8 @@ class ChatModule private constructor(settings: Settings) : Module(
         val extraFocusedHeight = spec.slider("extraFocusedHeight")
         val extraUnfocusedHeight = spec.slider("extraUnfocusedHeight")
         val copyOnRightClick = spec.toggle("copyOnRightClick")
+        val chatHelper = spec.toggle("chatHelper")
+        val chatHelperTrigger = spec.text("chatHelperTrigger")
         val legacyWindowWidth = spec.slider("legacyWindowWidth")
         val legacyWindowHeight = spec.slider("legacyWindowHeight")
     }
@@ -71,6 +80,14 @@ class ChatModule private constructor(settings: Settings) : Module(
     override fun isSettingVisible(setting: Setting): Boolean =
         setting !== legacyWindowWidth && setting !== legacyWindowHeight && super.isSettingVisible(setting)
 
+    override fun settingTooltip(setting: Setting): String? = when (setting) {
+        chatHelperSetting ->
+            "On by default. Handles matching direct messages locally before they reach chat history. This switch is independent of the Chat module's master switch."
+        chatHelperTriggerSetting ->
+            "Exact direct-message body to handle. Surrounding spaces and letter case are ignored; leave it blank to disable matching."
+        else -> null
+    }
+
     fun extraWidth(): Int = ChatNativeSizeRules.clampExtra(extraWidth.intValue())
 
     fun extraFocusedHeight(): Int = ChatNativeSizeRules.clampExtra(extraFocusedHeight.intValue())
@@ -78,6 +95,10 @@ class ChatModule private constructor(settings: Settings) : Module(
     fun extraUnfocusedHeight(): Int = ChatNativeSizeRules.clampExtra(extraUnfocusedHeight.intValue())
 
     fun copyOnRightClick(): Boolean = copyOnRightClick.value()
+
+    fun chatHelper(): BooleanSetting = chatHelperSetting
+
+    fun chatHelperTrigger(): TextSetting = chatHelperTriggerSetting
 
     /** Defers saved-size conversion until the client options are initialized. */
     fun initializeAfterConfig() {

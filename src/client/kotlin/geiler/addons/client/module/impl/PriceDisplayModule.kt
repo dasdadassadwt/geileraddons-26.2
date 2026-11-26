@@ -131,6 +131,15 @@ class PriceDisplayModule private constructor(private val s: Settings) : Module(
         collectionDemand = on
     }
 
+    /** Set by Croesus while its price source is live: it values chest loot from the Bazaar and lowest BIN. */
+    @Volatile
+    private var croesusDemand = false
+
+    fun setCroesusDemand(on: Boolean) {
+        if (on && !croesusDemand) ticksSinceRefresh = REFRESH_TICKS
+        croesusDemand = on
+    }
+
     /** Milliseconds since the Bazaar data last arrived, or null before it has. */
     @Synchronized
     fun bazaarAgeMillis(): Long? = loadedAt[Dataset.BAZAAR]?.let { System.currentTimeMillis() - it }
@@ -141,8 +150,8 @@ class PriceDisplayModule private constructor(private val s: Settings) : Module(
 
     private fun wanted(dataset: Dataset): Boolean = when (dataset) {
         Dataset.NPC -> s.npcPrice.value() || itemListDemand
-        Dataset.BAZAAR -> s.bazaarPrice.value() || itemListDemand || bazaarDemand || collectionDemand || craftingOn() || s.essenceCost.value() || s.estimatedValue.value()
-        Dataset.LOWEST_BIN -> s.lowestBin.value() || itemListDemand || collectionDemand || craftingOn() || s.estimatedValue.value()
+        Dataset.BAZAAR -> s.bazaarPrice.value() || itemListDemand || bazaarDemand || collectionDemand || croesusDemand || craftingOn() || s.essenceCost.value() || s.estimatedValue.value()
+        Dataset.LOWEST_BIN -> s.lowestBin.value() || itemListDemand || collectionDemand || croesusDemand || craftingOn() || s.estimatedValue.value()
         Dataset.ONE_DAY -> s.averageBin.value() && s.averageType.value() != "THREE_DAY"
         Dataset.THREE_DAY -> (s.averageBin.value() && s.averageType.value() != "ONE_DAY") || s.estimatedValue.value()
         Dataset.MOTES -> s.motesPrice.value() && HypixelModApi.currentIsland() == Island.THE_RIFT
@@ -155,7 +164,7 @@ class PriceDisplayModule private constructor(private val s: Settings) : Module(
 
     fun tick() {
         val enabled = isEnabled()
-        if (!enabled && !itemListDemand && !bazaarDemand && !collectionDemand) return
+        if (!enabled && !itemListDemand && !bazaarDemand && !collectionDemand && !croesusDemand) return
         if (enabled) diagnostics.advance()
         if (!onSkyblock()) return
         if (++ticksSinceRefresh >= REFRESH_TICKS) {

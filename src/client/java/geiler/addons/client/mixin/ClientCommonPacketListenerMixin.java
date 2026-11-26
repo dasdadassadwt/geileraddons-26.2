@@ -20,6 +20,28 @@ public abstract class ClientCommonPacketListenerMixin {
 		if (geiler.addons.client.termsim.TermSimGuard.shouldDrop(packet)) ci.cancel();
 	}
 
+	/**
+	 * Legacy Textures: a Hypixel resource pack push is answered as if it had been accepted, downloaded and loaded, so the
+	 * server carries on, but the pack is never fetched or applied.
+	 */
+	@Inject(method = "handleResourcePackPush", at = @At("HEAD"), cancellable = true)
+	private void geileraddons$declineServerPack(net.minecraft.network.protocol.common.ClientboundResourcePackPushPacket packet,
+		CallbackInfo ci) {
+		net.minecraft.client.multiplayer.ServerData server = net.minecraft.client.Minecraft.getInstance().getCurrentServer();
+		String address = server == null ? null : server.ip;
+		geiler.addons.client.module.impl.LegacyTexturesModule legacy = geiler.addons.client.module.impl.LegacyTexturesModule.INSTANCE;
+		if (!legacy.shouldBlockPack(address)) return;
+		ClientCommonPacketListenerImpl self = (ClientCommonPacketListenerImpl) (Object) this;
+		for (net.minecraft.network.protocol.common.ServerboundResourcePackPacket.Action action : new net.minecraft.network.protocol.common.ServerboundResourcePackPacket.Action[] {
+			net.minecraft.network.protocol.common.ServerboundResourcePackPacket.Action.ACCEPTED,
+			net.minecraft.network.protocol.common.ServerboundResourcePackPacket.Action.DOWNLOADED,
+			net.minecraft.network.protocol.common.ServerboundResourcePackPacket.Action.SUCCESSFULLY_LOADED }) {
+			self.send(new net.minecraft.network.protocol.common.ServerboundResourcePackPacket(packet.id(), action));
+		}
+		legacy.notePackBlocked(packet.id(), address);
+		ci.cancel();
+	}
+
 	@Inject(method = "handlePing", at = @At("TAIL"))
 	private void geileraddons$countServerPingPacket(ClientboundPingPacket packet, CallbackInfo ci) {
 		DungeonAssistModule.INSTANCE.onServerPingPacket(packet.getId());

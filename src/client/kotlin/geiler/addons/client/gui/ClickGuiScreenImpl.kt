@@ -128,6 +128,14 @@ class ClickGuiScreen @JvmOverloads constructor(
     private var hexInput = ""
     private var hexCursor = 0
     private var hexAnchor = -1
+    /**
+     * Editing engines behind the four field kinds: they own undo history, word editing and clipboard shortcuts while
+     * the fields keep their own text, caret and anchor (the engine adopts them before every edit).
+     */
+    private val searchEngine = TextFieldModel(SEARCH_MAX_LENGTH)
+    private val textEngine = TextFieldModel(256)
+    private val hexEngine = TextFieldModel(8, filter = { s -> s.filter { Character.digit(it, 16) >= 0 }.uppercase(Locale.ROOT) })
+    private val numberEngine = TextFieldModel(16)
     /** The field whose selection follows the mouse while the left button is held. */
     private var selectingField: SelectingField? = null
     private var settingsScroll = ClickGuiState.settingsScroll()
@@ -2090,19 +2098,21 @@ class ClickGuiScreen @JvmOverloads constructor(
             if (!changelogPanelRect().contains(mouseX, mouseY)) closeChangelog()
             return true
         }
+        // 1 = caret, 2 = word, 3 = whole text; counted here because vanilla only reports double clicks.
+        val clickCount = if (left) TextFieldInput.clickCount(mouseX, mouseY) else 1
 
         val search = searchRect(panelX, panelY)
         if (left && search.contains(mouseX, mouseY)) {
             searchFocused = true
-            searchCursor = cursorAtMouse(
+            val clicked = cursorAtMouse(
                 Minecraft.getInstance().font, searchQuery, mouseX.toDouble(),
                 search.x + searchTextInsetForHeight(search.h), searchTextViewportWidth(search.w, search.h),
                 searchCursor, HEADER_TEXT_SCALE,
             )
-            if (doubleClick) {
-                val all = selectAllState(searchQuery)
-                searchCursor = all.cursor
-                searchAnchor = all.anchor
+            val place = caretPlace(searchQuery, clicked, clickCount)
+            searchCursor = place.cursor
+            if (clickCount >= 2) {
+                searchAnchor = place.anchor
             } else {
                 searchAnchor = searchCursor
                 selectingField = SelectingField.SEARCH
@@ -2177,7 +2187,7 @@ class ClickGuiScreen @JvmOverloads constructor(
 
         val modules = visibleModules(selectedCategory)
         if (settingsModule != null && ModuleManager.contains(selectedCategory, settingsModule)) {
-            return settingsClicked(settingsModule, mouseX, mouseY, rightX, panelY, left, right, doubleClick)
+            return settingsClicked(settingsModule, mouseX, mouseY, rightX, panelY, left, right, doubleClick, clickCount)
         }
 
         if (left) {
@@ -2232,7 +2242,7 @@ class ClickGuiScreen @JvmOverloads constructor(
     }
 
     private fun settingsClicked(module: Module, mouseX: Int, mouseY: Int, x: Int, panelY: Int, left: Boolean, right: Boolean,
-        doubleClick: Boolean = false): Boolean {
+        doubleClick: Boolean = false, clickCount: Int = 1): Boolean {
         val viewport = settingsViewport(x, panelY)
         if ((!left && !right) || !viewport.contains(mouseX, mouseY)) return true
         for (row in settingsRows(module, x, panelY)) {
@@ -2283,10 +2293,11 @@ class ClickGuiScreen @JvmOverloads constructor(
                             playClick()
                             focusedHexSetting = row.setting
                             hexInput = row.setting.hex()
-                            hexCursor = cursorAtMouse(Minecraft.getInstance().font, hexInput, mouseX.toDouble(),
+                            val clicked = cursorAtMouse(Minecraft.getInstance().font, hexInput, mouseX.toDouble(),
                                 picker.hex.x + 4, picker.hex.w - 8, hexCursor)
-                            hexAnchor = if (doubleClick) 0 else hexCursor
-                            if (doubleClick) hexCursor = hexInput.length
+                            val place = caretPlace(hexInput, clicked, clickCount)
+                            hexCursor = place.cursor
+                            hexAnchor = if (clickCount >= 2) place.anchor else hexCursor
                             return true
                         }
                     }
@@ -2303,11 +2314,15 @@ class ClickGuiScreen @JvmOverloads constructor(
                     val field = row.field
                     if (field != null && field.contains(mouseX, mouseY)) {
                         markInteraction(row.setting); playClick()
-                        if (focusedNumberSetting === row.setting && !doubleClick) {
-                            numberCursor = cursorAtMouse(Minecraft.getInstance().font, numberInput, mouseX.toDouble(),
+                        if (focusedNumberSetting === row.setting) {
+                            val clicked = cursorAtMouse(Minecraft.getInstance().font, numberInput, mouseX.toDouble(),
                                 field.x + 4, field.w - 8, numberCursor)
-                            numberAnchor = numberCursor
-                            selectingField = SelectingField.NUMBER
+                            val place = caretPlace(numberInput, clicked, clickCount)
+                            numberCursor = place.cursor
+                            if (clickCount >= 2) numberAnchor = place.anchor else {
+                                numberAnchor = numberCursor
+                                selectingField = SelectingField.NUMBER
+                            }
                         } else {
                             focusedNumberSetting = row.setting
                             numberInput = row.setting.display()
@@ -2364,12 +2379,12 @@ class ClickGuiScreen @JvmOverloads constructor(
                         textAnchor = -1
                         return true
                     }
-                    textCursor = cursorAtMouse(Minecraft.getInstance().font, row.setting.value(), mouseX.toDouble(),
+                    val clicked = cursorAtMouse(Minecraft.getInstance().font, row.setting.value(), mouseX.toDouble(),
                         field.x + 4, field.w - 8, row.setting.value().length)
-                    if (doubleClick) {
-                        val all = selectAllState(row.setting.value())
-                        textCursor = all.cursor
-                        textAnchor = all.anchor
+                    val place = caretPlace(row.setting.value(), clicked, clickCount)
+                    textCursor = place.cursor
+                    if (clickCount >= 2) {
+                        textAnchor = place.anchor
                     } else {
                         textAnchor = textCursor
                         selectingField = SelectingField.TEXT
@@ -2525,7 +2540,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         val codepoint = event.codepoint()
         if (searchFocused) {
             if (Character.isISOControl(codepoint)) return true
-            val edit = insertReplacingSelection(searchQuery, searchCursor, searchAnchor, Character.toString(codepoint), SEARCH_MAX_LENGTH)
+            val edit = typeEdit(searchEngine, searchQuery, searchCursor, searchAnchor, Character.toString(codepoint), SEARCH_MAX_LENGTH)
             if (edit.text != searchQuery) setSearchQuery(edit.text)
             searchCursor = edit.cursor
             searchAnchor = edit.anchor
@@ -2554,7 +2569,7 @@ class ClickGuiScreen @JvmOverloads constructor(
     }
 
     private fun applyTextEdit(setting: TextSetting, inserted: String) {
-        val edit = insertReplacingSelection(setting.value(), textCursor, textAnchor, inserted, setting.maxLength())
+        val edit = typeEdit(textEngine, setting.value(), textCursor, textAnchor, inserted, setting.maxLength())
         if (edit.text != setting.value()) {
             setting.setValue(edit.text)
             invalidateSettingsLayout()
@@ -2567,7 +2582,7 @@ class ClickGuiScreen @JvmOverloads constructor(
     private fun applyHexEdit(setting: ColorSetting, inserted: String) {
         val digits = inserted.filter { Character.digit(it, 16) >= 0 }.uppercase(Locale.ROOT)
         if (digits.isEmpty()) return
-        val edit = insertReplacingSelection(hexInput, hexCursor, hexAnchor, digits, 8)
+        val edit = typeEdit(hexEngine, hexInput, hexCursor, hexAnchor, digits, 8)
         hexInput = edit.text
         hexCursor = edit.cursor
         hexAnchor = -1
@@ -2580,7 +2595,8 @@ class ClickGuiScreen @JvmOverloads constructor(
             it.isDigit() || it == '-' || it == '+' || (!setting.isInteger() && it == '.')
         }.joinToString("")
         if (allowed.isEmpty()) return
-        val edit = insertReplacingSelection(numberInput, numberCursor, numberAnchor, allowed, 16)
+        numberEngine.filter = numberFilter(setting)
+        val edit = typeEdit(numberEngine, numberInput, numberCursor, numberAnchor, allowed, 16)
         numberInput = edit.text
         numberCursor = edit.cursor
         numberAnchor = -1
@@ -2590,33 +2606,32 @@ class ClickGuiScreen @JvmOverloads constructor(
      * Shared single-line shortcuts: select all, copy, cut, paste, and (shift-)navigation. Returns the new field
      * state, or null when the key is not an editing key so the caller can handle it.
      */
-    private fun editKey(event: KeyEvent, text: String, cursor: Int, anchor: Int, maxLength: Int): ClickGuiTextEditResult? {
-        val minecraft = Minecraft.getInstance()
-        if (minecraft.hasControlDown()) {
-            when (event.key()) {
-                GLFW.GLFW_KEY_A -> return selectAllState(text)
-                GLFW.GLFW_KEY_C -> {
-                    val picked = selectedText(text, cursor, anchor)
-                    if (picked.isNotEmpty()) minecraft.keyboardHandler.setClipboard(picked)
-                    return ClickGuiTextEditResult(text, cursor, false, anchor)
-                }
-                GLFW.GLFW_KEY_X -> {
-                    val picked = selectedText(text, cursor, anchor)
-                    if (picked.isEmpty()) return ClickGuiTextEditResult(text, cursor, false, anchor)
-                    minecraft.keyboardHandler.setClipboard(picked)
-                    return deleteSelection(text, cursor, anchor)
-                }
-                GLFW.GLFW_KEY_V -> return insertReplacingSelection(
-                    text, cursor, anchor, sanitizePaste(minecraft.keyboardHandler.getClipboard()), maxLength,
-                )
-            }
-        }
-        if (event.key() in EDIT_KEYS) {
-            return applyKeyWithSelection(
-                text, cursor, anchor, textEditKey(event.key()), (event.modifiers() and GLFW.GLFW_MOD_SHIFT) != 0,
-            )
-        }
-        return null
+    private fun editKey(
+        engine: TextFieldModel, id: String, event: KeyEvent, text: String, cursor: Int, anchor: Int, maxLength: Int,
+    ): ClickGuiTextEditResult? {
+        engine.maxLength = maxLength
+        engine.adopt(text, cursor, anchor)
+        if (TextFieldInput.handleKey(engine, event, id) == TextFieldInput.Outcome.IGNORED) return null
+        return ClickGuiTextEditResult(engine.text, engine.cursor, false, engine.anchor)
+    }
+
+    /** Typed or pasted characters through the engine, so they join its undo history. */
+    private fun typeEdit(
+        engine: TextFieldModel, text: String, cursor: Int, anchor: Int, inserted: String, maxLength: Int,
+    ): ClickGuiTextEditResult {
+        engine.maxLength = maxLength
+        engine.adopt(text, cursor, anchor)
+        engine.type(inserted)
+        return ClickGuiTextEditResult(engine.text, engine.cursor, false, engine.anchor)
+    }
+
+    private fun caretPlace(text: String, clickCursor: Int, count: Int): ClickGuiTextEditResult =
+        TextFieldInput.caretPlace(text, clickCursor, count)
+
+    private fun numberFilter(setting: NumberSetting): (String) -> String = { s ->
+        s.map { if (it == ',') '.' else it }.filter {
+            it.isDigit() || it == '-' || it == '+' || (!setting.isInteger() && it == '.')
+        }.joinToString("")
     }
 
     override fun keyPressed(event: KeyEvent): Boolean {
@@ -2625,7 +2640,7 @@ class ClickGuiScreen @JvmOverloads constructor(
             return true
         }
         if (searchFocused) {
-            val edit = editKey(event, searchQuery, searchCursor, searchAnchor, SEARCH_MAX_LENGTH)
+            val edit = editKey(searchEngine, "click-gui-search", event, searchQuery, searchCursor, searchAnchor, SEARCH_MAX_LENGTH)
             if (edit != null) {
                 if (edit.text != searchQuery) setSearchQuery(edit.text)
                 searchCursor = edit.cursor
@@ -2656,7 +2671,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         }
         val hexSetting = focusedHexSetting
         if (hexSetting != null) {
-            val edit = editKey(event, hexInput, hexCursor, hexAnchor, 8)
+            val edit = editKey(hexEngine, "click-gui-hex", event, hexInput, hexCursor, hexAnchor, 8)
             if (edit != null) {
                 val digits = edit.text.filter { Character.digit(it, 16) >= 0 }.uppercase(Locale.ROOT)
                 hexCursor = minOf(edit.cursor, digits.length)
@@ -2676,7 +2691,8 @@ class ClickGuiScreen @JvmOverloads constructor(
         }
         val numberSetting = focusedNumberSetting
         if (numberSetting != null) {
-            val edit = editKey(event, numberInput, numberCursor, numberAnchor, 16)
+            numberEngine.filter = numberFilter(numberSetting)
+            val edit = editKey(numberEngine, "click-gui-number", event, numberInput, numberCursor, numberAnchor, 16)
             if (edit != null) {
                 val allowed = edit.text.map { if (it == ',') '.' else it }.filter {
                     it.isDigit() || it == '-' || it == '+' || (!numberSetting.isInteger() && it == '.')
@@ -2699,7 +2715,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         }
         if (textSetting != null) {
             val value = textSetting.value()
-            val edit = editKey(event, value, textCursor, textAnchor, textSetting.maxLength())
+            val edit = editKey(textEngine, "click-gui-text", event, value, textCursor, textAnchor, textSetting.maxLength())
             if (edit != null) {
                 if (edit.text != value) {
                     textSetting.setValue(edit.text)
@@ -3275,19 +3291,6 @@ class ClickGuiScreen @JvmOverloads constructor(
             ClickGuiMotion.elapsedMillis(startedNanos, nowNanos)
         private fun clampCursor(text: String, cursor: Int): Int = ClickGuiTextEditing.clampCursor(text, cursor)
         private fun moveCursor(text: String, cursor: Int, direction: Int): Int = ClickGuiTextEditing.moveCursor(text, cursor, direction)
-        private val EDIT_KEYS = setOf(
-            GLFW.GLFW_KEY_BACKSPACE, GLFW.GLFW_KEY_DELETE, GLFW.GLFW_KEY_LEFT, GLFW.GLFW_KEY_RIGHT, GLFW.GLFW_KEY_HOME, GLFW.GLFW_KEY_END,
-        )
-        private fun isDeleteKey(key: Int): Boolean = key == GLFW.GLFW_KEY_BACKSPACE || key == GLFW.GLFW_KEY_DELETE
-        private fun textEditKey(key: Int): ClickGuiTextEditKey = when (key) {
-            GLFW.GLFW_KEY_BACKSPACE -> ClickGuiTextEditKey.BACKSPACE
-            GLFW.GLFW_KEY_DELETE -> ClickGuiTextEditKey.DELETE
-            GLFW.GLFW_KEY_LEFT -> ClickGuiTextEditKey.LEFT
-            GLFW.GLFW_KEY_RIGHT -> ClickGuiTextEditKey.RIGHT
-            GLFW.GLFW_KEY_HOME -> ClickGuiTextEditKey.HOME
-            GLFW.GLFW_KEY_END -> ClickGuiTextEditKey.END
-            else -> throw IllegalArgumentException("Unsupported text edit key: $key")
-        }
         private fun rowIdentity(row: Row): Any = when (row) {
             is GroupRow -> row.group
             is PreviewRow -> row.preview

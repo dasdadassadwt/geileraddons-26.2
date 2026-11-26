@@ -1,5 +1,6 @@
 package geiler.addons.client.inventory;
 
+import geiler.addons.client.dungeon.DungeonContextTracker;
 import geiler.addons.client.config.ConfigProfileCodec;
 import geiler.addons.client.config.ConfigProfileInstaller;
 import geiler.addons.client.gui.PlayerInventorySlotOverlay;
@@ -84,6 +85,14 @@ public final class PlayerInventoryControlsChecks {
 		check(PlayerSlotLockRules.blocksWorldDrop(0, locked)
 			&& !PlayerSlotLockRules.blocksWorldDrop(1, locked),
 			"dropping from a locked selected hotbar slot is blocked");
+		check(PlayerSlotLockRules.dropProtectionApplies(false) && !PlayerSlotLockRules.dropProtectionApplies(true),
+			"the drop key is never blocked in a started dungeon run, where it triggers class abilities");
+		DungeonContextTracker.onChatMessage("Party > [MVP+] Bob: [NPC] Mort: Here, I found this map when I first entered the dungeon.");
+		check(!DungeonContextTracker.isRunStarted(), "a player quoting Mort does not start a run");
+		DungeonContextTracker.onChatMessage("[NPC] Mort: Here, I found this map when I first entered the dungeon.");
+		check(DungeonContextTracker.isRunStarted(), "Mort's map line starts the run");
+		DungeonContextTracker.tick(null);
+		check(!DungeonContextTracker.isRunStarted(), "leaving the world ends the run");
 		check(PlayerSlotLockRules.allowsHotbarSelect(0) && PlayerSlotLockRules.allowsHotbarSelect(8),
 			"locked slots remain selectable and usable");
 		check(PlayerSlotLockRules.swapTargetInventorySlot(0) == 0

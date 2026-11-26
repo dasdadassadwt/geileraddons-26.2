@@ -64,7 +64,7 @@ class InstanceRequeueModule private constructor(
             InstanceRequeueLogic.Action.NONE -> {
                 if (!logic.canFire() && pendingTicks >= 0) {
                     pendingTicks = -1
-                    diagnostics.event("CANCELLED party leave during delay")
+                    diagnostics.event("CANCELLED party leave during delay by=${logic.blockedBy}")
                 }
             }
         }
@@ -81,14 +81,14 @@ class InstanceRequeueModule private constructor(
         }
         if (pendingTicks >= 0 && --pendingTicks < 0) fire(client)
         diagnostics.status { suppressed ->
-            "pendingTicks=$pendingTicks canFire=${logic.canFire()} requeuesSinceEnable=$requeues suppressedEvents=$suppressed"
+            "pendingTicks=$pendingTicks canFire=${logic.canFire()} blockedBy=${logic.blockedBy} requeuesSinceEnable=$requeues suppressedEvents=$suppressed"
         }
     }
 
     private fun fire(client: Minecraft) {
         val player = client.player
         if (player == null || !logic.canFire()) {
-            diagnostics.event("SKIPPED player=${player != null} canFire=${logic.canFire()}")
+            diagnostics.event("SKIPPED player=${player != null} canFire=${logic.canFire()} by=${logic.blockedBy}")
             return
         }
         player.connection.sendCommand("instancerequeue")

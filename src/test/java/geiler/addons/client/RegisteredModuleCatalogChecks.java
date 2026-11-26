@@ -127,6 +127,8 @@ public final class RegisteredModuleCatalogChecks {
 		"ZoomModule",
 		"BorderlessFullscreenModule",
 		"NoRenderModule",
+		"ArmorTransparencyModule",
+		"LegacyTexturesModule",
 		"AnimationFixModule",
 		"DoubleUseFixModule",
 		"DisconnectFixModule",

@@ -50,6 +50,7 @@
 		"GuiMessagePresentationAccessor",
 		"GuiMessagePresentationMixin",
 		"ChatScreenMixin",
+		"EditBoxUndoMixin",
 		"ChatComponentChannelsMixin",
 		"DungeonQuizChatStyleMixin",
 		"ChatChannelsDisconnectMixin",
@@ -130,7 +131,11 @@
 		"MinecraftItemCooldownMixin",
 		"ClientLevelGyroWandMixin",
 		"FluidStateModelSetMixin",
-		"CapeLayerCosmeticMixin"
+		"CapeLayerCosmeticMixin",
+			"EquipmentLayerRendererArmorTransparencyMixin",
+			"CustomHeadLayerArmorTransparencyMixin",
+			"SkullBlockRendererAccessor",
+			"ItemModelResolverLegacyTexturesMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

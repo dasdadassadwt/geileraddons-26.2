@@ -111,7 +111,8 @@ class PlayerInventoryControlsModule private constructor(settings: Settings) : Mo
         return "enabled=${isEnabled()} protectBoundSlots=${protectBoundSlots.value()} " +
             "drawBoundOutline=${drawBoundOutline.value()} pointingLineMode=${pointingLineMode.value()} " +
             "lineWidth=${lineWidth.intValue()} lockedSlotStyle=${lockedSlotStyle.value()} " +
-            "lockedSlots=${data.lockedSlots().size} activeLinks=${data.slotLinks().size}"
+            "lockedSlots=${data.lockedSlots().size} activeLinks=${data.slotLinks().size} " +
+            "runStarted=${geiler.addons.client.dungeon.DungeonContextTracker.isRunStarted()}"
     }
 
     private fun recordDiagnostic(line: String) {

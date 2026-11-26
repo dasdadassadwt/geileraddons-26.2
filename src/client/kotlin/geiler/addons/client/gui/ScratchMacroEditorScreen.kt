@@ -204,6 +204,8 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
     private var fieldHistory: BoundedUndoHistory<FieldDraftState>? = null
     private var restoringHistory = false
     private var picker: PickerState? = null
+    /** Editing engine (undo, word editing, clipboard) behind the picker's search box; it adopts the picker's state per edit. */
+    private val pickerEngine = TextFieldModel(128)
     private var pickerSearchSelecting: PickerState? = null
     private var pickerSearchSelectionBounds: GuiRect? = null
     private var pickerSearchDragAnchor = -1
@@ -2477,9 +2479,16 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
                 if (activePicker != null && activePicker.searchable) {
                     activePicker.searchCursor = pickerCursorAtMouse(search, currentMouseX)
                     activePicker.searchSelectionAnchor = -1
-                    pickerSearchSelecting = activePicker
-                    pickerSearchSelectionBounds = search
-                    pickerSearchDragAnchor = activePicker.searchCursor
+                    val clicks = TextFieldInput.clickCount(currentMouseX, currentMouseY)
+                    if (clicks >= 2) {
+                        val place = TextFieldInput.caretPlace(activePicker.search, activePicker.searchCursor, clicks)
+                        activePicker.searchCursor = place.cursor
+                        activePicker.searchSelectionAnchor = place.anchor
+                    } else {
+                        pickerSearchSelecting = activePicker
+                        pickerSearchSelectionBounds = search
+                        pickerSearchDragAnchor = activePicker.searchCursor
+                    }
                 }
             }, null, null, null, null, null)
             rowsTop = modal.y + 55
@@ -2664,9 +2673,17 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
                 focusField(targetField)
                 fieldCursor = fieldCursorAtMouse(targetField, target.bounds, x)
                 fieldSelectionAnchor = -1
-                fieldSelecting = targetField
-                fieldSelectingBounds = target.bounds
-                fieldSelectionDragAnchor = fieldCursor
+                val clicks = TextFieldInput.clickCount(x, y)
+                if (clicks >= 2) {
+                    // Double click selects a word, triple click the whole field; no drag selection from these.
+                    val place = TextFieldInput.caretPlace(fieldText, fieldCursor, clicks)
+                    fieldCursor = place.cursor
+                    fieldSelectionAnchor = place.anchor
+                } else {
+                    fieldSelecting = targetField
+                    fieldSelectingBounds = target.bounds
+                    fieldSelectionDragAnchor = fieldCursor
+                }
                 updateFieldHistoryCursor()
                 return true
             }
@@ -2896,41 +2913,13 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
                 return true
             }
             if (activePicker.searchable) {
-                if (control && event.key() == GLFW.GLFW_KEY_A) {
-                    activePicker.searchSelectionAnchor = 0
-                    activePicker.searchCursor = activePicker.search.length
-                    return true
-                }
-                if ((control && event.key() == GLFW.GLFW_KEY_C) ||
-                    (control && event.key() == GLFW.GLFW_KEY_INSERT)) {
-                    copySelectionToClipboard(activePicker.search, activePicker.searchSelectionAnchor,
-                        activePicker.searchCursor)
-                    return true
-                }
-                if ((control && event.key() == GLFW.GLFW_KEY_X) ||
-                    (shift && event.key() == GLFW.GLFW_KEY_DELETE)) {
-                    if (hasTextSelection(activePicker.searchSelectionAnchor, activePicker.searchCursor)) {
-                        copySelectionToClipboard(activePicker.search, activePicker.searchSelectionAnchor,
-                            activePicker.searchCursor)
-                        replacePickerSearch("")
-                    }
-                    return true
-                }
-                if ((control && event.key() == GLFW.GLFW_KEY_V) ||
-                    (shift && event.key() == GLFW.GLFW_KEY_INSERT)) {
-                    replacePickerSearch(minecraft?.keyboardHandler?.clipboard ?: "")
-                    return true
-                }
-                if (event.key() == InputConstants.KEY_BACKSPACE || event.key() == GLFW.GLFW_KEY_DELETE) {
-                    deletePickerSearch(event.key() == InputConstants.KEY_BACKSPACE)
-                    return true
-                }
-                if (event.key() == GLFW.GLFW_KEY_LEFT || event.key() == GLFW.GLFW_KEY_RIGHT) {
-                    movePickerSearchCursor(if (event.key() == GLFW.GLFW_KEY_LEFT) -1 else 1, shift)
-                    return true
-                }
-                if (event.key() == GLFW.GLFW_KEY_HOME || event.key() == GLFW.GLFW_KEY_END) {
-                    movePickerSearchCursorTo(if (event.key() == GLFW.GLFW_KEY_HOME) 0 else activePicker.search.length, shift)
+                pickerEngine.maxLength = 128
+                pickerEngine.adopt(activePicker.search, activePicker.searchCursor, activePicker.searchSelectionAnchor)
+                val outcome = TextFieldInput.handleKey(pickerEngine, event, "macro-picker-search")
+                if (outcome != TextFieldInput.Outcome.IGNORED) {
+                    if (outcome == TextFieldInput.Outcome.CHANGED) activePicker.updateSearch(pickerEngine.text)
+                    activePicker.searchCursor = pickerEngine.cursor
+                    activePicker.searchSelectionAnchor = pickerEngine.anchor
                     return true
                 }
             }
@@ -2994,6 +2983,16 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
             if ((control && event.key() == GLFW.GLFW_KEY_V) ||
                 (shift && event.key() == GLFW.GLFW_KEY_INSERT)) {
                 replaceFocusedFieldText(minecraft?.keyboardHandler?.clipboard ?: "")
+                return true
+            }
+            if (control && (event.key() == InputConstants.KEY_BACKSPACE || event.key() == GLFW.GLFW_KEY_DELETE)) {
+                deleteFocusedFieldWord(event.key() == InputConstants.KEY_BACKSPACE)
+                return true
+            }
+            if (control && (event.key() == GLFW.GLFW_KEY_LEFT || event.key() == GLFW.GLFW_KEY_RIGHT)) {
+                moveFocusedFieldCursor(if (event.key() == GLFW.GLFW_KEY_LEFT) ClickGuiTextEditing.wordLeft(fieldText, fieldCursor)
+                    else ClickGuiTextEditing.wordRight(fieldText, fieldCursor), shift)
+                updateFieldHistoryCursor()
                 return true
             }
             if (event.key() == InputConstants.KEY_BACKSPACE || event.key() == GLFW.GLFW_KEY_DELETE) {
@@ -3126,6 +3125,19 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
         replaceFocusedFieldText("")
     }
 
+    private fun deleteFocusedFieldWord(backwards: Boolean) {
+        if (hasTextSelection(fieldSelectionAnchor, fieldCursor)) {
+            replaceFocusedFieldText("")
+            return
+        }
+        val target = if (backwards) ClickGuiTextEditing.wordLeft(fieldText, fieldCursor)
+            else ClickGuiTextEditing.wordRight(fieldText, fieldCursor)
+        if (target == fieldCursor) return
+        fieldSelectionAnchor = fieldCursor
+        fieldCursor = target
+        replaceFocusedFieldText("")
+    }
+
     private fun moveFocusedFieldCursor(nextCursor: Int, extendSelection: Boolean) {
         val next = clampCursor(fieldText, nextCursor)
         if (extendSelection) {
@@ -3147,65 +3159,12 @@ class ScratchMacroEditorScreen(private val parent: Screen?, private val macro: M
     private fun replacePickerSearch(replacement: String) {
         val activePicker = picker ?: return
         if (!activePicker.searchable) return
-        val start = if (hasTextSelection(activePicker.searchSelectionAnchor, activePicker.searchCursor))
-            minOf(activePicker.searchSelectionAnchor, activePicker.searchCursor) else activePicker.searchCursor
-        val end = if (hasTextSelection(activePicker.searchSelectionAnchor, activePicker.searchCursor))
-            maxOf(activePicker.searchSelectionAnchor, activePicker.searchCursor) else activePicker.searchCursor
-        val inserted = limitUtf16Length(sanitizeSingleLine(replacement),
-            maxOf(0, 128 - (activePicker.search.length - (end - start))))
-        val updated = activePicker.search.substring(0, start) + inserted + activePicker.search.substring(end)
-        activePicker.updateSearch(updated)
-        activePicker.searchCursor = start + inserted.length
+        pickerEngine.maxLength = 128
+        pickerEngine.adopt(activePicker.search, activePicker.searchCursor, activePicker.searchSelectionAnchor)
+        if (!pickerEngine.type(sanitizeSingleLine(replacement))) return
+        activePicker.updateSearch(pickerEngine.text)
+        activePicker.searchCursor = pickerEngine.cursor
         activePicker.searchSelectionAnchor = -1
-    }
-
-    private fun deletePickerSearch(backwards: Boolean) {
-        val activePicker = picker ?: return
-        if (hasTextSelection(activePicker.searchSelectionAnchor, activePicker.searchCursor)) {
-            replacePickerSearch("")
-            return
-        }
-        var start = activePicker.searchCursor
-        var end = activePicker.searchCursor
-        if (backwards && activePicker.searchCursor > 0) {
-            start -= Character.charCount(activePicker.search.codePointBefore(activePicker.searchCursor))
-        } else if (!backwards && activePicker.searchCursor < activePicker.search.length) {
-            end += Character.charCount(activePicker.search.codePointAt(activePicker.searchCursor))
-        }
-        if (start == end) return
-        activePicker.searchSelectionAnchor = start
-        activePicker.searchCursor = end
-        replacePickerSearch("")
-    }
-
-    private fun movePickerSearchCursor(direction: Int, extendSelection: Boolean) {
-        val activePicker = picker ?: return
-        if (!extendSelection && hasTextSelection(activePicker.searchSelectionAnchor, activePicker.searchCursor)) {
-            activePicker.searchCursor = if (direction < 0)
-                minOf(activePicker.searchSelectionAnchor, activePicker.searchCursor)
-            else maxOf(activePicker.searchSelectionAnchor, activePicker.searchCursor)
-            activePicker.searchSelectionAnchor = -1
-            return
-        }
-        var next = activePicker.searchCursor
-        if (direction < 0 && next > 0) next -= Character.charCount(activePicker.search.codePointBefore(next))
-        else if (direction > 0 && next < activePicker.search.length) {
-            next += Character.charCount(activePicker.search.codePointAt(next))
-        }
-        movePickerSearchCursorTo(next, extendSelection)
-    }
-
-    private fun movePickerSearchCursorTo(nextCursor: Int, extendSelection: Boolean) {
-        val activePicker = picker ?: return
-        val next = clampCursor(activePicker.search, nextCursor)
-        if (extendSelection) {
-            if (activePicker.searchSelectionAnchor < 0) activePicker.searchSelectionAnchor = activePicker.searchCursor
-            activePicker.searchCursor = next
-            if (activePicker.searchSelectionAnchor == activePicker.searchCursor) activePicker.searchSelectionAnchor = -1
-        } else {
-            activePicker.searchCursor = next
-            activePicker.searchSelectionAnchor = -1
-        }
     }
 
     private fun sanitizeSingleLine(value: String?): String {

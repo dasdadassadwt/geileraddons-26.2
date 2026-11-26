@@ -333,12 +333,15 @@
         { "id": "extraFocusedHeight", "type": "slider", "name": "Extra Focused Height", "min": 0, "max": 16384, "default": 0, "integer": true },
         { "id": "extraUnfocusedHeight", "type": "slider", "name": "Extra Unfocused Height", "min": 0, "max": 16384, "default": 0, "integer": true },
         { "id": "copyOnRightClick", "type": "toggle", "name": "Copy Message on Right-click", "default": true },
+        { "id": "chatHelper", "type": "toggle", "name": "Chat Helper", "default": true },
+        { "id": "chatHelperTrigger", "type": "text", "name": "Chat Helper Trigger", "default": "crash", "maxLength": 32 },
         { "id": "legacyWindowWidth", "type": "slider", "name": "Window Width", "min": 0, "max": 16384, "default": 0, "integer": true },
         { "id": "legacyWindowHeight", "type": "slider", "name": "Window Height", "min": 0, "max": 16384, "default": 0, "integer": true }
       ],
       "groups": [
         { "name": "Size", "settings": ["extraWidth", "extraFocusedHeight", "extraUnfocusedHeight"] },
-        { "name": "Messages", "settings": ["copyOnRightClick"] }
+        { "name": "Messages", "settings": ["copyOnRightClick"] },
+        { "name": "Chat Helper", "settings": ["chatHelper", "chatHelperTrigger"] }
       ]
     },
     "Pest Highlighter": {
@@ -469,6 +472,34 @@
         {"id": "hideAll", "type": "toggle", "name": "Hide All", "label": "Hide All Particles", "default": true},
         {"id": "blockBreaking", "type": "toggle", "name": "Block Breaking", "label": "Hide Block Breaking Particles", "default": false},
         {"id": "explosions", "type": "toggle", "name": "Explosions", "label": "Hide Explosion Particles", "default": false}
+      ]
+    },
+    "Armor Transparency": {
+      "settings": [
+        {"id": "helmet", "type": "slider", "name": "Helmet", "label": "Helmet And Worn Head Opacity % (0 = Hidden)", "min": 0, "max": 100, "default": 100, "integer": true},
+        {"id": "chestplate", "type": "slider", "name": "Chestplate", "label": "Chestplate Opacity % (0 = Hidden)", "min": 0, "max": 100, "default": 100, "integer": true},
+        {"id": "leggings", "type": "slider", "name": "Leggings", "label": "Leggings Opacity % (0 = Hidden)", "min": 0, "max": 100, "default": 100, "integer": true},
+        {"id": "boots", "type": "slider", "name": "Boots", "label": "Boots Opacity % (0 = Hidden)", "min": 0, "max": 100, "default": 100, "integer": true},
+        {"id": "ownArmor", "type": "toggle", "name": "Own Armor", "label": "Apply To Your Own Armor", "default": true},
+        {"id": "otherPlayers", "type": "toggle", "name": "Other Players", "label": "Apply To Other Players' Armor", "default": true}
+      ],
+      "groups": [
+        {"name": "Opacity", "settings": ["helmet", "chestplate", "leggings", "boots"]},
+        {"name": "Applies To", "settings": ["ownArmor", "otherPlayers"]}
+      ]
+    },
+    "Legacy Textures": {
+      "settings": [
+        {"id": "blockServerPack", "type": "toggle", "name": "Block Server Pack", "label": "Decline The Hypixel Server Resource Pack", "default": true},
+        {"id": "oldModels", "type": "toggle", "name": "Old Item Models", "label": "Show SkyBlock Items With Their Old Vanilla Models", "default": true},
+        {"id": "weapons", "type": "toggle", "name": "Weapons And Tools", "default": true},
+        {"id": "armor", "type": "toggle", "name": "Armor", "default": true},
+        {"id": "heads", "type": "toggle", "name": "Heads", "default": true},
+        {"id": "other", "type": "toggle", "name": "Other Items", "default": true}
+      ],
+      "groups": [
+        {"name": "Server Pack", "settings": ["blockServerPack"]},
+        {"name": "Item Models", "toggle": "oldModels", "settings": ["weapons", "armor", "heads", "other"]}
       ]
     },
     "No Render": {
@@ -853,6 +884,8 @@
       "settings": [
         {"id": "highlightState", "type": "toggle", "name": "Highlight State", "default": true},
         {"id": "highlightProfitable", "type": "toggle", "name": "Highlight Profitable", "default": true},
+        {"id": "keyRule", "type": "toggle", "name": "Second Chest Needs Key Profit", "default": true},
+        {"id": "priceSource", "type": "dropdown", "name": "Price Source", "default": "AVERAGE", "choices": ["AVERAGE", "SELL_OFFER", "INSTANT_SELL"], "labels": {"AVERAGE": "Odin 7-Day Average", "SELL_OFFER": "Live Sell Offer", "INSTANT_SELL": "Live Instant Sell"}},
         {"id": "hideClaimed", "type": "toggle", "name": "Hide Claimed", "default": true},
         {"id": "includeKey", "type": "toggle", "name": "Include Key", "label": "Count Dungeon Chest Key As Unclaimed", "default": false},
         {"id": "minimized", "type": "toggle", "name": "Minimized", "label": "Only Show Profit", "default": false},
@@ -861,7 +894,7 @@
       ],
       "groups": [
         {"name": "Croesus Menu", "settings": ["highlightState", "hideClaimed", "includeKey"]},
-        {"name": "Chest Profit", "settings": ["highlightProfitable", "includeEssence", "minimized"]},
+        {"name": "Chest Profit", "settings": ["priceSource", "highlightProfitable", "keyRule", "includeEssence", "minimized"]},
         {"name": "Chest Count", "settings": ["chestWarning"]}
       ]
     },

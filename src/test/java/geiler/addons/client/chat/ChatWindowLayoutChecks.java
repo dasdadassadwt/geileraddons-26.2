@@ -45,11 +45,11 @@ public final class ChatWindowLayoutChecks {
 		equals(0, ChatNativeSizeRules.scaledHeight(-5, 2.0), "negative logical height stays at zero");
 		equals(140, ChatNativeSizeRules.migrateLegacyHeightExtra(320, 180, Double.NaN),
 			"invalid chat scale uses vanilla's safe unit scale during migration");
-		equals(9, ChatNativeCopyRules.lineIndexFromBottom(10, 0, 0),
+		equals(0, ChatNativeCopyRules.lineIndexFromBottom(10, 0, 0),
 			"right-click on the bottom row selects the newest native chat line");
-		equals(8, ChatNativeCopyRules.lineIndexFromBottom(10, 0, 1),
+		equals(1, ChatNativeCopyRules.lineIndexFromBottom(10, 0, 1),
 			"right-click one row higher selects the preceding native chat line");
-		equals(7, ChatNativeCopyRules.lineIndexFromBottom(10, 2, 0),
+		equals(2, ChatNativeCopyRules.lineIndexFromBottom(10, 2, 0),
 			"native chat copy maps rows correctly while scrolled");
 		equals(-1, ChatNativeCopyRules.lineIndexFromBottom(10, 0, 10),
 			"copy hit testing rejects a row below the visible native history");

@@ -83,6 +83,24 @@ public final class ChatTrailRequeueChecks {
 		check(logic.canFire(), "a world change clears the block");
 		logic.onChat("The party was disbanded because all invites expired and the party was empty.", false, false);
 		check(logic.canFire(), "with Disable On Leave/Kick off, leaving does not block");
+		for (String left : List.of("[VIP] TurtleMan111 has left the party.", "[MVP+] Amitay0 has left the party.",
+			"nick007lll08 has been removed from the party.", "Kicked [MVP+] Amitay0 because they were offline.",
+			"[VIP] Trishu_ was removed from your party because they disconnected.")) {
+			logic.reset();
+			logic.onChat(left, false, true);
+			check(!logic.canFire(), "a teammate leaving blocks the requeue: " + left);
+		}
+		logic.reset();
+		for (String harmless : List.of("Party > [MVP+] Bob: Amitay0 has left the party.",
+			"Party > Bob: The party was disbanded", "Guild > Bob: x has disbanded the party",
+			"Party Finder > Your group has been removed from the party finder because the leader went offline!",
+			"The party leader, [VIP] ich_liebe_Pizza1 has disconnected, they have 5 minutes to rejoin before the party is disbanded.")) {
+			logic.onChat(harmless, false, true);
+			check(logic.canFire(), "player chat and notices that are not a leave do not block: " + harmless);
+		}
+		logic.onChat("[VIP] TurtleMan111 has left the party.", false, false);
+		check(logic.canFire(), "with Disable On Leave/Kick off, a teammate leaving does not block");
+		logic.reset();
 		check(logic.onChat("You are no longer allowed to access this instance!", true, true)
 			== InstanceRequeueLogic.Action.ANNOUNCE_KICK
 			&& logic.onChat("You were kicked while joining that server!", true, true)

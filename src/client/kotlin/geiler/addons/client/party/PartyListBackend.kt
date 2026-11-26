@@ -205,6 +205,10 @@ object PartyListBackend {
         return true
     }
 
+    /** True while list lines are still arriving (the player's own /pl included); asking again then is rate limited. */
+    @JvmStatic
+    fun listResponsePending(): Boolean = listMessageDirty
+
     /** True after a complete list snapshot has been observed in the current party session. */
     @JvmStatic
     fun hasStableList(): Boolean = stableListObserved

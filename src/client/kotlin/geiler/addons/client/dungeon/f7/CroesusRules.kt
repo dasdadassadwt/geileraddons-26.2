@@ -1,6 +1,7 @@
 package geiler.addons.client.dungeon.f7
 
 import java.util.Locale
+import net.minecraft.network.chat.Component
 
 /** Pure Croesus rules: menu titles, item pricing, chest profit and menu highlight state (after Odin's Croesus). */
 object CroesusRules {
@@ -16,11 +17,11 @@ object CroesusRules {
     private val OPENED_STATUS = Regex("""^Opened Chest: (.+)$""")
     private val NO_MORE = Regex("""^No more chests to open!$""")
 
-    const val COLOR_FRESH = 0x6655FF55
-    const val COLOR_OPENED = 0x66FFAA00
-    const val COLOR_NONE = 0x66FF5555
-    const val COLOR_BEST = 0x8000AA00.toInt()
-    const val COLOR_SECOND = 0x80FFFF55.toInt()
+    const val COLOR_FRESH = 0xFF55FF55.toInt()
+    const val COLOR_OPENED = 0xFFFFAA00.toInt()
+    const val COLOR_NONE = 0xFFFF5555.toInt()
+    const val COLOR_BEST = 0xFF00AA00.toInt()
+    const val COLOR_SECOND = 0xFFFFFF55.toInt()
     const val COLOR_KISMET = 0xFF55FFFF.toInt()
 
     private val ULTIMATE = setOf(
@@ -47,7 +48,22 @@ object CroesusRules {
     )
 
     class ChestItem(val name: String, val price: Double)
-    class ChestResult(val name: String, val items: List<ChestItem>, val profit: Double, val slot: Int)
+    /** [display] is the chest item's own name, which carries the tier color. */
+    class ChestResult @JvmOverloads constructor(
+        val name: String,
+        val items: List<ChestItem>,
+        val profit: Double,
+        val slot: Int,
+        val display: Component? = null,
+    ) {
+        fun withDisplay(component: Component) = ChestResult(name, items, profit, slot, component)
+    }
+
+    /** One line of the profit list; [chest] is set on a chest's own line, whose name is drawn in its own column. */
+    class Row(val chest: ChestResult?, val text: String, val y: Int)
+
+    private const val LINE_HEIGHT = 9
+    private const val CHEST_GAP = 2
     class MenuState(val hide: Boolean, val color: Int)
 
     @JvmStatic fun isCroesusMenu(title: String?): Boolean = title != null && CROESUS_MENU.matches(title)
@@ -173,20 +189,40 @@ object CroesusRules {
     @JvmStatic
     fun money(value: Double): String = "%,.0f".format(Locale.US, value)
 
-    /** The Chest Count HUD text, or null (hidden) while the module is off, outside a dungeon, or with no chest. */
+    /** The Chest Count HUD text, or null (hidden) while the module is off or outside a dungeon. */
     @JvmStatic
     fun chestCountText(enabled: Boolean, inDungeon: Boolean, count: Int): String? =
-        if (enabled && inDungeon && count > 0) "§6Chests: §a$count" else null
+        if (enabled && inDungeon && count >= 0) "§6Chests: §a$count" else null
 
-    /** HUD lines for a list of chests: the profit line of each, then (unless [minimized]) its items. */
+    /** The profit list laid out like Odin's: each chest's profit, then (unless [minimized]) its items. */
     @JvmStatic
-    fun hudLines(chests: List<ChestResult>, minimized: Boolean): List<String> {
-        val lines = ArrayList<String>()
+    fun rows(chests: List<ChestResult>, minimized: Boolean): List<Row> {
+        val rows = ArrayList<Row>()
+        var y = 0
         for (chest in chests) {
             val color = if (chest.profit >= 0) "§2" else "§c"
-            lines.add("${chest.name} §8- §6Profit: $color${money(chest.profit)}")
-            if (!minimized) for (item in chest.items) lines.add("  §7${item.name}: §a${money(item.price)}")
+            rows.add(Row(chest, "§8- §6Profit: $color${money(chest.profit)}", y))
+            y += LINE_HEIGHT
+            if (!minimized) {
+                for (item in chest.items) {
+                    rows.add(Row(null, "  §7${item.name}: §a${money(item.price)}", y))
+                    y += LINE_HEIGHT
+                }
+            }
+            y += CHEST_GAP
         }
-        return lines
+        return rows
+    }
+
+    @JvmStatic
+    fun rowsHeight(rows: List<Row>): Int = rows.lastOrNull()?.let { it.y + LINE_HEIGHT + CHEST_GAP } ?: 0
+
+    /** [rows] that fit [maxHeight]: with items if they fit, profit only if not, and cut off as a last resort. */
+    @JvmStatic
+    fun fitted(chests: List<ChestResult>, minimized: Boolean, maxHeight: Int): List<Row> {
+        var result = rows(chests, minimized)
+        if (!minimized && rowsHeight(result) > maxHeight) result = rows(chests, true)
+        if (rowsHeight(result) <= maxHeight) return result
+        return result.filter { it.y + LINE_HEIGHT <= maxHeight }
     }
 }

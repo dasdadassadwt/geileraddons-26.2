@@ -6,6 +6,7 @@ import geiler.addons.client.module.BooleanSetting;
 import geiler.addons.client.module.Category;
 import geiler.addons.client.module.NumberSetting;
 import geiler.addons.client.module.Setting;
+import geiler.addons.client.module.TextSetting;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -39,9 +40,10 @@ public final class ChatModuleChecks {
                 "Window Width",
                 "Window Height")),
             "numeric setting IDs and order remain stable for config loading");
-        check(module.booleanSettings().size() == 1
-            && module.booleanSettings().getFirst().name().equals("Copy Message on Right-click"),
-            "the message-copy setting ID remains stable");
+        check(module.booleanSettings().size() == 2
+            && module.booleanSettings().get(0).name().equals("Copy Message on Right-click")
+            && module.booleanSettings().get(1).name().equals("Chat Helper"),
+            "the message-copy and chat-helper setting IDs remain stable");
         check(numbers.stream().allMatch(setting -> setting.intValue() == 0
             && setting.min() == 0f
             && setting.max() == ChatNativeSizeRules.MAX_EXTRA_PIXELS),
@@ -57,12 +59,19 @@ public final class ChatModuleChecks {
             && !module.isSettingVisible(numbers.get(3))
             && !module.isSettingVisible(numbers.get(4)),
             "legacy width and height settings remain hidden while config-readable");
-        check(module.groups().size() == 2
+        BooleanSetting chatHelper = module.booleanSettings().get(1);
+        TextSetting chatHelperTrigger = module.textSettings().getFirst();
+        check(module.groups().size() == 3
             && module.groups().get(0).name().equals("Size")
             && module.groups().get(0).settings().equals(numberRows.subList(0, 3))
             && module.groups().get(1).name().equals("Messages")
-            && module.groups().get(1).settings().equals(module.booleanSettings()),
-            "visible settings stay grouped into Size and Messages in order");
+            && module.groups().get(1).settings().equals(List.of(module.booleanSettings().getFirst()))
+            && module.groups().get(2).name().equals("Chat Helper")
+            && module.groups().get(2).settings().equals(List.of(chatHelper, chatHelperTrigger)),
+            "visible settings stay grouped into Size, Messages, and Chat Helper in order");
+        check(chatHelper.rawValue() && "crash".equals(chatHelperTrigger.value())
+            && chatHelperTrigger.maxLength() == 32,
+            "chat helper defaults on with the default trigger and a bounded text field");
         nativeSettingsDriveModuleAccessors(module, numbers);
 
         requireMethod("initializeAfterConfig");
@@ -71,6 +80,8 @@ public final class ChatModuleChecks {
         requireMethod("extraFocusedHeight");
         requireMethod("extraUnfocusedHeight");
         requireMethod("copyOnRightClick");
+        requireMethod("chatHelper");
+        requireMethod("chatHelperTrigger");
         requireMethod("logTabSelection", String.class);
         requireMethod("logOutgoingRouting", String.class, String.class, boolean.class);
         requireMethod("logMessageCopied", String.class);

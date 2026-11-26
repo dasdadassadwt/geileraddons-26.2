@@ -2,6 +2,8 @@ package geiler.addons.client.module.impl
 
 import geiler.addons.client.gui.GuiTheme
 import geiler.addons.client.gui.InventorySurfaces
+import geiler.addons.client.gui.TextFieldInput
+import geiler.addons.client.gui.TextFieldModel
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.Module
@@ -87,8 +89,10 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
     private var loadedMenu: AbstractContainerMenu? = null
     private var skipNext = false
     private val pages = arrayOfNulls<Page>(StorageOverlayRules.PAGE_COUNT)
-    private var search = ""
+    private val searchField = TextFieldModel(MAX_SEARCH)
+    private val search: String get() = searchField.text
     private var searchFocused = false
+    private var searchDragging = false
     private var scroll = 0.0
     private var closedAtMs = 0L
     private var loadedFor: UUID? = null
@@ -158,7 +162,7 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
         startLoad()
         if (System.currentTimeMillis() - closedAtMs > REOPEN_WINDOW_MS) {
             scroll = 0.0
-            if (!s.rememberSearch.value()) search = ""
+            if (!s.rememberSearch.value()) searchField.reset("")
         }
         current = screen
         searchFocused = false
@@ -489,7 +493,6 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
     private fun slotBackground(g: GuiGraphicsExtractor, x: Int, y: Int, mc: Boolean) = InventorySurfaces.slot(g, x, y, mc)
 
     private fun searchBox(g: GuiGraphicsExtractor, font: Font, r: Rect, mc: Boolean) {
-        val caret = searchFocused && (System.currentTimeMillis() / 500L) % 2L == 0L
         if (mc) {
             g.fill(r.x, r.y, r.x + r.w, r.y + r.h, if (searchFocused) 0xFFFFFFFF.toInt() else 0xFFA0A0A0.toInt())
             g.fill(r.x + 1, r.y + 1, r.x + r.w - 1, r.y + r.h - 1, 0xFF000000.toInt())
@@ -500,15 +503,11 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
             )
         }
         val textY = r.y + (r.h - font.lineHeight) / 2 + 1
-        val shown = font.plainSubstrByWidth(search, r.w - 10, true)
-        if (search.isEmpty()) {
+        val color = if (mc) 0xFFFFFFFF.toInt() else GuiTheme.TEXT_PRIMARY
+        if (search.isEmpty() && !searchFocused) {
             g.text(font, "Search storage", r.x + 5, textY, if (mc) 0xFF909090.toInt() else GuiTheme.TEXT_MUTED, false)
         } else {
-            g.text(font, shown, r.x + 5, textY, if (mc) 0xFFFFFFFF.toInt() else GuiTheme.TEXT_PRIMARY, false)
-        }
-        if (caret) {
-            val cx = r.x + 5 + font.width(shown)
-            g.fill(cx, r.y + 3, cx + 1, r.y + r.h - 3, if (mc) 0xFFFFFFFF.toInt() else GuiTheme.TEXT_PRIMARY)
+            TextFieldInput.draw(g, font, searchField, r.x + 5, textY, r.w - 10, color, 0xAA3366CC.toInt(), searchFocused)
         }
     }
 
@@ -550,7 +549,13 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
         // Outside both panels vanilla would treat the click as "outside the window" and throw a carried stack.
         if (!lay.panel.contains(x, y) && !lay.inv.contains(x, y)) return true
         if (event.button() != 0 && event.button() != 1) return true
-        if (searchFocused) return true
+        if (searchFocused) {
+            if (event.button() == 0) {
+                TextFieldInput.mousePressed(searchField, Minecraft.getInstance().font, x, y, lay.search.x + 5, lay.search.w - 10, event.hasShiftDown())
+                searchDragging = true
+            }
+            return true
+        }
         if (event.button() == 0 && lay.home.contains(x, y)) {
             // The home button leads to the vanilla Storage menu (upgrades, skins), so the overlay steps aside once.
             if (sendCommand("storage", "home")) skipNext = true
@@ -612,21 +617,32 @@ class StorageOverlayModule private constructor(private val s: Settings) : Module
         }
         when (event.key()) {
             GLFW.GLFW_KEY_ESCAPE, GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> searchFocused = false
-            GLFW.GLFW_KEY_BACKSPACE -> if (search.isNotEmpty()) {
-                search = if (event.hasControlDown()) "" else search.dropLast(1)
+            else -> if (TextFieldInput.handleKey(searchField, event, "storage-search") == TextFieldInput.Outcome.CHANGED) {
                 scroll = 0.0
+                diagnostics.event("SEARCH length=${search.length}")
             }
         }
         // Everything else is swallowed while typing so the inventory key does not close the screen.
         return true
     }
 
+    /** Extends the search selection while the button stays down after a press on the search box. */
+    fun handleMouseDrag(screen: AbstractContainerScreen<*>, event: MouseButtonEvent) {
+        if (!searchDragging || !ownsScreen(screen) || event.button() != 0) return
+        val r = layout(screen).search
+        TextFieldInput.mouseDragged(searchField, Minecraft.getInstance().font, event.x(), r.x + 5, r.w - 10)
+    }
+
+    fun handleMouseRelease(event: MouseButtonEvent) {
+        if (event.button() == 0) searchDragging = false
+    }
+
     private fun handleChar(screen: net.minecraft.client.gui.screens.Screen, event: CharacterEvent): Boolean {
         if (screen !is AbstractContainerScreen<*> || !ownsScreen(screen) || !searchFocused) return false
-        if (!event.isAllowedChatCharacter || search.length >= MAX_SEARCH) return true
-        search += event.codepointAsString()
-        scroll = 0.0
-        diagnostics.event("SEARCH length=${search.length}")
+        if (TextFieldInput.handleChar(searchField, event, "storage-search") == TextFieldInput.Outcome.CHANGED) {
+            scroll = 0.0
+            diagnostics.event("SEARCH length=${search.length}")
+        }
         return true
     }
 

@@ -28,7 +28,9 @@ import org.lwjgl.glfw.GLFW
  * click on a module that has no toggle, opens that module's settings in the Modern screen, which returns here.
  */
 class ClickGuiClassicScreen : Screen(Component.literal("GeilerAddons")) {
-    private var query = ClickGuiState.recalledSearch()
+    private val searchField = TextFieldModel(SEARCH_MAX_LENGTH).also { it.reset(ClickGuiState.recalledSearch()) }
+    private val query: String get() = searchField.text
+    private var searchDragging = false
     private var favoriteRevision = 0L
     private val search = ClickGuiModuleSearch()
     private val scrolls: MutableMap<String, Int> = HashMap()
@@ -157,12 +159,8 @@ class ClickGuiClassicScreen : Screen(Component.literal("GeilerAddons")) {
         if (query.isEmpty()) {
             graphics.centeredText(font, "Search...", box.x + box.w / 2, textY, GuiTheme.TEXT_MUTED)
         } else {
-            val shown = GuiTheme.fit(font, query, box.w - 16)
-            graphics.text(font, shown, box.x + 8, textY, GuiTheme.TEXT_PRIMARY)
-            if ((System.currentTimeMillis() / CARET_BLINK_MILLIS) % 2 == 0L) {
-                val caretX = box.x + 8 + font.width(shown)
-                graphics.fill(caretX, textY - 1, caretX + 1, textY + font.lineHeight, GuiTheme.TEXT_PRIMARY)
-            }
+            TextFieldInput.draw(graphics, font, searchField, box.x + 8, textY, box.w - 16,
+                GuiTheme.TEXT_PRIMARY, GuiTheme.CATEGORY_SELECTED or (0xFF shl 24), true)
         }
         for (button in Button.values()) {
             val rect = buttonRect(button.ordinal)
@@ -211,8 +209,14 @@ class ClickGuiClassicScreen : Screen(Component.literal("GeilerAddons")) {
             if (workspaceRect().contains(mouseX, mouseY)) {
                 playClick()
                 ClickGuiState.setWorkspace(ClickGuiState.workspace().otherWorkspace())
-                query = ""
+                searchField.reset("")
                 ModConfig.markDirty()
+                return true
+            }
+            val box = searchRect()
+            if (box.contains(mouseX, mouseY)) {
+                TextFieldInput.mousePressed(searchField, font, event.x(), event.y(), box.x + 8, box.w - 16, minecraft.hasShiftDown())
+                searchDragging = true
                 return true
             }
         }
@@ -264,31 +268,40 @@ class ClickGuiClassicScreen : Screen(Component.literal("GeilerAddons")) {
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY)
     }
 
+    override fun mouseDragged(event: MouseButtonEvent, dragX: Double, dragY: Double): Boolean {
+        if (!searchDragging || event.button() != 0) return super.mouseDragged(event, dragX, dragY)
+        val box = searchRect()
+        TextFieldInput.mouseDragged(searchField, font, event.x(), box.x + 8, box.w - 16)
+        return true
+    }
+
+    override fun mouseReleased(event: MouseButtonEvent): Boolean {
+        if (searchDragging && event.button() == 0) {
+            searchDragging = false
+            return true
+        }
+        return super.mouseReleased(event)
+    }
+
     override fun charTyped(event: CharacterEvent): Boolean {
-        val codepoint = event.codepoint()
-        if (Character.isISOControl(codepoint) || query.length >= SEARCH_MAX_LENGTH) return true
-        setQuery(query + Character.toString(codepoint))
+        if (TextFieldInput.handleChar(searchField, event, "classic-search") == TextFieldInput.Outcome.CHANGED) scrolls.clear()
         return true
     }
 
     override fun keyPressed(event: KeyEvent): Boolean {
-        when (event.key()) {
-            GLFW.GLFW_KEY_ESCAPE -> {
-                if (query.isNotEmpty()) setQuery("") else onClose()
-                return true
-            }
-            GLFW.GLFW_KEY_BACKSPACE -> {
-                if (query.isNotEmpty()) setQuery(query.dropLast(if (query.length > 1 && Character.isLowSurrogate(query.last())) 2 else 1))
-                return true
-            }
+        val outcome = TextFieldInput.handleKey(searchField, event, "classic-search")
+        if (outcome != TextFieldInput.Outcome.IGNORED) {
+            if (outcome == TextFieldInput.Outcome.CHANGED) scrolls.clear()
+            return true
+        }
+        if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
+            if (query.isNotEmpty()) {
+                searchField.replaceAll("")
+                scrolls.clear()
+            } else onClose()
+            return true
         }
         return super.keyPressed(event)
-    }
-
-    private fun setQuery(value: String) {
-        if (value == query) return
-        query = value
-        scrolls.clear()
     }
 
     // ---- helpers --------------------------------------------------------------------------------------------

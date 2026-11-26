@@ -14,7 +14,6 @@ import geiler.addons.client.utility.PlayerAlerts
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphicsExtractor
-import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.core.component.DataComponents
 import net.minecraft.network.chat.Component
@@ -25,17 +24,17 @@ import net.minecraft.world.item.Items
 
 /**
  * Croesus: highlights and hides runs in the Croesus menu, prices every chest of a run (profit, best two chests marked) and
- * the chest being opened, and counts unclaimed chests. After Odin's Croesus; prices come from Odin's 7-day average file.
+ * the chest being opened, and counts unclaimed chests. After Odin's Croesus; prices come from Odin's 7-day average file
+ * or, by choice, from the live Bazaar and lowest BIN data Price Display downloads.
  */
-class CroesusModule private constructor() : DungeonTextHudModule(
+class CroesusModule private constructor() : Module(
     "Croesus",
     "Profit and highlights for the Croesus menu and dungeon chests.",
-    "croesus_chests",
-    "Croesus Chest HUD",
+    Category.F7,
+    false,
     *spec.settings.toTypedArray(),
     refreshPrices,
-) {
-    override fun hudIslands(): Set<Island> = setOf(Island.DUNGEON_HUB, Island.CATACOMBS)
+), HudElement {
 
     private val highlightState = spec.toggle("highlightState")
     private val highlightProfitable = spec.toggle("highlightProfitable")
@@ -44,23 +43,27 @@ class CroesusModule private constructor() : DungeonTextHudModule(
     private val minimized = spec.toggle("minimized")
     private val includeEssence = spec.toggle("includeEssence")
     private val chestWarning = spec.slider("chestWarning")
+    private val keyRule = spec.toggle("keyRule")
+    private val priceSource = spec.choice("priceSource")
 
-    private var trackedScreen: Screen? = null
+    private var trackedScreen: AbstractContainerScreen<*>? = null
     private var kind = "none"
-    private var hidden: Set<Int> = emptySet()
+    private var scannedStateId = -1
     private var tint: Map<Int, Int> = emptyMap()
-    private var kismet: Set<Int> = emptySet()
-    private var ticks = 0
+    private var rows: List<CroesusRules.Row> = emptyList()
     private var chestCount = 0
-    private var lastLevel: Any? = null
+    private var livePrices: Map<String, Double> = emptyMap()
+    private var liveKey: List<Any?> = emptyList()
     private val diagnostics = ModuleDiagnostics(Category.F7, { name() }, 8, 100L, 320)
 
     init {
         group(*spec.groups.toTypedArray())
     }
 
+    // ---- profit list element ----
+
     /** A sample the size of a real preview, so placing it in Move Elements matches the live list. */
-    override fun previewLines(): List<String> = CroesusRules.hudLines(
+    private val sampleRows = CroesusRules.rows(
         listOf(
             CroesusRules.ChestResult(
                 "Bedrock",
@@ -77,33 +80,88 @@ class CroesusModule private constructor() : DungeonTextHudModule(
         false,
     )
 
-    /**
-     * Publishes the chest lines so the list always fits the screen: with the items if they fit, with only the profit per
-     * chest if not, and cut off as a last resort. A list taller than the screen cannot be moved in Move Elements.
-     */
-    private fun publishFitted(chests: List<CroesusRules.ChestResult>) {
-        val client = Minecraft.getInstance()
-        // The profit list names the loot, so it waits until the Chest Roll animation has finished on this screen.
-        if (ChestRollModule.INSTANCE.hidesResult(client.gui.screen() as? AbstractContainerScreen<*>)) {
-            clearHudLines()
-            return
+    override fun id(): String = "croesus_chests"
+    override fun module(): Module = this
+    override fun displayName(): String = "Croesus Chest HUD"
+    override fun hudIslands(): Set<Island> = emptySet()
+    override fun visible(): Boolean = isEnabled() && rows.isNotEmpty()
+
+    /** Drawn by the slot mixin above the open chest screen, never on the HUD layer below it. */
+    override fun renderOnHud(): Boolean = false
+
+    override fun previewMode(): String = if (rows.isEmpty()) "sample" else "live"
+    override fun width(font: Font?): Int = rowsWidth(font!!, rows.ifEmpty { sampleRows })
+    override fun height(font: Font?): Int = maxOf(1, CroesusRules.rowsHeight(rows.ifEmpty { sampleRows }))
+
+    override fun render(graphics: GuiGraphicsExtractor, font: Font, x: Int, y: Int) = drawRows(graphics, font, x, y, rows)
+
+    override fun renderPreview(graphics: GuiGraphicsExtractor, font: Font, x: Int, y: Int) =
+        drawRows(graphics, font, x, y, rows.ifEmpty { sampleRows })
+
+    /** The profit column starts where Odin's does, after the widest tier name. */
+    private fun nameWidth(font: Font): Int = font.width("Diamond ")
+
+    private fun rowsWidth(font: Font, list: List<CroesusRules.Row>): Int =
+        list.maxOfOrNull { (if (it.chest != null) nameWidth(font) else 0) + font.width(it.text) } ?: 1
+
+    private fun drawRows(graphics: GuiGraphicsExtractor, font: Font, x: Int, y: Int, list: List<CroesusRules.Row>) {
+        for (row in list) {
+            val chest = row.chest
+            if (chest != null) graphics.text(font, chest.display ?: Component.literal(chest.name), x, y + row.y, WHITE)
+            graphics.text(font, Component.literal(row.text), x + if (chest != null) nameWidth(font) else 0, y + row.y, WHITE)
         }
-        val lineHeight = client.font.lineHeight + 2
-        val allowed = ((client.window.guiScaledHeight * 0.95f) / (lineHeight * HudManager.scale(this))).toInt().coerceAtLeast(3)
-        var lines = CroesusRules.hudLines(chests, minimized.value())
-        if (lines.size > allowed && !minimized.value()) lines = CroesusRules.hudLines(chests, true)
-        if (lines.size > allowed) lines = lines.take(allowed)
-        if (lines.isEmpty()) clearHudLines() else publishHudLines(lines)
     }
 
+    /** Called by the slot mixin at tooltip time: brings the list up to date and draws it over the screen. */
+    fun drawOverScreen(graphics: GuiGraphicsExtractor, screen: AbstractContainerScreen<*>) {
+        if (!isEnabled()) return
+        scanIfChanged(screen)
+        if (kind != "preview" && kind != "opened") return
+        // The profit list names the loot, so it waits until the Chest Roll animation has finished on this screen.
+        if (rows.isEmpty() || ChestRollModule.INSTANCE.hidesResult(screen)) return
+        val font = Minecraft.getInstance().font
+        graphics.nextStratum()
+        HudManager.renderElement(
+            this, graphics, font,
+            HudManager.x(this, font, graphics.guiWidth()), HudManager.y(this, font, graphics.guiHeight()), false,
+        )
+    }
+
+    private fun publishFitted(chests: List<CroesusRules.ChestResult>) {
+        // A list taller than the screen cannot be moved in Move Elements.
+        val allowed = ((Minecraft.getInstance().window.guiScaledHeight * 0.95f) / HudManager.scale(this)).toInt()
+        rows = CroesusRules.fitted(chests, minimized.value(), allowed)
+    }
+
+    // ---- prices ----
+
+    private fun liveSource(): Boolean = priceSource.value() != "AVERAGE"
+
+    /** The prices of the chosen source; Chest Roll reads the same ones. */
+    fun effectivePrices(): Map<String, Double> {
+        val base = CroesusPrices.prices
+        if (!isEnabled() || !liveSource()) return base
+        val data = PriceDisplayModule.INSTANCE.prices()
+        val key = listOf(base, data, priceSource.value())
+        // Identity comparison: every download publishes a new map or snapshot.
+        if (key.size != liveKey.size || key.indices.any { key[it] !== liveKey[it] }) {
+            livePrices = CroesusPrices.live(base, data.lowestBin, data.bazaar, priceSource.value() == "SELL_OFFER")
+            liveKey = key
+        }
+        return livePrices
+    }
+
+    private fun keyPrice(): Double =
+        (if (liveSource()) effectivePrices()[CroesusPrices.KEY_ID] else null) ?: CroesusPrices.keyPrice
+
     override fun onEnable() {
-        diagnostics.enable("hide=${hideClaimed.value()} state=${highlightState.value()} profitable=${highlightProfitable.value()} essence=${includeEssence.value()} warning=${chestWarning.intValue()}")
+        diagnostics.enable("hide=${hideClaimed.value()} state=${highlightState.value()} profitable=${highlightProfitable.value()} keyRule=${keyRule.value()} essence=${includeEssence.value()} source=${priceSource.value()} warning=${chestWarning.intValue()}")
         if (CroesusPrices.prices.isEmpty()) fetchPrices()
     }
 
     override fun onDisable() {
+        PriceDisplayModule.INSTANCE.setCroesusDemand(false)
         clearScreenState()
-        clearHudLines()
         diagnostics.event("DISABLE")
         diagnostics.disable()
     }
@@ -122,59 +180,59 @@ class CroesusModule private constructor() : DungeonTextHudModule(
         }
     }
 
+    // ---- screens ----
+
     private fun clearScreenState() {
         trackedScreen = null
         kind = "none"
-        hidden = emptySet()
+        scannedStateId = -1
         tint = emptyMap()
-        kismet = emptySet()
+        rows = emptyList()
     }
 
     fun tick() {
         if (!isEnabled()) return
         diagnostics.advance()
-        val level = Minecraft.getInstance().level
-        if (level !== lastLevel) {
-            lastLevel = level
-            if (chestCount != 0) diagnostics.event("CHESTS WORLD_CHANGED count=0")
-            chestCount = 0
-        }
+        PriceDisplayModule.INSTANCE.setCroesusDemand(liveSource())
         val screen = Minecraft.getInstance().gui.screen() as? AbstractContainerScreen<*>
         if (screen == null) {
-            if (trackedScreen != null) {
-                clearScreenState()
-                clearHudLines()
-            }
-            diagnostics.status { "enabled=true screen=none prices=${CroesusPrices.status} chests=$chestCount suppressedEvents=$it" }
-            return
+            if (trackedScreen != null) clearScreenState()
+        } else {
+            scan(screen)
         }
+        diagnostics.status {
+            "enabled=true screen=$kind prices=${CroesusPrices.status}(${CroesusPrices.prices.size}) source=${priceSource.value()} " +
+                "liveBazaar=${PriceDisplayModule.INSTANCE.prices().bazaar?.size ?: 0} liveBin=${PriceDisplayModule.INSTANCE.prices().lowestBin?.size ?: 0} " +
+                "rows=${rows.size} chests=$chestCount suppressedEvents=$it"
+        }
+    }
+
+    /** Rescans in the same frame a slot packet lands, so nothing waits for the next tick. */
+    private fun scanIfChanged(screen: AbstractContainerScreen<*>) {
+        if (screen !== trackedScreen || screen.menu.stateId != scannedStateId) scan(screen)
+    }
+
+    private fun scan(screen: AbstractContainerScreen<*>) {
         if (screen !== trackedScreen) {
-            clearHudLines()
+            clearScreenState()
             trackedScreen = screen
-            kind = "none"
+            val title = screen.title.string
+            kind = when {
+                CroesusRules.isCroesusMenu(title) -> "menu"
+                CroesusRules.isChestPreview(title) -> "preview"
+                CroesusRules.isOpenedChest(title) -> "opened"
+                else -> "none"
+            }
+            if (kind != "none") {
+                diagnostics.event("SCREEN $kind")
+                CroesusPrices.refreshIfStale { diagnostics.event("PRICES $it") }
+            }
         }
-        if (ticks++ % REFRESH_TICKS != 0) return
-        val title = screen.title.string
-        val newKind = when {
-            CroesusRules.isCroesusMenu(title) -> "menu"
-            CroesusRules.isChestPreview(title) -> "preview"
-            CroesusRules.isOpenedChest(title) -> "opened"
-            else -> "none"
-        }
-        if (newKind != kind) diagnostics.event("SCREEN $newKind")
-        kind = newKind
+        scannedStateId = screen.menu.stateId
         when (kind) {
-            "menu" -> scanMenu(screen)
             "preview" -> scanPreview(screen)
             "opened" -> scanOpened(screen)
-            else -> {
-                hidden = emptySet()
-                tint = emptyMap()
-                kismet = emptySet()
-                clearHudLines()
-            }
         }
-        diagnostics.status { "enabled=true screen=$kind prices=${CroesusPrices.status}(${CroesusPrices.prices.size}) hidden=${hidden.size} chests=$chestCount suppressedEvents=$it" }
     }
 
     private fun containerSlots(screen: AbstractContainerScreen<*>): List<Slot> {
@@ -189,43 +247,23 @@ class CroesusModule private constructor() : DungeonTextHudModule(
             line.siblings.any { it.string == name && it.style.isStrikethrough }
         } ?: false
 
-    private fun scanMenu(screen: AbstractContainerScreen<*>) {
-        clearHudLines()
-        val newHidden = HashSet<Int>()
-        val newTint = HashMap<Int, Int>()
-        val newKismet = HashSet<Int>()
-        for ((index, slot) in containerSlots(screen).withIndex()) {
-            val stack = slot.item
-            if (stack.isEmpty) continue
-            val name = stack.hoverName.string
-            if (name != "The Catacombs" && name != "Master Mode The Catacombs") continue
-            val state = CroesusRules.menuState(lore(stack), hideClaimed.value(), includeKey.value(), struck(stack, "Dungeon Chest Key"), highlightState.value())
-            if (state.hide) {
-                newHidden.add(index)
-                continue
-            }
-            if (state.color != 0) newTint[index] = state.color
-            if (struck(stack, "Kismet Feather")) newKismet.add(index)
-        }
-        hidden = newHidden
-        tint = newTint
-        kismet = newKismet
-    }
-
     private fun scanPreview(screen: AbstractContainerScreen<*>) {
-        hidden = emptySet()
-        kismet = emptySet()
-        val prices = CroesusPrices.prices
+        val prices = effectivePrices()
         val chests = ArrayList<CroesusRules.ChestResult>()
         for ((index, slot) in containerSlots(screen).withIndex()) {
             if (index > MAX_PREVIEW_SLOT) break
             val stack = slot.item
             if (stack.isEmpty || stack.item != Items.PLAYER_HEAD) continue
-            CroesusRules.previewChest(index, stack.hoverName.string, lore(stack), prices, includeEssence.value())?.let { chests.add(it) }
+            CroesusRules.previewChest(index, stack.hoverName.string, lore(stack), prices, includeEssence.value())
+                ?.let { chests.add(it.withDisplay(stack.hoverName)) }
         }
-        val keyPrice = CroesusPrices.keyPrice
+        val keyPrice = if (keyRule.value()) keyPrice() else 0.0
         val top = if (highlightProfitable.value()) CroesusRules.topSlots(chests, keyPrice) else emptyList()
-        diagnostics.statusOnChange { "PREVIEW chests=${chests.size} top=$top essence=${includeEssence.value()} keyPrice=${"%,.0f".format(keyPrice)}" }
+        diagnostics.statusOnChange {
+            "PREVIEW chests=${chests.size} top=$top essence=${includeEssence.value()} source=${priceSource.value()} " +
+                "keyPrice=${CroesusRules.money(keyPrice)} unpriced=${chests.sumOf { chest -> chest.items.count { it.price == 0.0 } }} " +
+                "profits=${chests.joinToString(",") { CroesusRules.money(it.profit) }}"
+        }
         val newTint = HashMap<Int, Int>()
         top.getOrNull(0)?.let { newTint[it] = CroesusRules.COLOR_BEST }
         top.getOrNull(1)?.let { newTint[it] = CroesusRules.COLOR_SECOND }
@@ -234,9 +272,6 @@ class CroesusModule private constructor() : DungeonTextHudModule(
     }
 
     private fun scanOpened(screen: AbstractContainerScreen<*>) {
-        hidden = emptySet()
-        kismet = emptySet()
-        tint = emptyMap()
         val slots = ArrayList<CroesusRules.OpenedSlot>()
         for ((index, slot) in containerSlots(screen).withIndex()) {
             if (index > MAX_OPENED_SLOT) break
@@ -250,8 +285,7 @@ class CroesusModule private constructor() : DungeonTextHudModule(
                 },
             )
         }
-        val result = CroesusRules.openedChest(slots, CroesusPrices.prices, includeEssence.value())
-        publishFitted(listOf(result))
+        publishFitted(listOf(CroesusRules.openedChest(slots, effectivePrices(), includeEssence.value())))
     }
 
     private fun skyblockId(stack: ItemStack): String? =
@@ -264,29 +298,40 @@ class CroesusModule private constructor() : DungeonTextHudModule(
         return CroesusRules.OpenedSlot.book(stack.hoverName.string, key, enchantments.getIntOr(key, 0))
     }
 
-    /** Called by the slot mixin before a slot is drawn; true hides the slot. */
-    fun shouldHideSlot(screen: Screen, slot: Slot): Boolean =
-        isEnabled() && screen === trackedScreen && kind == "menu" && slot.index in hidden
-
-    /** Called by the slot mixin before a slot's item is drawn: a tint behind it and a Kismet outline. */
-    fun drawSlotBackground(graphics: GuiGraphicsExtractor, screen: Screen, slot: Slot) {
-        if (!isEnabled() || screen !== trackedScreen) return
-        val color = tint[slot.index]
-        if (color != null) graphics.fill(slot.x, slot.y, slot.x + 16, slot.y + 16, color)
-        if (slot.index in kismet) {
-            val c = CroesusRules.COLOR_KISMET
-            graphics.fill(slot.x - 1, slot.y - 1, slot.x + 17, slot.y, c)
-            graphics.fill(slot.x - 1, slot.y + 16, slot.x + 17, slot.y + 17, c)
-            graphics.fill(slot.x - 1, slot.y, slot.x, slot.y + 16, c)
-            graphics.fill(slot.x + 16, slot.y, slot.x + 17, slot.y + 16, c)
+    /**
+     * Called by the slot mixin before a slot is drawn: tints it, outlines a used Kismet Feather and returns true to
+     * hide it. A Croesus menu slot is judged from the item being drawn, so a page change is never stale.
+     */
+    fun onExtractSlot(graphics: GuiGraphicsExtractor, screen: AbstractContainerScreen<*>, slot: Slot): Boolean {
+        if (!isEnabled()) return false
+        scanIfChanged(screen)
+        if (kind == "preview") {
+            tint[slot.index]?.let { graphics.fill(slot.x, slot.y, slot.x + 16, slot.y + 16, it) }
+            return false
         }
+        if (kind != "menu") return false
+        val stack = slot.item
+        if (stack.isEmpty) return false
+        val name = stack.hoverName.string
+        if (name != "The Catacombs" && name != "Master Mode The Catacombs") return false
+        val state = CroesusRules.menuState(lore(stack), hideClaimed.value(), includeKey.value(), struck(stack, "Dungeon Chest Key"), highlightState.value())
+        if (state.hide) return true
+        if (state.color != 0) graphics.fill(slot.x, slot.y, slot.x + 16, slot.y + 16, state.color)
+        if (struck(stack, "Kismet Feather")) {
+            val c = CroesusRules.COLOR_KISMET
+            graphics.fill(slot.x, slot.y, slot.x + 16, slot.y + 1, c)
+            graphics.fill(slot.x, slot.y + 15, slot.x + 16, slot.y + 16, c)
+            graphics.fill(slot.x, slot.y + 1, slot.x + 1, slot.y + 15, c)
+            graphics.fill(slot.x + 15, slot.y + 1, slot.x + 16, slot.y + 15, c)
+        }
+        return false
     }
 
     // ---- chest count ----
 
     /** Tab-list updates carry "Unclaimed chests: N". */
     fun onPlayerInfoUpdate(packet: ClientboundPlayerInfoUpdatePacket) {
-        if (!isEnabled() || !DungeonContextTracker.inDungeon()) return
+        if (!isEnabled()) return
         val relevant = packet.actions().any {
             it == ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME || it == ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER
         }
@@ -312,7 +357,7 @@ class CroesusModule private constructor() : DungeonTextHudModule(
 
     /** The separate "Chest Count" HUD element. */
     val chestCountHud = object : HudElement {
-        override fun hudIslands(): Set<Island> = setOf(Island.DUNGEON_HUB)
+        override fun hudIslands(): Set<Island> = setOf(Island.CATACOMBS)
 
         override fun id(): String = "croesus_chest_count"
         override fun module(): Module = this@CroesusModule
@@ -329,7 +374,7 @@ class CroesusModule private constructor() : DungeonTextHudModule(
     }
 
     companion object {
-        private const val REFRESH_TICKS = 4
+        private const val WHITE = 0xFFFFFFFF.toInt()
         private const val PLAYER_SLOTS = 36
         private const val MAX_PREVIEW_SLOT = 16
         private const val MAX_OPENED_SLOT = 40
@@ -339,7 +384,7 @@ class CroesusModule private constructor() : DungeonTextHudModule(
 
         private val refreshPrices = ModuleAction(
             "Refresh Prices",
-            "Downloads Odin's 7-day average prices and the 3-day Dungeon Chest Key price again.",
+            "Downloads Odin's 7-day average prices and the 3-day Dungeon Chest Key price again. Live prices refresh on their own.",
             Runnable { INSTANCE.refreshNow() },
         )
 

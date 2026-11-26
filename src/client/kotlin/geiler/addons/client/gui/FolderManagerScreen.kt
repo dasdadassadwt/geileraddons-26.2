@@ -29,7 +29,9 @@ class FolderManagerScreen(
     private var selectedEntry: String? = null
     private var popup: Popup? = null
     private var dialog: Dialog? = null
-    private var dialogText = ""
+    private val dialogField = TextFieldModel(48)
+    private val dialogText: String get() = dialogField.text
+    private var dialogDragging = false
     private var folderScroll = 0
     private var entryScroll = 0
     private var layout: Layout? = null
@@ -184,8 +186,9 @@ class FolderManagerScreen(
         val input = GuiRect(box.x + 12, box.y + 34, box.w - 24, 20)
         GuiTheme.roundedRectBordered(graphics, input.x, input.y, input.w, input.h, GuiTheme.RADIUS_SMALL,
             GuiTheme.CARD_BG, GuiTheme.CARD_BG, GuiTheme.SLIDER_FILL)
-        graphics.text(font, trim(font, if (dialogText.isEmpty()) "Folder name…" else dialogText, input.w - 12),
-            input.x + 6, input.y + 6, if (dialogText.isEmpty()) GuiTheme.TEXT_MUTED else GuiTheme.TEXT_PRIMARY)
+        if (dialogText.isEmpty()) graphics.text(font, "Folder name…", input.x + 6, input.y + 6, GuiTheme.TEXT_MUTED)
+        TextFieldInput.draw(graphics, font, dialogField, input.x + 6, input.y + 6, input.w - 12,
+            GuiTheme.TEXT_PRIMARY, GuiTheme.SLIDER_FILL, true)
         val save = GuiRect(box.x + 12, box.y + 62, (box.w - 30) / 2, 19)
         val cancel = GuiRect(save.x + save.w + 6, save.y, save.w, save.h)
         button(graphics, "Save", save, mouseX, mouseY, !MacroJavaStrings.isBlank(dialogText))
@@ -255,7 +258,8 @@ class FolderManagerScreen(
 
     private fun beginDialog(mode: Dialog) {
         dialog = mode
-        dialogText = if (mode == Dialog.RENAME && selectedFolder != null) name(selectedFolder!!) else ""
+        dialogField.reset(if (mode == Dialog.RENAME && selectedFolder != null) name(selectedFolder!!) else "")
+        dialogField.selectAll()
         popup = null
     }
 
@@ -294,7 +298,12 @@ class FolderManagerScreen(
             val box = layout!!.dialog
             val save = GuiRect(box.x + 12, box.y + 62, (box.w - 30) / 2, 19)
             val cancel = GuiRect(save.x + save.w + 6, save.y, save.w, save.h)
+            val input = GuiRect(box.x + 12, box.y + 34, box.w - 24, 20)
             if (save.contains(x, y)) saveDialog() else if (cancel.contains(x, y)) dialog = null
+            else if (input.contains(x, y)) {
+                TextFieldInput.mousePressed(dialogField, font, event.x(), event.y(), input.x + 6, input.w - 12, minecraft.hasShiftDown())
+                dialogDragging = true
+            }
             return true
         }
         val activePopup = popup
@@ -372,9 +381,23 @@ class FolderManagerScreen(
         return true
     }
 
+    override fun mouseDragged(event: MouseButtonEvent, dragX: Double, dragY: Double): Boolean {
+        val box = layout?.dialog
+        if (!dialogDragging || dialog == null || box == null || event.button() != 0) return super.mouseDragged(event, dragX, dragY)
+        TextFieldInput.mouseDragged(dialogField, font, event.x(), box.x + 12 + 6, box.w - 24 - 12)
+        return true
+    }
+
+    override fun mouseReleased(event: MouseButtonEvent): Boolean {
+        if (dialogDragging && event.button() == 0) {
+            dialogDragging = false
+            return true
+        }
+        return super.mouseReleased(event)
+    }
+
     override fun charTyped(event: CharacterEvent): Boolean {
-        if (dialog == null || !event.isAllowedChatCharacter()) return true
-        if (dialogText.length < 48) dialogText += event.codepointAsString()
+        if (dialog != null) TextFieldInput.handleChar(dialogField, event, "folder-name")
         return true
     }
 
@@ -382,14 +405,7 @@ class FolderManagerScreen(
         if (dialog != null) {
             if (event.key() == InputConstants.KEY_ESCAPE) { dialog = null; return true }
             if (event.key() == InputConstants.KEY_RETURN) { saveDialog(); return true }
-            if (event.key() == InputConstants.KEY_BACKSPACE && dialogText.isNotEmpty()) {
-                dialogText = dialogText.substring(0, dialogText.offsetByCodePoints(dialogText.length, -1))
-                return true
-            }
-            if (event.key() == GLFW.GLFW_KEY_A && (event.modifiers() and InputConstants.MOD_CONTROL) != 0) {
-                dialogText = ""
-                return true
-            }
+            TextFieldInput.handleKey(dialogField, event, "folder-name")
             return true
         }
         if (event.key() == InputConstants.KEY_ESCAPE) { onClose(); return true }

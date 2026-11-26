@@ -28,6 +28,34 @@ public final class InvincibilityTimerModuleChecks {
 		checkProcSoundOutcomeClassification();
 		checkPartyMessageAndAlwaysShow();
 		checkAutomaticDiagnosticsLifecycle();
+		checkPoopPop();
+	}
+
+	/** The poop cutscene is a default-on Invincibility Timers setting that plays only for an enabled proc. */
+	private static void checkPoopPop() {
+		DungeonInvincibilityTimerModule module = DungeonInvincibilityTimerModule.INSTANCE;
+		BooleanSetting poop = (BooleanSetting) findSetting(module, "Poop Pop");
+		NumberSetting volume = (NumberSetting) findSetting(module, "Poop Volume");
+		boolean original = poop.rawValue();
+		try {
+			poop.reset();
+			require(poop.value() && volume.min() == 0f && volume.max() == 1f && volume.value() == 0.8f,
+				"Poop Pop defaults on with a 0-1 volume that defaults to 0.8");
+			require(module.isSettingVisible(volume), "Poop Volume shows while Poop Pop is on");
+			poop.setValue(false);
+			require(!module.isSettingVisible(volume), "Poop Volume hides while Poop Pop is off");
+		} finally {
+			poop.setValue(original);
+		}
+		require(PoopPop.shouldPlay(true, true) && !PoopPop.shouldPlay(false, true) && !PoopPop.shouldPlay(true, false),
+			"the cutscene plays only when Poop Pop is on and the proc itself is tracked");
+		require(PoopPop.soundNames().equals(List.of("poop.pop", "poop.toot")) && PoopPop.ITEM_MODEL_PATH.equals("poop"),
+			"the cutscene uses the poop item model and the pop and toot sound events");
+		Path assets = Path.of("src", "client", "resources", "assets", "geileraddons");
+		for (String file : List.of("items/poop.json", "models/item/poop.json", "textures/item/poop.png", "sounds.json",
+			"sounds/poop/squish.ogg", "sounds/poop/toot.ogg", "sounds/poop/rumble.ogg")) {
+			require(Files.isRegularFile(assets.resolve(file)), "missing poop asset " + file);
+		}
 	}
 
 	private static void checkAutomaticDiagnosticsLifecycle() {
@@ -96,11 +124,11 @@ public final class InvincibilityTimerModuleChecks {
 				&& module.displayName().equals("Invincibility Timers")
 				&& !module.defaultEnabled(), "module and HUD retain their names, category, ID, and off default");
 			require(List.of("Bonzo Mask", "Spirit Mask", "Phoenix", "Play Proc Sound", "Show Cooldowns", "Show On Item",
-					"Always Show In Dungeon", "Party Announce").equals(
+					"Always Show In Dungeon", "Party Announce", "Poop Pop").equals(
 				module.booleanSettings().stream().map(Setting::name).toList()),
 				"Java-visible boolean settings keep their IDs and declaration order");
 			require(List.of("Display").equals(module.choiceSettings().stream().map(Setting::name).toList())
-				&& List.of("Title Refresh (ticks)", "Sound Volume", "Sound Pitch").equals(
+				&& List.of("Title Refresh (ticks)", "Sound Volume", "Sound Pitch", "Poop Volume").equals(
 					module.numberSettings().stream().map(Setting::name).toList())
 				&& List.of("Sound ID").equals(module.textSettings().stream().map(Setting::name).toList()),
 				"display, timing, and sound setting IDs remain stable");
@@ -125,8 +153,9 @@ public final class InvincibilityTimerModuleChecks {
 			BooleanSetting partyAnnounce = (BooleanSetting) findSetting(module, "Party Announce");
 			require(!alwaysShow.rawValue() && !partyAnnounce.rawValue(),
 				"Always Show In Dungeon and Party Announce default off");
-			require(groups.size() == 5 && "Item Overlay".equals(groups.get(3).name())
+			require(groups.size() == 6 && "Item Overlay".equals(groups.get(3).name())
 				&& "Party Chat".equals(groups.get(4).name())
+				&& "Poop Pop".equals(groups.get(5).name())
 				&& groups.get(4).settings().contains(partyAnnounce)
 				&& List.of(tracked.name(), presentation.name(), sound.name())
 					.equals(List.of("Tracked Procs", "Display", "Sound"))

@@ -230,6 +230,8 @@ public final class PartyFinderReliabilityChecks {
 		PartyListBackend.clear();
 		try {
 			PartyListBackend.onChatMessage("Party Members (3)");
+			check(PartyListBackend.listResponsePending() && !PartyListBackend.hasStableList(),
+				"while a /p list response is arriving, no second /p list may be requested");
 			PartyListBackend.onChatMessage("Party Leader: Leader ●");
 			PartyListBackend.onChatMessage("Party Moderators: [VIP] Helper ● Member");
 			PartyListBackend.onChatMessage(
@@ -263,6 +265,7 @@ public final class PartyFinderReliabilityChecks {
 				"a member who rejoins receives a new membership identity");
 
 			PartyListBackend.onChatMessage("You are not currently in a party.");
+			check(!PartyListBackend.listResponsePending(), "an explicit no-party response leaves nothing pending");
 			PartySnapshot ended = PartyListBackend.snapshot();
 			check(!ended.inParty() && ended.members().isEmpty() && PartyListBackend.hasStableList(),
 				"an explicit no-party response clears the roster and marks it complete");

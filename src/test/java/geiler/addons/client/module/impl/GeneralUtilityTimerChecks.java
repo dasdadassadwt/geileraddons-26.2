@@ -58,7 +58,8 @@ public final class GeneralUtilityTimerChecks {
 			&& module.islandDetectionApi().value() && module.availabilityNotices().value()
 			&& module.showTimerHud().value() && module.timerCompletionAlert().value()
 			&& module.timerCompletionChat().value() && !module.timerCompletionTitle().value()
-			&& module.timerCompletionSound().value(), "General keeps all boolean defaults");
+			&& module.timerCompletionSound().value(),
+			"General keeps all boolean defaults");
 
 		assertNames(module.textSettings(), List.of("Completion Text"), "text setting IDs");
 		TextSetting completionText = module.timerCompletionText();
