@@ -8,14 +8,20 @@ import geiler.addons.client.module.ModuleSettingsSpec
 import geiler.addons.client.render.EspRenderer
 import geiler.addons.client.render.GeilerAddonsRenderTypes
 import geiler.addons.client.render.WorldRenderBuffer
+import geiler.addons.client.sim.DeviceSimGeometry
+import geiler.addons.client.sim.DeviceSimService
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext
 import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.block.state.properties.BlockStateProperties
+import net.minecraft.world.phys.Vec3
 
-/** Simon Says device solver after Odin's Simon Says (sequence, SS skip first phase, start limit, progress message). */
+/**
+ * Simon Says device solver after Odin's Simon Says (sequence, SS skip first phase, start limit, progress message). It
+ * thinks in Floor 7 coordinates; while `/ga sim ss` runs, world positions are mapped to and from those.
+ */
 class SimonSaysModule private constructor() : Module(
     "Simon Says",
     "Shows the buttons of the Simon Says device in order in F7 and M7.",
@@ -60,19 +66,60 @@ class SimonSaysModule private constructor() : Module(
 
     private fun onFloor7(): Boolean = DungeonContextTracker.inDungeon() && DungeonContextTracker.currentFloor()?.number() == 7
 
+    private fun sim(): DeviceSimGeometry.Frame? = DeviceSimService.frame(DeviceSimService.Kind.SS)
+
+    private fun active(): Boolean = sim() != null || onFloor7()
+
+    private fun toWorld(real: BlockPos): BlockPos = sim()?.toSim(real) ?: real
+
+    private fun toReal(world: BlockPos): BlockPos = sim()?.toReal(world) ?: world
+
     private fun nearDevice(): Boolean {
         val player = Minecraft.getInstance().player ?: return false
-        val dx = player.x - 110.5
-        val dy = player.y - 121.5
-        val dz = player.z - 93.5
-        return dx * dx + dy * dy + dz * dz <= NEAR_SQUARED
+        val device = Vec3(110.5, 121.5, 93.5)
+        return player.position().distanceToSqr(sim()?.toSim(device) ?: device) <= NEAR_SQUARED
+    }
+
+    // ---- read-only view for Auto Simon Says ----
+
+    /** The device is in play (Floor 7 or the sim) and the player is near it. */
+    fun deviceInReach(): Boolean = isEnabled() && active() && nearDevice()
+
+    /** The next button to press in Floor 7 coordinates, or null when no solution is known. */
+    fun nextButton(): BlockPos? = state.next()?.let { BlockPos.of(it) }
+
+    /** Step of the current round the next button is, and the round length. */
+    fun step(): Int = state.size() - state.remaining().size
+
+    fun roundSize(): Int = state.size()
+
+    /** A Floor 7 point in the world the player is in (unchanged on Floor 7, turned onto the sim wall in `/ga sim ss`). */
+    fun worldPoint(real: Vec3): Vec3 = sim()?.toSim(real) ?: real
+
+    fun worldBlock(real: BlockPos): BlockPos = toWorld(real)
+
+    fun startButton(): BlockPos = BlockPos(START_X, START_Y, START_Z)
+
+    /** Seen the start button pressed (by anyone) since this device reset; false means the device still waits to be started. */
+    private var startSeen = false
+
+    /** The device has not been started yet: no sequence and no start press seen since the last reset. */
+    fun awaitingStart(): Boolean = !startSeen && state.size() == 0 && state.firstPhase
+
+    /** A new sim device: nothing solved yet, first phase. */
+    fun onSimStart() {
+        state.reset()
+        startSeen = false
+        lastServerTicks = -1L
+        if (isEnabled()) diagnostics.event("SIM_ATTACH")
     }
 
     fun tick() {
         if (!isEnabled()) return
         val level = Minecraft.getInstance().level
-        if (level == null || !onFloor7()) {
+        if (level == null || !active()) {
             state.reset()
+            startSeen = false
             lastServerTicks = -1L
             return
         }
@@ -80,11 +127,14 @@ class SimonSaysModule private constructor() : Module(
         if (lastLevel !== level) {
             lastLevel = level
             state.reset()
+            startSeen = false
             lastServerTicks = -1L
         }
         // Odin runs the grid-reset check on server ticks; replay the ones that passed since the last client tick.
         val now = DungeonAssistModule.INSTANCE.serverTicks()
-        val delta = if (lastServerTicks < 0L || now < lastServerTicks) 0L else minOf(now - lastServerTicks, MAX_CATCH_UP)
+        // The sim runs on client ticks; there is no server clock to follow.
+        val delta = if (sim() != null) 1L
+        else if (lastServerTicks < 0L || now < lastServerTicks) 0L else minOf(now - lastServerTicks, MAX_CATCH_UP)
         lastServerTicks = now
         if (state.firstPhase && delta > 0) {
             val buttons = stoneButtonCount(level)
@@ -99,10 +149,8 @@ class SimonSaysModule private constructor() : Module(
     /** Stone buttons currently on the 4x4 button grid (the device shows them only while it waits for input). */
     private fun stoneButtonCount(level: net.minecraft.world.level.Level): Int {
         var count = 0
-        val pos = BlockPos.MutableBlockPos()
         for (y in 120..123) for (z in 92..95) {
-            pos.set(110, y, z)
-            if (level.getBlockState(pos).`is`(Blocks.STONE_BUTTON)) count++
+            if (level.getBlockState(toWorld(BlockPos(110, y, z))).`is`(Blocks.STONE_BUTTON)) count++
         }
         return count
     }
@@ -112,16 +160,21 @@ class SimonSaysModule private constructor() : Module(
      * multi-block) and the client's own predicted button press. Only called when the state really changed.
      */
     fun onBlockChange(pos: BlockPos, old: BlockState, new: BlockState) {
-        val x = pos.x
-        val y = pos.y
-        val z = pos.z
+        // Every client block change comes through here, so check the module before mapping anything.
+        if (!isEnabled()) return
+        val real = toReal(pos)
+        val x = real.x
+        val y = real.y
+        val z = real.z
         if (x !in 110..111 || y !in 120..123 || z !in 91..95) return
-        if (!isEnabled() || !onFloor7()) return
+        if (!active()) return
         if (x == START_X && y == START_Y && z == START_Z) {
             if (new.`is`(Blocks.STONE_BUTTON) && new.getValue(BlockStateProperties.POWERED)) {
+                startSeen = true
                 val deviceReset = state.startPowered()
                 diagnostics.event("START_BUTTON restart deviceReset=$deviceReset")
-                if (deviceReset && announceReset.value() && nearDevice()) {
+                // Never from the sim: on your own island it would reach your real party.
+                if (deviceReset && announceReset.value() && sim() == null && nearDevice()) {
                     Minecraft.getInstance().player?.connection?.sendCommand("pc SS Reset!")
                 }
             }
@@ -151,10 +204,8 @@ class SimonSaysModule private constructor() : Module(
     /** Button-grid positions that are air right now; more than eight means the device cleared the grid for a new round. */
     private fun airButtonCount(level: net.minecraft.world.level.Level): Int {
         var count = 0
-        val pos = BlockPos.MutableBlockPos()
         for (y in 120..123) for (z in 92..95) {
-            pos.set(110, y, z)
-            if (level.getBlockState(pos).isAir) count++
+            if (level.getBlockState(toWorld(BlockPos(110, y, z))).isAir) count++
         }
         return count
     }
@@ -163,8 +214,9 @@ class SimonSaysModule private constructor() : Module(
      * A right click on a block (Odin's `BlockInteractEvent`); returns true when it must be cancelled. The pointer itself moves
      * on the button's powered change, which the client predicts for its own press.
      */
-    fun onBlockUse(pos: BlockPos): Boolean {
-        if (!isEnabled() || !onFloor7()) return false
+    fun onBlockUse(worldPos: BlockPos): Boolean {
+        if (!isEnabled() || !active()) return false
+        val pos = toReal(worldPos)
         val sneaking = Minecraft.getInstance().player?.isShiftKeyDown == true
         if (pos.x == START_X && pos.y == START_Y && pos.z == START_Z) {
             if (blockWrongStart.value() && state.startClicked(maxStartClicks.intValue(), sneaking)) {
@@ -172,11 +224,12 @@ class SimonSaysModule private constructor() : Module(
                 diagnostics.event("START_BLOCKED blocked=$blocked max=${maxStartClicks.intValue()}")
                 return true
             }
+            AutoSimonSaysModule.INSTANCE.onStartPressed()
             return false
         }
         if (!SimonSaysState.inButtons(pos.x, pos.y, pos.z)) return false
         // Odin's progress message: clicking the round's last button reports the round length (sent before the block check).
-        if (announceProgress.value() && state.size() > 0 && state.isLast(pos.x, pos.y, pos.z)) {
+        if (announceProgress.value() && sim() == null && state.size() > 0 && state.isLast(pos.x, pos.y, pos.z)) {
             Minecraft.getInstance().player?.connection?.sendCommand("pc SS ${state.size()}/4")
         }
         // Odin blocks every grid click that is not the next button, also while no solution is known; sneaking overrides.
@@ -193,6 +246,7 @@ class SimonSaysModule private constructor() : Module(
     fun onChatMessage(message: String) {
         if (!isEnabled() || message != GOLDOR) return
         state.resetStartClicks()
+        startSeen = false
         diagnostics.event("GOLDOR startClicks=0")
     }
 
@@ -202,7 +256,7 @@ class SimonSaysModule private constructor() : Module(
             (SimonSaysState.inLights(pos.x, pos.y, pos.z) || SimonSaysState.inButtons(pos.x, pos.y, pos.z))
 
     fun render(context: LevelRenderContext) {
-        if (!isEnabled() || !onFloor7()) return
+        if (!isEnabled() || !active()) return
         val sequence = state.remaining()
         if (sequence.isEmpty() || !nearDevice()) return
         val level = Minecraft.getInstance().level ?: return
@@ -220,14 +274,17 @@ class SimonSaysModule private constructor() : Module(
             }
             // The real button shape (follows the press). While the device still shows the order there is no button yet,
             // so the step is drawn where the button will appear, as Odin does.
-            val block = level.getBlockState(pos)
-            val shape = if (block.`is`(Blocks.STONE_BUTTON)) block.getShape(level, pos) else null
+            val worldPos = toWorld(pos)
+            val block = level.getBlockState(worldPos)
+            val shape = if (block.`is`(Blocks.STONE_BUTTON)) block.getShape(level, worldPos) else null
             val box = if (shape == null || shape.isEmpty) {
                 missing++
-                SimonSaysState.buttonSpotBox(pos.x, pos.y, pos.z)
+                turned(SimonSaysState.buttonSpotBox(pos.x, pos.y, pos.z))
             } else {
                 val b = shape.bounds()
-                SimonSaysState.highlightBox(pos.x, pos.y, pos.z, b.minX, b.minY, b.minZ, b.maxX, b.maxY, b.maxZ)
+                SimonSaysState.highlightBox(
+                    worldPos.x, worldPos.y, worldPos.z, b.minX, b.minY, b.minZ, b.maxX, b.maxY, b.maxZ,
+                )
             }
             EspRenderer.renderBox(
                 context.poseStack(), buffers,
@@ -236,6 +293,16 @@ class SimonSaysModule private constructor() : Module(
             )
         }
         GeilerAddonsRenderTypes.endBatches(buffers)
+    }
+
+    /** A Floor 7 box turned onto the sim wall; unchanged on Floor 7. */
+    private fun turned(box: DoubleArray): DoubleArray {
+        val frame = sim() ?: return box
+        val a = frame.toSim(Vec3(box[0], box[1], box[2]))
+        val b = frame.toSim(Vec3(box[3], box[4], box[5]))
+        return doubleArrayOf(
+            minOf(a.x, b.x), minOf(a.y, b.y), minOf(a.z, b.z), maxOf(a.x, b.x), maxOf(a.y, b.y), maxOf(a.z, b.z),
+        )
     }
 
     companion object {

@@ -174,6 +174,12 @@ class LeverAimAssistModule private constructor() : Module(
             lastLevel = level
             idle()
         }
+        // Another automation (Auto Mask) owns the view and the mouse right now.
+        if (geiler.addons.client.dungeon.f7.AutomationLock.blocks(LOCK_NAME, System.currentTimeMillis())) {
+            if (mode != Mode.NONE) diagnostics.event("IDLE reason=automation-lock")
+            idle()
+            return
+        }
         val found = candidates(player, level)
         val pullFovValue = if (pullOn.value()) pullFov.value().toDouble() else 0.0
         val triggerFovValue = if (triggerOn.value()) triggerFov.value().toDouble() else 0.0
@@ -191,7 +197,7 @@ class LeverAimAssistModule private constructor() : Module(
             mode = Mode.TRIGGER
             pullPoint = null
             pull.reset()
-            look.lookAt(target.point)
+            look.lookAtExact(target.point)
             val hit = client.hitResult
             val aimed = hit is BlockHitResult && hit.type == HitResult.Type.BLOCK && hit.blockPos == target.pos
             noteState("TRIGGER", target)
@@ -312,6 +318,7 @@ class LeverAimAssistModule private constructor() : Module(
     companion object {
         /** The floating name Hypixel gives the armor stand over a lever that still has to be pulled. */
         private const val STAND_NAME = "Not Activated"
+        private const val LOCK_NAME = "lever-aim"
 
         /** `Entity.turn` multiplies what it is given by this before applying it. */
         private const val TURN_SCALE = 0.15

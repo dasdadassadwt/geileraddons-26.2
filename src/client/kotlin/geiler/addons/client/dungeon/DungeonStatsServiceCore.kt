@@ -65,6 +65,15 @@ internal object DungeonStatsServiceCore {
     private const val MAX_QUEUED_LOOKUPS = 32
     private val LOOKUP_START_INTERVAL_NANOS = TimeUnit.MILLISECONDS.toNanos(1_000)
     private val HTTP_START_INTERVAL_NANOS = TimeUnit.MILLISECONDS.toNanos(800)
+    private const val ELECTION_URL = "https://api.hypixel.net/v2/resources/skyblock/election"
+    private const val MILLIS_PER_DAY = 86_400_000L
+    private const val DAILY_BONUS_RUNS = 5L
+    private const val MAX_BAG_DEPTH = 6
+    private const val MAX_BAG_BYTES = 4 * 1024 * 1024
+    private const val MAX_BAG_NODES = 400_000
+    private const val MAX_BAG_ITEMS = 4_000
+    private val EXPLORER_KEYS = setOf("CATACOMBS_EXPLORER", "SHARD_BONZO", "BONZO", "E51")
+    private val EPIC_SHARD_COSTS = intArrayOf(1, 2, 4, 6, 9, 12, 16, 20, 25, 32)
     private val DUNGEON_XP_LEVELS = longArrayOf(
         0, 50, 125, 235, 395, 625, 955, 1425, 2095, 3045, 4385,
         6275, 8940, 12700, 17960, 25340, 35640, 50040, 70040, 97640,
@@ -183,6 +192,201 @@ internal object DungeonStatsServiceCore {
     fun encodePathForChecks(value: String): String = encodePath(value)
 
     fun maxJsonNodesForChecks(): Int = MAX_JSON_NODES
+
+    /** Total Catacombs XP at a level from 0 to 50. */
+    fun catacombsXpAt(level: Int): Long = DUNGEON_XP_LEVELS[level.coerceIn(0, 50)]
+
+    class CataLookup(
+        val name: String,
+        val profile: CataCalculator.Profile?,
+        val mayorBonus: Double?,
+        val mayorName: String,
+        val error: String?,
+    )
+
+    /** One uncached profile lookup for `/ga cata`; shares the stats queue, pacing and endpoint rules. */
+    fun fetchCata(name: String, callback: Consumer<CataLookup>) {
+        val finish = { result: CataLookup -> Minecraft.getInstance().execute { callback.accept(result) } }
+        val fail = { reason: String -> finish(CataLookup(name, null, null, "", reason)) }
+        val ticket = REQUEST_LIMITER.tryAcquire()
+        if (ticket == null) {
+            fail("Stats request queue is full")
+            return
+        }
+        try {
+            EXECUTOR.execute {
+                try {
+                    val delay = REQUEST_LIMITER.reserveStartDelayNanos(System.nanoTime())
+                    if (delay > 0) TimeUnit.NANOSECONDS.sleep(delay)
+                    finish(loadCata(name))
+                } catch (exception: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    fail("Profile request was interrupted")
+                } catch (exception: Exception) {
+                    GeilerAddons.LOGGER.debug("[Dungeon Stats] Cata lookup failed ({})", exception.javaClass.simpleName)
+                    fail(errorText(exception))
+                } finally {
+                    ticket.close()
+                }
+            }
+        } catch (_: RejectedExecutionException) {
+            ticket.close()
+            fail("Stats request queue is full")
+        }
+    }
+
+    class ProfilesLookup(val name: String, val uuid: String?, val root: JsonObject?, val error: String?)
+
+    /** Raw profiles answer for the Profile Viewer; same queue, pacing and endpoint rules. Callback on the client thread. */
+    fun fetchProfiles(name: String, callback: Consumer<ProfilesLookup>) = fetchProfiles(name, null, callback)
+
+    /** As [fetchProfiles]; a known [uuid] (your own) skips the Mojang name lookup. */
+    fun fetchProfiles(name: String, uuid: String?, callback: Consumer<ProfilesLookup>) {
+        val finish = { result: ProfilesLookup -> Minecraft.getInstance().execute { callback.accept(result) } }
+        val ticket = REQUEST_LIMITER.tryAcquire()
+        if (ticket == null) {
+            finish(ProfilesLookup(name, null, null, "Stats request queue is full"))
+            return
+        }
+        try {
+            EXECUTOR.execute {
+                try {
+                    val delay = REQUEST_LIMITER.reserveStartDelayNanos(System.nanoTime())
+                    if (delay > 0) TimeUnit.NANOSECONDS.sleep(delay)
+                    val identity = if (uuid == null) getJson(UUID_BASE + encodePath(name)) else null
+                    val id = uuid ?: string(identity, "id")
+                    if (id == null) {
+                        finish(ProfilesLookup(name, null, null, "Mojang did not return a UUID"))
+                    } else {
+                        finish(ProfilesLookup(identity?.let { string(it, "name") } ?: name, id, getJson(API_BASE + "get/" + id), null))
+                    }
+                } catch (exception: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    finish(ProfilesLookup(name, null, null, "Profile request was interrupted"))
+                } catch (exception: Exception) {
+                    finish(ProfilesLookup(name, null, null, errorText(exception)))
+                } finally {
+                    ticket.close()
+                }
+            }
+        } catch (_: RejectedExecutionException) {
+            ticket.close()
+            finish(ProfilesLookup(name, null, null, "Stats request queue is full"))
+        }
+    }
+
+    private fun loadCata(name: String): CataLookup {
+        val identity = getJson(UUID_BASE + encodePath(name))
+        val id = string(identity, "id") ?: return CataLookup(name, null, null, "", "Mojang did not return a UUID")
+        val member = profileMember(getJson(API_BASE + "get/" + id), id)
+            ?: return CataLookup(name, null, null, "", "Profile data is unavailable")
+        val profile = parseCata(member, System.currentTimeMillis() / MILLIS_PER_DAY)
+        val mayor = fetchMayor()
+        return CataLookup(string(identity, "name") ?: name, profile, mayor?.first, mayor?.second ?: "", null)
+    }
+
+    /** The mayor's Catacombs XP bonus and name, or null when the public election data cannot be read. */
+    private fun fetchMayor(): Pair<Double, String>? = try {
+        val mayor = jsonObject(getJson(ELECTION_URL), "mayor")
+        if (mayor == null) {
+            null
+        } else {
+            val perks = ArrayList<String>()
+            mayor.get("perks")?.takeIf { it.isJsonArray }?.asJsonArray?.forEach { perk ->
+                if (perk.isJsonObject) string(perk.asJsonObject, "name")?.let(perks::add)
+            }
+            string(jsonObject(jsonObject(mayor, "minister"), "perk"), "name")?.let(perks::add)
+            CataCalculator.mayorBonus(string(mayor, "key") ?: "", perks) to (string(mayor, "name") ?: "Mayor")
+        }
+    } catch (exception: IOException) {
+        GeilerAddons.LOGGER.debug("[Dungeon Stats] Election lookup failed ({})", exception.javaClass.simpleName)
+        null
+    } catch (exception: RuntimeException) {
+        GeilerAddons.LOGGER.debug("[Dungeon Stats] Election lookup failed ({})", exception.javaClass.simpleName)
+        null
+    }
+
+    fun parseCataForChecks(member: JsonObject, today: Long): CataCalculator.Profile = parseCata(member, today)
+
+    private fun parseCata(member: JsonObject, today: Long): CataCalculator.Profile {
+        val dungeons = jsonObject(member, "dungeons")
+        val types = jsonObject(dungeons, "dungeon_types")
+        val catacombs = jsonObject(types, "catacombs")
+        val completions = EnumMap<CataCalculator.Floor, Int>(CataCalculator.Floor::class.java)
+        for (floor in CataCalculator.Floor.entries) {
+            val source = if (floor.master()) jsonObject(types, "master_catacombs") else catacombs
+            completions[floor] = number(jsonObject(source, "tier_completions"), floor.tier().toString()).toInt()
+        }
+        val daily = jsonObject(dungeons, "daily_runs")
+        val usedToday = if (number(daily, "current_day_stamp") == today) number(daily, "completed_runs_count") else 0L
+
+        // Without the inventory API there are no item bags, and a missing ring is then unknown rather than absent.
+        val inventory = jsonObject(member, "inventory")
+        var ring: Boolean? = null
+        var hecatomb: Int? = null
+        if (inventory != null) {
+            // The ring only works carried: in the accessory bag or the inventory.
+            val carried = ArrayList<Map<*, *>>()
+            itemAttributes(jsonObject(jsonObject(inventory, "bag_contents"), "talisman_bag"), carried, 0)
+            itemAttributes(jsonObject(inventory, "inv_contents"), carried, 0)
+            ring = carried.any { it["id"] == "CATACOMBS_EXPERT_RING" }
+            val all = ArrayList<Map<*, *>>()
+            itemAttributes(inventory, all, 0)
+            itemAttributes(member.get("loadout"), all, 0)
+            hecatomb = all.maxOfOrNull {
+                ((it["enchantments"] as? Map<*, *>)?.get("hecatomb") as? Number)?.toInt() ?: 0
+            } ?: 0
+        }
+
+        // Shard attributes are saved as the number of shards used; the Explorer shard is epic.
+        val stacks = jsonObject(jsonObject(member, "attributes"), "stacks")
+        var explorer: Int? = null
+        if (stacks != null) {
+            val shards = stacks.entrySet().filter { it.key.uppercase(Locale.ROOT) in EXPLORER_KEYS }
+                .maxOfOrNull { number(stacks, it.key) } ?: 0L
+            explorer = EPIC_SHARD_COSTS.count { shards >= it }
+        }
+        return CataCalculator.Profile(
+            maxOf(0L, number(catacombs, "experience")), completions,
+            (DAILY_BONUS_RUNS - usedToday).coerceIn(0L, DAILY_BONUS_RUNS).toInt(), ring, hecatomb, explorer,
+        )
+    }
+
+    /** Collects every item's ExtraAttributes from the base64 gzip `data` fields under [element]. */
+    private fun itemAttributes(element: JsonElement?, output: MutableList<Map<*, *>>, depth: Int) {
+        if (element == null || !element.isJsonObject || depth > MAX_BAG_DEPTH) return
+        for (entry in element.asJsonObject.entrySet()) {
+            val value = entry.value
+            if (entry.key != "data" || !value.isJsonPrimitive) {
+                itemAttributes(value, output, depth + 1)
+                continue
+            }
+            val text = value.asString
+            if (!looksLikeCompressedNbt(text)) continue
+            try {
+                val bytes = Base64.getDecoder().decode(text)
+                if (bytes.size > MAX_NBT_BYTES) continue
+                GZIPInputStream(ByteArrayInputStream(bytes)).use { gzip ->
+                    DataInputStream(LimitedInputStream(gzip, MAX_BAG_BYTES)).use { input ->
+                        findExtraAttributes(NbtTreeReader.read(input, MAX_BAG_NODES), output, 0)
+                    }
+                }
+            } catch (_: Exception) {
+                // One unreadable bag only hides its own items.
+            }
+        }
+    }
+
+    private fun findExtraAttributes(value: Any?, output: MutableList<Map<*, *>>, depth: Int) {
+        if (depth > MAX_NBT_DEPTH || output.size >= MAX_BAG_ITEMS) return
+        if (value is List<*>) {
+            for (child in value) findExtraAttributes(child, output, depth + 1)
+        } else if (value is Map<*, *>) {
+            val attributes = value["ExtraAttributes"] as? Map<*, *>
+            if (attributes != null) output.add(attributes)
+            else for (child in value.values) findExtraAttributes(child, output, depth + 1)
+        }
+    }
 
     fun formatTime(seconds: Long): String {
         if (seconds <= 0) return "-"
@@ -369,6 +573,8 @@ internal object DungeonStatsServiceCore {
         if (uri.rawUserInfo != null || uri.rawFragment != null) return false
         if (uri.port != -1 && uri.port != 443) return false
         val host = uri.host ?: return false
+        // The public election data (no key), for the mayor's Catacombs XP bonus.
+        if (host.equals("api.hypixel.net", ignoreCase = true)) return uri.rawPath == "/v2/resources/skyblock/election"
         return host.equals("api.minecraftservices.com", ignoreCase = true) ||
             host.equals("api.odtheking.com", ignoreCase = true) ||
             host.equals("hypixel.odtheking.com", ignoreCase = true)
@@ -1424,8 +1630,8 @@ internal object DungeonStatsServiceCore {
         fun exhausted(): Boolean = remainingItems <= 0 || remainingChars <= 0
     }
 
-    private class NbtBudget {
-        private var nodes = MAX_NBT_NODES
+    private class NbtBudget(maximumNodes: Int = MAX_NBT_NODES) {
+        private var nodes = maximumNodes
         private var bytes = MAX_NBT_BYTES
 
         fun visit(): Boolean {
@@ -1444,8 +1650,8 @@ internal object DungeonStatsServiceCore {
     /** Parses bounded NBT values into detached data, keeping Minecraft tooltip work on the client thread. */
     private object NbtTreeReader {
         @Throws(IOException::class)
-        fun read(input: DataInputStream): Any? {
-            val budget = NbtBudget()
+        fun read(input: DataInputStream, maximumNodes: Int = MAX_NBT_NODES): Any? {
+            val budget = NbtBudget(maximumNodes)
             val type = input.readUnsignedByte()
             if (type == 0) return null
             readString(input, budget)

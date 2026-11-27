@@ -1,6 +1,7 @@
 package geiler.addons.client.module.impl
 
 import geiler.addons.client.foraging.ForagingRules
+import geiler.addons.client.foraging.TunerSpeedMeter
 import geiler.addons.client.module.Category
 import geiler.addons.client.module.Module
 import geiler.addons.client.utility.SkyblockItems
@@ -30,7 +31,10 @@ class TunerSolverModule private constructor() : Module(
 
     private var open = false
     private var lastTargetSlot = -1
-    private var ticksSinceMove = 0
+    private val speedMeter = TunerSpeedMeter()
+    private var serverTicks = 0L
+    private var lastMoveTick = 0L
+    private var speedLoreLogged = false
     private var targetSpeed = -1
     private var targetPitch = -1
     private var pitchMatches = 0
@@ -54,7 +58,9 @@ class TunerSolverModule private constructor() : Module(
         overlay.clear()
         open = false
         lastTargetSlot = -1
-        ticksSinceMove = 0
+        speedMeter.reset()
+        lastMoveTick = 0L
+        speedLoreLogged = false
         targetSpeed = -1
         targetPitch = -1
         pitchMatches = 0
@@ -93,6 +99,7 @@ class TunerSolverModule private constructor() : Module(
         if (slots.size <= PITCH_SLOT) return
         val stacks = slots.map { it.item }
         trackTargetMovement(stacks)
+        logSpeedLore(stacks[SPEED_SLOT])
         colorClicks = solveColor(stacks)
         speedClicks = solveSpeed(stacks)
         pitchClicks = solvePitch(stacks)
@@ -113,22 +120,31 @@ class TunerSolverModule private constructor() : Module(
     private fun path(stack: ItemStack): String =
         if (stack.isEmpty) "" else BuiltInRegistries.ITEM.getKey(stack.item).path
 
-    /** The target pane moves along the top row; the gap between its moves says how fast the target speed is. */
+    /** One server tick, from the server's ping stream (negative ids, as Run Splits counts them). Client thread. */
+    fun onServerPing(id: Int) {
+        if (id < 0) serverTicks++
+    }
+
+    /** The target pane moves along the top row; the server ticks between its moves say how fast the target speed is. */
     private fun trackTargetMovement(stacks: List<ItemStack>) {
-        val current = TARGET_SLOTS.firstOrNull { ForagingRules.paneIndex(path(stacks[it])) >= 0 } ?: -1
-        if (current != lastTargetSlot && lastTargetSlot != -1) {
-            val measured = ForagingRules.speedFromTicks(ticksSinceMove)
-            if (measured > 0) {
-                targetSpeed = measured
-                diagnostics.event("TARGET_SPEED ticks=$ticksSinceMove speed=$measured")
-            } else {
-                diagnostics.event("TARGET_SPEED_OUT_OF_RANGE ticks=$ticksSinceMove")
-            }
-            ticksSinceMove = 0
-        } else if (current != -1) {
-            ticksSinceMove++
+        val current = TARGET_SLOTS.firstOrNull { ForagingRules.paneIndex(path(stacks[it])) >= 0 } ?: return
+        if (lastTargetSlot != -1 && current != lastTargetSlot) {
+            val interval = serverTicks - lastMoveTick
+            lastMoveTick = serverTicks
+            val measured = speedMeter.move(serverTicks)
+            if (measured > 0) targetSpeed = measured
+            diagnostics.event("TARGET_MOVE interval=$interval speed=$measured serverTicks=$serverTicks")
         }
         lastTargetSlot = current
+    }
+
+    /** The speed button's own text, once per menu, so a wrong lore pattern shows up in the log. */
+    private fun logSpeedLore(stack: ItemStack) {
+        if (speedLoreLogged || stack.isEmpty) return
+        val lore = SkyblockItems.loreLines(stack)
+        if (lore.isEmpty()) return
+        speedLoreLogged = true
+        diagnostics.event("SPEED_LORE " + lore.take(8).joinToString(" | ").take(240))
     }
 
     private fun solveColor(stacks: List<ItemStack>): Int? {

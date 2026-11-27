@@ -262,6 +262,13 @@ public final class PartyFinderStatsModuleChecks {
                 && PartyFinderStatsModule.apiUnavailableStatus("Player_1", "\u00a0")
                     .equals("Dungeon stats API unavailable: Player_1 (\u00a0)"),
             "retry feedback keeps its command and frozen Java blank-string semantics");
+        check(PartyFinderStatsModule.kickHiddenReason(true, "Leader", "leader", true) == null,
+            "a leader sees Kick for a party member even when the profile is incomplete");
+        check("not_in_party".equals(PartyFinderStatsModule.kickHiddenReason(false, "Leader", "Leader", true))
+                && "leader_unknown".equals(PartyFinderStatsModule.kickHiddenReason(true, null, "Leader", true))
+                && "not_leader".equals(PartyFinderStatsModule.kickHiddenReason(true, "Other", "Leader", true))
+                && "not_member".equals(PartyFinderStatsModule.kickHiddenReason(true, "Leader", "Leader", false)),
+            "Kick stays hidden with a named reason outside a led party or for non-members");
 
         PartyFinderStatsModule.DisplayOptions options = new PartyFinderStatsModule.DisplayOptions(
             false, true, true, true, true, true, true, true, true, true, true, true);

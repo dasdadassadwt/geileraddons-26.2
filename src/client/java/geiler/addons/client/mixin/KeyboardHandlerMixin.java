@@ -45,7 +45,8 @@ public abstract class KeyboardHandlerMixin {
 			String keyName = InputConstants.getKey(event).getName();
 			if (WardrobeKeybindsModule.INSTANCE.onKey(menu, keyName) || LoadoutKeybindsModule.INSTANCE.onKey(menu, keyName)
 				|| PetKeybindsModule.INSTANCE.onKey(menu, keyName)
-				|| InventoryCaptureModule.INSTANCE.onKey(menu, keyName)) {
+				|| InventoryCaptureModule.INSTANCE.onKey(menu, keyName)
+				|| geiler.addons.client.module.impl.AutoCroesusModule.INSTANCE.onKey(menu, keyName)) {
 				ci.cancel();
 				return;
 			}

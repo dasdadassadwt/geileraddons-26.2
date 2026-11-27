@@ -22,6 +22,21 @@ class WindowsMediaBridge {
         private set
     @Volatile var status: String = "stopped"
         private set
+    /** The bridge's last command reply, e.g. `{"type":"cmd","cmd":"next","ok":true}`; for diagnostics. */
+    @Volatile var lastCommand: String? = null
+        private set
+    /** Session reads that threw (a missing timeline or cover read); for diagnostics. */
+    @Volatile var readErrors: Int = 0
+        private set
+    /** Cover reads that threw; they are retried once a second until one succeeds. */
+    @Volatile var artErrors: Int = 0
+        private set
+    /** The last failed cover read, e.g. `{"type":"arterror","error":"InvalidCastException"}` or `{"type":"artskip","bytes":0}`. */
+    @Volatile var lastArtProblem: String? = null
+        private set
+    /** The last state line without title, artist and album (raw position, report age, thumbnail present); for diagnostics. */
+    @Volatile var lastState: String? = null
+        private set
     private var process: Process? = null
     private var input: Writer? = null
 
@@ -62,6 +77,7 @@ class WindowsMediaBridge {
         when {
             trimmed.startsWith("{\"type\":\"state\"") -> {
                 playback = SpotifyPlayback.parseBridge(trimmed, System.currentTimeMillis())
+                lastState = withoutNames(trimmed)
                 status = "connected"
             }
             trimmed.startsWith("{\"type\":\"none\"") -> {
@@ -73,6 +89,12 @@ class WindowsMediaBridge {
                 artKey = key
             }
             trimmed.startsWith("{\"type\":\"error\"") -> status = "WinRT unavailable"
+            trimmed.startsWith("{\"type\":\"cmd\"") -> lastCommand = trimmed.take(120)
+            trimmed.startsWith("{\"type\":\"readerror\"") -> readErrors++
+            trimmed.startsWith("{\"type\":\"arterror\"") || trimmed.startsWith("{\"type\":\"artskip\"") -> {
+                artErrors++
+                lastArtProblem = trimmed.take(120)
+            }
         }
     }
 
@@ -98,6 +120,17 @@ class WindowsMediaBridge {
         private const val MAX_LINE = 2_000_000
         private val COMMANDS = setOf("toggle", "next", "prev")
 
+        /** A bridge state line with the song's names removed, so diagnostics never hold a title or artist. */
+        @JvmStatic
+        fun withoutNames(line: String): String? = try {
+            val json = com.google.gson.JsonParser.parseString(line).asJsonObject
+            json.addProperty("artistBlank", json.get("artist")?.takeIf { it.isJsonPrimitive }?.asString.isNullOrBlank())
+            listOf("title", "artist", "album").forEach { json.remove(it) }
+            json.toString().take(300)
+        } catch (_: Exception) {
+            null
+        }
+
         @JvmStatic
         fun supported(): Boolean = System.getProperty("os.name", "").lowercase(Locale.ROOT).contains("windows")
 
@@ -112,7 +145,8 @@ class WindowsMediaBridge {
         }
 
         // Windows PowerShell 5.1 script; awaits WinRT async calls through System.WindowsRuntimeSystemExtensions.AsTask.
-        private val SCRIPT = """
+        @JvmField
+        val SCRIPT = """
 ${'$'}ErrorActionPreference = 'Stop'
 try {
   Add-Type -AssemblyName System.Runtime.WindowsRuntime
@@ -134,12 +168,14 @@ while (${'$'}true) {
     ${'$'}cmd = ${'$'}pending.Result
     if (${'$'}cmd -eq ${'$'}null) { exit 0 }
     if (${'$'}session -ne ${'$'}null) {
+      ${'$'}ok = ${'$'}false
       try {
-        if (${'$'}cmd -eq 'toggle') { [void](Await (${'$'}session.TryTogglePlayPauseAsync()) ([bool])) }
-        elseif (${'$'}cmd -eq 'next') { [void](Await (${'$'}session.TrySkipNextAsync()) ([bool])) }
-        elseif (${'$'}cmd -eq 'prev') { [void](Await (${'$'}session.TrySkipPreviousAsync()) ([bool])) }
+        if (${'$'}cmd -eq 'toggle') { ${'$'}ok = Await (${'$'}session.TryTogglePlayPauseAsync()) ([bool]) }
+        elseif (${'$'}cmd -eq 'next') { ${'$'}ok = Await (${'$'}session.TrySkipNextAsync()) ([bool]) }
+        elseif (${'$'}cmd -eq 'prev') { ${'$'}ok = Await (${'$'}session.TrySkipPreviousAsync()) ([bool]) }
       } catch {}
-    }
+      [Console]::Out.WriteLine('{"type":"cmd","cmd":"' + ${'$'}cmd + '","ok":' + ([string][bool]${'$'}ok).ToLower() + '}'); [Console]::Out.Flush()
+    } else { [Console]::Out.WriteLine('{"type":"cmd","cmd":"' + ${'$'}cmd + '","ok":false,"session":false}'); [Console]::Out.Flush() }
     ${'$'}pending = ${'$'}stdin.ReadLineAsync()
     ${'$'}commanded = ${'$'}true
   }
@@ -153,26 +189,37 @@ while (${'$'}true) {
       ${'$'}tl = ${'$'}session.GetTimelineProperties()
       ${'$'}pb = ${'$'}session.GetPlaybackInfo()
       ${'$'}playing = ${'$'}pb.PlaybackStatus -eq [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionPlaybackStatus]::Playing
-      ${'$'}pos = [long]${'$'}tl.Position.TotalMilliseconds
-      if (${'$'}playing) { ${'$'}pos += [long]([DateTimeOffset]::Now - ${'$'}tl.LastUpdatedTime).TotalMilliseconds }
-      ${'$'}state = [ordered]@{ type = 'state'; title = ${'$'}p.Title; artist = ${'$'}p.Artist; album = ${'$'}p.AlbumTitle; pos = ${'$'}pos; dur = [long]${'$'}tl.EndTime.TotalMilliseconds; playing = ${'$'}playing }
+      ${'$'}rawPos = [long]${'$'}tl.Position.TotalMilliseconds
+      ${'$'}dur = [long]${'$'}tl.EndTime.TotalMilliseconds
+      ${'$'}ago = [long]([DateTimeOffset]::Now - ${'$'}tl.LastUpdatedTime).TotalMilliseconds
+      # The elapsed time since the last timeline report is added only when it is plausible; a stale or unset
+      # LastUpdatedTime would otherwise push the position to the end of the song.
+      ${'$'}pos = ${'$'}rawPos
+      if (${'$'}playing -and ${'$'}ago -gt 0 -and (${'$'}dur -le 0 -or ${'$'}rawPos + ${'$'}ago -le ${'$'}dur)) { ${'$'}pos += ${'$'}ago }
+      ${'$'}artist = ${'$'}p.Artist
+      if ([string]::IsNullOrWhiteSpace(${'$'}artist)) { ${'$'}artist = ${'$'}p.AlbumArtist }
+      ${'$'}state = [ordered]@{ type = 'state'; title = ${'$'}p.Title; artist = ${'$'}artist; album = ${'$'}p.AlbumTitle; pos = ${'$'}pos; dur = ${'$'}dur; playing = ${'$'}playing; rawPos = ${'$'}rawPos; ago = ${'$'}ago; thumb = (${'$'}p.Thumbnail -ne ${'$'}null) }
       ${'$'}line = ${'$'}state | ConvertTo-Json -Compress
-      ${'$'}key = ${'$'}p.Title + '|' + ${'$'}p.Artist
-      if (${'$'}key -ne ${'$'}lastArt -and ${'$'}p.Thumbnail -ne ${'$'}null) {
-        ${'$'}lastArt = ${'$'}key
+      ${'$'}key = ${'$'}p.Title + '|' + ${'$'}artist
+      # lastArt is set only after a cover was sent: Spotify often fills the thumbnail a moment after the title.
+      if (${'$'}key -ne ${'$'}lastArt -and ${'$'}p.Thumbnail -ne ${'$'}null -and (${'$'}tick % 5) -eq 0) { try {
         ${'$'}stream = Await (${'$'}p.Thumbnail.OpenReadAsync()) ([Windows.Storage.Streams.IRandomAccessStreamWithContentType])
-        if (${'$'}stream.Size -gt 0 -and ${'$'}stream.Size -lt 1048576) {
-          ${'$'}reader = [Windows.Storage.Streams.DataReader]::new(${'$'}stream)
-          [void](Await (${'$'}reader.LoadAsync([uint32]${'$'}stream.Size)) ([uint32]))
-          ${'$'}bytes = New-Object byte[] ([int]${'$'}stream.Size)
-          ${'$'}reader.ReadBytes(${'$'}bytes)
-          ${'$'}art = [ordered]@{ type = 'art'; key = ${'$'}key; data = [Convert]::ToBase64String(${'$'}bytes) }
-          [Console]::Out.WriteLine((${'$'}art | ConvertTo-Json -Compress))
-        }
-      }
+        # Copied through a .NET stream: PowerShell 5.1 reads the WinRT Size property as empty, which skipped every cover.
+        # AsStreamForRead is called by reflection because PowerShell finds no overload for the WinRT object.
+        ${'$'}net = [System.IO.WindowsRuntimeStreamExtensions].GetMethod('AsStreamForRead', [Type[]]@([Windows.Storage.Streams.IInputStream])).Invoke(${'$'}null, @(${'$'}stream))
+        ${'$'}ms = New-Object System.IO.MemoryStream
+        ${'$'}buf = New-Object byte[] 65536
+        while ((${'$'}n = ${'$'}net.Read(${'$'}buf, 0, ${'$'}buf.Length)) -gt 0 -and ${'$'}ms.Length -le 1048576) { ${'$'}ms.Write(${'$'}buf, 0, ${'$'}n) }
+        ${'$'}net.Dispose()
+        if (${'$'}ms.Length -gt 0 -and ${'$'}ms.Length -le 1048576) {
+          ${'$'}art = [ordered]@{ type = 'art'; key = ${'$'}key; data = [Convert]::ToBase64String(${'$'}ms.ToArray()) }
+          [Console]::Out.WriteLine((${'$'}art | ConvertTo-Json -Compress)); [Console]::Out.Flush()
+          ${'$'}lastArt = ${'$'}key
+        } else { [Console]::Out.WriteLine('{"type":"artskip","bytes":' + ${'$'}ms.Length + '}'); [Console]::Out.Flush() }
+      } catch { [Console]::Out.WriteLine('{"type":"arterror","error":"' + ${'$'}_.Exception.GetType().Name + '"}'); [Console]::Out.Flush() } }
     }
     if (${'$'}line -ne ${'$'}last) { [Console]::Out.WriteLine(${'$'}line); [Console]::Out.Flush(); ${'$'}last = ${'$'}line }
-  } catch {}
+  } catch { [Console]::Out.WriteLine('{"type":"readerror"}'); [Console]::Out.Flush() }
 }
 """.trimIndent()
     }

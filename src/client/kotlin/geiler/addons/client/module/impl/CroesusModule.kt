@@ -2,6 +2,7 @@ package geiler.addons.client.module.impl
 
 import geiler.addons.client.location.Island
 import geiler.addons.client.dungeon.DungeonContextTracker
+import geiler.addons.client.dungeon.f7.ChestRollRules
 import geiler.addons.client.dungeon.f7.CroesusPrices
 import geiler.addons.client.dungeon.f7.CroesusRules
 import geiler.addons.client.hud.HudElement
@@ -182,7 +183,10 @@ class CroesusModule private constructor() : Module(
 
     // ---- screens ----
 
+    private var lastHidden = 0
+
     private fun clearScreenState() {
+        lastHidden = 0
         trackedScreen = null
         kind = "none"
         scannedStateId = -1
@@ -242,21 +246,29 @@ class CroesusModule private constructor() : Module(
 
     private fun lore(stack: ItemStack): List<String> = stack.get(DataComponents.LORE)?.lines()?.map { it.string } ?: emptyList()
 
-    private fun struck(stack: ItemStack, name: String): Boolean =
-        stack.get(DataComponents.LORE)?.lines()?.any { line ->
-            line.siblings.any { it.string == name && it.style.isStrikethrough }
-        } ?: false
+    private fun struck(stack: ItemStack, name: String): Boolean = croesusStruckModifier(stack, name)
+
 
     private fun scanPreview(screen: AbstractContainerScreen<*>) {
         val prices = effectivePrices()
         val chests = ArrayList<CroesusRules.ChestResult>()
+        var hidden = 0
         for ((index, slot) in containerSlots(screen).withIndex()) {
             if (index > MAX_PREVIEW_SLOT) break
             val stack = slot.item
             if (stack.isEmpty || stack.item != Items.PLAYER_HEAD) continue
-            CroesusRules.previewChest(index, stack.hoverName.string, lore(stack), prices, includeEssence.value())
+            val lore = lore(stack)
+            // Chest Roll: an unrolled chest's value would spoil its roll, so it gets no tint and no profit row yet.
+            val loot = ChestRollRules.lootLineRange(lore)?.let { lore.slice(it) }.orEmpty()
+            if (!ChestRollModule.INSTANCE.revealedInPreview(stack.hoverName.string, loot)) {
+                hidden++
+                continue
+            }
+            CroesusRules.previewChest(index, stack.hoverName.string, lore, prices, includeEssence.value())
                 ?.let { chests.add(it.withDisplay(stack.hoverName)) }
         }
+        if (hidden != lastHidden) ChestRollModule.INSTANCE.notePreviewHidden(hidden, 0)
+        lastHidden = hidden
         val keyPrice = if (keyRule.value()) keyPrice() else 0.0
         val top = if (highlightProfitable.value()) CroesusRules.topSlots(chests, keyPrice) else emptyList()
         diagnostics.statusOnChange {
@@ -392,3 +404,17 @@ class CroesusModule private constructor() : Module(
         val INSTANCE = CroesusModule()
     }
 }
+
+/**
+ * Whether the Croesus "Available Modifiers" line [name] is struck through (that modifier was used on the run). Reads every
+ * styled run of the line, so a leading space or a split component still counts.
+ */
+internal fun croesusStruckModifier(stack: ItemStack, name: String): Boolean =
+    stack.get(DataComponents.LORE)?.lines()?.any { line ->
+        var hit = false
+        line.visit({ style, text ->
+            if (style.isStrikethrough && text.trim().isNotEmpty() && name.contains(text.trim())) hit = true
+            java.util.Optional.empty<Unit>()
+        }, net.minecraft.network.chat.Style.EMPTY)
+        hit && line.string.trim() == name
+    } ?: false

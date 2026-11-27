@@ -10,4 +10,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface LevelExtractorSpiritLeapAccessor {
 	@Accessor("levelRenderer")
 	LevelRenderer geiler$getLevelRenderer();
+
+	@org.spongepowered.asm.mixin.gen.Invoker("setSectionDirty")
+	void geiler$setSectionDirty(int x, int y, int z, boolean fromPlayer);
 }

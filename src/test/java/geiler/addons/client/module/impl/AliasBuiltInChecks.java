@@ -16,6 +16,20 @@ public final class AliasBuiltInChecks {
 		checkCommands();
 		checkStoreRejectsBuiltIns();
 		checkModuleSwitch();
+		checkSuggestions();
+	}
+
+	/** Chat completion offers built-ins by their switch and saved aliases by theirs, and nothing while the module is off. */
+	private static void checkSuggestions() throws Exception {
+		Path dir = Files.createTempDirectory("geiler-alias-suggest");
+		AliasStore store = AliasStore.forPathChecks(dir.resolve("aliases.json"));
+		check(store.put("dh", "warp dh", true) && store.put("hub2", "warp hub", false), "two saved aliases");
+		check(AliasesModule.suggests("m7", true, true, store) && !AliasesModule.suggests("m7", true, false, store),
+			"a built-in is suggested only while Built-in Aliases is on");
+		check(AliasesModule.suggests("dh", true, false, store), "an enabled saved alias is suggested");
+		check(!AliasesModule.suggests("hub2", true, true, store), "a disabled saved alias is not suggested");
+		check(store.remove("dh") && !AliasesModule.suggests("dh", true, true, store), "a removed alias is not suggested");
+		check(!AliasesModule.suggests("m7", false, true, store), "nothing is suggested while the module is off");
 	}
 
 	private static void checkCommands() {

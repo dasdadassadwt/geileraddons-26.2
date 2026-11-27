@@ -117,6 +117,8 @@ object ModConfigCore {
 
     @JvmStatic
     fun load() {
+        // Checked before reading, because reading migrates a legacy file into place.
+        val freshInstall = BundledDefaults.isFreshInstall(Files.exists(PATH), Files.exists(LEGACY_PATH))
         val data = readData()
         // The Macros workspace has its own file; its modules are not part of config.json.
         MacroWorkspaceConfig.load()
@@ -268,6 +270,10 @@ object ModConfigCore {
         loadMacros(data)
         loadInventoryButtons(data)
         loadUiState(data)
+        if (freshInstall) {
+            BundledDefaults.applyAll()
+            markDirty()
+        }
         if (migratedChatWaypoints || legacyShowNames != null || migratedLegacyChatHud || migratedDungeonMapSettings || migratedLegacyTimer || migratedLegacyPresentation ||
             migratedHideonwallEsp || migratedSecretSettings || migratedDungeonSettings || migratedBloodCampSettings || migratedDefaultTheme ||
             migratedDungeonSplitTiming || migratedDungeonMobEspKeybind || migratedRoomAlertSounds ||
@@ -499,6 +505,7 @@ object ModConfigCore {
             module.booleanSettings().forEach { it.reset() }
             module.choiceSettings().forEach { it.reset() }
             module.textSettings().forEach { it.reset() }
+            BundledDefaults.apply(module)
             module.setKeybind(module.defaultKeybind())
             module.setEnabled(module.defaultEnabled())
         }
@@ -516,6 +523,7 @@ object ModConfigCore {
             module.booleanSettings().forEach { it.reset() }
             module.choiceSettings().forEach { it.reset() }
             module.textSettings().forEach { it.reset() }
+            BundledDefaults.apply(module)
             module.setKeybind(module.defaultKeybind())
             module.setEnabled(module.defaultEnabled())
         }
@@ -539,6 +547,7 @@ object ModConfigCore {
         TikiCoords.seedDefaults()
         TikiFingerprints.replaceAll(emptyMap())
         HudManager.resetPositions()
+        BundledDefaults.applyHudPositions()
         for (type in TreeType.values()) TreeTrackerModule.INSTANCE.tracker().stats(type).restore(0, 0, 0, 0)
         ClickGuiState.runIn(Workspace.NORMAL) {
             ClickGuiState.setCategory(Category.values()[0])

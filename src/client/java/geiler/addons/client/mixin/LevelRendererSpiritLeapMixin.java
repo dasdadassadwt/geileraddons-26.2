@@ -37,6 +37,13 @@ public abstract class LevelRendererSpiritLeapMixin {
 		return ((LevelRendererInvoker) (Object) renderer).geiler$getTransparencyChain();
 	}
 
+	@com.llamalad7.mixinextras.injector.ModifyExpressionValue(method = "invalidateCompiledGeometry", at = @At(value = "INVOKE",
+		target = "Lnet/minecraft/client/Options;getEffectiveRenderDistance()I"), require = 0)
+	private int geiler$capLeapViewArea(int distance) {
+		return SpiritLeapPovRenderer.INSTANCE.isSecondary((LevelRenderer) (Object) this)
+			? geiler.addons.client.module.impl.SpiritLeapPrivateRenderers.cappedViewDistance(distance) : distance;
+	}
+
 	@Redirect(method = "invalidateCompiledGeometry", at = @At(value = "INVOKE",
 		target = "Lnet/minecraft/world/level/block/LeavesBlock;setCutoutLeaves(Z)V"))
 	private void geiler$preserveSharedLeafSetting(boolean cutoutLeaves) {

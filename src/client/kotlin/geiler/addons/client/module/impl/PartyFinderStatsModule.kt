@@ -101,6 +101,17 @@ class PartyFinderStatsModule private constructor(private val settings: Settings 
         @JvmStatic
         fun retryCommand(name: String): String = "/ga pfretry $name"
 
+        /** Null when the card gets a Kick action; otherwise why not. Profile completeness does not matter. */
+        @JvmStatic
+        fun kickHiddenReason(inParty: Boolean, leaderName: String?, localName: String?, memberPresent: Boolean): String? =
+            when {
+                !inParty -> "not_in_party"
+                leaderName == null || localName == null -> "leader_unknown"
+                !leaderName.equals(localName, ignoreCase = true) -> "not_leader"
+                !memberPresent -> "not_member"
+                else -> null
+            }
+
         @JvmStatic
         fun showStatsCommand(): String = "/ga pfstats"
 
@@ -1425,9 +1436,9 @@ class PartyFinderStatsModule private constructor(private val settings: Settings 
     private fun liveActions(view: StatsView, completeStats: Boolean): List<Component> {
         val actions = ArrayList<Component>()
         val party = PartyListBackend.snapshot()
-        if (completeStats && party.isLeader(localName()) && findMember(party, view.name()) != null) {
-            actions.add(kickAction(view.name()))
-        }
+        val kickHidden = kickHiddenReason(party.inParty(), party.leaderName(), localName(), findMember(party, view.name()) != null)
+        if (kickHidden == null) actions.add(kickAction(view.name()))
+        diagnostics.event("card_actions kick=${kickHidden == null} kickHidden=${kickHidden ?: "none"} completeStats=$completeStats")
         if (!view.gearKnown() || !view.bankKnown()) actions.add(pvAction(view.name()))
         return actions
     }

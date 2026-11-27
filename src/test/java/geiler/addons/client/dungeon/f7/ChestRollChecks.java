@@ -25,6 +25,39 @@ public final class ChestRollChecks {
 		checkLootFile();
 		checkContentWatch();
 		checkRolledChests();
+		checkPreviewLoot();
+		checkPreviewMatch();
+		checkCover();
+	}
+
+	/** The loot lines of a Croesus preview chest are the lines between Contents and the first blank line. */
+	private static void checkPreviewLoot() {
+		List<String> lines = List.of("Bedrock Chest", "Contents", "Necron's Handle", "Wither Essence x10", "", "Cost", "2,000,000 Coins");
+		kotlin.ranges.IntRange range = ChestRollRules.lootLineRange(lines);
+		require(range != null && range.getFirst() == 2 && range.getLast() == 3, "loot lines are 2..3: " + range);
+		require(ChestRollRules.lootLineRange(List.of("Bedrock Chest", "Cost")) == null, "no Contents line has no loot");
+		require(ChestRollRules.lootLineRange(List.of("Contents", "A")) == null, "an unfinished lore has no loot");
+		require(ChestRollRules.lootLineRange(List.of("Contents", "")) == null, "an empty Contents block has no loot");
+	}
+
+	/** A preview chest matches an opened chest when the item names agree, ignoring counts, colour codes and book names. */
+	private static void checkPreviewMatch() {
+		List<String> preview = List.of("Necron's Handle", "Wither Essence x10", "Enchanted Book (Soul Eater I)");
+		require(ChestRollRules.previewMatches(preview, List.of("Enchanted Book", "§6Necron's Handle", "Wither Essence")),
+			"the same loot in another order and format matches");
+		require(!ChestRollRules.previewMatches(preview, List.of("Necron's Handle", "Wither Essence")), "a missing item is another chest");
+		require(!ChestRollRules.previewMatches(preview, List.of("Wither Catalyst", "Wither Essence", "Enchanted Book")),
+			"other loot is another chest");
+		require(!ChestRollRules.previewMatches(List.of(), List.of()), "empty loot never counts as rolled");
+	}
+
+	/** Before a roll starts, an unrolled chest of an enabled tier stays covered, but never longer than the time limit. */
+	private static void checkCover() {
+		require(ChestRollRules.covers(true, false, 0L), "a fresh chest of an enabled tier is covered");
+		require(!ChestRollRules.covers(false, false, 0L), "a disabled tier is never covered");
+		require(!ChestRollRules.covers(true, true, 0L), "an already rolled chest shows at once");
+		require(ChestRollRules.covers(true, false, ChestRollRules.COVER_MAX_MS - 1), "the cover holds until the limit");
+		require(!ChestRollRules.covers(true, false, ChestRollRules.COVER_MAX_MS), "the cover gives up at the limit");
 	}
 
 	/** A chest that was rolled once is not rolled again when reopened or viewed in Croesus; a reroll or new chest still rolls. */

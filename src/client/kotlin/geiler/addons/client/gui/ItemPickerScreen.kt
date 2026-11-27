@@ -1,5 +1,6 @@
 package geiler.addons.client.gui
 
+import geiler.addons.client.module.impl.rarityItem
 import geiler.addons.client.itemlist.Entry
 import geiler.addons.client.itemlist.ItemListRepository
 import geiler.addons.client.module.impl.VisualModule
@@ -73,7 +74,7 @@ class ItemPickerScreen(
                     GuiTheme.roundedRect(graphics, view.x, y, view.w - 4, ROW - 1, GuiTheme.RADIUS_SMALL,
                         if (ticked) GuiTheme.CATEGORY_SELECTED else GuiTheme.CATEGORY_HOVER)
                 }
-                graphics.item(compiled.stacks.get(entry), view.x + 4, y + 2)
+                graphics.rarityItem(compiled.stacks.get(entry), view.x + 4, y + 2)
                 val color = if (ticked || hover) GuiTheme.TEXT_ON_ACCENT else GuiTheme.TEXT_PRIMARY
                 graphics.text(font, GuiTheme.fit(font, (if (ticked) "✔ " else "") + entry.plainName, view.w - 170), view.x + 26, y + 6, color)
                 graphics.text(font, GuiTheme.fit(font, entry.id, 140), view.x + view.w - 150, y + 6,

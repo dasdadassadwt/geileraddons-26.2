@@ -156,3 +156,12 @@ class ItemRarityBackgroundsModule private constructor(
         val attributes = BooleanSetting("Attribute Item Backgrounds", true)
     }
 }
+
+/**
+ * Draws [stack] the way this mod's own screens show items: the Item Rarity Backgrounds square first (only while that
+ * module is on and the stack has a SkyBlock rarity), then the item.
+ */
+fun GuiGraphicsExtractor.rarityItem(stack: ItemStack, x: Int, y: Int) {
+    ItemRarityBackgroundsModule.INSTANCE.drawBackground(this, stack, x, y)
+    item(stack, x, y)
+}

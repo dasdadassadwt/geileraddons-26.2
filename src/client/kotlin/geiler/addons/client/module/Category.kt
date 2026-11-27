@@ -30,7 +30,6 @@ enum class Category(private val label: String, val workspace: Workspace = Worksp
     FORAGING("Foraging"),
     MINING("Mining"),
     KUUDRA("Kuudra"),
-    TAB_WIDGETS("Tab Widgets"),
     MISCELLANEOUS("Miscellaneous"),
     VISUAL("Visual"),
     DEV("Dev"),

@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import geiler.addons.client.module.impl.SimonSaysModule;
+import geiler.addons.client.module.impl.SpiritBearModule;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
@@ -24,8 +25,10 @@ public abstract class LevelChunkSimonSaysMixin {
 		Operation<BlockState> original, @Local(argsOnly = true) BlockPos pos) {
 		BlockState old = original.call(section, x, y, z, state);
 		// Only the client level on the client thread; the integrated server shares this class.
-		if (old != state && ((LevelChunk) (Object) this).getLevel().isClientSide() && Minecraft.getInstance().isSameThread())
+		if (old != state && ((LevelChunk) (Object) this).getLevel().isClientSide() && Minecraft.getInstance().isSameThread()) {
 			SimonSaysModule.INSTANCE.onBlockChange(pos, old, state);
+			SpiritBearModule.INSTANCE.onBlockChange(pos, old, state);
+		}
 		return old;
 	}
 }

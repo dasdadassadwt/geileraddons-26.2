@@ -20,6 +20,10 @@ object ClickGuiHeaderGeometry {
     fun panelHeightForScreen(screenHeight: Int): Int =
         maxOf(1, minOf(maxOf(1, screenHeight), (screenHeight * MAX_HEIGHT_FRACTION).roundToInt()))
 
+    /** Centres the panel on one axis. Both values are design px, never Minecraft GUI px. */
+    @JvmStatic
+    fun panelOriginForScreen(screenSize: Int, panelSize: Int): Int = (screenSize - panelSize) / 2
+
     @JvmStatic
     fun baseHeaderHeightForPanelHeight(panelHeight: Int): Int =
         maxOf(40, (maxOf(1, panelHeight) * HEADER_HEIGHT_FRACTION).roundToInt())

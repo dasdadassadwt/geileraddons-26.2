@@ -1,5 +1,21 @@
 {
   "modules": {
+    "Bazaar Buy Presets": {
+      "settings": [
+        { "id": "presets", "type": "text", "name": "Presets", "label": "Amounts, Comma Separated (Max = Order Limit)", "default": "64, 160, Max", "maxLength": 64 }
+      ]
+    },
+    "Mute Enderman Sounds": {
+      "settings": [
+        { "id": "ambient", "type": "toggle", "name": "Ambient", "label": "Mute Ambient", "default": true },
+        { "id": "scream", "type": "toggle", "name": "Scream", "label": "Mute Scream", "default": true },
+        { "id": "stare", "type": "toggle", "name": "Stare", "label": "Mute Stare", "default": true },
+        { "id": "teleport", "type": "toggle", "name": "Teleport", "label": "Mute Teleport (Teleport Items Can Use This Sound)", "default": false },
+        { "id": "hurt", "type": "toggle", "name": "Hurt", "label": "Mute Hurt", "default": false },
+        { "id": "death", "type": "toggle", "name": "Death", "label": "Mute Death", "default": false }
+      ],
+      "groups": [ { "name": "Sounds", "settings": ["ambient", "scream", "stare", "teleport", "hurt", "death"] } ]
+    },
     "Inventory Capture": {
       "settings": [
         { "id": "captureKey", "type": "text", "name": "Capture Key", "default": "", "maxLength": 64, "keybind": true }
@@ -878,6 +894,84 @@
         {"id": "invertKey", "type": "toggle", "name": "Invert Shift", "label": "Block While Sneaking Instead", "default": false},
         {"id": "blockWrongStart", "type": "toggle", "name": "Block Wrong On Start", "label": "Limit Start Button Clicks In The First Phase", "default": false},
         {"id": "maxStartClicks", "type": "slider", "name": "Max Start Clicks", "min": 1, "max": 10, "default": 4, "integer": true}
+      ]
+    },
+    "Auto Simon Says": {
+      "settings": [
+        {"id": "mode", "name": "Mode", "type": "dropdown", "default": "TRIGGER", "choices": ["AIM_ASSIST", "TRIGGER", "AUTO"], "labels": {"AIM_ASSIST": "Aim Assist", "TRIGGER": "Trigger Bot", "AUTO": "Auto"}},
+        {"id": "pullStrength", "type": "slider", "name": "Pull Strength", "min": 5, "max": 100, "default": 35, "integer": true},
+        {"id": "pullSpeed", "type": "slider", "name": "Pull Speed", "min": 1, "max": 20, "default": 6, "integer": true},
+        {"id": "pullFov", "type": "slider", "name": "Pull FOV", "min": 5, "max": 60, "default": 20, "integer": true},
+        {"id": "triggerFov", "type": "slider", "name": "Trigger FOV", "min": 1, "max": 30, "default": 8, "integer": true},
+        {"id": "delayMin", "type": "slider", "name": "Click Delay Min", "min": 0, "max": 500, "default": 90, "integer": true},
+        {"id": "delayMax", "type": "slider", "name": "Click Delay Max", "min": 0, "max": 500, "default": 160, "integer": true},
+        {"id": "reach", "type": "slider", "name": "Max Reach", "min": 2, "max": 6, "default": 4.5},
+        {"id": "autoStart", "type": "toggle", "name": "Auto Start", "label": "Auto Mode Presses The Start Button", "default": true},
+        {"id": "ssSkip", "type": "toggle", "name": "SS Skip", "label": "Press Start Twice More After Your Press", "default": false},
+        {"id": "skipGapMin", "type": "slider", "name": "Skip Gap Min", "min": 50, "max": 300, "default": 115, "integer": true},
+        {"id": "skipGapMax", "type": "slider", "name": "Skip Gap Max", "min": 50, "max": 300, "default": 145, "integer": true}
+      ],
+      "groups": [
+        {"name": "Mode", "settings": ["mode", "delayMin", "delayMax", "reach", "autoStart"]},
+        {"name": "Aim Assist", "settings": ["pullStrength", "pullSpeed", "pullFov"]},
+        {"name": "Trigger Bot", "settings": ["triggerFov"]},
+        {"name": "SS Skip", "toggle": "ssSkip", "settings": ["skipGapMin", "skipGapMax"]}
+      ]
+    },
+    "Auto i4": {
+      "settings": [
+        {"id": "delayMin", "type": "slider", "name": "Reaction Min", "min": 0, "max": 500, "default": 80, "integer": true},
+        {"id": "delayMax", "type": "slider", "name": "Reaction Max", "min": 0, "max": 500, "default": 150, "integer": true},
+        {"id": "tolerance", "type": "slider", "name": "Aim Tolerance", "min": 0.2, "max": 5, "default": 1.0},
+        {"id": "bowOnly", "type": "toggle", "name": "Bow Only", "label": "Only Shoot While Holding A Bow", "default": true},
+        {"id": "prefire", "type": "toggle", "name": "Prefire", "label": "Shoot The Orange Spheres While No Target Is Lit", "default": true}
+      ]
+    },
+    "Auto Mask": {
+      "settings": [
+        {"id": "useRod", "type": "toggle", "name": "Cast Rod", "label": "Cast The Hotbar Rod Once For Phoenix", "default": true},
+        {"id": "delayMin", "type": "slider", "name": "Step Delay Min", "min": 50, "max": 1000, "default": 180, "integer": true},
+        {"id": "delayMax", "type": "slider", "name": "Step Delay Max", "min": 50, "max": 1000, "default": 320, "integer": true},
+        {"id": "timeout", "type": "slider", "name": "Give Up After", "min": 2, "max": 10, "default": 6, "integer": true}
+      ]
+    },
+    "Rare Drop Rat": {
+      "settings": [
+        {"id": "size", "type": "slider", "name": "Size", "min": 48, "max": 320, "default": 180, "integer": true},
+        {"id": "growMs", "type": "slider", "name": "Grow Time", "min": 200, "max": 3000, "default": 1200, "integer": true},
+        {"id": "holdMs", "type": "slider", "name": "Hold Time", "min": 0, "max": 5000, "default": 1500, "integer": true},
+        {"id": "fadeMs", "type": "slider", "name": "Fade Time", "min": 100, "max": 2000, "default": 400, "integer": true},
+        {"id": "shake", "type": "slider", "name": "Shake", "min": 0, "max": 20, "default": 6}
+      ]
+    },
+    "Auto Croesus": {
+      "settings": [
+        {"id": "startKey", "type": "text", "name": "Start/Stop Key", "default": "", "maxLength": 64, "keybind": true},
+        {"id": "minProfit", "type": "slider", "name": "Min Profit (m)", "min": 0, "max": 10, "default": 0},
+        {"id": "useKeys", "type": "toggle", "name": "Use Chest Keys", "label": "Open A Second Chest With A Dungeon Chest Key", "default": false},
+        {"id": "keyMinProfit", "type": "slider", "name": "Key Min Profit (m)", "min": 0, "max": 5, "default": 0.5},
+        {"id": "kismet", "type": "toggle", "name": "Use Kismet", "label": "Reroll A Poor Bedrock Chest With A Kismet Feather", "default": false},
+        {"id": "kismetMinProfit", "type": "slider", "name": "Kismet Below (m)", "min": 0.5, "max": 10, "default": 2},
+        {"id": "kismetFloors", "type": "text", "name": "Kismet Floors", "label": "Floors, Comma Separated (Empty = All)", "default": "M7", "maxLength": 64},
+        {"id": "runMin", "type": "slider", "name": "Run Click Min", "min": 0, "max": 2000, "default": 250, "integer": true},
+        {"id": "runMax", "type": "slider", "name": "Run Click Max", "min": 0, "max": 2000, "default": 450, "integer": true},
+        {"id": "chestMin", "type": "slider", "name": "Chest Click Min", "min": 0, "max": 2000, "default": 300, "integer": true},
+        {"id": "chestMax", "type": "slider", "name": "Chest Click Max", "min": 0, "max": 2000, "default": 550, "integer": true},
+        {"id": "claimMin", "type": "slider", "name": "Claim Click Min", "min": 0, "max": 2000, "default": 250, "integer": true},
+        {"id": "claimMax", "type": "slider", "name": "Claim Click Max", "min": 0, "max": 2000, "default": 450, "integer": true},
+        {"id": "backMin", "type": "slider", "name": "Go Back Min", "min": 0, "max": 2000, "default": 200, "integer": true},
+        {"id": "backMax", "type": "slider", "name": "Go Back Max", "min": 0, "max": 2000, "default": 400, "integer": true},
+        {"id": "pageMin", "type": "slider", "name": "Next Page Min", "min": 0, "max": 2000, "default": 250, "integer": true},
+        {"id": "pageMax", "type": "slider", "name": "Next Page Max", "min": 0, "max": 2000, "default": 450, "integer": true},
+        {"id": "kismetDelayMin", "type": "slider", "name": "Kismet Click Min", "min": 0, "max": 2000, "default": 350, "integer": true},
+        {"id": "kismetDelayMax", "type": "slider", "name": "Kismet Click Max", "min": 0, "max": 2000, "default": 600, "integer": true},
+        {"id": "responseTimeout", "type": "slider", "name": "Menu Timeout (ms)", "min": 1000, "max": 10000, "default": 4000, "integer": true}
+      ],
+      "groups": [
+        {"name": "Start", "settings": ["startKey", "minProfit"]},
+        {"name": "Chest Keys", "toggle": "useKeys", "settings": ["keyMinProfit"]},
+        {"name": "Kismet", "toggle": "kismet", "settings": ["kismetMinProfit", "kismetFloors"]},
+        {"name": "Delays", "settings": ["runMin", "runMax", "chestMin", "chestMax", "claimMin", "claimMax", "backMin", "backMax", "pageMin", "pageMax", "kismetDelayMin", "kismetDelayMax", "responseTimeout"]}
       ]
     },
     "Croesus": {

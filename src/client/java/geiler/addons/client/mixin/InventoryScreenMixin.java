@@ -2,6 +2,7 @@ package geiler.addons.client.mixin;
 
 import geiler.addons.client.gui.InventoryButtonOverlay;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.navigation.ScreenPosition;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import org.spongepowered.asm.mixin.Mixin;
@@ -20,6 +21,13 @@ public abstract class InventoryScreenMixin {
 		InventoryButtonOverlay.render((InventoryScreen) (Object) this, graphics, mouseX, mouseY);
 		geiler.addons.client.rename.RenamePaintbrush.render((InventoryScreen) (Object) this, graphics, mouseX, mouseY);
 		geiler.addons.client.module.impl.GardenPlotsOverlayModule.INSTANCE.renderOnInventory((InventoryScreen) (Object) this, graphics, mouseX, mouseY);
+		geiler.addons.client.module.impl.EquipmentInInventoryModule.INSTANCE.renderOnInventory((InventoryScreen) (Object) this, graphics, mouseX, mouseY);
+	}
+
+	@Inject(method = "getRecipeBookButtonPosition", at = @At("RETURN"), cancellable = true)
+	private void geileraddons$recipeButtonClearOfOffhand(CallbackInfoReturnable<ScreenPosition> cir) {
+		int shift = geiler.addons.client.module.impl.EquipmentInInventoryModule.INSTANCE.recipeButtonShift();
+		if (shift != 0) cir.setReturnValue(new ScreenPosition(cir.getReturnValue().x() + shift, cir.getReturnValue().y()));
 	}
 
 	@Inject(method = "mouseReleased", at = @At("TAIL"))

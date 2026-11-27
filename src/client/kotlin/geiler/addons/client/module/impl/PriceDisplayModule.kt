@@ -140,6 +140,15 @@ class PriceDisplayModule private constructor(private val s: Settings) : Module(
         croesusDemand = on
     }
 
+    /** Set by Hunting Methods while it is enabled: shard prices fall back to this Bazaar data. */
+    @Volatile
+    private var huntingDemand = false
+
+    fun setHuntingDemand(on: Boolean) {
+        if (on && !huntingDemand) ticksSinceRefresh = REFRESH_TICKS
+        huntingDemand = on
+    }
+
     /** Milliseconds since the Bazaar data last arrived, or null before it has. */
     @Synchronized
     fun bazaarAgeMillis(): Long? = loadedAt[Dataset.BAZAAR]?.let { System.currentTimeMillis() - it }
@@ -150,7 +159,7 @@ class PriceDisplayModule private constructor(private val s: Settings) : Module(
 
     private fun wanted(dataset: Dataset): Boolean = when (dataset) {
         Dataset.NPC -> s.npcPrice.value() || itemListDemand
-        Dataset.BAZAAR -> s.bazaarPrice.value() || itemListDemand || bazaarDemand || collectionDemand || croesusDemand || craftingOn() || s.essenceCost.value() || s.estimatedValue.value()
+        Dataset.BAZAAR -> s.bazaarPrice.value() || itemListDemand || bazaarDemand || huntingDemand || collectionDemand || croesusDemand || craftingOn() || s.essenceCost.value() || s.estimatedValue.value()
         Dataset.LOWEST_BIN -> s.lowestBin.value() || itemListDemand || collectionDemand || croesusDemand || craftingOn() || s.estimatedValue.value()
         Dataset.ONE_DAY -> s.averageBin.value() && s.averageType.value() != "THREE_DAY"
         Dataset.THREE_DAY -> (s.averageBin.value() && s.averageType.value() != "ONE_DAY") || s.estimatedValue.value()
@@ -164,7 +173,7 @@ class PriceDisplayModule private constructor(private val s: Settings) : Module(
 
     fun tick() {
         val enabled = isEnabled()
-        if (!enabled && !itemListDemand && !bazaarDemand && !collectionDemand && !croesusDemand) return
+        if (!enabled && !itemListDemand && !bazaarDemand && !collectionDemand && !croesusDemand && !huntingDemand) return
         if (enabled) diagnostics.advance()
         if (!onSkyblock()) return
         if (++ticksSinceRefresh >= REFRESH_TICKS) {

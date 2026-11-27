@@ -545,7 +545,8 @@ class ClickGuiScreen @JvmOverloads constructor(
     private fun designDiagnostic(): String {
         val window = minecraft.window
         return "poseScale=${String.format(java.util.Locale.ROOT, "%.3f", designPose())},guiScale=${window.guiScale}," +
-            "virtual=${vw()}x${vh()},locked=${VisualModule.INSTANCE.lockGuiScale().value()}"
+            "virtual=${vw()}x${vh()},panel=${panelX()}/${panelY()}/${panelWidth()}x${panelHeight()}," +
+            "locked=${VisualModule.INSTANCE.lockGuiScale().value()}"
     }
 
     private fun panelWidth(): Int = ClickGuiHeaderGeometry.panelWidthForScreen(vw())
@@ -574,9 +575,9 @@ class ClickGuiScreen @JvmOverloads constructor(
 
     private fun settingsContentWidth(): Int = maxOf(1, moduleWidth() - 2 * (gridInset() + PADDING))
 
-    private fun panelX(): Int = (width - panelWidth()) / 2
+    private fun panelX(): Int = ClickGuiHeaderGeometry.panelOriginForScreen(vw(), panelWidth())
 
-    private fun panelY(): Int = (height - panelHeight()) / 2
+    private fun panelY(): Int = ClickGuiHeaderGeometry.panelOriginForScreen(vh(), panelHeight())
 
     private fun contentTop(outerPanelY: Int): Int = outerPanelY + headerHeight()
 
@@ -616,6 +617,7 @@ class ClickGuiScreen @JvmOverloads constructor(
     private fun settingsGearRect(panelX: Int, panelY: Int): Rect = topBarRect(panelX, panelY, TopBarIcon.SETTINGS)
     private fun themeRect(panelX: Int, panelY: Int): Rect = topBarRect(panelX, panelY, TopBarIcon.THEME)
     private fun cosmeticsRect(panelX: Int, panelY: Int): Rect = topBarRect(panelX, panelY, TopBarIcon.COSMETICS)
+    private fun huntingRect(panelX: Int, panelY: Int): Rect = topBarRect(panelX, panelY, TopBarIcon.HUNTING)
     private fun moveElementsRect(panelX: Int, panelY: Int): Rect = topBarRect(panelX, panelY, TopBarIcon.MOVE_ELEMENTS)
     private fun settingsBackRect(x: Int, panelY: Int): Rect = settingsHeaderSurfaceRect(x, panelY)
 
@@ -715,6 +717,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         renderTopBarButton(graphics, settingsGearRect(panelX, panelY), TopBarIcon.SETTINGS, "General settings", mouseX, mouseY)
         renderTopBarButton(graphics, themeRect(panelX, panelY), TopBarIcon.THEME, "Theme and colors", mouseX, mouseY)
         renderTopBarButton(graphics, cosmeticsRect(panelX, panelY), TopBarIcon.COSMETICS, "Cosmetics", mouseX, mouseY)
+        renderTopBarButton(graphics, huntingRect(panelX, panelY), TopBarIcon.HUNTING, "Hunting Methods", mouseX, mouseY)
         renderTopBarButton(graphics, moveElementsRect(panelX, panelY), TopBarIcon.MOVE_ELEMENTS, "Move HUD elements", mouseX, mouseY)
         val newer = UpdateChecker.newerVersion()
         if (newer != null) {
@@ -766,6 +769,7 @@ class ClickGuiScreen @JvmOverloads constructor(
             TopBarIcon.SETTINGS -> ICON_SETTINGS
             TopBarIcon.THEME -> ICON_THEME
             TopBarIcon.COSMETICS -> ICON_COSMETICS
+            TopBarIcon.HUNTING -> ICON_HUNTING
             TopBarIcon.MOVE_ELEMENTS -> ICON_MOVE
         }
         val iconSize = minOf(32, maxOf(16, bounds.w - 16))
@@ -2153,6 +2157,14 @@ class ClickGuiScreen @JvmOverloads constructor(
             beginClose(CosmeticsScreen(this))
             return true
         }
+        if (left && huntingRect(panelX, panelY).contains(mouseX, mouseY)) {
+            persistView()
+            markInteraction("Hunting Methods")
+            playClick()
+            geiler.addons.client.module.impl.HuntingMethodsModule.INSTANCE.note("UI OPEN source=top_bar")
+            beginClose(HuntingMethodsScreen(this))
+            return true
+        }
         if (left && moveElementsRect(panelX, panelY).contains(mouseX, mouseY)) {
             persistView()
             markInteraction("Move Elements")
@@ -3114,7 +3126,7 @@ class ClickGuiScreen @JvmOverloads constructor(
         }
     }
 
-    enum class TopBarIcon { WORKSPACE, GITHUB, SETTINGS, THEME, COSMETICS, MOVE_ELEMENTS }
+    enum class TopBarIcon { WORKSPACE, GITHUB, SETTINGS, THEME, COSMETICS, HUNTING, MOVE_ELEMENTS }
     private enum class PickerPart { SQUARE, HUE, ALPHA }
 
     companion object {
@@ -3124,6 +3136,8 @@ class ClickGuiScreen @JvmOverloads constructor(
         private val ICON_THEME = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/octicon-paintbrush-16.png")
         /** A wing with a sparkle, drawn for this mod (source: icons/cosmetics-wing-16.svg). */
         private val ICON_COSMETICS = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/cosmetics-wing-16.png")
+        /** A large shard between two small ones, drawn for this mod (source: icons/hunting-shard-16.svg). */
+        private val ICON_HUNTING = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/hunting-shard-16.png")
         private val ICON_MOVE = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/move-arrows-16.png")
         /** The Macros workspace button: a lightning bolt for "cheats", drawn for this mod. */
         private val ICON_CHEATS = Identifier.fromNamespaceAndPath("geileraddons", "textures/gui/cheats-bolt.png")

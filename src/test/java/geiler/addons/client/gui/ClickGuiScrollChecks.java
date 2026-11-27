@@ -300,13 +300,13 @@ public final class ClickGuiScrollChecks {
 		int compactContent = ClickGuiScreen.categoryContentHeightForPanelHeight(367);
 		check(ClickGuiScreen.categoryContentHeightForPanelHeight(367, 12) == 300,
 			"the compact rail fits twelve categories below its header gap");
-		check(compactContent == 300 + 24, "the thirteenth category adds one compact row");
-		check(ClickGuiScreen.categoryMaxScroll(367, 300) == 24,
+		check(compactContent == 300, "the twelve categories fill the compact rail");
+		check(ClickGuiScreen.categoryMaxScroll(367, 276) == 24,
 			"the compact rail scrolls by the one row that no longer fits");
 		check(ClickGuiScreen.categoryMaxScroll(367, compactContent) == 0,
 			"the compact rail needs no scroll when all category rows fit");
 		int referenceContent = ClickGuiScreen.categoryContentHeightForPanelHeight(783);
-		check(ClickGuiScreen.categoryContentHeightForPanelHeight(783, 12) == 495 && referenceContent == 495 + 39,
+		check(ClickGuiScreen.categoryContentHeightForPanelHeight(783, 12) == 495 && referenceContent == 495,
 			"the reference rail uses compact responsive row spacing");
 		check(ClickGuiScreen.categoryMaxScroll(783, 637) == 0,
 			"the full-height reference rail fits every category without scrolling");

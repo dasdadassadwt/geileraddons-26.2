@@ -9,6 +9,10 @@ import geiler.addons.client.module.SettingGroup
 import geiler.addons.client.module.TextSetting
 import geiler.addons.client.utility.AliasStore
 import geiler.addons.client.utility.BuiltInAliases
+import com.mojang.brigadier.CommandDispatcher
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands
+import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
 import net.minecraft.client.Minecraft
 import java.util.Locale
 
@@ -27,6 +31,9 @@ class AliasesModule private constructor(private val ui: Settings) : Module(
     private val rows = LinkedHashMap<String, AliasRow>()
     private val rowDelete = HashMap<String, ModuleAction>()
     private var sending = false
+    /** Lowercase alias names with a suggestion node on the active client dispatcher. */
+    private val nodes = HashSet<String>()
+    private var suggestionState = ""
     private var used = 0
 
     /** Per-alias controls on the module page; the store stays the persisted source of truth. */
@@ -81,6 +88,7 @@ class AliasesModule private constructor(private val ui: Settings) : Module(
 
     private fun addAlias() {
         if (AliasStore.instance().put(ui.aliasText.value(), ui.commandText.value(), true)) {
+            ClientCommands.getActiveDispatcher()?.let { addNodes(it, listOf(ui.aliasText.value().trim().removePrefix("/"))) }
             diagnostics.event("ALIAS_ADDED alias=${bounded(ui.aliasText.value())} commandChars=${ui.commandText.value().length}")
             ui.aliasText.setValue("")
             ui.commandText.setValue("")
@@ -90,17 +98,68 @@ class AliasesModule private constructor(private val ui: Settings) : Module(
     }
 
     override fun onEnable() {
-        diagnostics.enable("aliases=${AliasStore.instance().entries().size}")
+        diagnostics.enable("aliases=${AliasStore.instance().entries().size} suggestNodes=${nodes.size}")
+        refreshSuggestions()
     }
 
     override fun onDisable() {
         diagnostics.disable()
+        refreshSuggestions()
+    }
+
+    /**
+     * Chat tab-completion: every built-in and saved alias gets a literal client command node. A node only shows while
+     * [suggests] is true, and running it sends the alias through [intercept], the same path a typed alias takes. Brigadier
+     * cannot remove nodes, so a deleted or disabled alias just stops passing `requires`.
+     */
+    fun registerCommands() {
+        ClientCommandRegistrationCallback.EVENT.register { dispatcher, _ ->
+            nodes.clear()
+            addNodes(dispatcher, BuiltInAliases.names() + AliasStore.instance().entries().map { it.alias() })
+        }
+    }
+
+    private fun addNodes(dispatcher: CommandDispatcher<FabricClientCommandSource>, names: Collection<String>) {
+        var added = 0
+        for (raw in names) {
+            val name = raw.lowercase(Locale.ROOT)
+            // A real client command of that name (for example ga) keeps its own node and behavior.
+            if (name.isEmpty() || name in nodes || dispatcher.root.getChild(name) != null) continue
+            nodes.add(name)
+            dispatcher.register(
+                ClientCommands.literal(name)
+                    .requires { suggests(name) }
+                    .executes { if (intercept(name, true)) 1 else 0 },
+            )
+            added++
+        }
+        if (added > 0) {
+            diagnostics.event("SUGGEST_NODES added=$added total=${nodes.size}")
+            refreshSuggestions()
+        }
+    }
+
+    /** Whether [name] is offered in chat completion right now. */
+    fun suggests(name: String): Boolean = suggests(name, isEnabled(), ui.builtIn.value(), AliasStore.instance())
+
+    private fun refreshSuggestions() {
+        if (Minecraft.getInstance().connection == null) return
+        try {
+            ClientCommands.refreshCommandCompletions()
+        } catch (error: RuntimeException) {
+            diagnostics.event("SUGGEST_REFRESH failed ${error.javaClass.simpleName}")
+        }
     }
 
     fun tick() {
         if (!isEnabled()) return
         diagnostics.advance()
         syncRows()
+        val state = "${ui.builtIn.value()}|" + AliasStore.instance().entries().joinToString(",") { "${it.alias()}=${it.enabled()}" }
+        if (state != suggestionState) {
+            if (suggestionState.isNotEmpty()) refreshSuggestions()
+            suggestionState = state
+        }
         diagnostics.status { suppressed -> "aliases=${AliasStore.instance().entries().size} usedSinceLastStatus=$used suppressedEvents=$suppressed".also { used = 0 } }
     }
 
@@ -145,6 +204,14 @@ class AliasesModule private constructor(private val ui: Settings) : Module(
 
     companion object {
         private const val MAX_DIAGNOSTIC_CHARS = 32
+
+        /** Pure rule behind [suggests]: built-ins follow their switch, saved aliases their own switch; nothing while off. */
+        @JvmStatic
+        fun suggests(name: String, moduleOn: Boolean, builtInOn: Boolean, store: AliasStore): Boolean = when {
+            !moduleOn -> false
+            BuiltInAliases.isBuiltInName(name) -> builtInOn
+            else -> store.resolve(name) != null
+        }
 
         @JvmField
         val INSTANCE = AliasesModule(Settings())

@@ -106,7 +106,17 @@ object ShardPriceFeed {
     private const val QUIET_FAILURES = 3
     private const val MAX_BYTES = 24L * 1024 * 1024
 
-    private val wanted: Set<String> = CritterSpecies.all().map { it.bazaarId() }.toSet()
+    private val critterIds: Set<String> = CritterSpecies.all().map { it.bazaarId() }.toSet()
+    @Volatile private var wanted: Set<String> = critterIds
+
+    /** Hunting Methods asks for its shards too; ids must look like bazaar shard products. Bounded to 400. */
+    @JvmStatic
+    fun extraWanted(ids: Collection<String>) {
+        val extra = ids.asSequence().filter { it.matches(SHARD_ID) }.take(400).toSet()
+        if (!critterIds.containsAll(extra) && !wanted.containsAll(extra)) wanted = critterIds + extra
+    }
+
+    private val SHARD_ID = Regex("SHARD_[A-Z0-9_]{1,40}")
     private val worker = Executors.newSingleThreadExecutor { task -> Thread(task, "geileraddons-shard-prices").also { it.isDaemon = true } }
     private val fetching = AtomicBoolean()
     private val client: HttpClient by lazy { HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build() }
@@ -155,7 +165,8 @@ object ShardPriceFeed {
             failures = 0
             lastError = null
             nextAt = fetchedAt + REFRESH_MILLIS
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
+            // Throwable: an Error here used to leave the status at "idle" with no prices and no reason.
             failures++
             lastError = e.javaClass.simpleName
             nextAt = System.currentTimeMillis() + if (failures > QUIET_FAILURES) BACK_OFF_MILLIS else RETRY_MILLIS

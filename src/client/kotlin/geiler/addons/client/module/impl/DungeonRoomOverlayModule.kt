@@ -843,6 +843,13 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
                 playerClasses[name.lowercase(Locale.ROOT)] = dungeonClass.displayName()
             }
         }
+        // Solo or without party data the tab list still names every class (Map Auto Split needs your own).
+        for (tab in geiler.addons.client.dungeon.helpers.DungeonPlayerRoster.snapshot()) {
+            val name = tab.name() ?: continue
+            val dungeonClass = tab.dungeonClass()
+            if (tab.dead() || dungeonClass.isNullOrBlank()) continue
+            playerClasses.putIfAbsent(name.lowercase(Locale.ROOT), dungeonClass)
+        }
         for (player in clientLevel.players()) {
             val cell = DungeonGridRules.cellAt(
                 kotlin.math.floor(player.x).toInt(), kotlin.math.floor(player.z).toInt(),
@@ -1293,8 +1300,11 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
                 .resolve(state, settings.revealUnopened.value())
             val roomColors = roomColors()
             val roomsById = data.roomsById()
+            // Map Auto Split "Hide Other Rooms": those rooms are left out entirely (cells, bridges, doors, text).
+            val hidden = if (preview) emptySet() else DungeonAutoSplitModule.INSTANCE.hiddenCells(state)
             for (z in 0 until DungeonRoomOverlayLayout.GRID_CELLS) {
                 for (cellX in 0 until DungeonRoomOverlayLayout.GRID_CELLS) {
+                    if ((cellX to z) in hidden) continue
                     val visible = data.visibleCellAt(cellX, z) ?: continue
                     val left = gridX + cellX * (layout.cellSize + layout.cellGap)
                     val top = gridY + z * (layout.cellSize + layout.cellGap)
@@ -1302,11 +1312,12 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
                         roomFillColor(visible, roomColors))
                 }
             }
-            drawRoomBridges(graphics, data, roomsById, layout, gridX, gridY, roomColors)
+            drawRoomBridges(graphics, data, roomsById, layout, gridX, gridY, roomColors, hidden)
             if (settings.showExits.value()) {
                 for (door in data.doorGeometry(layout.cellSize, layout.cellGap, settings.doorSize.value())) {
                     val exit = door.exit ?: continue
                     val cell = exit.cell() ?: continue
+                    if ((cell.x() to cell.z()) in hidden) continue
                     val direction = exit.direction() ?: continue
                     val color = exitColor(exit, data, roomColors)
                     val adjacent = neighbor(cell, direction)
@@ -1321,8 +1332,10 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
                 }
             }
             drawUnopenedDoorHints(graphics, data.plan(), layout, gridX, gridY, roomColors)
+            if (!preview) DungeonAutoSplitModule.INSTANCE.drawOverlay(graphics, state, gridX, gridY, layout.cellSize,
+                layout.cellGap) { cx, cz -> data.visibleCellAt(cx, cz) != null }
             drawPredictions(graphics, data, layout, gridX, gridY, roomColors)
-            drawRoomTextAndIcons(graphics, font, data, roomsById, layout, gridX, gridY)
+            drawRoomTextAndIcons(graphics, font, data, roomsById, layout, gridX, gridY, hidden)
             if (settings.showPlayers.value()) drawPlayers(graphics, font, state, layout, gridX, gridY, preview)
         }
         if (rotateGrid) pose.popMatrix()
@@ -1478,8 +1491,10 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
         gridX: Int,
         gridY: Int,
         roomColors: DungeonRoomOverlayStyle.RoomColors,
+        hidden: kotlin.collections.Set<Pair<Int, Int>> = emptySet(),
     ) {
         for (room in rooms.values) {
+            if (room.footprint().any { (it.x() to it.z()) in hidden }) continue
             val footprint = HashSet<String>()
             val visibleFootprint = ArrayList<DungeonRoomOverlayGeometry.Cell>()
             for (cell in room.footprint()) {
@@ -1559,9 +1574,11 @@ class DungeonRoomOverlayModule private constructor(private val settings: Setting
         layout: DungeonRoomOverlayLayout.Layout,
         gridX: Int,
         gridY: Int,
+        hidden: kotlin.collections.Set<Pair<Int, Int>> = emptySet(),
     ) {
         val labels = resolveRoomLabels(data, font, layout, rooms)
         for (label in labels.labels) {
+            if ((label.minX to label.minZ) in hidden) continue
             val cell = label.cell
             val room = label.room
             val footprint = label.footprint

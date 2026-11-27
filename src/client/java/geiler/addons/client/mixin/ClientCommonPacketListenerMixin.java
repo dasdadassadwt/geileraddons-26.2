@@ -17,7 +17,8 @@ public abstract class ClientCommonPacketListenerMixin {
 	 */
 	@Inject(method = "send(Lnet/minecraft/network/protocol/Packet;)V", at = @At("HEAD"), cancellable = true)
 	private void geileraddons$termSimFirewall(net.minecraft.network.protocol.Packet<?> packet, CallbackInfo ci) {
-		if (geiler.addons.client.termsim.TermSimGuard.shouldDrop(packet)) ci.cancel();
+		if (geiler.addons.client.termsim.TermSimGuard.shouldDrop(packet)
+			|| geiler.addons.client.sim.DeviceSimGuard.shouldDrop(packet)) ci.cancel();
 	}
 
 	/**
@@ -45,5 +46,6 @@ public abstract class ClientCommonPacketListenerMixin {
 	@Inject(method = "handlePing", at = @At("TAIL"))
 	private void geileraddons$countServerPingPacket(ClientboundPingPacket packet, CallbackInfo ci) {
 		DungeonAssistModule.INSTANCE.onServerPingPacket(packet.getId());
+		geiler.addons.client.module.impl.TunerSolverModule.INSTANCE.onServerPing(packet.getId());
 	}
 }

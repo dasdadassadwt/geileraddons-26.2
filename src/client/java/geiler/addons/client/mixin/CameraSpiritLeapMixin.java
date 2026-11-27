@@ -40,14 +40,24 @@ public abstract class CameraSpiritLeapMixin implements CameraSpiritLeapAccess {
 	private float geiler$rotateFixedCameraProbe(Entity entity, float partialTick) {
 		float entityYaw = entity.getViewYRot(partialTick);
 		Camera camera = (Camera) (Object) this;
-		if (!SpiritLeapPovRenderer.INSTANCE.isPovCamera(camera)
-			|| camera.entity() != Minecraft.getInstance().player) return entityYaw;
+		if (!SpiritLeapPovRenderer.INSTANCE.isPovCamera(camera)) return entityYaw;
+		if (camera.entity() != Minecraft.getInstance().player) {
+			return SpiritLeapPovRenderer.INSTANCE.smoothViewAngle(camera, entityYaw, false, entity.getId());
+		}
 		boolean fixedProbe;
 		try {
 			fixedProbe = "fixed-camera".equals(System.getProperty("geileraddons.spiritLeapPovProbe"));
 		} catch (SecurityException ignored) {
 			fixedProbe = false;
 		}
-		return fixedProbe ? Mth.wrapDegrees(entityYaw + 90.0f) : entityYaw;
+		float yaw = fixedProbe ? Mth.wrapDegrees(entityYaw + 90.0f) : entityYaw;
+		return SpiritLeapPovRenderer.INSTANCE.smoothViewAngle(camera, yaw, false, entity.getId());
+	}
+
+	@Redirect(method = "alignWithEntity", at = @At(value = "INVOKE",
+		target = "Lnet/minecraft/world/entity/Entity;getViewXRot(F)F"))
+	private float geiler$smoothLeapFeedPitch(Entity entity, float partialTick) {
+		return SpiritLeapPovRenderer.INSTANCE.smoothViewAngle((Camera) (Object) this, entity.getViewXRot(partialTick),
+			true, entity.getId());
 	}
 }

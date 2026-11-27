@@ -23,5 +23,6 @@ public abstract class CroesusSlotMixin {
 	@Inject(method = "extractTooltip", at = @At("HEAD"))
 	private void geileraddons$croesusList(GuiGraphicsExtractor graphics, int mouseX, int mouseY, CallbackInfo ci) {
 		CroesusModule.INSTANCE.drawOverScreen(graphics, (AbstractContainerScreen<?>) (Object) this);
+		geiler.addons.client.module.impl.RareDropRatModule.INSTANCE.drawOverScreen(graphics);
 	}
 }

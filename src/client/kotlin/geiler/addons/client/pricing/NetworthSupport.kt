@@ -9,6 +9,11 @@ import it.unimi.dsi.fastutil.ints.IntList
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap
 import it.unimi.dsi.fastutil.objects.Object2ObjectMaps
 import net.azureaaron.networth.ItemCalculator
+import net.azureaaron.networth.MiscCalculators
+import net.azureaaron.networth.PetCalculator
+import net.azureaaron.networth.data.ModifierValues
+import net.azureaaron.networth.item.PetInfo
+import java.util.Optional
 import net.azureaaron.networth.data.SkyblockItemData
 import net.azureaaron.networth.item.ItemMetadataRetriever
 import net.azureaaron.networth.item.SkyblockItemStack
@@ -57,6 +62,30 @@ object NetworthSupport {
         } catch (_: Exception) {
             0.0
         }
+    }
+
+    /** Value of one pet as the library prices it (`LVL_1_` / `LVL_100_` / `LVL_200_<TIER>_<TYPE>` prices, skin, held item, candy). */
+    @JvmStatic
+    fun pet(type: String, xp: Double, tier: String, candyUsed: Int, heldItem: String?, skin: String?, price: ToDoubleFunction<String>): Double = try {
+        PetCalculator.calculate(PetInfo(type, xp, tier, candyUsed, Optional.ofNullable(heldItem), Optional.ofNullable(skin)), price, ModifierValues.DEFAULT).price()
+    } catch (_: Exception) {
+        0.0
+    }
+
+    /** Value of [amount] of a sack item (runes in their API form included). */
+    @JvmStatic
+    fun sackItem(id: String, amount: Long, price: ToDoubleFunction<String>): Double = try {
+        MiscCalculators.calculateSackItem(id, amount.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), price).price()
+    } catch (_: Exception) {
+        0.0
+    }
+
+    /** Value of [amount] essence of [type] (`WITHER`, `DRAGON`...), priced as `ESSENCE_<TYPE>`. */
+    @JvmStatic
+    fun essence(type: String, amount: Long, price: ToDoubleFunction<String>): Double = try {
+        MiscCalculators.calculateEssence(type.uppercase(), amount.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), price).price()
+    } catch (_: Exception) {
+        0.0
     }
 
     /** Bazaar buy price, else the 3-day average, else lowest BIN. */

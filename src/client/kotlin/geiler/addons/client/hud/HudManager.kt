@@ -251,6 +251,20 @@ object HudManager {
         return false
     }
 
+    /**
+     * [click] from an inventory or container screen. Clicks on the menu panel stay with the menu, which is drawn over
+     * the HUD there. shortcut: the open recipe book is not excluded; exclude it if it ever overlaps a clickable element.
+     */
+    @JvmStatic
+    fun clickInContainer(left: Int, top: Int, imageWidth: Int, imageHeight: Int, mouseX: Double, mouseY: Double, button: Int): Boolean {
+        if (insidePanel(left, top, imageWidth, imageHeight, mouseX, mouseY)) return false
+        return click(mouseX, mouseY, button)
+    }
+
+    @JvmStatic
+    fun insidePanel(left: Int, top: Int, imageWidth: Int, imageHeight: Int, mouseX: Double, mouseY: Double): Boolean =
+        mouseX >= left && mouseX < left + imageWidth && mouseY >= top && mouseY < top + imageHeight
+
     @JvmStatic
     fun positions(): Map<String, FloatArray> = snapshot()
 

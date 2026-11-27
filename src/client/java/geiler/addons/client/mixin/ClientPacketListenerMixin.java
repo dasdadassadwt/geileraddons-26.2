@@ -188,6 +188,12 @@ public abstract class ClientPacketListenerMixin {
 			DungeonBloodCampModule.INSTANCE.onEntityRemoved(entityId);
 	}
 
+	@Inject(method = "handleDamageEvent", at = @At("TAIL"))
+	private void geileraddons$markLootshareHit(net.minecraft.network.protocol.game.ClientboundDamageEventPacket packet, CallbackInfo ci) {
+		if (Minecraft.getInstance().isSameThread())
+			geiler.addons.client.module.impl.LootshareRangeModule.INSTANCE.onDamageEvent(packet);
+	}
+
 	/** Resolve Watcher and blood-mob head textures after vanilla has applied their equipment. */
 	@Inject(method = "handleSetEquipment", at = @At("TAIL"))
 	private void geileraddons$observeBloodCampHeadEquipment(ClientboundSetEquipmentPacket packet, CallbackInfo ci) {

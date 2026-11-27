@@ -53,6 +53,9 @@ class LookControl : FrameSteered {
     /** The angles asked for are an etherwarp's, not a teleport jump's: each has a speed of its own. */
     private var warp = false
     private var requestedNanos = 0L
+
+    /** The point is aimed at, not walked toward: [wanted] skips the walking pitch limits. */
+    private var exact = false
     private var staleLogged = false
 
     init {
@@ -69,11 +72,18 @@ class LookControl : FrameSteered {
     /** What is being looked at, for diagnostics: POINT, ENTITY, ANGLES or NONE. */
     fun kindName(): String = kind?.name ?: "NONE"
 
-    /** Looks at a fixed point in the world. */
+    /** Looks at a fixed point on the way: the pitch is held near level like a walking player's. */
     fun lookAt(target: Vec3) {
         kind = Kind.POINT
         point = target
+        exact = false
         requestedNanos = System.nanoTime()
+    }
+
+    /** Looks straight at a fixed point (a device target, a button): no walking pitch limits. */
+    fun lookAtExact(target: Vec3) {
+        lookAt(target)
+        exact = true
     }
 
     /**
@@ -211,6 +221,7 @@ class LookControl : FrameSteered {
             Kind.POINT -> {
                 val target = point ?: return null
                 val angles = SmoothRotation.lookAt(player.getEyePosition(partialTick), target)
+                if (exact) return angles
                 val falling = !player.onGround() && player.deltaMovement.y < -0.1
                 val limit = if (falling) FALL_PITCH_DOWN_LIMIT else WALK_PITCH_DOWN_LIMIT
                 var pitch = angles.pitch.toDouble()

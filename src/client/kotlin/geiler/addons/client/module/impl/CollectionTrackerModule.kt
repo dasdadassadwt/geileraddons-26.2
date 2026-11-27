@@ -356,7 +356,7 @@ class CollectionTrackerModule private constructor(private val s: Settings) : Mod
                         graphics.pose().pushMatrix()
                         graphics.pose().translate(left.toFloat(), top.toFloat())
                         graphics.pose().scale(ICON / 16f, ICON / 16f)
-                        graphics.item(compiled.stacks.get(entry), 0, 0)
+                        graphics.rarityItem(compiled.stacks.get(entry), 0, 0)
                         graphics.pose().popMatrix()
                     }
                     left += ICON + 2

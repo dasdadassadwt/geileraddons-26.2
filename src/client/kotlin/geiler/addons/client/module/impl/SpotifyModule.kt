@@ -40,7 +40,7 @@ import java.util.Locale
  */
 class SpotifyModule private constructor(private val s: Settings) : Module(
     "Spotify",
-    "Now playing HUD for Spotify: cover, title, artist, progress and controls (click them with chat open).",
+    "Now playing HUD for Spotify: cover, title, artist, progress and controls (click them with chat or an inventory open).",
     Category.MISCELLANEOUS,
     false,
     *s.all(),
@@ -120,7 +120,8 @@ class SpotifyModule private constructor(private val s: Settings) : Module(
         val current = playback()
         if (current != null && current.key != lastKey) {
             lastKey = current.key
-            diagnostics.event("TRACK source=${current.source} playing=${current.playing} hasArt=${current.artUrl != null}")
+            diagnostics.event("TRACK source=${current.source} playing=${current.playing} artistBlank=${current.artistText.isBlank()} " +
+                "durMs=${current.durationMs} posMs=${current.progressMs} artUrl=${current.artUrl != null} bridgeState=${bridge.lastState}")
             if (SpotifyBlocklist.blocked(current, blocklist) && lastSkipped != current.key) {
                 lastSkipped = current.key
                 autoSkips++
@@ -131,7 +132,8 @@ class SpotifyModule private constructor(private val s: Settings) : Module(
         diagnostics.statusOnChange(200L) {
             "source=${if (useWeb()) "web" else "windows"} loggedIn=${loggedIn()} auth=${SpotifyAuth.status} bridge=${bridge.status} " +
                 "playing=${current?.playing} premiumRequired=${api.premiumRequired} apiError=${api.lastError} " +
-                "blocklist=${blocklist.size} clicks=$clicks autoSkips=$autoSkips"
+                "blocklist=${blocklist.size} clicks=$clicks autoSkips=$autoSkips artBytes=${bridge.art?.size} artKeyMatch=${current != null && bridge.artKey == "${current.title}|${current.artistText}"} " +
+                "artErrors=${bridge.artErrors} artProblem=${bridge.lastArtProblem} artTexture=${current?.let { art(it) != null }} artDecodeFailures=${SpotifyArt.failures} readErrors=${bridge.readErrors} lastCommand=${bridge.lastCommand} buttons=${buttons.size}"
         }
     }
 
@@ -229,10 +231,11 @@ class SpotifyModule private constructor(private val s: Settings) : Module(
     override fun mouseClicked(localX: Double, localY: Double, button: Int): Boolean {
         if (button != 0) return false
         val hit = buttons.firstOrNull { localX >= it.x && localX < it.x + it.w && localY >= it.y && localY < it.y + it.h } ?: return false
+        if (!hit.enabled) diagnostics.event("CLICK_DISABLED button=${hit.label} source=${if (useWeb()) "web" else "windows"}")
         if (hit.enabled) {
             clicks++
             hit.run()
-            diagnostics.event("CLICK button=${hit.label}")
+            diagnostics.event("CLICK button=${hit.label} viaBridge=${controlsViaBridge()} bridgeRunning=${bridge.running}")
         }
         return true
     }
@@ -293,7 +296,7 @@ class SpotifyModule private constructor(private val s: Settings) : Module(
                 top += 6
             }
             if (s.showTime.value()) {
-                val time = "${clock(p.progressAt(now))} / ${clock(p.durationMs)}" + if (!p.playing) "  paused" else ""
+                val time = timeText(p.progressAt(now), p.durationMs, p.playing)
                 graphics.text(font, time, x + 4, top, GuiTheme.TEXT_SECONDARY)
                 top += line
             }
@@ -416,6 +419,11 @@ class SpotifyModule private constructor(private val s: Settings) : Module(
 
         @JvmField
         val INSTANCE = SpotifyModule(Settings())
+
+        /** `1:23 / 3:35`; only the elapsed time when the source gives no song length (Windows can report 0). */
+        @JvmStatic
+        fun timeText(progressMs: Long, durationMs: Long, playing: Boolean): String =
+            (if (durationMs > 0) "${clock(progressMs)} / ${clock(durationMs)}" else clock(progressMs)) + if (!playing) "  paused" else ""
 
         @JvmStatic
         fun clock(ms: Long): String {

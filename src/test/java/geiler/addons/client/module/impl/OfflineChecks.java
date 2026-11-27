@@ -214,6 +214,12 @@ public final class OfflineChecks {
 		step("WaypointChecks.run", () -> WaypointChecks.run());
 		step("F7FeatureChecks.run", () -> F7FeatureChecks.run());
 		step("LeverAimChecks.run", () -> geiler.addons.client.dungeon.f7.LeverAimChecks.run());
+		step("AutomationLockChecks.run", () -> geiler.addons.client.dungeon.f7.AutomationLockChecks.run());
+		step("AutoSimonSaysChecks.run", () -> geiler.addons.client.dungeon.f7.AutoSimonSaysChecks.run());
+		step("AutoI4Checks.run", () -> geiler.addons.client.dungeon.f7.AutoI4Checks.run());
+		step("AutoMaskChecks.run", () -> geiler.addons.client.dungeon.f7.AutoMaskChecks.run());
+		step("RareDropRatChecks.run", () -> geiler.addons.client.dungeon.f7.RareDropRatChecks.run());
+		step("AutoCroesusChecks.run", () -> geiler.addons.client.dungeon.f7.AutoCroesusChecks.run());
 		step("TickTimersChecks.run", () -> geiler.addons.client.dungeon.f7.TickTimersChecks.run());
 		step("SpiritLeapMapChecks.run", () -> geiler.addons.client.dungeon.helpers.SpiritLeapMapChecks.run());
 		step("WitherDragonChecks.run", () -> geiler.addons.client.dungeon.f7.WitherDragonChecks.run());
@@ -414,6 +420,23 @@ public final class OfflineChecks {
 		step("WalkKeysChecks.run", () -> geiler.addons.client.macros.input.WalkKeysChecks.run());
 		step("PathingChecks.run", () -> geiler.addons.client.macros.pathing.PathingChecks.run());
 		step("GateAreaChecks.run", () -> geiler.addons.client.macros.area.GateAreaChecks.run());
+		step("MuteEndermanSoundsChecks.run", () -> MuteEndermanSoundsChecks.run());
+		step("HuntingMethodsChecks.run", () -> geiler.addons.client.hunting.HuntingMethodsChecks.run());
+		step("ItemPullOutChecks.run", () -> ItemPullOutChecks.run());
+		step("DungeonAutoSplitChecks.run", () -> geiler.addons.client.dungeon.DungeonAutoSplitChecks.run());
+		step("SecretHitboxChecks.run", () -> geiler.addons.client.dungeon.SecretHitboxChecks.run());
+		step("BazaarPresetChecks.run", () -> geiler.addons.client.bazaar.BazaarPresetChecks.run());
+		step("SpinWheelChecks.run", () -> geiler.addons.client.spin.SpinWheelChecks.run());
+		step("SpiritBearChecks.run", () -> SpiritBearChecks.run());
+		step("RareMobHighlighterChecks.run", () -> RareMobHighlighterChecks.run());
+		step("LegionLootshareChecks.run", () -> LegionLootshareChecks.run());
+		step("CataCalculatorChecks.run", () -> geiler.addons.client.dungeon.CataCalculatorChecks.run());
+		step("ProfileViewerParserChecks.run", () -> geiler.addons.client.profileviewer.ProfileViewerParserChecks.run());
+		step("CustomPartyFinderChecks.run", () -> geiler.addons.client.dungeon.CustomPartyFinderChecks.run());
+		step("FancyAuctionChecks.run", () -> geiler.addons.client.bazaar.FancyAuctionChecks.run());
+		step("EquipmentInInventoryChecks.run", () -> EquipmentInInventoryChecks.run());
+		step("BundledDefaultsChecks.run", () -> geiler.addons.client.config.BundledDefaultsChecks.run());
+		step("DeviceSimChecks.run", () -> geiler.addons.client.sim.DeviceSimChecks.run());
 		step("KillerChecks.run", () -> geiler.addons.client.macros.killer.KillerChecks.run());
 		if (!FAILURES.isEmpty()) {
 			System.err.println(FAILURES.size() + " offline check(s) failed:");

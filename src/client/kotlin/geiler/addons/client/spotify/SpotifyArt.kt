@@ -29,6 +29,10 @@ object SpotifyArt {
     private val textures = LinkedHashMap<String, Identifier>()
     private val pending = HashSet<String>()
 
+    /** Covers that could not be downloaded or decoded; for diagnostics. Client thread. */
+    var failures = 0
+        private set
+
     /** The texture for [key] if loaded; otherwise starts loading it from [url] and returns null. Client thread. */
     fun fromUrl(key: String, url: String): Identifier? = textures[key] ?: run {
         if (pending.add(key)) worker.execute {
@@ -53,8 +57,12 @@ object SpotifyArt {
     private fun publish(key: String, bytes: ByteArray?) {
         val image = bytes?.let { decode(it) }
         Minecraft.getInstance().execute {
+            // A failed key stays pending, so an undecodable cover is not fetched and decoded again every frame.
+            if (image == null) {
+                failures++
+                return@execute
+            }
             pending.remove(key)
-            if (image == null) return@execute
             val id = GeilerAddons.id("spotify_art/${Integer.toHexString(key.hashCode())}_${textures.size}")
             Minecraft.getInstance().textureManager.register(id, DynamicTexture({ "GeilerAddons Spotify cover" }, image))
             textures[key] = id

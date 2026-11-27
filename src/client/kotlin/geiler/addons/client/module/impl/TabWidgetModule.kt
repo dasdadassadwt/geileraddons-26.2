@@ -23,7 +23,7 @@ import net.minecraft.network.chat.Component
 class TabWidgetModule private constructor(private val s: Settings) : Module(
     "Tab Widget",
     "Shows chosen tab-list widgets (Soulflow, Commissions, Pests, ...) as movable HUD panels, on their own islands.",
-    Category.TAB_WIDGETS,
+    Category.VISUAL,
     false,
     *s.all().toTypedArray(),
 ) {
@@ -35,14 +35,14 @@ class TabWidgetModule private constructor(private val s: Settings) : Module(
         fun all(): List<Setting> = listOf<Setting>(islandFilter) + appearance.all() + toggles.values
     }
 
-    private val diagnostics = ModuleDiagnostics(Category.TAB_WIDGETS, { name() }, 8, 100L, 400)
+    private val diagnostics = ModuleDiagnostics(Category.VISUAL, { name() }, 8, 100L, 400)
 
     @Volatile
     private var blocks: Map<String, List<String>> = emptyMap()
     private var tickCount = 0L
     private var tabRows = 0
 
-    /** One movable HUD panel per widget, registered with the HUD manager in the Tab Widgets category. */
+    /** One movable HUD panel per widget, registered with the HUD manager in the Visual category. */
     val panels: List<HudElement> = TabWidgetRules.WIDGETS.map { Panel(it) }
 
     init {

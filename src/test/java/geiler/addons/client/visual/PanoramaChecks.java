@@ -237,6 +237,10 @@ public final class PanoramaChecks {
 		check(!shader.contains("pyramid") && !shader.contains("beacon"), "the pyramids and their light beam are gone");
 		check(shader.contains("const float MAX_HEIGHT = " + PanoramaMath.MAX_TERRAIN_HEIGHT + ";"),
 			"the shader's rising-ray cut-off matches the terrain limit");
+		check(shader.contains("out float cover") && shader.contains("cover = min(cover,"),
+			"the march measures how close a missed ray passes a crest, so silhouettes blend instead of stepping");
+		check(shader.contains("float footA = foot / graze;"),
+			"ripples and grain fade by the grazing-angle footprint, so near dunes do not shimmer");
 		String fxaa = resource("/assets/geileraddons/shaders/core/panorama_fxaa.fsh");
 		check(fxaa.contains("uniform sampler2D InSampler;"), "the edge smoothing pass samples the desert by its bound name");
 	}

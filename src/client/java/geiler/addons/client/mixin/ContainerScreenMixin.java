@@ -18,6 +18,7 @@ public abstract class ContainerScreenMixin {
 		AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) (Object) this;
 		if (ExperimentSolverModule.INSTANCE.ownsScreen(screen)
 			|| geiler.addons.client.module.impl.TerminalSolverModule.INSTANCE.ownsScreen(screen)
-			|| geiler.addons.client.module.impl.StorageOverlayModule.INSTANCE.ownsScreen(screen)) ci.cancel();
+			|| geiler.addons.client.module.impl.StorageOverlayModule.INSTANCE.ownsScreen(screen)
+			|| geiler.addons.client.gui.ContainerSkins.owns(screen)) ci.cancel();
 	}
 }

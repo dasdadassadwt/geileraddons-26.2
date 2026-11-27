@@ -86,6 +86,10 @@ public abstract class AbstractContainerScreenMixin {
 			ci.cancel();
 			return;
 		}
+		if (geiler.addons.client.gui.ContainerSkins.render(screen, graphics, mouseX, mouseY)) {
+			ci.cancel();
+			return;
+		}
 		if (geiler.addons.client.module.impl.StorageOverlayModule.INSTANCE.renderCustomScreen(screen, graphics, mouseX, mouseY)) {
 			ci.cancel();
 			return;
@@ -124,6 +128,12 @@ public abstract class AbstractContainerScreenMixin {
 	private void geileraddons$clickExperimentSurface(MouseButtonEvent event, boolean doubleClick,
 		CallbackInfoReturnable<Boolean> cir) {
 		AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) (Object) this;
+		AbstractContainerScreenAccess panel = (AbstractContainerScreenAccess) (Object) screen;
+		if (geiler.addons.client.hud.HudManager.clickInContainer(leftPos, topPos, panel.geileraddons$getImageWidth(),
+			panel.geileraddons$getImageHeight(), event.x(), event.y(), event.button())) {
+			cir.setReturnValue(true);
+			return;
+		}
 		if (geiler.addons.client.rename.RenamePaintbrush.handleClick(screen, event)) {
 			cir.setReturnValue(true);
 			return;

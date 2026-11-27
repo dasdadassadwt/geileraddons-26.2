@@ -121,7 +121,26 @@ object GeilerAddonsCommand {
             WaypointCommands.appendTo(root)
             geiler.addons.client.module.impl.CrystalHollowsCommands.appendTo(root)
             geiler.addons.client.termsim.TermSimCommand.appendTo(root)
+            geiler.addons.client.dungeon.CataCommand.appendTo(root)
+            root.then(
+                ClientCommands.literal("hunt")
+                    .executes { geiler.addons.client.module.impl.HuntingMethodsModule.INSTANCE.openScreen(null); 1 }
+                    .then(ClientCommands.argument("fortune", com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, 1000))
+                        .executes {
+                            geiler.addons.client.module.impl.HuntingMethodsModule.INSTANCE.openScreen(
+                                com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(it, "fortune"))
+                            1
+                        }),
+            )
+            geiler.addons.client.sim.DeviceSimCommand.appendTo(root)
+            geiler.addons.client.spin.SpinCommand.appendTo(root)
             geiler.addons.client.rename.AnyRenameCommand.appendTo(root)
+            fun pv(literal: String, always: Boolean) = ClientCommands.literal(literal)
+                .executes { geiler.addons.client.module.impl.ProfileViewerModule.INSTANCE.command(null, always) }
+                .then(ClientCommands.argument("name", StringArgumentType.word())
+                    .executes { geiler.addons.client.module.impl.ProfileViewerModule.INSTANCE.command(StringArgumentType.getString(it, "name"), always) })
+            root.then(pv("pv", true))
+            dispatcher.register(pv("pv", false))
             val registeredRoot = dispatcher.register(root)
             for (alias in arrayOf("Ga", "gA", "GA")) {
                 dispatcher.register(

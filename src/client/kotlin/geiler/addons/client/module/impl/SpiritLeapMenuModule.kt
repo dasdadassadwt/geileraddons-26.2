@@ -23,7 +23,7 @@ class SpiritLeapMenuModule private constructor(private val settings: Settings) :
     settings.incomingTitle, settings.incomingTitleDurationTicks, settings.soundId, settings.classColors,
     settings.extraRoundness, settings.cardDistance, settings.tankColor, settings.berserkColor,
     settings.mageColor, settings.archerColor, settings.healerColor, settings.showPovs, settings.povFps,
-    settings.povTransparency, settings.sort, settings.keyMode, settings.customOrder, settings.topLeftKey,
+    settings.povTransparency, settings.povSmoothing, settings.sort, settings.keyMode, settings.customOrder, settings.topLeftKey,
     settings.topRightKey, settings.bottomLeftKey, settings.bottomRightKey, settings.archerKey,
     settings.berserkKey, settings.healerKey, settings.mageKey, settings.tankKey,
     settings.showMap, settings.mapScale,
@@ -38,7 +38,8 @@ class SpiritLeapMenuModule private constructor(private val settings: Settings) :
             SettingGroup("Teammate Cards", settings.classColors, settings.sort, settings.customOrder,
                 settings.extraRoundness, settings.cardDistance),
             SettingGroup("Dungeon Map", settings.showMap, settings.mapScale),
-            SettingGroup("POV Cameras", settings.showPovs, settings.povFps, settings.povTransparency),
+            SettingGroup("POV Cameras", settings.showPovs, settings.povFps, settings.povTransparency,
+                settings.povSmoothing),
             SettingGroup("Class Colors", settings.tankColor, settings.berserkColor, settings.mageColor,
                 settings.archerColor, settings.healerColor),
             SettingGroup(
@@ -77,7 +78,7 @@ class SpiritLeapMenuModule private constructor(private val settings: Settings) :
 
     override fun isSettingVisible(setting: Setting): Boolean {
         if (setting === mapScale) return showMap.value()
-        if (setting === povFps || setting === povTransparency) return showPovs.value()
+        if (setting === povFps || setting === povTransparency || setting === povSmoothing) return showPovs.value()
         if (setting === tankColor || setting === berserkColor || setting === mageColor ||
             setting === archerColor || setting === healerColor
         ) return classColors.value()
@@ -114,6 +115,7 @@ class SpiritLeapMenuModule private constructor(private val settings: Settings) :
         val showPovs = BooleanSetting("Show POVs", "Show POVs", true)
         val povFps = NumberSetting("POV FPS", 1f, 30f, 4f, true)
         val povTransparency = NumberSetting("POV Transparency", "POV Transparency", 0f, 100f, 0f, true, false)
+        val povSmoothing = NumberSetting("POV Camera Smoothing", "POV Camera Smoothing", 0f, 100f, 0f, true, false)
         val sort = ChoiceSetting(
             "Sort Teammates", "ODIN",
             Map.of("ODIN", "Class Layout", "CLASS", "Class Order", "NAME", "Name", "HEALTH", "Health", "CUSTOM", "Custom"),
@@ -166,6 +168,9 @@ class SpiritLeapMenuModule private constructor(private val settings: Settings) :
         @JvmField val showPovs = defaultSettings.showPovs
         @JvmField val povFps = defaultSettings.povFps
         @JvmField val povTransparency = defaultSettings.povTransparency
+        @JvmField val povSmoothing = defaultSettings.povSmoothing
+
+        @JvmStatic fun povSmoothingPercent(): Int = Math.round(povSmoothing.value())
         @JvmField val sort = defaultSettings.sort
         @JvmField val keyMode = defaultSettings.keyMode
         @JvmField val customOrder = defaultSettings.customOrder
@@ -202,7 +207,7 @@ class SpiritLeapMenuModule private constructor(private val settings: Settings) :
             "cards=${showCardsAndKeys.value()} classColors=${classColors.value()}" +
                 " sort=${sort.value()} roundness=${extraRoundness.intValue()}" +
                 " distance=${cardDistance.display()} colors=${tankColor.hex()}/${berserkColor.hex()}/${mageColor.hex()}/${archerColor.hex()}/${healerColor.hex()}" +
-                " showPOVs=${showPovs.value()} povFps=${povUpdatesPerSecond()}" +
+                " showPOVs=${showPovs.value()} povFps=${povUpdatesPerSecond()} povSmoothing=${povSmoothingPercent()}" +
                 " povTransparency=${povTransparencyPercent()} clickPhase=${if (onMouseRelease.value()) "release" else "press"}" +
                 " keyMode=${keyMode.value()} map=${showMap.value()} mapScale=${mapScale.display()}" +
                 " cornerKeys[tl=${boundedDiagnosticText(topLeftKey.value(), MAX_DIAGNOSTIC_KEY_CHARS)}" +

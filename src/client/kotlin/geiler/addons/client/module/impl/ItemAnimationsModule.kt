@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.math.Axis
 import geiler.addons.client.module.BooleanSetting
 import geiler.addons.client.module.Category
+import geiler.addons.client.module.ChoiceSetting
 import geiler.addons.client.module.Module
 import geiler.addons.client.module.ModuleAction
 import geiler.addons.client.module.NumberSetting
@@ -40,6 +41,8 @@ class ItemAnimationsModule private constructor(settings: Settings) : Module(
     settings.noSwing,
     settings.noSwingTerm,
     settings.noHandSway,
+    settings.pullOutStyle,
+    settings.pullOutSpeed,
     settings.reset,
 ) {
     private val xOffset = settings.xOffset
@@ -58,6 +61,12 @@ class ItemAnimationsModule private constructor(settings: Settings) : Module(
     private val noSwing = settings.noSwing
     private val noSwingTerm = settings.noSwingTerm
     private val noHandSway = settings.noHandSway
+    private val pullOutStyle = settings.pullOutStyle
+    private val pullOutSpeed = settings.pullOutSpeed
+
+    private var lastHeldKey: String? = null
+    private var pullOutStartNanos = Long.MIN_VALUE
+    private var pullOutsSinceStatus = 0
 
     private var lastLevel: Any? = null
     private val itemScaleScopes = ThreadLocal.withInitial { ArrayDeque<Boolean>() }
@@ -102,6 +111,7 @@ class ItemAnimationsModule private constructor(settings: Settings) : Module(
                 settings.noSwingTerm,
                 settings.noHandSway,
             ),
+            SettingGroup("Pull-Out", settings.pullOutStyle, settings.pullOutSpeed),
             SettingGroup("Apply To", settings.changeHand, settings.changeMap),
         )
     }
@@ -134,6 +144,8 @@ class ItemAnimationsModule private constructor(settings: Settings) : Module(
         val noSwing = BooleanSetting("noSwing", "Disable Swing", false)
         val noSwingTerm = BooleanSetting("noSwingTerm", "Disable Terminator Swing", false)
         val noHandSway = BooleanSetting("noHandSway", "No Hand Sway", true)
+        val pullOutStyle = ChoiceSetting("Pull-Out Style", "Vanilla", *PULL_OUT_STYLES)
+        val pullOutSpeed = NumberSetting("Pull-Out Speed", 0.25f, 3.0f, 1.0f)
         val reset = ModuleAction("Reset Values", Runnable { ItemAnimationsModule.INSTANCE.resetValues() })
 
         private fun angle(name: String, label: String, value: Float) =
@@ -165,6 +177,33 @@ class ItemAnimationsModule private constructor(settings: Settings) : Module(
         pose.mulPose(Axis.YP.rotationDegrees(yawOffset.value()))
         pose.mulPose(Axis.ZP.rotationDegrees(rollOffset.value()))
         pose.translate(xOffset.value(), yOffset.value(), zOffset.value())
+    }
+
+    /** Main hand only: offsets the item along the chosen pull-out curve right after a hotbar switch. */
+    fun applyPullOut(pose: PoseStack?, mainHand: Boolean) {
+        if (pose == null || !mainHand || !isEnabled() || pullOutStyle.value() == "Vanilla" || pullOutStartNanos == Long.MIN_VALUE) return
+        val t = pullOutProgress(pullOutStartNanos, System.nanoTime(), pullOutSpeed.value())
+        if (t >= 1f) return
+        val p = pullOutPose(pullOutStyle.value(), t)
+        pose.translate(p[0], p[1], p[2])
+        pose.mulPose(Axis.YP.rotationDegrees(p[3]))
+        pose.mulPose(Axis.ZP.rotationDegrees(p[4]))
+        pose.scale(p[5], p[5], p[5])
+    }
+
+    /** A custom style draws its own motion, so vanilla's lower-and-raise is skipped while one is chosen. */
+    fun customPullOut(): Boolean = isEnabled() && pullOutStyle.value() != "Vanilla"
+
+    private fun trackHeldItem(client: Minecraft) {
+        val player = client.player ?: return
+        val stack = player.mainHandItem
+        val key = "${player.inventory.selectedSlot}:${if (stack.isEmpty) "empty" else stack.item.toString()}"
+        if (lastHeldKey != null && key != lastHeldKey && customPullOut()) {
+            pullOutStartNanos = System.nanoTime()
+            pullOutsSinceStatus = incrementCount(pullOutsSinceStatus)
+            diagnostics.event("PULL_OUT style=${pullOutStyle.value()} speed=${pullOutSpeed.value()} slot=${player.inventory.selectedSlot}")
+        }
+        lastHeldKey = key
     }
 
     /** Marks the synchronous vanilla held-item submission so scaling can follow its model transform. */
@@ -254,6 +293,7 @@ class ItemAnimationsModule private constructor(settings: Settings) : Module(
             if (diagnosticsEnabled) reportDiagnostics(client)
             return
         }
+        trackHeldItem(client)
         previousAttackAnimation = attackAnimation
         val duration = currentSwingDuration()
         if (swinging) {
@@ -336,7 +376,7 @@ class ItemAnimationsModule private constructor(settings: Settings) : Module(
                     "scaleScope=$scaleScopesSinceStatus/$eligibleScaleScopesSinceStatus;" +
                     "deferredScale=$deferredScalesAppliedSinceStatus;" +
                     "mapScale=$mapScaleCallsSinceStatus/$mapScalesAppliedSinceStatus;" +
-                    "swingProgress=$swingProgressCallsSinceStatus/$swingProgressSuppressedSinceStatus}"
+                    "swingProgress=$swingProgressCallsSinceStatus/$swingProgressSuppressedSinceStatus;pullOuts=$pullOutsSinceStatus}"
                 resetDiagnosticCounters()
                 line
             },
@@ -355,7 +395,8 @@ class ItemAnimationsModule private constructor(settings: Settings) : Module(
             "scaleExponent=${scale.value()};swingSpeedExponent=${swingSpeed.value()};" +
             "changeHand=${changeHand.value()};changeMap=${changeMap.value()};ignoreEffects=${ignoreEffects.value()};" +
             "noReequipReset=${noReequipReset.value()};inPlaceSwing=${inPlaceSwing.value()};" +
-            "noSwing=${noSwing.value()};noSwingTerm=${noSwingTerm.value()};noHandSway=${noHandSway.value()}}"
+            "noSwing=${noSwing.value()};noSwingTerm=${noSwingTerm.value()};noHandSway=${noHandSway.value()};" +
+            "pullOutStyle=${pullOutStyle.value()};pullOutSpeed=${pullOutSpeed.value()}}"
 
     private fun resetDiagnosticCounters() {
         transformCallsSinceStatus = 0
@@ -367,6 +408,7 @@ class ItemAnimationsModule private constructor(settings: Settings) : Module(
         mapScalesAppliedSinceStatus = 0
         swingProgressCallsSinceStatus = 0
         swingProgressSuppressedSinceStatus = 0
+        pullOutsSinceStatus = 0
     }
 
     private fun incrementCount(value: Int): Int = (value + 1).coerceAtMost(MAX_DIAGNOSTIC_COUNT)
@@ -378,6 +420,31 @@ class ItemAnimationsModule private constructor(settings: Settings) : Module(
         private const val MAX_DIAGNOSTIC_EVENTS_PER_TICK = 16
         private const val MAX_DIAGNOSTIC_COUNT = 1_000_000
         private const val MAX_DIAGNOSTIC_LINE_LENGTH = 1024
+        private const val PULL_OUT_NANOS = 300_000_000L
+        private val PULL_OUT_STYLES = arrayOf("Vanilla", "Rise", "Spin", "Pop", "Swing In")
+
+        /** 0..1 through a pull-out of 300 ms at speed 1. */
+        @JvmStatic
+        fun pullOutProgress(startNanos: Long, nowNanos: Long, speed: Float): Float =
+            ((nowNanos - startNanos).toDouble() * speed / PULL_OUT_NANOS).coerceIn(0.0, 1.0).toFloat()
+
+        /** The pose offset at progress [t]: dx, dy, dz, yaw degrees, roll degrees, scale. Identity at t >= 1. */
+        @JvmStatic
+        fun pullOutPose(style: String, t: Float): FloatArray {
+            val c = t.coerceIn(0f, 1f)
+            val left = (1f - c) * (1f - c) * (1f - c) // 1 - ease-out cubic
+            return when (style) {
+                "Rise" -> floatArrayOf(0f, -0.6f * left, 0f, 0f, 0f, 1f)
+                "Spin" -> floatArrayOf(0f, -0.2f * left, 0f, 360f * left, 0f, 1f)
+                "Pop" -> {
+                    val back = 1.70158f
+                    val u = c - 1f
+                    floatArrayOf(0f, 0f, 0f, 0f, 0f, 0.2f + 0.8f * (1f + (back + 1f) * u * u * u + back * u * u))
+                }
+                "Swing In" -> floatArrayOf(0.5f * left, 0f, 0f, 0f, -60f * left, 1f)
+                else -> floatArrayOf(0f, 0f, 0f, 0f, 0f, 1f)
+            }
+        }
 
         @JvmField
         val INSTANCE = ItemAnimationsModule(Settings())

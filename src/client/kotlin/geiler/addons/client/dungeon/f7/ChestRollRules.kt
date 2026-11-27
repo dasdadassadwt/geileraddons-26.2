@@ -237,6 +237,37 @@ object ChestRollRules {
         }
     }
 
+    /** Indexes of a Croesus preview chest's loot lines: after "Contents", before the first blank line; null when there are none. */
+    @JvmStatic
+    fun lootLineRange(lines: List<String>): IntRange? {
+        val start = lines.indexOfFirst { it.trim() == "Contents" } + 1
+        if (start == 0) return null
+        val end = (start until lines.size).firstOrNull { lines[it].isBlank() } ?: return null
+        return if (end > start) start until end else null
+    }
+
+    private val COLOR_CODE = Regex("""§.""")
+    private val COUNT_SUFFIX = Regex("""\s+x\d+$""")
+
+    /** A loot name compared across the preview lore and the opened chest: no colour codes, counts or book enchant names. */
+    private fun lootName(name: String): String {
+        val plain = COLOR_CODE.replace(name, "").trim().replace(COUNT_SUFFIX, "").lowercase()
+        return if (plain.startsWith("enchanted book")) "enchanted book" else plain
+    }
+
+    /** True when the preview's loot lines and the opened chest's item names are the same items (order free). */
+    @JvmStatic
+    fun previewMatches(previewLines: List<String>, openedNames: List<String>): Boolean =
+        previewLines.isNotEmpty() && previewLines.map(::lootName).sorted() == openedNames.map(::lootName).sorted()
+
+    /** Whether a chest screen is covered before its roll starts, so the loot never shows for a frame. */
+    @JvmStatic
+    fun covers(tierEnabled: Boolean, known: Boolean, elapsedMs: Long): Boolean =
+        tierEnabled && !known && elapsedMs < COVER_MAX_MS
+
+    /** The longest a chest stays covered while waiting for its roll; past it the chest shows (an item packet never came). */
+    const val COVER_MAX_MS = 1500L
+
     private const val EDGE_MARGIN = 4.0
     const val SETTLE_MS = 300L
     const val REVEAL_MS = 1600L

@@ -19,7 +19,7 @@ public final class CodeStyleChecks {
 		"BlockPickerScreen", "ClickGuiClassicScreen", "ClickGuiScreen", "ClickGuiScreenImpl", "ConfigResetScreen", "ConfigTransferScreen", "CosmeticsScreen",
 		"DungeonFloorPickerScreen", "DungeonGuideEditorScreen", "DungeonGuideStagesScreen", "FolderManagerScreen",
 		"GuiColorPickerScreen", "HotbarBindingCaptureScreen", "InventoryButtonPickerScreen", "InventoryButtonTextScreen", "ItemPickerScreen", "MacroShareScreen", "MoveUiScreen",
-		"PlayerSizeEditorScreen", "RenameScreen", "ScoreboardFontImportScreen", "ScratchMacroEditorScreen", "SecretWaypointEditorScreen",
+		"HuntingMethodsScreen", "PlayerSizeEditorScreen", "ProfileViewerScreen", "RenameScreen", "ScoreboardFontImportScreen", "ScratchMacroEditorScreen", "SecretWaypointEditorScreen", "SpinWheelScreen",
 		"TikiCoordManagerScreen", "WaypointManagerScreen");
 	private static final int MAX_FACADE_PAIRS = 62;
 	private static final int MAX_FILE_LINES = 4300;

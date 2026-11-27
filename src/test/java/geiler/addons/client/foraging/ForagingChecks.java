@@ -84,16 +84,32 @@ public final class ForagingChecks {
 		assertEq(7, ForagingRules.colorIndex("lapis_lazuli"), "lapis is the blue dye");
 		assertEq(7, ForagingRules.paneIndex("blue_stained_glass_pane"), "blue pane lines up with lapis");
 		assertEq(-1, ForagingRules.paneIndex("stone"), "not a pane");
-		assertEq(5, ForagingRules.speedFromTicks(10), "fastest");
-		assertEq(1, ForagingRules.speedFromTicks(64), "slowest");
-		assertEq(3, ForagingRules.speedFromTicks(35), "middle");
+		assertEq(5, ForagingRules.speedFromTicks(12), "fastest");
+		assertEq(4, ForagingRules.speedFromTicks(19), "19 is nearer 22 than 12");
+		assertEq(1, ForagingRules.speedFromTicks(52), "slowest");
+		assertEq(3, ForagingRules.speedFromTicks(33), "middle");
 		assertEq(-1, ForagingRules.speedFromTicks(65), "out of range");
+		assertEq(-1, ForagingRules.speedFromTicks(3), "too fast");
+		checkTunerSpeedMeter();
 		assertEq(0, ForagingRules.pitchIndex(0.0952381f), "low");
 		assertEq(2, ForagingRules.pitchIndex(1.4920635f), "high");
 		assertEq(-1, ForagingRules.pitchIndex(1.0f), "unknown pitch");
 		assertEq(1, ForagingRules.pitchFromLore("Pitch: Normal"), "pitch from lore");
 		assertEq(4, ForagingRules.speedFromLore("Speed: 4"), "speed from lore");
+		assertEq(3, ForagingRules.speedFromLore("Current speed: 3"), "lower-case speed line");
 		assertEq(0, ForagingRules.speedFromLore("Speed: 9"), "bad speed");
+	}
+
+	private static void checkTunerSpeedMeter() {
+		TunerSpeedMeter meter = new TunerSpeedMeter();
+		assertEq(-1, meter.move(5L), "the first move only starts the clock");
+		assertEq(4, meter.move(27L), "one full interval");
+		assertEq(4, meter.move(49L), "steady");
+		assertEq(4, meter.move(109L), "one lag spike is ignored by the median");
+		assertEq(4, meter.move(130L), "jitter of one tick");
+		meter.reset();
+		assertEq(-1, meter.move(500L), "reset restarts the clock");
+		assertEq(5, meter.move(512L), "after reset");
 	}
 
 	private static void checkSweep() {

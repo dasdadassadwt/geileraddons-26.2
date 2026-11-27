@@ -55,6 +55,7 @@ object EspRenderer {
     private const val SPHERE_LONGITUDES = 24
     private const val SPHERE_ROW = SPHERE_LONGITUDES + 1
     private const val RING_SEGMENTS = 48
+    private const val RANGE_CIRCLES = 8
 
     /** A unit sphere's vertices, built once instead of recalculating trig values per frame. */
     private val SPHERE = buildUnitSphere()
@@ -213,6 +214,48 @@ object EspRenderer {
                 sphereVertex(quads, pose, index(lat + 1, lon), cx, cy, cz, radius, fillColor)
                 sphereVertex(quads, pose, index(lat + 1, lon + 1), cx, cy, cz, radius, fillColor)
                 sphereVertex(quads, pose, index(lat, lon + 1), cx, cy, cz, radius, fillColor)
+            }
+        }
+    }
+
+    /** A range sphere: faint fill when [fill] is on, and always the lines that show its shape. Camera-relative. */
+    @JvmStatic
+    fun renderRangeSphere(
+        poseStack: PoseStack,
+        bufferSource: WorldRenderBuffer.BufferSource,
+        cx: Double,
+        cy: Double,
+        cz: Double,
+        radius: Float,
+        color: Int,
+        fill: Boolean,
+    ) {
+        if (!radius.isFinite() || radius <= 0 || !hasAlpha(color)) return
+        // A quarter of the line alpha, so what is inside the sphere stays readable.
+        if (fill) renderSphere(poseStack, bufferSource, cx, cy, cz, radius, ((color ushr 26) shl 24) or (color and 0xFFFFFF), true)
+        for (circle in 1 until RANGE_CIRCLES) {
+            val theta = Math.PI * circle / RANGE_CIRCLES
+            renderRing(
+                poseStack, bufferSource, cx, cy + radius * Math.cos(theta), cz,
+                (radius * Math.sin(theta)).toFloat(), color, 2.0f, true,
+            )
+        }
+        val lines = bufferSource.getBuffer(GeilerAddonsRenderTypes.lines(true))
+        val pose = poseStack.last()
+        for (meridian in 0 until RANGE_CIRCLES) {
+            val phi = Math.PI * meridian / RANGE_CIRCLES
+            var previousX = cx.toFloat()
+            var previousY = (cy + radius).toFloat()
+            var previousZ = cz.toFloat()
+            for (segment in 1..RING_SEGMENTS) {
+                val theta = Math.PI * 2.0 * segment / RING_SEGMENTS
+                val x = (cx + radius * Math.sin(theta) * Math.cos(phi)).toFloat()
+                val y = (cy + radius * Math.cos(theta)).toFloat()
+                val z = (cz + radius * Math.sin(theta) * Math.sin(phi)).toFloat()
+                line(lines, pose, previousX, previousY, previousZ, x, y, z, color, 2.0f)
+                previousX = x
+                previousY = y
+                previousZ = z
             }
         }
     }

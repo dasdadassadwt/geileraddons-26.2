@@ -9,6 +9,7 @@ public final class ClickGuiFlatChecks {
 
 	public static void run() {
 		checkDesignScale();
+		checkPanelOrigin();
 		checkHeader();
 		checkCardControls();
 		checkLiquidSwitch();
@@ -29,6 +30,21 @@ public final class ClickGuiFlatChecks {
 			"with the lock off the menu follows the Minecraft GUI scale");
 	}
 
+	private static void checkPanelOrigin() {
+		// framebuffer width, framebuffer height, Minecraft GUI scale
+		for (int[] size : new int[][] {{2560, 1369, 2}, {1920, 1080, 3}, {1920, 1080, 4}, {3840, 2160, 2}, {800, 450, 2}}) {
+			float pose = ClickGuiDesignScale.poseScale(size[0], size[1], size[2], true);
+			for (int side = 0; side < 2; side++) {
+				int screen = ClickGuiDesignScale.virtualSize(size[side] / size[2], pose);
+				int panel = side == 0 ? ClickGuiHeaderGeometry.panelWidthForScreen(screen)
+					: ClickGuiHeaderGeometry.panelHeightForScreen(screen);
+				int origin = ClickGuiHeaderGeometry.panelOriginForScreen(screen, panel);
+				check(origin >= 0 && origin + panel <= screen && Math.abs(origin - (screen - origin - panel)) <= 1,
+					"the panel is centred on the design screen: " + size[0] + "x" + size[1] + " at GUI scale " + size[2]);
+			}
+		}
+	}
+
 	private static void checkHeader() {
 		int panelW = ClickGuiHeaderGeometry.panelWidthForScreen(958);
 		int panelH = ClickGuiHeaderGeometry.panelHeightForScreen(511);
@@ -45,8 +61,10 @@ public final class ClickGuiFlatChecks {
 		check(search.x() == gridLeft, "the search bar starts at the card grid's left edge");
 		check(search.x() + search.w() == first.x() - 8, "the search bar ends 8 px before the toolbar");
 		check(last.x() + last.w() == gridContentRight, "the toolbar ends at the card grid's right edge");
-		check(ClickGuiScreen.TopBarIcon.values().length == 6 && first.w() == 30 && first.y() == py + 5,
-			"six 30 px toolbar buttons sit centred in the top bar");
+		check(ClickGuiScreen.TopBarIcon.values().length == 7 && first.w() == 30 && first.y() == py + 5,
+			"seven 30 px toolbar buttons sit centred in the top bar");
+		check(ClickGuiScreen.TopBarIcon.HUNTING.ordinal() == ClickGuiScreen.TopBarIcon.COSMETICS.ordinal() + 1,
+			"the Hunting Methods button sits right of the Cosmetics button");
 		check(ClickGuiScreen.TopBarIcon.COSMETICS.ordinal() == ClickGuiScreen.TopBarIcon.THEME.ordinal() + 1,
 			"the Cosmetics button sits right of the Theme button");
 		check(search.h() == 21 && search.y() == py + 9, "the search bar is 21 px tall and centred");

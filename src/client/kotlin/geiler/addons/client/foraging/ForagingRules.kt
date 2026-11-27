@@ -104,8 +104,9 @@ object ForagingRules {
     private val PITCH_VALUES = floatArrayOf(0.0952381f, 0.7936508f, 1.4920635f)
     private val PITCH_NAMES = listOf("Low", "Normal", "High")
 
-    /** Target pane speeds by ticks between its moves: 1 is slowest (50-64 ticks), 5 fastest (10-19). */
-    private val SPEED_TICKS = listOf(50..64, 40..49, 30..39, 20..29, 10..19)
+    /** Server ticks between two moves of the target pane, for speeds 1..5 (SkyHanni's measured values). */
+    private val SPEED_TICKS = doubleArrayOf(52.0, 42.0, 32.0, 22.0, 12.0)
+    private const val SPEED_TOLERANCE = 6.0
 
     @JvmStatic
     fun colorIndex(itemPath: String): Int = DYES.indexOf(itemPath)
@@ -121,11 +122,13 @@ object ForagingRules {
         return if (forward <= backward) forward else -backward
     }
 
-    /** The speed (1..5) a target pane moving every [ticks] ticks stands for, or -1. */
+    /** The speed (1..5) nearest to a target pane moving every [ticks] server ticks, or -1. */
     @JvmStatic
-    fun speedFromTicks(ticks: Int): Int {
-        val index = SPEED_TICKS.indexOfFirst { ticks in it }
-        return if (index < 0) -1 else index + 1
+    fun speedFromTicks(ticks: Int): Int = speedFromTicks(ticks.toDouble())
+
+    fun speedFromTicks(ticks: Double): Int {
+        val index = SPEED_TICKS.indices.minBy { Math.abs(SPEED_TICKS[it] - ticks) }
+        return if (Math.abs(SPEED_TICKS[index] - ticks) > SPEED_TOLERANCE) -1 else index + 1
     }
 
     @JvmStatic
@@ -134,7 +137,7 @@ object ForagingRules {
     @JvmStatic
     fun pitchFromLore(line: String): Int = PITCH_NAMES.indexOfFirst { line.contains(it) }
 
-    private val SPEED_LINE = Regex("Speed:\\s*(\\d)")
+    private val SPEED_LINE = Regex("speed:\\s*(\\d)", RegexOption.IGNORE_CASE)
 
     /** The speed written on the speed button, 1..5, or 0. */
     @JvmStatic

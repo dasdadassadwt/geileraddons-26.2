@@ -10,6 +10,8 @@ import geiler.addons.client.module.ModuleSettingsSpec
 import geiler.addons.client.render.EspRenderer
 import geiler.addons.client.render.GeilerAddonsRenderTypes
 import geiler.addons.client.render.WorldRenderBuffer
+import geiler.addons.client.sim.DeviceSimGeometry
+import geiler.addons.client.sim.DeviceSimService
 import geiler.addons.client.tree.ChatText
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext
 import net.minecraft.ChatFormatting
@@ -25,7 +27,10 @@ import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.phys.Vec3
 
-/** Highlights the nine-block device panel on the Catacombs F7/M7 4th-device puzzle. */
+/**
+ * Highlights the nine-block device panel on the Catacombs F7/M7 4th-device puzzle. Its rules are in Floor 7
+ * coordinates; while `/ga sim i4` runs, world positions are mapped to and from those.
+ */
 class I4HelperModule private constructor(settings: Settings) : Module(
     "i4 helper",
     "Highlights the F7/M7 device panel and marks the next block to click.",
@@ -68,6 +73,7 @@ class I4HelperModule private constructor(settings: Settings) : Module(
 
     override fun onEnable() {
         clearDeviceState()
+        delayedSounds.clear()
         contextLevel = null
         contextFloor = null
         diagnosticTick = 0
@@ -86,6 +92,7 @@ class I4HelperModule private constructor(settings: Settings) : Module(
     override fun onDisable() {
         writeDiagnostic("EVENT FEATURE_DISABLED " + diagnosticState())
         clearDeviceState()
+        delayedSounds.clear()
         contextLevel = null
         contextFloor = null
         GeilerAddonsLog.setModuleDiagnosticsEnabled(Category.F7, name(), false)
@@ -107,10 +114,13 @@ class I4HelperModule private constructor(settings: Settings) : Module(
         val floor = DungeonContextTracker.currentFloor()
         val level = client.level
         val player = client.player
-        if (!I4HelperRules.supportsDungeonContext(DungeonContextTracker.inDungeon(), floor)
+        // Before the context check: finishing the sim ends its context, but the done sounds still play out.
+        tickDelayedSounds()
+        val sim = sim()
+        if ((sim == null && !I4HelperRules.supportsDungeonContext(DungeonContextTracker.inDungeon(), floor))
             || level == null || player == null
         ) {
-            val hadContext = contextLevel != null || onDevice || delayedSounds.isNotEmpty()
+            val hadContext = contextLevel != null || onDevice
             clearDeviceState()
             contextLevel = null
             contextFloor = null
@@ -129,7 +139,8 @@ class I4HelperModule private constructor(settings: Settings) : Module(
             if (changed) recordEvent("CONTEXT_CHANGED floor=" + floor?.name)
         }
 
-        val nowOnDevice = I4HelperRules.isOnDevice(player.x, Mth.floor(player.y), player.z)
+        val feet = sim?.toReal(player.position()) ?: player.position()
+        val nowOnDevice = I4HelperRules.isOnDevice(feet.x, Mth.floor(feet.y), feet.z)
         if (nowOnDevice != onDevice) {
             onDevice = nowOnDevice
             if (onDevice) {
@@ -148,8 +159,58 @@ class I4HelperModule private constructor(settings: Settings) : Module(
             // positions already known complete.
             syncActiveFromLevel(reset = false)
         }
+    }
 
-        tickDelayedSounds()
+    private fun sim(): DeviceSimGeometry.Frame? = DeviceSimService.frame(DeviceSimService.Kind.I4)
+
+    private fun toWorld(real: BlockPos): BlockPos = sim()?.toSim(real) ?: real
+
+    /** For Auto i4: the panel index of the current emerald while standing on the device, or -1. */
+    fun activeTargetIndex(): Int {
+        if (!isEnabled() || !onDevice || !hasCurrentDeviceContext()) return -1
+        return highlighted.indexOfFirst { it == I4HelperRules.ACTIVE }
+    }
+
+    /** For Auto i4: the first aim spot of the current emerald in world coordinates (turned onto the sim), or null. */
+    fun activeAimPoint(): Vec3? {
+        val active = activeTargetIndex()
+        if (active < 0) return null
+        val done = highlighted.indices.filter { highlighted[it] == I4HelperRules.COMPLETED }
+        val spot = I4HelperRules.aimSpots(active, done).firstOrNull() ?: return null
+        return sim()?.toSim(spot) ?: spot
+    }
+
+    /**
+     * For Auto i4 prefire: the orange spheres, the aim spots of every target not lit yet, as (panel index, world point),
+     * without the spots of the current emerald. Empty off the device.
+     */
+    fun prefireAimPoints(): List<Pair<Int, Vec3>> {
+        if (!isEnabled() || !onDevice || !hasCurrentDeviceContext()) return emptyList()
+        val done = highlighted.indices.filter { highlighted[it] == I4HelperRules.COMPLETED }
+        val active = highlighted.indexOfFirst { it == I4HelperRules.ACTIVE }
+        val activeSpots = if (active >= 0) I4HelperRules.aimSpots(active, done) else emptyList()
+        val out = ArrayList<Pair<Int, Vec3>>()
+        for (i in highlighted.indices) {
+            if (highlighted[i] != I4HelperRules.REMAINING) continue
+            for (spot in I4HelperRules.aimSpots(i, done)) {
+                if (I4HelperRules.matchesAny(spot, activeSpots)) continue
+                out.add(i to (sim()?.toSim(spot) ?: spot))
+            }
+        }
+        return out
+    }
+
+    /** A new sim device: drop what was seen of the last one. */
+    fun onSimStart() {
+        if (!isEnabled()) return
+        clearDeviceState()
+        contextLevel = null
+        recordEvent("SIM_ATTACH")
+    }
+
+    /** The sim was finished, which on Floor 7 a chat line would say. */
+    fun onSimDone() {
+        if (isEnabled() && onDevice) notifyDone()
     }
 
     private fun hasCurrentDeviceContext(): Boolean {
@@ -157,14 +218,13 @@ class I4HelperModule private constructor(settings: Settings) : Module(
         val floor = DungeonContextTracker.currentFloor()
         return client.level != null && client.player != null && client.level === contextLevel
             && floor == contextFloor
-            && I4HelperRules.supportsDungeonContext(DungeonContextTracker.inDungeon(), floor)
+            && (sim() != null || I4HelperRules.supportsDungeonContext(DungeonContextTracker.inDungeon(), floor))
     }
 
     private fun clearDeviceState() {
         onDevice = false
         notified = false
         highlighted.fill(I4HelperRules.NONE)
-        delayedSounds.clear()
     }
 
     /**
@@ -174,7 +234,7 @@ class I4HelperModule private constructor(settings: Settings) : Module(
     private fun syncActiveFromLevel(reset: Boolean) {
         val level = Minecraft.getInstance().level ?: return
         for (i in highlighted.indices) {
-            val pos = I4HelperRules.panelPosition(i)
+            val pos = toWorld(I4HelperRules.panelPosition(i))
             if (!level.isLoaded(pos)) continue
             val block = level.getBlockState(pos).block
             if (block === Blocks.EMERALD_BLOCK) {
@@ -187,7 +247,7 @@ class I4HelperModule private constructor(settings: Settings) : Module(
 
     fun onBlockChange(pos: BlockPos, state: BlockState) {
         if (!isEnabled() || !onDevice || !hasCurrentDeviceContext()) return
-        val index = I4HelperRules.findPanelIndex(pos)
+        val index = I4HelperRules.findPanelIndex(sim()?.toReal(pos) ?: pos)
         if (index == -1) return
 
         val block = state.block
@@ -251,7 +311,7 @@ class I4HelperModule private constructor(settings: Settings) : Module(
             val state = highlighted[i]
             if (state != I4HelperRules.COMPLETED && state != I4HelperRules.ACTIVE) continue
 
-            val pos = I4HelperRules.panelPosition(i)
+            val pos = toWorld(I4HelperRules.panelPosition(i))
             val color = if (state == I4HelperRules.COMPLETED) completedColor.argb() else activeColor.argb()
             poseStack.pushPose()
             try {
@@ -313,12 +373,13 @@ class I4HelperModule private constructor(settings: Settings) : Module(
         radius: Float,
         color: Int,
     ) {
+        val at = sim()?.toSim(spot) ?: spot
         EspRenderer.renderSphere(
             poseStack,
             bufferSource,
-            spot.x - cameraPosition.x,
-            spot.y - cameraPosition.y,
-            spot.z - cameraPosition.z,
+            at.x - cameraPosition.x,
+            at.y - cameraPosition.y,
+            at.z - cameraPosition.z,
             radius,
             color,
         )

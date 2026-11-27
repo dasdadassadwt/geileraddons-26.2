@@ -22,7 +22,11 @@ import net.minecraft.world.phys.Vec3
  * separate entity, so each match is paired with the nearest mob body under it (same rule as Sparkling Critter).
  * [classify] turns a label into a tag (or null to skip it).
  */
-class LabeledMobTracker<T : Any>(private val classify: (Component) -> T?) {
+class LabeledMobTracker<T : Any>(
+    /** Also accept Hypixel NPC player models (never real players) as bodies. */
+    private val npcBodies: Boolean = false,
+    private val classify: (Component) -> T?,
+) {
     class Sighting<T>(val tag: T, val label: Entity, val body: Entity)
 
     val sightings = ArrayList<Sighting<T>>()
@@ -77,7 +81,15 @@ class LabeledMobTracker<T : Any>(private val classify: (Component) -> T?) {
     }
 
     /** World labels, projected through the one shared projector (26.2 has no reachable world text stage). */
-    fun renderLabels(graphics: GuiGraphicsExtractor, text: (Sighting<T>) -> String, color: (T) -> Int): Int {
+    fun renderLabels(graphics: GuiGraphicsExtractor, text: (Sighting<T>) -> String, color: (T) -> Int): Int =
+        renderLabels(graphics, sightings, text, color)
+
+    fun renderLabels(
+        graphics: GuiGraphicsExtractor,
+        sightings: List<Sighting<T>>,
+        text: (Sighting<T>) -> String,
+        color: (T) -> Int,
+    ): Int {
         val mc = Minecraft.getInstance()
         if (sightings.isEmpty() || mc.level == null || mc.player == null || mc.gui.hud.isHidden()) return 0
         val camera = mc.gameRenderer.mainCamera()
@@ -93,8 +105,9 @@ class LabeledMobTracker<T : Any>(private val classify: (Component) -> T?) {
 
     private fun isMobLike(entity: Entity): Boolean {
         val type = entity.type
+        if (type === EntityTypes.PLAYER) return npcBodies && entity.uuid.version() != REAL_PLAYER_UUID
         return type !== EntityTypes.ARMOR_STAND && type !== EntityTypes.INTERACTION && type !== EntityTypes.ITEM_DISPLAY &&
-            type !== EntityTypes.BLOCK_DISPLAY && type !== EntityTypes.TEXT_DISPLAY && type !== EntityTypes.PLAYER &&
+            type !== EntityTypes.BLOCK_DISPLAY && type !== EntityTypes.TEXT_DISPLAY &&
             type !== EntityTypes.ITEM && Nameplates.hasBody(entity)
     }
 
@@ -113,5 +126,6 @@ class LabeledMobTracker<T : Any>(private val classify: (Component) -> T?) {
 
     private companion object {
         const val LABEL_TO_MOB_RADIUS = 3.0
+        const val REAL_PLAYER_UUID = 4
     }
 }

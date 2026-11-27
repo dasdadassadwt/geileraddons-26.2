@@ -27,6 +27,7 @@ public abstract class ItemAnimationsMixin {
 		InteractionHand hand, float swingProgress, ItemStack stack, float equipProgress, PoseStack pose,
 		SubmitNodeCollector collector, int packedLight, CallbackInfo ci) {
 		ItemAnimationsModule.INSTANCE.applyTransform(pose, stack);
+		ItemAnimationsModule.INSTANCE.applyPullOut(pose, hand == InteractionHand.MAIN_HAND);
 	}
 
 	@WrapMethod(method = "renderItem")
@@ -71,6 +72,6 @@ public abstract class ItemAnimationsMixin {
 	@Inject(method = "shouldInstantlyReplaceVisibleItem", at = @At("HEAD"), cancellable = true)
 	private void geileraddons$skipReequipReset(ItemStack previous, ItemStack next,
 		CallbackInfoReturnable<Boolean> cir) {
-		if (ItemAnimationsModule.INSTANCE.noReequipReset()) cir.setReturnValue(true);
+		if (ItemAnimationsModule.INSTANCE.noReequipReset() || ItemAnimationsModule.INSTANCE.customPullOut()) cir.setReturnValue(true);
 	}
 }

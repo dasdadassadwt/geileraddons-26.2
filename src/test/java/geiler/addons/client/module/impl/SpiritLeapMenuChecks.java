@@ -46,9 +46,26 @@ import java.util.UUID;
 public final class SpiritLeapMenuChecks {
 	private SpiritLeapMenuChecks() { }
 
+	private static void checkPovAngleSmoothing() {
+		PovAngleSmoother smoother = new PovAngleSmoother();
+		long second = 1_000_000_000L;
+		require(smoother.next(90f, 0L, 100, 1) == 90f, "the first angle is taken as it is");
+		float step = smoother.next(100f, second / 20, 100, 1);
+		require(step > 90f && step < 100f, "a smoothed angle moves part of the way");
+		require(smoother.next(100f, second / 20, 100, 1) == step, "no time passed, no movement");
+		require(smoother.next(20f, second / 10, 0, 1) == 20f, "strength 0 turns smoothing off");
+		smoother.reset();
+		smoother.next(179f, 0L, 100, 1);
+		float wrapped = smoother.next(-179f, second / 20, 100, 1);
+		require(wrapped > 179f && wrapped < 181f, "it turns the short way across 180 degrees: " + wrapped);
+		require(smoother.next(10f, second / 10, 100, 2) == 10f, "a new target is not eased into");
+		require(smoother.next(50f, second * 3, 100, 2) == 50f, "nor is a view that was not drawn for a while");
+	}
+
 	public static void run() {
 		checkSettingsAndPalette();
 		checkCameraHudPanels();
+		checkPovAngleSmoothing();
 		checkEarlyGuiOrdering();
 		checkDiagnosticSettings();
 		checkCardGeometry();
@@ -922,14 +939,15 @@ public final class SpiritLeapMenuChecks {
 
 		SpiritLeapPovRenderer.CompatibilityDecision sodiumClosed = classifyProfile(
 			SpiritLeapPovRenderer.PROBE_SODIUM_VERSION, null, true);
-		require(sodiumClosed.maxFeeds() == SpiritLeapPovRenderer.FEED_COUNT
-			&& sodiumClosed.mode().equals("four-feed-automatic"),
-			"the exact pinned Sodium renderer enables four feeds after target-capability preflight");
+		require(sodiumClosed.maxFeeds() == 0 && sodiumClosed.reason().equals("sodium-private-renderer-unverified"),
+			"Sodium keeps POVs closed until the private POV renderer is verified with it");
+		require(SpiritLeapPrivateRenderers.cappedViewDistance(32) == SpiritLeapPrivateRenderers.VIEW_DISTANCE
+			&& SpiritLeapPrivateRenderers.cappedViewDistance(2) == 2,
+			"a private POV renderer never uses more than its capped view distance");
 		SpiritLeapPovRenderer.CompatibilityDecision sodium091 = classifyProfile(
 			SodiumWorldRendererSpiritLeapSupport.VERIFIED_0_9_1_VERSION, null, true);
-		require(sodium091.maxFeeds() == SpiritLeapPovRenderer.FEED_COUNT
-			&& sodium091.reason().equals("pinned-sodium-capabilities"),
-			"verified Sodium 0.9.1 on Minecraft 26.2 opens the same preflight-gated Vulkan feed path");
+		require(sodium091.maxFeeds() == 0 && sodium091.reason().equals("sodium-private-renderer-unverified"),
+			"Sodium 0.9.1 stays closed for the same reason");
 		SpiritLeapPovRenderer.CompatibilityDecision sodiumAdapterClosed = classifyProfile(
 			SpiritLeapPovRenderer.PROBE_SODIUM_VERSION, null, false);
 		require(sodiumAdapterClosed.maxFeeds() == 0
@@ -938,10 +956,8 @@ public final class SpiritLeapMenuChecks {
 
 		SpiritLeapPovRenderer.CompatibilityDecision nvidiumSupported = classifyProfile(
 			SpiritLeapPovRenderer.PROBE_SODIUM_VERSION, SpiritLeapPovRenderer.PROBE_NVIDIUM_VERSION, true);
-		require(nvidiumSupported.maxFeeds() == SpiritLeapPovRenderer.FEED_COUNT
-			&& nvidiumSupported.mode().equals("four-feed-automatic")
-			&& nvidiumSupported.reason().equals("pinned-sodium-nvidium-capabilities"),
-			"the exact Nvidium 26.2 build opens POV feeds with the supported Sodium version");
+		require(nvidiumSupported.maxFeeds() == 0 && nvidiumSupported.reason().equals("sodium-private-renderer-unverified"),
+			"Nvidium needs Sodium, so it stays closed too");
 		SpiritLeapPovRenderer.CompatibilityDecision nvidiumLegacy = classifyProfile(
 			SpiritLeapPovRenderer.PROBE_SODIUM_VERSION, "0.4.4-beta6-26.1", true);
 		require(nvidiumLegacy.maxFeeds() == 0 && nvidiumLegacy.reason().equals("nvidium-version-unverified"),
@@ -1149,18 +1165,16 @@ public final class SpiritLeapMenuChecks {
 			"detected renderer versions are length-bounded and cannot inject diagnostic lines");
 		require(SpiritLeapPovRenderer.diagnosticVersion(null).equals("absent"),
 			"missing renderer versions are explicit in the diagnostic profile");
-		String diagnostic = classifyProfile(SpiritLeapPovRenderer.PROBE_SODIUM_VERSION, null, true).mode();
+		String diagnostic = classifyProfile(null, null, true).mode();
 		require(diagnostic.equals("four-feed-automatic"),
 			"renderer diagnostics report automatic activation without a JVM opt-in");
-		SpiritLeapPovRenderer.CompatibilityDecision decision = classifyProfile(
-			SpiritLeapPovRenderer.PROBE_SODIUM_VERSION, null, true);
+		SpiritLeapPovRenderer.CompatibilityDecision decision = classifyProfile(null, null, true);
 		String profile = SpiritLeapPovRenderer.formatRendererProfile("26.2", "0.19.5", "0.161.0+26.2",
-			"OpenGL", SpiritLeapPovRenderer.PROBE_SODIUM_VERSION,
-			null, true, decision);
+			"OpenGL", null, null, true, decision);
 		require(profile.contains("minecraft=26.2") && profile.contains("fabricloader=0.19.5")
-			&& profile.contains("fabricApi=0.161.0+26.2") && profile.contains("sodium=0.9.2+mc26.2")
+			&& profile.contains("fabricApi=0.161.0+26.2") && profile.contains("sodium=absent")
 			&& profile.contains("nvidium=absent")
-			&& profile.contains("maxFeeds=4") && profile.contains("resourceRisk=active-world-pass-cost-unmeasured")
+			&& profile.contains("maxFeeds=4") && profile.contains("resourceRisk=private-renderer-cost-unmeasured")
 			&& profile.indexOf('\n') < 0 && !profile.contains("PrivateName"),
 			"the diagnostic profile records exact Fabric and renderer versions, gate, resource risk, and feed count");
 		SpiritLeapPovRenderer.CompatibilityDecision nvidiumDecision = classifyProfile(
@@ -1169,9 +1183,9 @@ public final class SpiritLeapMenuChecks {
 			"OpenGL", SpiritLeapPovRenderer.PROBE_SODIUM_VERSION,
 			SpiritLeapPovRenderer.PROBE_NVIDIUM_VERSION, true, nvidiumDecision);
 		require(nvidiumProfile.contains("nvidium=0.4.4-beta6-26.2")
-			&& nvidiumProfile.contains("gate=four-feed-automatic(pinned-sodium-nvidium-capabilities)")
-			&& nvidiumProfile.contains("maxFeeds=4"),
-			"the runtime profile records the supported Nvidium 26.2 renderer path");
+			&& nvidiumProfile.contains("gate=closed(sodium-private-renderer-unverified)")
+			&& nvidiumProfile.contains("maxFeeds=0"),
+			"the runtime profile records why an Nvidium install has no POV feeds");
 		SpiritLeapPovRenderer.CompatibilityDecision blockedModifier =
 			SpiritLeapPovRenderer.classifyRendererCompatibility("26.2", "0.19.5", "0.161.0+26.2",
 				"OpenGL", null, null, "iris", true);

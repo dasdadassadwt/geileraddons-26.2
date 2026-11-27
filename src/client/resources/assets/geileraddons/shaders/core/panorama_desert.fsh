@@ -91,11 +91,15 @@ vec3 normalAt(vec2 p, float e) {
 
 // Small relaxed steps that shrink with distance less than before, so thin far crests are not stepped
 // over (the dashed crest lines). Running out of steps near the ground counts as ground, never as sky.
-float march(vec3 ro, vec3 rd, int steps, out bool hit) {
+// A ray that misses reports in [cover] how close it passed the sand (0 at the hit threshold, 1 a pixel and a half
+// away), and where ([tNear]), so a crest silhouette blends over about a pixel instead of stepping.
+float march(vec3 ro, vec3 rd, int steps, float px, out bool hit, out float cover, out float tNear) {
     float t = 1.0;
     float tPrev = 1.0;
     float dPrev = 1.0;
     hit = false;
+    cover = 1.0;
+    tNear = FAR;
     for (int i = 0; i < 256; i++) {
         if (i >= steps) {
             hit = rd.y < 0.03;
@@ -117,6 +121,12 @@ float march(vec3 ro, vec3 rd, int steps, out bool hit) {
             return tm;
         }
         if (rd.y > 0.0 && p.y > MAX_HEIGHT) break;
+        // 0 at the hit threshold, 1 a pixel and a half beyond it.
+        float c = (d - 0.0015 * t) / (1.5 * t * px);
+        if (c < cover) {
+            cover = min(cover, c);
+            tNear = t;
+        }
         tPrev = t;
         dPrev = d;
         t += max(0.4 * d, 0.004 * t);
@@ -176,9 +186,13 @@ vec3 shadeGround(vec3 ro, vec3 rd, float t, vec3 L, vec3 accent, float px) {
     // World size of one pixel here: normals and detail are filtered to it, so nothing shimmers.
     float foot = t * px;
     vec3 n = normalAt(p.xz, max(0.2, foot));
+    // At a grazing view one pixel covers far more sand along the ray than across it; detail fades by
+    // that longer footprint, or the near dunes shimmer as the camera glides.
+    float graze = max(abs(dot(n, rd)), 0.08);
+    float footA = foot / graze;
 
     // Wind ripples on gentle windward slopes, faded out before they get smaller than a pixel.
-    float ripple = (1.0 - smoothstep(0.08, 0.3, foot)) * smoothstep(0.8, 0.95, n.y);
+    float ripple = (1.0 - smoothstep(0.08, 0.3, footA)) * smoothstep(0.8, 0.95, n.y);
     if (ripple > 0.0) {
         float w = dot(p.xz, WIND) * 4.4 + noise(p.xz * 0.4) * 5.0;
         n = normalize(n - vec3(WIND.x, 0.0, WIND.y) * cos(w) * 0.12 * ripple);
@@ -192,14 +206,14 @@ vec3 shadeGround(vec3 ro, vec3 rd, float t, vec3 L, vec3 accent, float px) {
     vec3 albedo = mix(toLinear(SandDark.rgb), toLinear(SandLight.rgb), drift);
     albedo *= mix(vec3(0.82, 0.72, 0.66), vec3(1.06, 1.02, 0.98), crest);
     float grain = noise(p.xz * 0.05 + 2.0);
-    albedo *= 1.0 + (grain - 0.5) * 0.18 * (1.0 - smoothstep(0.5, 2.0, foot));
+    albedo *= 1.0 + (grain - 0.5) * 0.18 * (1.0 - smoothstep(0.5, 2.0, footA));
 
     float sha = softShadow(p + vec3(0.0, 0.25, 0.0), L);
     float dif = clamp(dot(n, L), 0.0, 1.0) * sha;
     vec3 skyLight = vec3(0.32, 0.40, 0.62) * (0.55 + 0.45 * n.y);
     vec3 bounce = vec3(0.60, 0.36, 0.20) * clamp(dot(n, normalize(vec3(-L.x, 0.0, -L.z))), 0.0, 1.0) * 0.35;
     vec3 col = albedo * (SUN * dif + skyLight * 0.45 + bounce);
-    col += SUN * pow(clamp(dot(reflect(rd, n), L), 0.0, 1.0), 20.0) * 0.08 * sha;
+    col += SUN * pow(clamp(dot(reflect(rd, n), L), 0.0, 1.0), 20.0) * 0.08 * sha * (1.0 - 0.7 * smoothstep(0.3, 1.5, footA));
 
     // Aerial haze over distance plus thicker air low in the troughs (analytic integral of exp(-b*y)).
     float b = 0.045;
@@ -242,14 +256,18 @@ void main() {
     vec3 rd = normalize(fwd * focal + uv.x * r2 + uv.y * u2);
 
     bool hit;
-    float t = march(ro, rd, steps, hit);
+    float cover;
+    float tNear;
+    float t = march(ro, rd, steps, px, hit, cover, tNear);
     vec3 col;
     if (hit) {
         col = shadeGround(ro, rd, t, L, accent, px);
-    } else if (rd.y < 0.0) {
-        col = hazeColor(rd, L, accent);
     } else {
-        col = skyColor(rd, L, accent, px);
+        col = rd.y < 0.0 ? hazeColor(rd, L, accent) : skyColor(rd, L, accent, px);
+        // Just past a crest: part of this pixel is still sand.
+        if (cover < 1.0 && tNear < FAR) {
+            col = mix(shadeGround(ro, rd, tNear, L, accent, px), col, smoothstep(0.0, 1.0, max(cover, 0.0)));
+        }
     }
 
     col = aces(col * 0.9);

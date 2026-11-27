@@ -14,6 +14,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class SlotItemOverlayMixin {
 	@Inject(method = "extractSlots", at = @At("HEAD"))
 	private void geileraddons$slotBackgrounds(GuiGraphicsExtractor graphics, int mouseX, int mouseY, CallbackInfo ci) {
+		// First: it moves the offhand slot, which the rarity backgrounds below are placed by.
+		geiler.addons.client.module.impl.EquipmentInInventoryModule.INSTANCE.beforeSlots(this, graphics, mouseX, mouseY);
 		SlotItemOverlays.beforeSlots(graphics, ((AbstractContainerScreen<?>) (Object) this).getMenu().slots);
 	}
 

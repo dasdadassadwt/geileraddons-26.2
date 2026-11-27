@@ -113,6 +113,7 @@ object SpiritLeapPovRenderer {
     private const val MAX_TOTAL_FEED_TARGET_PIXELS = 10_485_760L
     const val MAX_CACHED_FRAME_AGE_NANOS = 2_000_000_000L
     private const val CHUNK_PROBE_INTERVAL_NANOS = 250_000_000L
+    private const val VIEW_STATS_INTERVAL_NANOS = 2_000_000_000L
     private const val MIN_SELECTION_RETRY_NANOS = 500_000_000L
     private const val DEFERRED_TARGET_CLEANUP_RETRY_NANOS = 1_000_000_000L
     private const val PIXEL_SAMPLE_INTERVAL_NANOS = 1_000_000_000L
@@ -226,6 +227,7 @@ object SpiritLeapPovRenderer {
     private var loadedPlayerLookupBuilds = 0L
     private var loadedPlayerLookupSize = 0
     private var warmupQuadrant = -1
+    private var lastViewStatsNanos = 0L
     private var status = "idle(reason=menu-closed)"
 
     @JvmStatic
@@ -444,6 +446,13 @@ object SpiritLeapPovRenderer {
     fun isSodiumTranslucentBranch(terrainPass: Any?, shaderTransparency: Boolean): Boolean {
         if (!activePovPass || activeRenderTarget == null) throw IllegalStateException("sodium-private-render-not-active")
         return shaderTransparency && isSodiumTranslucentPass(terrainPass)
+    }
+
+    /** Eases a POV camera's yaw or pitch; any other camera gets [angle] back. */
+    fun smoothViewAngle(camera: Camera, angle: Float, pitch: Boolean, targetId: Int): Float {
+        val feed = feeds.firstOrNull { it.camera === camera } ?: return angle
+        val smoother = if (pitch) feed.pitchSmoother else feed.yawSmoother
+        return smoother.next(angle, System.nanoTime(), SpiritLeapMenuModule.povSmoothingPercent(), targetId)
     }
 
     fun isPovCamera(candidate: Camera?): Boolean {
@@ -1020,12 +1029,9 @@ object SpiritLeapPovRenderer {
             return CompatibilityDecision(0, "closed", "nvidium-version-unverified")
         }
         if (hasSodium && !sodiumTargetAdapterVerified) return CompatibilityDecision(0, "closed", "sodium-target-adapter-unverified")
-        return CompatibilityDecision(
-            FEED_COUNT,
-            "four-feed-automatic",
-            if (hasNvidium) "pinned-sodium-nvidium-capabilities"
-            else if (hasSodium) "pinned-sodium-capabilities" else "vanilla-gpu-backend-capabilities",
-        )
+        // Sodium replaces the terrain renderer, and its adapter was only built around the shared main renderer.
+        if (hasSodium) return CompatibilityDecision(0, "closed", "sodium-private-renderer-unverified")
+        return CompatibilityDecision(FEED_COUNT, "four-feed-automatic", "vanilla-gpu-backend-capabilities")
     }
 
     private fun isSupportedGpuBackend(backendName: String?): Boolean =
@@ -1103,8 +1109,8 @@ object SpiritLeapPovRenderer {
         " sodiumTargetAdapter=${if (sodiumVersion == null) "not-needed" else if (sodiumTargetAdapterVerified) "verified" else "unverified"}" +
         " gate=${decision.mode}(${decision.reason})" +
         " maxFeeds=${decision.maxFeeds}" +
-        " renderer=active-world" +
-        " resourceRisk=active-world-pass-cost-unmeasured"
+        " renderer=private-per-feed" +
+        " resourceRisk=private-renderer-cost-unmeasured"
 
     @JvmStatic
     fun gateFabricExtractionContext(decision: CompatibilityDecision, renderingVersion: String?, accessorApplied: Boolean): CompatibilityDecision {
@@ -1729,8 +1735,11 @@ object SpiritLeapPovRenderer {
         }
         val client = Minecraft.getInstance()
         val active = isActive(client)
+        // The solo probe never gets a screen sample, so a finished source sample must not block the next one.
+        if (soloProbe(client) && pendingPixelSample?.awaitingScreenSample == true) pendingPixelSample = null
         if (guiFramePublication.pending()) {
-            if (active) return
+            // The solo probe has no leap menu to show the frame in.
+            if (active && !soloProbe(client)) return
             discardPendingGuiPublication("discarded-menu-closed")
         }
         val screen = client.gui.screen()
@@ -1840,6 +1849,7 @@ object SpiritLeapPovRenderer {
     /** Runs after every client frame so deferred cleanup can progress from title screens too. */
     fun maintainDeferredCleanupAfterFrame() {
         if (!RenderSystem.isOnRenderThread() || activeRenderTarget != null) return
+        SpiritLeapPrivateRenderers.endFrame()
         publishPendingFrameAfterGuiPass()
         queuePublishedScreenPixelSample()
         if (!pendingRenderStateRestore.pending() && !feedTargetCleanupPending && !rendererCleanupPending &&
@@ -2383,6 +2393,12 @@ object SpiritLeapPovRenderer {
             feedScheduler.renderAttemptCompleted(System.nanoTime())
             renderingFeed = previousRenderingFeed
         }
+        if (attemptFailure == null && now - lastViewStatsNanos >= VIEW_STATS_INTERVAL_NANOS) {
+            lastViewStatsNanos = now
+            SpiritLeapMenuModule.recordEvent(client.level?.gameTime ?: 0L,
+                "POV_VIEW_STATS quadrant=${feed.quadrant} frames=${feed.successfulFrameCount} " +
+                    "sourcePixels=${feed.sourcePixelSample} ${SpiritLeapPrivateRenderers.stats()}")
+        }
         val failure = attemptFailure
         if (failure == null && shouldPublishCompletedFrame(privateRenderSucceeded, stateRestorationSucceeded, povSessionState.failureLatched())) {
             requestSourcePixelSample(feed, scratchTarget, incrementSaturated(feed.successfulFrameCount), System.nanoTime())
@@ -2422,6 +2438,8 @@ object SpiritLeapPovRenderer {
         }
         try {
             for (feed in feeds) {
+                // A private renderer keeps compiled meshes and models from the old resources.
+                closeFeedRenderer(feed)
                 feed.stage = "resource-reload"
                 feed.reason = "reloaded"
             }
@@ -2451,7 +2469,16 @@ object SpiritLeapPovRenderer {
         if (resources != null) reloadFeedResources(resources)
     }
 
+    /**
+     * The fixed-camera probe in a development client's singleplayer world: it renders one feed with no leap menu, so the
+     * private renderer can be exercised outside a dungeon. Never true in a released client.
+     */
+    private fun soloProbe(client: Minecraft): Boolean = fixedCameraProbeEnabled() &&
+        FabricLoader.getInstance().isDevelopmentEnvironment && client.hasSingleplayerServer() && client.level != null &&
+        SpiritLeapMenuModule.INSTANCE.isEnabled() && SpiritLeapMenuModule.povsEnabled()
+
     private fun isActive(client: Minecraft): Boolean {
+        if (soloProbe(client)) return true
         if (!SpiritLeapMenuModule.INSTANCE.isEnabled() || !SpiritLeapMenuModule.povsEnabled() ||
             client.gui.screen() !is net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<*>) return false
         val screen = client.gui.screen() as net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<*>
@@ -2459,6 +2486,11 @@ object SpiritLeapPovRenderer {
         if (validatedSurface) SpiritLeapSurfaceOwner.acquireAfterValidatedRender(screen)
         return validatedSurface || SpiritLeapSurfaceOwner.owns(screen)
     }
+
+    /** A development client reports its launched version as "Fabric"; the solo probe stands in the pinned one. */
+    private fun launchedMinecraftVersion(client: Minecraft): String =
+        if (fixedCameraProbeEnabled() && FabricLoader.getInstance().isDevelopmentEnvironment) PROBE_MINECRAFT_VERSION
+        else client.getLaunchedVersion()
 
     private fun rendererProfile(): RendererProfile = rendererProfile(null, emptyList())
 
@@ -2487,7 +2519,7 @@ object SpiritLeapPovRenderer {
             nullableLegacyValue(client.gameRenderer.mainRenderTarget()) != null
         val preflightEligible = extractionContextAccessorApplied && sodiumLoaded &&
             isSodiumAdapterPreflightEligible(
-                client.getLaunchedVersion(),
+                launchedMinecraftVersion(client),
                 fabricLoaderVersion,
                 fabricApiVersion,
                 backendName,
@@ -2528,7 +2560,7 @@ object SpiritLeapPovRenderer {
         }
         var decision = gateFabricExtractionContext(
             classifyRendererCompatibility(
-                client.getLaunchedVersion(),
+                launchedMinecraftVersion(client),
                 fabricLoaderVersion,
                 fabricApiVersion,
                 backendName,
@@ -2547,7 +2579,7 @@ object SpiritLeapPovRenderer {
             SkyblockerSpiritLeapSupport.isHookApplied(),
         )
         val profile = RendererProfile(
-            client.getLaunchedVersion(),
+            launchedMinecraftVersion(client),
             fabricLoaderVersion,
             fabricApiVersion,
             backendName,
@@ -2825,22 +2857,42 @@ object SpiritLeapPovRenderer {
             throw IllegalStateException("active-level-renderer-unavailable")
         }
         prepareFeedCamera(feed, level, player)
-        renderer = levelRenderer
-        if (feed.levelRenderer !== renderer || feed.levelExtractor == null) {
-            feed.levelRenderer = renderer
-            feed.levelExtractor = LevelExtractor(client, feed.levelRenderState, feed.levelRenderer!!)
-            feed.levelExtractor!!.setLevel(level)
+        val width = maxOf(1, client.window.width / 2)
+        val height = maxOf(1, client.window.height / 2)
+        var private = feed.privateRenderer
+        if (private != null && (private.level !== level || !SpiritLeapPrivateRenderers.isPrivate(private.renderer))) {
+            closeFeedRenderer(feed)
+            private = null
         }
+        if (private == null) {
+            // Never the main renderer: sharing it wiped its chunk meshes until the next world change.
+            private = SpiritLeapPrivateRenderers.create(client, level, feed.levelRenderState, width, height)
+            feed.privateRenderer = private
+            feed.levelRenderer = private.renderer
+            feed.levelExtractor = private.extractor
+            SpiritLeapMenuModule.recordEvent(level.gameTime,
+                "POV_PRIVATE_RENDERER created quadrant=${feed.quadrant} ${SpiritLeapPrivateRenderers.stats()}")
+        }
+        private.resize(width, height)
+        renderer = private.renderer
         attachedLevel = level
         if (fogRenderer == null) fogRenderer = FogRenderer()
         if (povProjection == null) povProjection = Projection()
         if (povProjectionBuffer == null) povProjectionBuffer = ProjectionMatrixBuffer("Spirit Leap POV perspective")
-        val width = maxOf(1, client.window.width / 2)
-        val height = maxOf(1, client.window.height / 2)
         setWindowSize(width, height)
         if (Minecraft.getInstance().gameRenderer.gameRenderState().useShaderTransparency() && transparencyChain == null) {
             rebuildTransparencyChain(client)
         }
+    }
+
+    private fun closeFeedRenderer(feed: FeedState) {
+        val private = feed.privateRenderer ?: return
+        // The secondary-renderer redirects must still see it while it closes, so it leaves the registry afterwards.
+        SpiritLeapPrivateRenderers.close(private)
+        feed.privateRenderer = null
+        feed.levelExtractor = null
+        feed.levelRenderer = null
+        if (renderer === private.renderer) renderer = null
     }
 
     private fun ensureTarget(feed: FeedState, client: Minecraft, activeFeedCount: Int): Boolean {
@@ -3021,6 +3073,7 @@ object SpiritLeapPovRenderer {
             try {
                 (currentFeed.levelExtractor ?: error("private-level-extractor-unavailable"))
                     .extract(currentDeltaTracker, currentCamera, partialTick)
+                currentFeed.privateRenderer?.let { SpiritLeapPrivateRenderers.seed(it) }
                 // The client's hit result belongs to the local camera, never this teammate view.
                 currentFeed.levelRenderState.blockOutlineRenderState = null
                 currentFeed.levelExtractionSuccessCount = incrementSaturated(currentFeed.levelExtractionSuccessCount)
@@ -3297,10 +3350,11 @@ object SpiritLeapPovRenderer {
         } else mainChain
     }
 
-    fun isSecondary(candidate: LevelRenderer?): Boolean = ownsRenderer(candidate)
+    /** Any private POV renderer, also while it is being built or closed outside a render pass. */
+    fun isSecondary(candidate: LevelRenderer?): Boolean = SpiritLeapPrivateRenderers.isPrivate(candidate)
 
     fun cameraFor(candidate: LevelRenderer?, mainCamera: Camera): Camera {
-        if (!ownsRenderer(candidate)) return mainCamera
+        if (!isSecondary(candidate)) return mainCamera
         val selectedFeed = renderingFeed ?: activeFeed()
         return if (selectedFeed != null && selectedFeed.cameraHistory.isBound()) selectedFeed.camera else mainCamera
     }
@@ -3690,8 +3744,7 @@ object SpiritLeapPovRenderer {
             }
         }
         for (feed in feeds) {
-            feed.levelExtractor = null
-            feed.levelRenderer = null
+            cleanupFailure = attemptCleanup(cleanupFailure) { closeFeedRenderer(feed) }
             cleanupFailure = attemptCleanup(cleanupFailure) {
                 feed.cameraHistory.clear {
                     feed.camera.setLevel(null)
@@ -3751,6 +3804,9 @@ object SpiritLeapPovRenderer {
         @JvmField val levelRenderState = LevelRenderState()
         @JvmField var levelRenderer: LevelRenderer? = null
         @JvmField var levelExtractor: LevelExtractor? = null
+        var privateRenderer: SpiritLeapPrivateRenderers.Entry? = null
+        val yawSmoother = PovAngleSmoother()
+        val pitchSmoother = PovAngleSmoother()
         @JvmField val cameraHistory = FeedCameraHistory()
         @JvmField var frameTarget: RenderTarget? = null
         @JvmField var targetName: String? = null

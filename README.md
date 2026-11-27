@@ -83,6 +83,14 @@ chat dimensions; all start at `0`, and the effective size is clamped to the scal
 Chat keeps its vanilla position, rendering, input, and scrolling. Right-click a visible message to
 copy its complete text; **Copy Message on Right-click** is enabled by default.
 
+**Chat Helper** is a local direct-message helper and is on by default. It watches direct messages
+before they reach vanilla chat history and handles one whose body exactly matches **Chat Helper
+Trigger**. The helper has its own switch and is independent of the Chat module's master switch:
+turning off the visual Chat module does not turn off the helper; use **Chat Helper** to disable it.
+The trigger ignores surrounding spaces and letter case, and a blank trigger disables matching. Only
+direct messages from another player can match; your own messages, public chat, and system lines are
+ignored.
+
 **Chat Channels** adds translucent **All**, **Party**, **Guild**, **Co-op**, **Private**, and **System**
 buttons directly above the vanilla chat input. Selecting a tab is local and sends no server command.
 With a tab selected, ordinary text is sent immediately with the matching prefix: `/ac`, `/pc`, `/gc`,
@@ -237,12 +245,12 @@ source-supported puzzle events. Qualifying times compare against local puzzle be
 adds a clickable chat action for the supported puzzle-failure messages; it does not send the command
 until clicked.
 
-The remaining focused modules are **Scorer** (threshold, alert text, duration, and sound), **Run
+The remaining focused modules are **Score Titles** (a title at 270 and at 300, each once per run, with optional chat messages, alert text, duration, sound and a Paul override), **Run
 Splits** (Blood, Camp, and Portal aggregates; all tracked floor boss phases; individual S1–S4 rows;
 and a bottom Run total, with real time fixed first and **Second Time Display** for 50 ms tick
 estimates, bracketed local PBs, red Time Lost, or Off; the Goldor and Storm timers moved to **Tick Timers**, the M3 fire-freeze countdown to **Fire Freeze Timer**), **Blood Camp**
 (Watcher wave predictions and world markers), **Livid Solver** (Livid highlight and invulnerability
-timer), **Invincibility Timer** (movable HUD with a head icon per Bonzo Mask, Spirit Mask, and Phoenix proc: gold seconds
+timer), **Invincibility Timer** (a totem-style Poop Pop cutscene on your own proc, **Poop Pop** and **Poop Volume** settings, on by default; movable HUD with a head icon per Bonzo Mask, Spirit Mask, and Phoenix proc: gold seconds
 while active, red seconds on cooldown, green check when ready; the centered title (proc name, live countdown beneath, refreshed every tick) shows only an active window; a green check means no active time and no cooldown, and with Show Cooldowns off a cooldown hides its row; optional **Always Show In Dungeon** keeps the
 HUD up for the whole run and **Party Announce** sends `Bonzo proc`, `Spirit proc`, or `Phoenix proc` to party chat), **Spirit Leap Menu**
 (centered teammate cards, quadrant selection, adjustable card styling, sorting and key modes, incoming
@@ -292,29 +300,20 @@ the cursor over the map, any mouse button leaps to the teammate marker nearest t
 configured press or release phase; the click is consumed even when no teammate resolves, and the
 cards behave as before.
 
-**Show POVs** uses Minecraft 26.2's backend-neutral GPU APIs to render four teammate views. Its vanilla
-backend gate allows OpenGL and Vulkan after the same capability checks; the Vulkan path has not yet been
-verified in a client. Sodium requires the exact `0.9.2+mc26.2` build and a successful private-target
-capability preflight. Nvidium stays closed because the pinned `0.4.4-beta6-26.1` build has not been
-verified on 26.2. Fabric Loader and Fabric API must be present; their patch versions are recorded in
-diagnostics but are not pinned. Unknown Sodium or Nvidium versions and unsupported backends remain
-closed. Iris, Canvas, and Distant Horizons are blocked until their renderer interactions are verified;
-VulkanMod is not blocked by name, but still needs a client run. Sodium uses a private-target capability
-preflight; an observed wrong target latches the feature closed, while route hooks that do not run during a
-pass are not treated as failures. The first eligible loaded teammate/quadrant is privately rendered as
-warmup; its frame becomes available only after the framebuffer bindings and viewport pass restoration
-checks, then the scheduler promotes to four-feed round robin. The model-view stack and output-texture
-overrides are restored separately. Targets are half resolution and reused, with one update per main frame
-and a 4 Hz cap per feed under a shared target-pixel budget. On Skyblocker `6.10.4+26.2`, a version-gated
-bridge skips its primitive callbacks only during private POV rendering; the main-world renderer is
-unchanged, and unknown Skyblocker versions keep POVs closed. Unavailable teammates or any missing chunk
-in the local 3×3 FULL-chunk neighborhood keep their quadrant hidden; validated menu-head identities
-remain eligible when party online status is unknown, but the feed still requires a matching alive player
-loaded in the client world. The chunk check never requests
-remote chunks. A render/state failure stays latched across menu
-reopens and clears on a POV/module toggle off-to-on, world change, or successful resource reload. This
-source-level support path has not received live visual or performance verification; diagnostics do not
-prove visible pixels or a frame-time budget.
+**Show POVs** renders up to four teammate views. Each view has its own world renderer, separate from the one that
+draws your screen, and builds up to 4 chunks around that teammate. OpenGL and Vulkan pass the same capability checks;
+the Vulkan path has not been verified in a client. **POVs stay off when Sodium is installed** (and so with Nvidium):
+the separate view renderers have not been verified with it. Fabric Loader and Fabric API must be present; their patch
+versions are recorded in diagnostics but are not pinned. Iris, Canvas and Distant Horizons are blocked until their
+renderer interactions are verified. The first eligible loaded teammate is rendered as warmup; its frame becomes
+available only after the framebuffer bindings and viewport restoration checks, then the four views take turns.
+Targets are half resolution and reused, with one update per main frame and a per-view FPS cap under a shared
+target-pixel budget. Unavailable teammates, or any missing chunk in the local 3x3 chunk neighborhood, keep their
+quadrant hidden; the check never requests remote chunks. A render failure stays latched across menu reopens and
+clears on a POV or module toggle off and on, a world change, or a successful resource reload. **POV Camera
+Smoothing** (0-100, default 0 = off) eases the turning of each view's camera; it does not smooth its position.
+The separate renderers have run in a singleplayer development client only: not in a dungeon, not with four views or
+a far teammate, and their frame-time and memory cost is unmeasured.
 
 Dungeon ESP is split into three modules. **Dungeon Mob ESP** owns Starred Mobs, Minibosses, and Fels.
 **Dungeon Boss ESP** owns the F7 Wither Boss and known Mimic chest highlights. **Dungeon Class ESP**
@@ -398,7 +397,7 @@ are ready, the HUD shows a neutral provisional 6×6 grid and marks the local pla
 identities or connections. It switches to the existing authoritative map when ready. The map preview
 in settings reflects the current choices. A **Map Info** panel is attached under the map, as wide as the map, with Odin's
 two rows: secrets found, needed and total, score, deaths (or unfound secrets), Mimic/Prince/Bat markers and crypts. It has its own
-switch and settings (Include Remaining, Remaining Secrets, Deaths, Hide Map Info In Boss, background color). Its Unfound count uses the
+switch and settings (Include Remaining, Remaining Secrets, Deaths, Hide Map Info In Boss, background color). Its score, secrets, deaths, crypts and bonuses come from the same Odin-style latched score state as Score Titles (kept while a tab row is missing, so it no longer goes blank in the boss room). Its Unfound count uses the
 secrets of the rooms already opened on the map. Its default uses the requested item-icon style and enables
 **Illegal Map: Reveal Unopened Rooms**. The **Map Style** settings group can copy all Dungeon Map settings to the clipboard
 as Base64 JSON, import bounded JSON or Base64 from the clipboard, or reset every map setting to its
@@ -854,6 +853,21 @@ Calls out: Gemzie, Wumpa and Doomspiral at ready, started and done (each its own
 </details>
 
 <details>
+<summary><b>Queen Ant Alert, Blue Jay ESP, Lasso</b> — Torrhus Canyon and Galatea hunting helpers</summary>
+
+<br>
+
+All three are in **Hunting** and off by default.
+
+- **Queen Ant Alert** (Torrhus Canyon): a Queen Ant spawns 1 in 40 per Ant when you break an Anthill in Ant's Cave. When its name tag shows up you get a `QUEEN ANT!` title and a sound, and it gets a box, a tracer and a world label. **Party Message** (off by default) posts `Queen Ant at x: 123 y: 23 z: 511` with your own position. One alert per queen, at most one every 30 seconds.
+- **Blue Jay ESP** (Torrhus Canyon): boxes Blue Jays and colours them by the `/!\` mark on their name tag: red while it has seen you, yellow while it settles, green (`Blue Jay - lasso now`) once the mark is gone. Lassoing one early scares it off. Colours, tracer, labels and range are settings.
+- **Lasso** (Galatea, Torrhus Canyon): a movable HUD panel (place it in Move Elements) with the stamina bar of the critter on your lasso and `REEL NOW` at the reel point; the reel point follows your lasso tier (Abysmal, Vinerip, Entangler, Everstretch). **Reel Sound** (on) and **Reel Title** (off) fire on the REEL prompt. **Auto Reel** (off) right-clicks once per REEL prompt after a random **Reaction** delay (default 180-320 ms) and holds the click for a random **Click Hold** (default 60-110 ms); it does nothing while a screen is open, the lasso is gone or you switched items. Auto Reel is an input automation; use it at your own risk on Hypixel.
+
+The name tags are read the way the wiki describes them and have not been checked in a live game yet.
+
+</details>
+
+<details>
 <summary><b>Fishing</b> — bobber timer, bait, rare catches, geysers, hotspots and lava (SkyHanni behavior)</summary>
 
 <br>
@@ -959,6 +973,10 @@ and `t1`–`t5` run `joininstance KUUDRA_NORMAL`, `KUUDRA_HOT`, `KUUDRA_BURNING`
 not stored in `aliases.json`, cannot be deleted, and a saved alias cannot reuse their names. The whole module must be
 enabled for them to work.
 
+Every enabled alias, built-in and saved, shows in chat tab-completion (type `/m` to see `m1`–`m7`). A new alias shows
+at once; a disabled or deleted one stops showing. A name that is already a client command (such as `ga`) keeps that
+command and is not offered as an alias.
+
 </details>
 
 <details>
@@ -967,8 +985,9 @@ enabled for them to work.
 <br>
 
 Sends `/instancerequeue` after **Requeue Delay** seconds (default 2, 0-30) once the run's `> EXTRA STATS <` line appears.
-**Disable On Leave/Kick** (on by default) skips the requeue after you leave or are kicked from the party, including
-during the delay; the next run end requeues normally again. **Announce Kick** (off) sends `/pc I was kicked!` when the
+**Disable On Leave/Kick** (on by default) skips the requeue after anyone leaves the party (you leave, are kicked or it
+is disbanded, or a teammate leaves, is removed or is removed as offline), including during the delay; the next run end
+requeues normally again. **Announce Kick** (off) sends `/pc I was kicked!` when the
 server kicks you from an instance. Changing world clears a pending requeue.
 
 </details>
@@ -982,6 +1001,29 @@ Draws a line behind you while you move. **Trail Color** (with alpha), **Trail Ra
 visible, default 8), **Trail Decay (ticks)** (how long a point lives and fades, default 40), **Trail Density** (points
 per block, default 4), **Trail Width**, and **Show In First Person** (on). A teleport restarts the trail, and at most 512
 points are kept.
+
+</details>
+
+<details>
+<summary><b>Any Rename</b> — rename items and change their icon, tooltip and look on your client</summary>
+
+<br>
+
+Replaces how an item looks to you, like NEU's `/neu rename`, without touching the server. Off by default; enable it in
+Visual. Open the editor with `/ga rename` (item in your main hand) or the brush in the top-right corner of the player
+model area of the inventory: click the brush, then click the item. The editor has a live preview (hover the item at the top
+right) and these fields:
+
+- **Name**: `&` codes (`&6`, `&l` bold, `&o`, `&n`, `&m`, `&k`, `&r`) and `&#RRGGBB`; the **B I U S O** buttons force a style on the whole name. **Gradient**: hex stops like `FF0000,0000FF` or `rainbow`, applied to characters without a colour. An empty name with a gradient colours the item's own name.
+- **Icon**: any item or resource-pack model id (`minecraft:diamond_sword`), `head:<player>`, or `texture:<base64>` for a custom head.
+- **Lore**: your own lines separated by `|` (**Lore** button: Keep, Replace, Append), a replacement **rarity line** (the last line; the rarity background follows it), and **hide** terms that remove lore lines containing them.
+- **Look**: enchant glint On/Off/Keep and a dye colour for leather armour and potions.
+- **Scope**: the item's own uuid by default; switch to every item with the same SkyBlock id (the uuid wins). Items without a uuid use the SkyBlock-id rule.
+
+Overrides are applied when the server sends the item, so there is no per-frame cost and the editor opens instantly. The real
+item is kept aside so other modules still read it. `/ga rename reset|list|export|import <string>` removes, counts, copies or
+imports an override (Copy and Paste in the editor do the same). Saved in `config/geileraddons/any-rename.json`. Not
+included: animated name effects and a stack-count override.
 
 </details>
 
@@ -1462,7 +1504,7 @@ The Forest counterpart of the HotM Tree Helper, for the Heart of the Forest menu
 
 Puts the number of clicks on the colour, speed and pitch buttons of the Tune Frequency menu: **+3** is three right clicks, **-2** is two left clicks, and the number counts down as you click.
 
-The target colour is the pane in the top row. The target speed is measured from how quickly that pane moves, so the speed button needs a moment before it shows a number. The target pitch is heard from the bass notes the menu plays; five notes at the current pitch mean it is already right.
+The target colour is the pane in the top row. The target speed is measured from how quickly that pane moves, in server ticks. The wait before the first move is ignored, so the speed button shows a number from the pane's second move. The target pitch is heard from the bass notes the menu plays; five notes at the current pitch mean it is already right.
 
 </details>
 
@@ -1504,6 +1546,15 @@ menu no longer shows module icons on its cards; the toolbar buttons keep their o
 to switch between the Modules and Macros workspaces. In Classic, left-click toggles a module; right-click (or left-click on a module without a switch) opens its
 settings in the Modern layout, and Esc or Back returns to the columns. Scroll over a column to scroll it; typing searches. Open Theme settings from the Classic
 toolbar to change the style back.
+
+**Text fields** behave the same everywhere: the Click GUI (search, text, number and hex fields), the Classic search, the
+macro editor fields and picker search, the folder name dialog, the Item List search, the Storage Overlay search, and every
+vanilla text box (chat, anvil rename, and this mod's picker screens). Click places the caret, drag selects, double-click selects
+a word and triple-click selects everything (in the Item List search, double-click still switches slot search). Keys:
+`Ctrl+A` select all, `Ctrl+C` / `Ctrl+X` / `Ctrl+V` copy, cut, paste (`Ctrl+Insert`, `Shift+Delete`, `Shift+Insert` also work in the
+custom fields), `Ctrl+Z` undo, `Ctrl+Y` or `Ctrl+Shift+Z` redo, `Ctrl+Left` / `Ctrl+Right` jump a word, `Ctrl+Backspace` /
+`Ctrl+Delete` delete a word, `Shift` with the arrows, `Home` or `End` extends the selection. Typing in a row is one undo step.
+Pasted line breaks become spaces. Undo history lasts while the field keeps its text; setting the text from outside starts a new history.
 
 **Click GUI → Lock GUI Scale** (on by default) draws the Modern menu as it looks at Minecraft GUI scale 2 at every GUI
 scale, so its text stays sharp and its layout stays the same; windows smaller than 1280×720 use a scale-1 layout instead.
@@ -1585,7 +1636,9 @@ Chat-observed infested plots drive **Warp to Latest Infested Plot**. Set its key
 settings; the warp prefers another known infested plot when the player is already on one, and repeats
 the current plot only when it is the sole target.
 
-Slayer Tracker shows session or total bosses per hour. Boss and miniboss alerts live in the separate
+Slayer Tracker shows session or total bosses per hour. It appears only while you are slaying: your boss is up,
+or quest progress, a quest start or a kill happened within **Hide After Idle** (default 60 s). An accepted quest that
+only sits on the sidebar does not show it, and that idle time does not lower bosses per hour. Boss and miniboss alerts live in the separate
 **Slayer Alerts** module. The Garden and Slayer paths depend on live widget, chat, scoreboard, entity, and island
 observations; they have not been verified in-game.
 
@@ -1630,7 +1683,8 @@ other players' bosses never trigger a module's alerts, timers or tracers.
 <br>
 
 **Unreleased.** Hover a player inventory slot and press the configured **Lock Key** to toggle its
-lock. A locked slot cannot be moved, swapped, or dropped. To bind a slot, hover an inventory slot,
+lock. A locked slot cannot be moved, swapped, or dropped. In a started dungeon run (from Mort's map message until you
+leave) the drop key is not blocked for locked or bound slots, because it triggers your class abilities there. To bind a slot, hover an inventory slot,
 hold the configured **Bind Key** (G by default), move to a hotbar slot, then release. The editor draws
 the link between the two slots. Shift-clicking either linked slot swaps it using that hotbar slot's
 number key; locked endpoints remain protected. Link colors, line style, slot protection, and saved
@@ -1704,9 +1758,9 @@ Diagnostics are automatic while enabled under `Visual/` and `Miscellaneous/`.
 
 <br>
 
-**Unreleased.** Category **Tab Widgets**. Off by default.
+**Unreleased.** Category **Visual**. Off by default.
 
-- Shows the Hypixel tab-list widgets you switch on (Soulflow, Profile, Bank, Pet, Stats, Commissions, Powders, Pests, Visitors, Slayer, Dungeon Party, Trophy Fish and about 35 more, grouped General, Mining, Farming, Foraging, Combat and Dungeons) as movable HUD panels, one per widget, in their own Tab Widgets category in Move Elements. Each widget is only shown on the islands it belongs to (**Island Filter**, on by default; off shows them everywhere), and only when the tab list shows it: turn the widget on in Hypixel with `/widget`. Background, text colour and text scale are shared. Every widget is off until you switch it on. Rows come from the tab list as the server sends them.
+- Shows the Hypixel tab-list widgets you switch on (Soulflow, Profile, Bank, Pet, Stats, Commissions, Powders, Pests, Visitors, Slayer, Dungeon Party, Trophy Fish and about 35 more, grouped General, Mining, Farming, Foraging, Combat and Dungeons) as movable HUD panels, one per widget, in the Visual category in Move Elements. Each widget is only shown on the islands it belongs to (**Island Filter**, on by default; off shows them everywhere), and only when the tab list shows it: turn the widget on in Hypixel with `/widget`. Background, text colour and text scale are shared. Every widget is off until you switch it on. Rows come from the tab list as the server sends them.
 
 </details>
 
@@ -1726,7 +1780,8 @@ Diagnostics are automatic while enabled under `Visual/` and `Miscellaneous/`.
 - **Menu background**: **Desert** replaces the panorama behind every other menu outside a world (options, world and server
   lists) with a 3D desert at golden hour drawn on the graphics card: a camera glides a six-minute loop over long ridges,
   crescent dunes, star dunes and flat sand sheets, with wind ripples up close, long soft shadows from a low sun, haze and
-  distant mountains. Edges are smoothed in a second pass. Your Click GUI accent lightly tints the haze. Vanilla's menu blur
+  distant mountains. Crest silhouettes blend over about a pixel and edges are smoothed in a second pass; ripples and grain fade where
+  a pixel covers too much sand (far away or at a grazing view), so near dunes do not shimmer. Your Click GUI accent lightly tints the haze. Vanilla's menu blur
   still applies. **Vanilla** keeps Minecraft's panorama. Menus in a world keep the blurred game.
 - **Dune style** and **Dune height**: Mixed is the original desert; Gentle is calm, Towering is tall and wild, Long ridges and Star dunes favour one dune type, Rolling is soft hills. Dune height scales every dune (0.5 to 1.5). **Sand shadow**, **Sand light**, **Sky** and **Sunset glow** are the desert's colours (they only apply to the desert, not to your photo).
 - **Buttons**: **Click GUI** draws every vanilla button (title, options, pause menu, and any screen built from vanilla buttons)
@@ -1758,13 +1813,43 @@ the module falls back to vanilla's panorama and records why. Diagnostics are aut
   **Explosions** (explosion, explosion emitter and gust particles, from the server or a local blast).
 - **No Render** (Visual): one switch each for Fire Overlay, Food Bar, Armor Bar, Boss Bar, Effect Display, Recipe Book, Dead Entities
   (dead mobs and their health tags), Dead Poof, Lightning, Falling Blocks (not in the Rift), Entity Fire, Mage Beam (dungeons),
-  Powder Coating, Guided Sheep (dungeons), Bone Plating (dungeons), Tree Bits (Galatea, Hub, Park), Nausea, Blindness (removes the blindness fog and darkening; the effect itself stays on you), Warden Darkness (removes the Darkness effect on your client), Exp Orbs, Stuck Arrows and Soul Weaver Skulls (the skulls from Soul Weaver's Gloves, dungeons only), plus a **Fog** group (Underwater Fog, Lava Fog, Air Fog for nether, world and effect fog, Distance Fog and Clouds, which hides the sky clouds; all off by default).
+  Powder Coating, Guided Sheep (dungeons), Bone Plating (dungeons), Tree Bits (Galatea, Hub, Park), Nausea, Blindness (removes the blindness fog and darkening; the effect itself stays on you), Warden Darkness (removes the Darkness effect on your client), Night Vision (removes the Night Vision effect on your client: no brightened light and no bright red Nether fog), Exp Orbs, Stuck Arrows and Soul Weaver Skulls (the skulls from Soul Weaver's Gloves, dungeons only), plus a **Fog** group (Underwater Fog, Lava Fog, Air Fog for nether, world and effect fog, Distance Fog and Clouds, which hides the sky clouds; all off by default).
+- **Armor Transparency** (Visual): opacity sliders for Helmet, Chestplate, Leggings and Boots (100 = untouched, 0 = hidden), with
+  **Own Armor** and **Other Players** switches. The Helmet slider also covers skulls and heads worn on the head (a head fades with the
+  same opacity; a worn pumpkin or block hides at 0 but does not fade). A faded piece draws without its enchantment glint; elytra are not affected.
+- **Legacy Textures** (Visual): **Block Server Pack** declines the Hypixel resource pack (the server is told it loaded, nothing is
+  applied) and **Old Item Models** draws SkyBlock items with their plain vanilla model, with switches for Weapons And Tools, Armor,
+  Heads and Other Items. Items whose base item is a placeholder get a matching vanilla look (for example a sword id shows an iron
+  sword). Behavior follows NoFrills and Detexturify (no code copied). Not yet checked on Hypixel.
+- **Poop Pop** (Invincibility Timers, on by default): when your own Bonzo Mask, Spirit Mask or Phoenix proc fires, a poop flies up
+  like a totem pop (vanilla totem path, particles and timing) with a squish and a toot. **Poop Pop** switches it off, **Poop Volume**
+  sets the sounds (0-1, default 0.8). Logged as `POOP` lines in `Dungeons/Invincibility_Timers.log`. Not yet checked in the game.
 - **Animation Fix** (Miscellaneous): your own sneak and swim animation no longer plays twice. **Skyblock Only** limits it to SkyBlock.
 - **Double Use Fix** (Miscellaneous): Blaze daggers no longer fire a second time when aimed at a block, and a fishing rod casts once.
   **Skyblock Only** limits it to SkyBlock.
 - **Disconnect Fix** (Miscellaneous): corrupted entity-data packets (for example Tarantula slayer) are skipped instead of disconnecting you.
 
 Diagnostics are automatic while enabled under `Visual/` and `Miscellaneous/`.
+
+</details>
+
+<details>
+<summary><b>Hide Spam</b> — drops repetitive ability feedback from chat</summary>
+
+<br>
+
+**Unreleased.** Off by default, client-side only, chat only (the action bar is never touched). Behavior follows Skyblocker's chat filters; no code copied.
+
+- **Hide Spam** (Miscellaneous, Chat & Party): ten toggles, all on once the module is enabled. Also hidden, one toggle each: **Kill Combo**
+  (`+5 Kill Combo ...` and the expiry line), **Teleport Pad** (warped / no destination), **Mimic** (`Mimic Killed!` and `Mimic dead!`,
+  dungeons only, so a party line ending in it is hidden too), **Autopet** (`Autopet equipped your ...! VIEW RULE`), **Lottery** and
+  **Sky Mall** (the new-day buff, new buff and "disable this messaging" lines; hidden in every area, including Galatea).
+  The first four: **Ability Cooldown** hides `This ability is on cooldown for 5s.`
+  and `No more charges, next one in 3s!`. **Blocks In The Way** hides `There are blocks in the way!`. **Ability Damage** hides the
+  `Your Implosion / Molten Wave / Spirit Sceptre hit N enemies for X damage.` lines. **Heal And Dungeon Breaker** hides the heal lines and the
+  Dungeon Breaker "mystical force" / "not enough charges" lines. Other modules (Item Cooldowns and so on) still see the lines.
+
+Diagnostics are automatic while enabled under `Miscellaneous/Hide_Spam.log`.
 
 </details>
 
@@ -1836,12 +1921,18 @@ reason a use was dropped (`noId`, `noAbility`, ...) and records the first action
 - **Cursor Tracker** (Dev, off by default): debug recorder for Auto Terms. While on, every terminal Terminal Solver shows (real or in the simulator) is written to the Analyse Terms file with your raw mouse stream (every move event with its time, every button down and up) and the slot the solver wants next (for melody: the button the pointer's row leads to and whether it is lit yet). Play ten or so of each terminal (a rubix with +2 tiles, a melody) and run `python tools/analyze_terminals.py <folder>`: the extra section reports the speed profile, speed peaks and corrections per move, path bow, overshoot, resting tremor and drift, rubix bursts, button press length and the melody pre-aim. Needs Terminal Solver on; Aim Assist changes which slot is sent, so leave it off.
 - **Terminal Times** (F7): Odin's Terminal Times. **Terminal Times** prints how long each terminal took, from opening to solved, with a personal best per terminal type (saved in `config/geileraddons/terminal-personal-bests.json`, **Reset PBs** clears it). It reads the solved state from Terminal Solver, so that module must be on; the simulator keeps its own bests. **Terminal Splits** appends `(section s | phase s)` to each Goldor terminal, lever and device chat line and prints the section times and phase total when the core opens. Real time only; Odin's server-tick option is not ported.
 - **Price Display** (Visual): Skyblocker's tooltip prices on Skyblock: NPC, George pet, Motes (Rift), Bazaar buy/sell, Lowest BIN and 1-day / 3-day average prices, plus **Show Essence Cost** (essence shop items priced in coins) and **Crafting Cost** (Off / Buy Order / Buy Instantly: the cheapest way to craft an item, from the NotEnoughUpdates item repository, downloaded once and cached under `config/geileraddons/neu-recipes.json`). The price data comes from `hysky.de` (the same service Skyblocker uses); **Refresh Prices** reloads it. **Enable Estimated Item Value** adds the item's estimated total value (the networth-calculator library Skyblocker uses, fed by the Hypixel items resource).
-- **Item List** (Miscellaneous): a REI-style SkyBlock item and recipe viewer beside every inventory and chest screen. The grid (page arrows and a `1/5` counter on top, wheel flips pages) shows the NotEnoughUpdates repository: SkyBlock items, pets, enchanted books, mobs, NPCs and vanilla items; the eight filter buttons under it pick a kind, and the search bar sits below them. **Search**: words (name first, then id, then lore), aliases and acronyms (`hype`, `aote`), `"phrase"`, `/regex/`, `r:legendary`, `t:sword`, `%pet`, `is:craftable|forgeable|npc|bazaar|pet|mob|dungeon|soulbound|vanilla`, and stat compares such as `damage>200`; a gray suggestion completes with Tab or Right. **Calculator**: `1.5m*3+250k`, `1b/4`, `2 x 3`, `bz(enchanted diamond)*160`, `lb(hyperion)-lb(necron blade)` (`+ - * / ^ %`, `k m b t`, `bz lb npc` by id or name) show `= result`; Enter copies it. It is forgiving: `x`, `X`, `×` and `*` all multiply, `÷` and `:` divide, `**` is a power, and a missing closing parenthesis is fine. **Keys** (Controls, category GeilerAddons Item List): hover an item and press R for its recipe, U for what it is used in, F to favorite; left click opens the recipe, right click the uses. Ctrl+F focuses the search, Ctrl+O hides the list, Backspace goes back in the recipe window, Esc closes it. Favorites float top left. The recipe window (over the current screen, so a chest stays open) has a tab per recipe type (crafting, forge, NPC shop, trade, mob drops, Kat upgrade, essence upgrade), clickable ingredients with a back history, a cost breakdown (ingredient prices from the Bazaar, Lowest BIN or NPC, the total and what buying costs instead; a long name is cut so it never runs into its price), an essence upgrade also lists every later star with its cost and the total still to pay, and buttons for `/bz`, `/ahs`, the wiki, copying the id and `/recipe` (these close the window and the inventory so the screen the command opens is the only one). Hovered items get Price Display's lines. **Style** is Click GUI or Minecraft; **Craft Cost Prices** picks Buy Order or Buy Instantly. **Columns** (4 to 20, default 11) and **Rows** (0 fills the screen height, up to 30) set how wide and tall the grid is; items per page is columns times rows, and a capped grid moves the filter buttons and search bar up under it. The list is hidden when the window is too narrow (less than 8 columns of room, or fewer if Columns is lower). With the official Hypixel SkyBlock resource pack loaded (it downloads when you join Hypixel) items use its models, the same as in game. Data comes from the NEU repository, kept in `config/geileraddons/neu-item-list.json.gz` and loaded in the background as soon as the game starts, so the list is ready seconds later and works offline; every item icon (heads and other custom items included, with their textures) is built in the background too and saved in `config/geileraddons/neu-item-stacks.nbt.gz`, so the next start restores them from disk instead of rebuilding (it is rebuilt when the repository has a new commit). One tiny GitHub request per start (and every 6 hours) asks for the repository's current commit (`neu-item-list.commit`); only a new commit downloads the zip (about 20 MB) again. Favorites are in `config/geileraddons/item-list.json`.
+- **Item List** (Miscellaneous): a REI-style SkyBlock item and recipe viewer beside every inventory and chest screen. The grid (page arrows and a `1/5` counter on top, wheel flips pages) shows the NotEnoughUpdates repository: SkyBlock items, pets, enchanted books, mobs, NPCs and vanilla items; the eight filter buttons under it pick a kind, and the search bar sits below them. **Search**: words (name first, then id, then lore), aliases and acronyms (`hype`, `aote`), `"phrase"`, `/regex/`, `r:legendary`, `t:sword`, `%pet`, `is:craftable|forgeable|npc|bazaar|pet|mob|dungeon|soulbound|vanilla`, and stat compares such as `damage>200`; a gray suggestion completes with Tab or Right. **Calculator**: `1.5m*3+250k`, `1b/4`, `2 x 3`, `bz(enchanted diamond)*160`, `lb(hyperion)-lb(necron blade)` (`+ - * / ^ %`, `k m b t`, `bz lb npc` by id or name) show `= result`; Enter copies it. It is forgiving: `x`, `X`, `×` and `*` all multiply, `÷` and `:` divide, `**` is a power, and a missing closing parenthesis is fine. **Keys** (Controls, category GeilerAddons Item List): hover an item and press R for its recipe, U for what it is used in, F to favorite; left click opens the recipe, right click the uses. Ctrl+F focuses the search, Ctrl+O hides the list, Backspace goes back in the recipe window, Esc closes it. Favorites float top left. The recipe window (over the current screen, so a chest stays open) has a tab per recipe type (crafting, forge, NPC shop, trade, mob drops, Kat upgrade, essence upgrade), clickable ingredients with a back history, a cost breakdown (ingredient prices from the Bazaar, Lowest BIN or NPC, the total and what buying costs instead; a long name is cut so it never runs into its price), an essence upgrade also lists every later star with its cost and the total still to pay, and buttons for `/bz`, `/ahs`, the wiki, copying the id and `/recipe` (these close the window and the inventory so the screen the command opens is the only one). Hovered items get Price Display's lines. **Style** is Click GUI or Minecraft; **Craft Cost Prices** picks Buy Order or Buy Instantly. **Sort** is the button at the left of the toolbar (click for the next sort, right click for the previous): Best match, A-Z, Z-A, Price low to high, Price high to low; the price is the same Bazaar, Lowest BIN or NPC price the cost breakdown uses, items with no price go last, and the choice is saved with the favorites. **Rarity Backgrounds** (on by default) colors the slot behind each item and favorite with its rarity, in the square or disc style, opacity and legacy colors set in Item Rarity Backgrounds (it works even while that module is off). **Columns** (4 to 20, default 11) and **Rows** (0 fills the screen height, up to 30) set how wide and tall the grid is; items per page is columns times rows, and a capped grid moves the filter buttons and search bar up under it. The list is hidden when the window is too narrow (less than 8 columns of room, or fewer if Columns is lower). With the official Hypixel SkyBlock resource pack loaded (it downloads when you join Hypixel) items use its models, the same as in game. Without the pack, the 850 or so items NEU now lists as plain paper (Abiphones and many more, formerly skull items) get their old head texture or a stand-in item (data from PackDisabler, CC0); about 90 stay paper. Data comes from the NEU repository, kept in `config/geileraddons/neu-item-list.json.gz` and loaded in the background as soon as the game starts, so the list is ready seconds later and works offline; every item icon (heads and other custom items included, with their textures) is built in the background too and saved in `config/geileraddons/neu-item-stacks.nbt.gz`, so the next start restores them from disk instead of rebuilding (it is rebuilt when the repository has a new commit). One tiny GitHub request per start (and every 6 hours) asks for the repository's current commit (`neu-item-list.commit`); only a new commit downloads the zip (about 20 MB) again. Favorites are in `config/geileraddons/item-list.json`. **Inventory search**: double-click the search bar and it turns yellow; the typed words (all must match, `"quoted phrase"` stays one term, any case) then also search the name and lore of every item in the open inventory or chest, outlining matches in yellow and dimming the rest. Double-click again to switch it off.
 - **Terminal ESP** (Dungeons): outlines the hitbox of each inactive Phase 3 terminal. **Show All Terminals** (on by default) also covers the other sections: from Goldor's opening line every terminal gets a marker at its known spot (**Unloaded Fill / Outline Color**) until its real stand loads. A marker disappears when its stand vanishes within 48 blocks of you, or when the `X activated a terminal!` line names a player who is standing next to it. The marker size and spot are estimates and not yet checked in game. Settings: Style, Show Through Walls, Fill / Outline Color, Line Width, Flash On Click, Flash Color.
 - **Lever Aim Assist** (F7): helps with the two levers of each Phase 3 section (not the device). A lever is the block next to a `Not Activated` armor stand; pulled levers and levers out of **Max Reach** are skipped. Off by default. **Pull** turns the view part of the way to the nearest lever inside **Pull FOV** and then stops: **Pull Strength** is the share of the angle that gets closed, **Pull Speed** how fast. **Trigger Bot** turns the view onto a lever inside **Trigger FOV** with the Rotation Engine's settings and right-clicks it once the crosshair is on it, after a random delay between **Delay Min** and **Delay Max** (ms); a clicked lever rests for 1.5 s. Nothing is sent while a screen is open. Automatic aiming and clicking can get an account banned on servers that forbid it. The stand name is taken from Odin and not yet checked in game.
+- **Auto Simon Says** (F7, off by default, needs **Simon Says**): presses the Simon Says buttons that Simon Says has solved, in order, and never a button that is not next. **Mode**: **Aim Assist** pulls the view part of the way to the next button inside **Pull FOV** (**Pull Strength**, **Pull Speed**) and never clicks; **Trigger Bot** (default) clicks when your crosshair is on the right button inside **Trigger FOV**; **Auto** turns the view to each button with the Rotation Engine and clicks it. Every click waits a delay drawn between **Click Delay Min** and **Max** (90-160 ms) and only within **Max Reach**. **Auto Start** (on): in Auto mode, while the device has not been started (no sequence and no start press seen), it turns to the start button and presses it. Auto aims straight at the button face (no walking pitch limits). **SS Skip** (off by default): after you press the start button yourself, it presses it twice more, each after a gap between **Skip Gap Min** and **Max** (115-145 ms), while you keep looking at it; looking away cancels it. With **Block Wrong On Start** on in Simon Says, set **Max Start Clicks** to at least 3. Works in `/ga sim ss`. It pauses while Auto Mask is running.
+- **Auto i4** (F7, off by default, needs **i4 helper**): while you stand on the 4th device plate, turns the view to the aim spot of the current emerald (the yellow sphere of i4 helper) and right-clicks the held bow once the view is within **Aim Tolerance** degrees of the sphere's centre (aimed straight, no walking pitch limits), after a reaction delay between **Reaction Min** and **Max** (80-150 ms) and the bow's `Shot Cooldown` from its lore. A miss is shot again after the cooldown. A movement or jump key stops it until you let go. **Bow Only** (on) skips it unless you hold a bow. **Prefire** (on): while no target is lit, it aims at the orange sphere nearest the crosshair (the spots of the targets still to come) and shoots it, so the next emerald is hit as it lights up; a lit target always comes first. Works in `/ga sim i4`. It pauses while Auto Mask is running.
+- **Auto Mask** (F7, off by default): after a Bonzo's Mask or Spirit Mask proc in a dungeon, casts the first fishing rod in your hotbar once (**Cast Rod**, so an autopet rule on the rod can swap to Phoenix) and switches back, runs `/stats`, clicks the other mask (Spirit after Bonzo, Bonzo after Spirit) in the inventory part of that menu and closes the screen if it is still open. If the click picks the mask up instead of equipping it, it is put straight back. Each step waits a pause between **Step Delay Min** and **Max** (180-320 ms); it gives up after **Give Up After** seconds. While it runs, Auto Simon Says, Auto i4 and the Lever Aim Assist trigger neither turn the view nor click.
+- **Rare Drop Rat** (F7, off by default): a rat grows in the middle of the screen and shakes when Necron's Handle (also Shiny), the Implosion, Shadow Warp or Wither Shield scroll or the Fifth Master Star drops: from a drop chat line (`RARE DROP!` and similar) or when the item shows in a dungeon reward chest or a Croesus chest preview, once per item and chest. **Size**, **Grow Time**, **Hold Time**, **Fade Time** and **Shake** set the animation. It is drawn above an open chest screen, otherwise on the HUD. The image is `assets/geileraddons/textures/gui/rat.png` (128x128); without that file nothing is drawn. Try it with `/ga chat RARE DROP! Necron's Handle`.
+- **Auto Croesus** (F7, off by default): claims your Croesus chests. Set **Start/Stop Key**, open the Croesus menu and press the key. It opens each run with no chest opened, claims the most profitable chest (the same prices as **Croesus**), walks back with the menu's own **Go Back** arrow and moves through the pages with **Next Page**. It never closes the menu and never clicks the NPC. **Min Profit** skips runs whose best chest is worth less (they stay unclaimed). **Use Chest Keys** also opens the next best chest when its profit minus the Dungeon Chest Key price is at least **Key Min Profit**. **Use Kismet** rerolls Bedrock once per run when its profit is below **Kismet Below** (a run whose Kismet Feather is
+already struck through on the Croesus list, or whose reroll button says it was used, is never rerolled again), on the **Kismet Floors** (comma separated, `M7` by default, empty for all). Every kind of click has its own random delay range (run, chest, claim, Go Back, next page, Kismet). Pressing the key again stops it; a closed or unknown screen, or a menu that does not change within **Menu Timeout**, stops it too.
 - **Melody Message** (Dungeons): sends a party message when you open the Melody terminal and, optionally, `Melody 67%` / `Melody 33%` as it progresses. Messages can be edited (`/pc ...`, `{percent}`).
 - **Trapped Chest ESP** (Dungeons): boxes every trapped chest in a dungeon, which is where the Mimic hides. Settings: colors, Line Width, Range, Depth Check.
-- **Chest Roll** (Dungeons): a case-opening animation for dungeon reward chests. When a chest of a tier you enabled (Wood, Gold, Diamond, Emerald, Obsidian, Bedrock; Emerald and up by default) opens, and again after every reroll, a band of rarity-colored cards scrolls past a center line over a blurred backdrop (the world and HUD are blurred, the band keeps its look), with tick sounds that sharpen on the last three cards, and lands on the chest's most valuable item. The cards are real SkyBlock items (Wither armor, scrolls, master stars and so on, drawn from the Item List repository; enchanted books are the plain books they are in game), so the Item List data must have loaded; an item it does not know is drawn as a plain icon. The reveal is short: the band closes while the item grows from small to big with a spin, a glow and a ring in its rarity colour, a sound by rarity (from a plain pickup to a totem and firework for Legendary and Mythic), then its name, rarity and description (its lore), the price (Croesus price data) and the other items in the chest fade in below; then the normal chest screen is shown (no click is held back). Click or any key skips ahead. A chest rolls once: reopening it, or looking at it in Croesus after the run, does not roll again (a chest is remembered for three hours by its tier and contents; a reroll has new contents and rolls). The Croesus profit list waits until the roll has finished. The **Test Roll** button plays a Bedrock roll over the game view without any chest. The filler cards come from the loot pool of the floor (the floor of the run you are in, else the floor you last opened in Croesus); every floor F1 to F7 and M1 to M7 and every chest tier ships with the mod, read from the Hypixel SkyBlock Wiki (first-roll chances). **Spin Seconds** (2 to 8), **Reveal Seconds** (0.5 to 4, default 1.6), **Blur Background** (its strength is the Menu Background Blur option in Options > Video Settings; at 0 there is no blur), **Play Sound** and **Volume** adjust it.
+- **Chest Roll** (Dungeons): a case-opening animation for dungeon reward chests. When a chest of a tier you enabled (Wood, Gold, Diamond, Emerald, Obsidian, Bedrock; Emerald and up by default) opens, and again after every reroll, a band of rarity-colored cards scrolls past a center line over a blurred backdrop (the world and HUD are blurred, the band keeps its look), with tick sounds that sharpen on the last three cards, and lands on the chest's most valuable item. The cards are real SkyBlock items (Wither armor, scrolls, master stars and so on, drawn from the Item List repository; enchanted books are the plain books they are in game), so the Item List data must have loaded; an item it does not know is drawn as a plain icon. The reveal is short: the band closes while the item grows from small to big with a spin, a glow and a ring in its rarity colour, a sound by rarity (from a plain pickup to a totem and firework for Legendary and Mythic), then its name, rarity and description (its lore), the price (Croesus price data) and the other items in the chest fade in below; then the normal chest screen is shown (no click is held back). Click or any key skips ahead. A chest rolls once: reopening it, or looking at it in Croesus after the run, does not roll again (a chest is remembered for three hours by its tier and contents; a reroll has new contents and rolls). The chest screen stays dark from the moment it opens until the roll starts, so the loot never shows for a frame (at most 1.5 s, in case the items never arrive). The Croesus profit list waits until the roll has finished. In a Croesus run preview, a chest of a rolled tier that has not been rolled yet gets no best-chest mark and no profit row, and its tooltip shows the loot lines as scrambled text; both come back once that chest has rolled. The **Test Roll** button plays a Bedrock roll over the game view without any chest. The filler cards come from the loot pool of the floor (the floor of the run you are in, else the floor you last opened in Croesus); every floor F1 to F7 and M1 to M7 and every chest tier ships with the mod, read from the Hypixel SkyBlock Wiki (first-roll chances). **Spin Seconds** (2 to 8), **Reveal Seconds** (0.5 to 4, default 1.6), **Blur Background** (its strength is the Menu Background Blur option in Options > Video Settings; at 0 there is no blur), **Play Sound** and **Volume** adjust it.
 - **Arrow Align** (Dungeons): shows how many clicks each arrow frame still needs (green under 3, gold under 5, red otherwise) and can block clicks on frames that are already right (Shift overrides).
 - **Speed Display** (Miscellaneous): a movable HUD line with your speed stat (Devonian behavior).
 - **Quiver Display** (Miscellaneous, unreleased): a movable HUD line with the quiver name and the arrows left, read from the `Arrows Remaining` lore line of the arrow or feather item in your inventory (Odin behavior). Hidden while no such item is found.
@@ -1852,8 +1943,8 @@ reason a use was dropped (`noId`, `noAbility`, ...) and records the first action
 - **Rare Crop Title** (Farming, unreleased): in the Garden, a `RARE CROP!` or `VERY RARE CROP!` drop line shows a title and sound with the item name (after SkyHanni's Burrowing Spores notifier, for any drop). **Composter Display** (Farming, unreleased) shows the composter's time left, organic matter, fuel and stored compost on a movable HUD, read from the Composter widget in the tab list, and warns (at most once per 5 minutes) when organic matter or fuel falls under **Low Organic Matter** (default 20,000) or **Low Fuel** (default 3,000); 0 turns a warning off. Enable the Composter widget in the tab list for it to have data.
 - **Garden Keybinds** (Farming, unreleased): set a key for Attack, Use Item, Left, Right, Forward, Back, Jump or Sneak and only that key drives the control while you farm (after SkyHanni's Garden custom keybinds). It is active in the Garden with a farming tool (hoe, dicer, chopper, knife, cutter, mousemat or pest vacuum) in hand and no screen open; **Exclude Barn** keeps normal keys in the barn and greenhouse and **Require Farming Tool** can be switched off. A control left empty keeps its normal key, and a key you give to one control stops driving the control it normally drives. **Visitor Shopping List** (Farming, unreleased) shows the items you still need for your Garden visitors, read from the Items Required of each visitor menu you open and dropped when the visitor leaves the tab list; with a chat, inventory or other screen open, left-click an item row to copy the amount you are missing and run `/bz <item>`; you click the result, Buy and Custom Amount yourself and press Ctrl+V in the sign (the mod never clicks for you). The card lists only the items you still need to buy (no visitor names), with a count of visitors and how many you can already serve, the Bazaar Instabuy cost of each item in millions of coins at the right of its row and the total in the header. **Show Icons** (on by default) draws each item's icon (the plain crop with the enchanted shimmer, for example a melon slice for Enchanted Melon) and prices it from the Bazaar by the name turned into its id (`Enchanted Melon` is `ENCHANTED_MELON`, a few renamed ones like Nether Wart map to their Bazaar id); an item the Bazaar does not list shows `?` for the cost, and a crop with no known icon shows none. Neither needs the Item List data. The card ignores clicks while the Click GUI, Move Elements or another GeilerAddons screen is open. After a click-to-search, the matching item in the Bazaar result gets a green box for two minutes. It does not count sacks. **Greenhouse Helper** (Farming, unreleased) colours the status slot in the Crop Diagnostics menu (green harvestable, yellow drops, red otherwise) and the water slot when watered, and counts down to the next growth stage with a notice when it is ready.
 - **Ghost Vision** (Visual): in the Dwarven Mines, boxes the ghosts (creepers below Y 100) and removes their charged swirl. Settings: Style, Fill / Outline Color, Remove Charge Effect (NoFrills behavior).
-- **Croesus** (Dungeons): in the Croesus menu, tints runs by state (green unopened, gold opened, red none left), hides claimed runs and outlines runs with a Kismet Feather. In a run's chest preview it prices every chest, lists them by profit and marks the best two: the second mark is the second-best buy, so it counts the Dungeon Chest Key (3-day average price) against that chest and only shows while the profit stays above zero; an opened chest shows its own profit. **Include Essence** (on by default) can leave essence out of every profit. A Chest Count HUD warns at a threshold (default 55). Prices are downloaded from Odin's price service (`lb.odtheking.com`, the 7-day file plus the 3-day file for the key) when the module is enabled; **Refresh Prices** reloads them.
-- **Simon Says** (Dungeons): marks the buttons in order (first, second, then the rest), can block wrong clicks, can announce `SS n/4` to the party and stops you breaking the device blocks. It handles the first round of the SS skip (double and triple skips too): the list follows the pressed button, so clicking ahead of the highlighted button completes the ones before it, and a skip the server shows removes only its own button. The buttons are shown in the order that works there, and **Block Wrong On Start** (with **Max Start Clicks**, default 4) blocks extra start-button clicks in that round unless you sneak.
+- **Croesus** (Dungeons): after Odin's Croesus. In the Croesus menu it tints runs by state (green unopened, gold opened, red none left), hides claimed runs and outlines runs with a used Kismet Feather. In a run's chest preview and in an opened chest a list above the chest screen (tier-colored name, profit, items) shows what each chest is worth, sorted by profit; place and scale it in Move Elements. The two most profitable chests are marked. **Second Chest Needs Key Profit** (on by default) marks the second one only while its profit still covers a Dungeon Chest Key; turn it off to mark the top two like Odin. **Price Source**: **Odin 7-Day Average** (default; from `lb.odtheking.com`, the key from the 3-day file, re-downloaded when an hour old), **Live Sell Offer** or **Live Instant Sell** (Bazaar plus lowest BIN from `hysky.de`, the data Price Display uses, refreshed about every minute; an item without a live price keeps its 7-day value). Chest Roll shows the same prices. **Include Essence** (on by default) can leave essence out of every profit. The list drops to profit only when it would not fit the screen. A Chest Count HUD in the Catacombs shows the unclaimed chests and warns above a threshold (default 55). **Refresh Prices** reloads the averages.
+- **Simon Says** (Dungeons): marks the buttons in order (first, second, then the rest). The solution and the SS skip follow Odin's Simon Says exactly: the order is recorded as the lanterns turn off; in the first round after the start button a list of two is reversed and a list of three drops the one before the last; pressing a button moves the highlight past it; a grid reset or a finished round ends that first round. The order shows while the device still plays it, as boxes where the buttons will appear. **Block Wrong Clicks** blocks every grid click that is not the highlighted button (sneak to override, or **Invert Shift**). **Block Wrong On Start** with **Max Start Clicks** (default 4) blocks extra start-button clicks in the first round unless you sneak; Goldor's entry line resets that count. **Announce Progress** sends `SS n/4` (the round length) when you click the round's last button, **Announce Reset** sends `SS Reset!` when the start button restarts a device in progress, and the device blocks cannot be broken.
 
 </details>
 
@@ -1993,6 +2084,126 @@ legacy opaque metadata and has no potion or gameplay behavior; use `color`, `gra
 </details>
 
 <details>
+<summary><b>Cosmetics</b> — wings, horns, cat ears, a halo, tails, auras and body shape</summary>
+
+<br>
+
+**Unreleased.** Open **Cosmetics** with the wing button in the Click GUI's top bar (right of Theme); there is no
+module card or on/off switch. The menu shows your player on the left and a card per cosmetic on the right, each
+with a live picture in your colors. Click a card to wear it or take it off (a tick marks what you wear); one per
+slot. The gear on a card opens that slot's settings: style, **Use Style Colors** or your own **Color** and
+**Second Color**, **Size**, **Height**, **Depth** and the slot's animation speed (0 stops it). Drag the player
+to turn it (left and right all the way round, up and down a little); the mouse alone no longer moves it. Drag
+the scrollbar or use the wheel; the card list keeps its scroll when you open a slot's settings, come back or
+reopen the menu (until the game closes).
+
+- **Wings:** Angel Wings (layered feathers) and Devil Wings (bones and a sagging membrane). Mounted high on the
+  back, they beat forward and down, sweep back a little while you move and beat faster in the air.
+  More wings: Dragon (heavy beat, flexing fingers and gold claws), Fairy (fast flutter, see-through, sparkles),
+  Phoenix (two tiers: the long primaries fan out above the lower feathers; flickering fire tips and embers), Mechanical (blades fan open while you move or fall, turning gears)
+  and Crystal (floating shards on black rods around a pulsing core, with a quick chatter now and then).
+- **Head:** Demon Horns (curl forward, loop over and sweep back), Cute Horns, Ram Horns (spiral back and down
+  and end pointing forward) and Cat Ears (leaned out, twitching now and then). Unicorn Horn (a spiral with a pulsing glowing tip and an
+  occasional sparkle).
+- **More head pieces:** Bunny Ears (two-part ears that bounce, flop and twitch), Fox Ears (pointed ears with a dark
+  tip that twitch and swivel, and perk up every few seconds) and Deer Antlers (branching antlers that sway). They
+  share the Head slot with the horns and cat ears. Bunny ears, fox ears and antlers also give a short shake about
+  every 12 seconds (faster with a higher speed). **Size** on any head piece grows it from where it stands on the
+  head; it no longer lifts it.
+- **Hat:** its own slot, so a hat can be worn together with ears or horns. Top Hat (still, bounces with steps), Royal
+  Crown (gold ring, velvet cap, gems that glint in turn), Witch Hat (the bent tip lags behind head turns and
+  walking), Propeller Beanie (the propeller spins faster when moving and much faster in the air), Flower Crown
+  (petals and leaves flutter; **Size** grows the flowers and leaves, the ring stays on the head) and Over-Ear Headphones (the cups pulse to a beat). Color is the main part (band,
+  gold ring, petals, cups), Second Color the rest (brim, velvet, leaves, headband); gems, buckle, flower hearts and
+  the propeller keep their own color. A worn helmet (any head item) hides the hat. The slot's **Motion Speed** 0
+  freezes it.
+- **Halo:** spins and bobs. **Tail:** Straight, Curled, Fluffy, each swaying in its own way.
+  More tails: Dragon (scaled, spiked, heavy sway, lags behind turns), Fox (big fluffy, slow swish) and Devil (thin
+  whip with a spade tip).
+- **Aura:** Glow Aura (glowing sparks rising around you) and Stink Aura (green haze with buzzing flies), plus
+  Music Note Aura (3D notes drifting round you, spinning and hopping to a beat), Frost Aura (small snowflakes swirling
+  down while ice crystals grow, shrink and glint around your feet) and Cherry Blossom Aura (whole five-petal
+  blossoms and loose petals tumbling and swaying down to the floor, fading near it).
+  Storm Cloud (a drifting grey cloud over your head with rain and now and then a lightning flash; it floats higher
+  on its own when tall ears, horns or a hat would poke into it), Flame Ring
+  (a slowly turning ring of flickering flames round your feet with rising embers) and Heart Aura (small pixel
+  hearts floating up round you, shrinking and fading, in your two colors).
+- **Pet:** a small companion that moves around you: about every 10 seconds it hops to its next spot, from your left
+  shoulder to the floor, your head, the other side of the floor, your right shoulder and the floor in front of you
+  (it skips your head while you wear a hat or head piece, and holds on to your shoulder while you are in the air):
+  Baby Dragon (flapping wings that glide while you move,
+  paddling arms and legs, swaying tail), Ghost (rippling skirt), Bee (buzzing see-through wings), Slime Cube (hops and
+  squashes, the inner cube lags the shell), Axolotl (waving gills, paddling legs, undulating tail) and Owl (flapping
+  wings, swivelling head). The pet trails behind when you walk, swings round when you turn, faces where it travels,
+  drifts back and settles when you stop, and blinks and looks around on its own; it snaps back after a teleport.
+  Color is the main body, Second Color the accents (dragon wings, bee stripes, axolotl gills, slime core...).
+  Speed 0 freezes the animation cycles (the pet still follows you).
+- **Face** (on the head's hat layer): Pixel Sunglasses (a glint sweeps over the lenses now and then), Fox Mask
+  (kitsune markings, ears that twitch, a mask that sways a little with you), Plague Doctor Mask (gold-ringed
+  lenses, a beak that nods with your steps) and a Bandana (polka dots, loose ends that flutter more as you move).
+- **Back** (flush behind the body, so a chestplate only hides half a pixel of it; wings sit further out and can
+  overlap): Adventure Backpack (bounces and lags with your steps, bedroll and pocket flap swing), Katana in its
+  sheath (sways and rattles), Jetpack (flickering flames: a small one idle, big ones in the air, with smoke), Turtle
+  Shell (a slow bob) and an Electric Guitar on a strap (swings with your steps). Their speed setting scales all of
+  it; 0 holds the pose. Colors: the first color tints the main parts, the second the black parts; gold, steel,
+  wood and flames keep their own color. The fox mask's second color is its fur.
+- **Skirt:** Pleated Skirt, Ruffled Tiered Skirt, Long Flowing Skirt (front slit that opens with your stride), Tutu,
+  Kilt (swinging pouch with a gold clasp) and Maid Skirt (apron, lace hem, bow with fluttering tails). The
+  waistband follows the **Waist** slider like the shaped torso and bent armor and sits outside leggings; below
+  the waist one piece of cloth follows your legs (the front lifts with the forward leg, the back with the other),
+  the hem bounces, flares and sways, and the Sway Speed setting (0 stops it) scales the idle motion. Color is the
+  main fabric (red parts of the sheet), Second Color the black parts (plaid, trims, waistband, skirt of the maid
+  outfit); lace and the clasp keep their own color.
+- **Trail** (slot `trail`): effects left behind in the world where you walk, then fading after one to two seconds;
+  nothing spawns while you stand still. Flame Footprints (`flame_footprints`), Flower Steps (`flower_steps`, they
+  sprout and wilt), Sparkle Trail (`sparkle_trail`), Rainbow Ribbon (`rainbow_ribbon`, a continuous strip behind
+  your back that breaks into loose pixels at the tail), Bubble Trail (`bubble_trail`, drift up and pop) and Ender
+  Sparks (`ender_sparks`). Color and Second Color are the sprite's main and secondary parts (flame edge and core,
+  petal and stem, star and core, bubble rim and film, spark and shadow). The ribbon's **Color** is its top band and
+  **Second Color** its bottom band; the bands between sweep the hue from one to the other the long way round, so the
+  default red to violet is the rainbow and blue with white is a blue-to-white ribbon. Size scales the sprites,
+  Height lifts them, Depth moves them back, the speed (default 1) drives the twinkle, flicker and wobble (0 freezes
+  them; the trail still fades). Only players you can see in third person are recorded (your own trail needs the
+  F5 view), and the trail pauses while swimming, gliding or dying.
+- **Cape** (slot `cape`): replaces the vanilla cape and moves exactly like it (same lean, flap and sway, hidden
+  under an elytra, pushed out a little by a chestplate). Dragon Scale Cape (`dragon_scale`), Starfield Cape
+  (`starfield`, twinkling stars) and Royal Cape (`royal`, velvet with ermine trim). Color is the red areas (scales,
+  stars, velvet) and Second Color the dark areas (gaps, sky, collar); the gold clasp, white stars, the moon and the
+  fur keep their colors. Size scales the cape about the neck, Height and Depth move the hinge, the speed drives the
+  scale shimmer and the star twinkle.
+- **Body:** **Chest** and **Waist** sliders reshape your skin's torso. Worn chestplates and leggings bend to the
+  same shape, trims and enchant glint included.
+
+Cosmetics the owner gave you in the hosted profile show as worn in the menu. You can change them on your side:
+pick another style in that slot to replace the hosted piece, or click the worn card (or **None** in the slot's
+settings) to switch the slot off, which hides the hosted piece for you. **Hosted (...)** in the slot's settings
+goes back to the hosted piece. This only changes what you see.
+
+New cosmetics start at the owner's tuned placement (for example wings at size 0.5). Your own picks are seen
+only by you, since there is no server that shares them; **Show others' cosmetics** (bottom of the player
+panel) hides cosmetics from the hosted profile. Everything is client-side and changes nothing on the server.
+
+Hosted format, for the owner: inside a player entry of the hosted player profile, `effect.cosmetics` maps a slot
+(`wings`, `head`, `halo`, `tail`, `aura`, `hat`, `face`, `back`, `pet`, `skirt`, `trail`, `cape`) to a piece:
+`style` (`angel`, `devil`, `demon_horns`, `cute_horns`, `ram_horns`, `cat_ears`, `unicorn_horn`, `bunny_ears`,
+`fox_ears`, `deer_antlers`, `top_hat`, `royal_crown`, `witch_hat`, `propeller_beanie`, `flower_crown`,
+`headphones`, `straight`, `curled`, `fluffy`, `glow`, `stink`, `storm_cloud`, `flame_ring`, `heart_aura`,
+`music_notes`, `frost`, `cherry_blossom`; wings also `dragon`, `fairy`, `phoenix`, `mechanical`, `crystal`; tails
+also `dragon`, `fox`, `devil`; for `pet`: `baby_dragon`, `ghost`, `bee`, `slime_cube`, `axolotl`, `owl`; for
+`skirt`: `pleated`, `ruffled`, `long`, `tutu`, `kilt`, `maid`; for `trail`: `flame_footprints`, `flower_steps`,
+`sparkle_trail`, `rainbow_ribbon`, `bubble_trail`, `ender_sparks`; for `cape`: `dragon_scale`, `starfield`,
+`royal`; optional for `halo`), and optional
+`color` / `color2` (`#RRGGBB`), `size` (0.25 to 2.5), `up` and `back` (pixels, -12 to 12) and `speed` (0 to 4);
+a left-out field uses the tuned default. `"body": {"chest": 0.5, "waist": 1}` (0 to 1) shapes the body. Example:
+`{"name": "Player", "effect": {"cosmetics": {"wings": {"style": "devil"}, "halo": {}, "body": {"chest": 0.3}}}}`.
+The `face` slot takes `sunglasses`, `fox_mask`, `plague_mask` and `bandana`; the `back` slot takes `backpack`, `katana`,
+`jetpack`, `turtle_shell` and `guitar`. Everyone with the mod sees hosted cosmetics. Older mod versions ignore `effect`. A bad piece is skipped and
+logged; the rest still applies. `./gradlew cosmeticPreviews` renders every cosmetic, the menu cards and the bent
+armor to `26.2/build/cosmetic-previews/`; `./gradlew cosmeticPreviewsE` adds shaped and walking skirt sheets.
+
+</details>
+
+<details>
 <summary><b>Local utilities</b> — supply requests, timer, clock, and lobby watch</summary>
 
 <br>
@@ -2002,22 +2213,337 @@ custom-data ID is `ENDER_PEARL` or `SUPERBOOM_TNT`, then request only the amount
 target. The defaults are 16 pearls and 64 Superboom TNT; an optional positive integer changes the
 target. For example, `/ga ep` with 15 pearls requests one, and `/ga sb` with 32 Superboom TNT
 requests 32. At or above the target, neither command sends a request. `/ga timer` and `/ga timer get` show countdown status;
-`/ga timer set`, `pause`, `resume`, and `reset` control it. Debug aids: `/ga chat <text>` shows a client-side chat line (`&` colour codes work) and runs every chat listener on it as if the server sent it; `/ga testlever` places three client-side levers with `Not Activated` stands in front of you (Lever Aim Assist then works outside F7, in singleplayer or anywhere; the server never sees the levers, so a pull only exercises the aim) and `/ga testlever clear` removes them. Its **Timer Settings** are under General,
+`/ga timer set`, `pause`, `resume`, and `reset` control it. The countdown is saved to `%USERPROFILE%\.geileraddons\shared-timer.json`, so it resumes after a restart and every running game instance (each Modrinth profile) shows the same timer within a second; a timer that ran out more than a minute before the game started shows as complete without alerting. Debug aids: `/ga chat <text>` shows a client-side chat line (`&` colour codes work) and runs every chat listener on it as if the server sent it; `/ga testlever` places three client-side levers with `Not Activated` stands in front of you (Lever Aim Assist then works outside F7, in singleplayer or anywhere; the server never sees the levers, so a pull only exercises the aim) and `/ga testlever clear` removes them. Its **Timer Settings** are under General,
 not a separate module.
 Completion sends
 `[Timer] Countdown complete.` in client chat and plays a sound by default; its text, chat/title/sound
 outputs, and title duration are configurable. System Clock uses the operating system's local timezone
 and defaults to white `HH:mm:ss` text with no background. Its settings are shown directly without an
 extra dropdown; choose 12/24-hour time, show or hide seconds, and configure text and background.
-**Performance HUD** (Miscellaneous → Display) is a movable panel with your ping, the server TPS and your FPS.
-Show Ping, Show TPS and Show FPS each switch one stat off; Style is a Click GUI themed panel (default) or
-plain text in a chosen color. Ping and TPS read `--` until the server has reported them (TPS is the same
-client-observed estimate as the TPS chat command).
+**Performance HUD** (Miscellaneous → Display) is a movable panel with your ping, the server TPS, your FPS
+and memory use (used / maximum MB of the Java heap, with a percentage).
+Show Ping, Show TPS, Show FPS and Show Memory each switch one stat off; Style is a Click GUI themed panel (default) or
+plain text in a chosen color. Ping is a real round trip: the HUD sends a ping packet every 2 seconds and times the
+server's reply (the tab-list latency always reads 0 on Hypixel). Ping and TPS read `--` until the server has
+answered (TPS is the same client-observed estimate as the TPS chat command, read from the server's time packets).
 **Lobby Sniper** lets you add multiple player names, enable or disable each entry, and choose a custom
 title. It matches names case-insensitively against the current lobby roster and alerts once per
 presence interval.
 
 </details>
+
+### Carnival, Dojo Helper, Collection Tracker and Spotify (Miscellaneous)
+
+All four modules are off by default and have not been verified in a live client yet.
+
+**Carnival** ports SkyHanni's whole Carnival category. It works in the Hub's Carnival area (the sidebar location
+row must say Carnival).
+
+- **Fruit Digging** (on by default): greys dug and destroyed cells, labels clues over the board (treasure `<=`,
+  anchor `>=`, mine counts, fruit guesses with their current value), boxes the solver's best next dig and says which
+  shovel to use, and shows two movable panels: Remaining Fruit and Fruit Digging Solver (rounds, cell, shovel, bomb
+  chance). The solver samples possible boards from the clues; SkyHanni's own solver loses its clues to a Kotlin
+  `buildList`/`size` mix-up, which is fixed here, so recommendations here use the clues.
+- **Zombie Shootout** (off by default, as in SkyHanni): colored hitboxes per helmet (leather, iron, gold,
+  diamond), a time-left label over each zombie, an optional highest-value-only filter, a red box and tracer on the
+  lit lamp, and a Lantern Timer panel.
+- **Show Goals**: a panel of this SkyBlock year's Carnival goals that are not done yet. Open **Carnival Goals** once
+  to read them; completion lines in chat tick them off.
+- **Double Click to Start**: right-click a game master again within 5 s of its option prompt and the game starts
+  (it sends the same dialogue answer SkyHanni sends).
+- **Reminder Daily Tickets**: while Foxy's Chivalrous Carnival perk is active (read hourly from the public Hypixel
+  election data), a chat line every 5 minutes until you claim; click it to warp to the Carnival. SkyHanni walks you
+  to the Carnival Leader instead; this mod has no Hub path graph.
+- **Token Shop Helper**: inside an event token shop (Fishing Festival, Spooky Festival, Season of Jerry), a panel
+  lists the upgrades still to buy, their token cost, your tokens and the other shops' remaining totals (from NEU's
+  `carnivalshops.json`, downloaded once and cached). SkyHanni puts this into slot 8 of the shop; here it is a panel.
+
+Data: `config/geileraddons/carnival.json` (goals, last claim day, shop levels) and `carnival-shops.json`.
+
+**Dojo Helper** ports Skyblocker's Crimson Isle Dojo helpers, one switch each (all on): **Force** (time-left labels,
+red boxes on negative zombies), **Stamina** (wall holes, green when moving towards you, orange when moving away),
+**Mastery** (time until each block turns red, corrected for ping and arrow flight, tracer to the next block),
+**Discipline** (boxes the zombies your held sword can hit, in that sword's color), **Swiftness** (the newest wool
+block), **Control** (where to aim at the Wither Skeleton, green while you look at it) and **Tenacity** (fireball
+paths and their landing blocks). Skyblocker makes zombies glow; this mod draws boxes. It only runs on the Crimson
+Isle between Master Tao's start line and the CHALLENGE COMPLETED/FAILED line.
+
+**Collection Tracker** counts chosen items per tracker. Click **Create Tracker**, open it, name it, then **Add
+Items**: a search window over the mod's item list opens (same search as the Item List module); click results to
+tick them and press Done. Each tracker has its own Island Filter, price mode, HUD switches and an idle time
+(default 120 s). **Manage Folders** sorts trackers into folders, as macros are sorted.
+
+- **Counting:** items arrive from two sources, as in SkyHanni. Sacks: Hypixel's `[Sacks] +N items. (Last 30s.)`
+  line lists every item in its hover text; the tracker reads those rows (items sent to sacks appear up to 30 s
+  late; a very long list ends in "and N other items", which cannot be counted). Inventory: items appearing in your
+  own inventory while no container is open. Moving items out of chests, storage, trades, shops or crafting does
+  not count, and sack lines within 10 s of a sack menu are ignored.
+- **HUD:** one panel per tracker, shown only while that tracker is active: enabled, allowed on this island, and a
+  tracked item arrived within its idle time. Rows show the item icon, count, items per hour (after the first
+  minute), and optionally the unit and total value; then active time, earnings and coins per hour.
+  **Show Totals** switches between this session (since game start or a reset) and all-time totals.
+- **Prices** are estimates from the price data the mod already downloads: **Instant Sell** (top Bazaar buy order),
+  **Sell Offer** (lowest Bazaar sell order), **Lowest BIN**, or **Bazaar, else BIN**. Items without data say so;
+  prices older than 15 minutes are marked stale.
+- **Time** only counts while the tracker is active, so time spent elsewhere or idle does not lower the rates.
+
+Data: `config/geileraddons/collection-trackers.json` (trackers, folders, totals).
+
+**Spotify** shows what Spotify plays: cover, title, artist, progress bar and time, play controls and up to five
+custom buttons. Click them while chat or an inventory is open (in an inventory, outside the menu panel). Settings: style (Card, Compact, Minimal), width, accent color,
+background, hide when paused, and a switch per element. Position and scale come from Move Elements.
+
+- **Source: Web API** needs your own Spotify app: create one at developer.spotify.com, add the redirect URI the mod
+  prints on **Log In** (`http://127.0.0.1:8888/callback` by default), paste its Client ID, then press **Log In** and
+  finish in the browser. Since February 2026 Spotify's Development Mode apps need the app owner to have Premium and
+  allow 5 users, which is why the mod cannot ship a shared app. Playback controls (play, pause, skip, seek,
+  shuffle, repeat, volume) need Premium; without it the HUD shows "Premium needed for controls".
+- **Source: Windows** reads the Windows media controls through a hidden PowerShell process: no login and no
+  Premium, but only play/pause and skip; Like, Shuffle, Repeat, Volume and Restart are greyed out. The cover is
+  retried each second until Spotify provides it, and when Windows reports no song length the time shows only the
+  elapsed part.
+  **Auto** uses the Web API when logged in, else Windows, and sends play/pause/skip through Windows when the Web
+  API refuses them.
+- **Custom buttons:** Like/Unlike (Liked Songs), Shuffle, Repeat, Volume -/+, Restart Song, Open in Spotify, Block
+  Artist (mod) and Block Song (mod). Spotify has no API to remove a song from your taste profile or to stop
+  recommending an artist or song. The block buttons keep a list in this mod and skip matching songs when they
+  start; Spotify itself is not changed. **Clear Blocklist** empties it.
+
+Data: `config/geileraddons/spotify-token.json` (login, never logged) and `spotify-blocklist.json`.
+
+### Bazaar Buy Presets and the lucky wheel
+
+Neither has been verified in a live client yet.
+
+**Bazaar Buy Presets** (Miscellaneous, off by default) adds amount buttons beside the Bazaar's buy amount sign. A
+button only writes the number onto the sign; you press **Done** yourself, and the mod sends nothing. **Amounts**
+(default `64, 160, Max`, up to five) is a comma-separated list. **Max** is the per-order limit read from the menu
+before the sign (256 for unstackable items, otherwise usually 71,680) and is hidden when that limit is unknown.
+Numbers above a known limit are hidden. Sell and price signs get no buttons.
+
+**`/ga spin`** opens a lucky wheel. Add up to 24 entries and edit each name and chance on the same screen. The
+chances always add up to 100%: a new entry gets an equal share, and changing or removing one rescales the others in
+proportion. Click the wheel to spin; the winner is drawn by chance first and the wheel then lands on it. **Style**
+switches between **Pastel** and **Click GUI** colors. Entries are saved in `config/geileraddons/spin-wheel.json`.
+
+### Mod-ideas batch (enderman sounds, rare mobs, lootshare, Cata runs, equipment, simulators)
+
+All new modules are off by default and have not been verified in a live client yet.
+
+**Mute Enderman Sounds** (Miscellaneous) has one switch per sound: **Mute Ambient**, **Mute Scream** and **Mute
+Stare** (on), **Mute Teleport**, **Mute Hurt** and **Mute Death** (off). Item teleports can use the same sound as
+enderman teleports. The folded **Islands** list chooses where it applies (all on). Where the island is unknown,
+the sounds are muted.
+
+**Spirit Bear** (Dungeons) is a movable HUD line for the Floor 4 and Master 4 boss. It counts the lamps that light
+as mobs die (`Bear: 7/30` in M4, `/25` in F4), counts down the 3.4 second spawn after the last lamp, then shows
+`Alive!`.
+
+**Rare Mob Highlighter** (Miscellaneous) boxes preset mobs on their own island, with a switch and colour for each:
+Zealot, Special Zealot (holds an End Portal Frame), Endstone Protector and Ender Dragon (The End); Arachne and
+Arachne's Brood (Spider's Den); Ashfang, Barbarian Duke X, Mage Outlaw, Magma Boss, Bladesoul and Vanquisher
+(Crimson Isle); Minos Inquisitor, King Minos, Manticore and Sphinx (Hub); Scatha (Crystal Hollows). Options:
+**Tracer**, **World Label** (name and distance), **Screen Title**, **Sound** and **Send Party Chat Message** (off;
+sends the mob and its coordinates, at most once per mob and once every 10 seconds, only in a party). Zealot and
+Arachne's Brood are common: they get a box but no title, sound or message.
+
+**Legion Display** (Miscellaneous) shows HUD rows for Legion (real players within 30 blocks, up to 20) and Bobbin'
+Time (fishing bobbers within 30 blocks, up to 5) with the bonus your armor levels give. **Only Show A Row While You
+Wear The Enchant** (on) and **Range Sphere** (off), a 30 block sphere around you. **Fill** (off) adds a faint fill;
+without it only the lines that show the shape are drawn.
+
+**Lootshare Range** (Miscellaneous) draws the 30 block lootshare sphere around the Rare Mob Highlighter's chosen
+uncommon mobs (the highlighter itself can stay off) and around rare sea creatures. The sphere turns green while you
+are inside, and has the same **Fill** switch. A label shows `Lootshare: hit` once the client saw you damage the mob, otherwise `not hit`. It never
+says that you qualify for the loot; arrow and magic hits may be missed.
+
+**`/ga cata [level] [name]`** prints the Catacombs XP needed (default: your next level, levels past 50 included)
+and the S+ runs needed on every floor and Master floor, with the XP of the next run. It reads the profile for the
+Catacombs Expert Ring (carried or in the accessory bag), the highest Hecatomb on your items (assumes you wear it),
+the Catacombs Explorer shard, floor completions and today's remaining daily bonus runs, and the public election
+data for a mayor XP bonus. The answer lists what was applied, what you do not own and what could not be detected
+(the global dungeon XP boost is never applied). Hypixel publishes no formula, so treat the result as an estimate.
+The lookup uses the same profile service as `/ga dstats`.
+
+**Equipment In Inventory** (Miscellaneous) puts necklace, cloak, belt and gloves into your inventory, right of your
+player model and in line with your armor. They take the offhand slot's place; the offhand moves one slot right (and
+the recipe book button a little further). The column has no background of its own, only the Item Rarity Backgrounds
+color when that module is on. Hypixel only sends equipment inside its own menu, so open `/equipment` once; the items
+are then remembered per account and SkyBlock profile (the Rift separately) in `config/geileraddons/equipment/`.
+Clicking the column runs `/stats`.
+
+**Device Simulator** (Dungeons) practices i4 and Simon Says.
+
+1. Stand where you want to practice, face where the wall should be and run `/ga sim setpos`. The spot is saved per
+   singleplayer world, and one for your island.
+2. Run `/ga sim ss [ping]` or `/ga sim i4 [ping]`. Ping is 0 to 1000 ms.
+3. `/ga sim stop` ends it. Finishing, leaving the area, changing world, disconnecting, turning the module off or
+   standing on a sim block also ends it and removes the blocks.
+
+It works in singleplayer. **Use On Hypixel** (off) also allows your own Private Island, never a guest island. The
+blocks exist only on your client. Simon Says only replaces air; the i4 wall may cover ground and other plain blocks
+(never chests or other blocks with contents) and puts them back. If something is in the way, the sim refuses to start. While
+a sim runs, your clicks, mining, swings, drops and attacks are not sent to the server. Do not stand on the sim
+blocks. Mods on Hypixel are used at your own risk, and this island mode has not been tested live.
+
+- **Simon Says:** four rounds with the device's tick timing. The start button toggles start and reset, so pressing
+  it three times quickly gives the skip, as on Floor 7.
+- **i4:** stand on the gold plate. The wall is placed exactly as on Floor 7 (bottom row one block below your feet,
+  15 blocks ahead). The bow is simulated: left or right click shoots; a click inside the cooldown fires when it ends.
+  Arrows move 3 blocks a tick and fall like Hypixel's. A Terminator shot is a main arrow plus side arrows 5.5 degrees
+  out that leave one tick later from half a block lower. **Shoot Three Arrows Like A Terminator** (on) and **Shot
+  Cooldown (Ticks)** (5 with Terror armor, 7 without). The next target lights on a 10 tick grid and leaving the plate
+  resets the run.
+
+Times are shown after each run and personal bests are saved in `config/geileraddons/device-sim-personal-bests.json`.
+Turn on **i4 helper** or **Simon Says** to use that solver inside its simulator. The Simon Says solver sends no party
+messages from the simulator.
+
+**New defaults.** New players start with updated HUD positions and module settings. Which modules are enabled, the
+menu theme and automation or chat settings keep their old defaults. An existing config is never changed;
+resetting to defaults uses the new values.
+
+### Mod-ideas batch 2 (secret hitboxes, map split, hunting methods, scoreboard and item animations)
+
+All new parts are off by default and have not been checked in a live client yet.
+
+**Bigger Secret Hitboxes** (Dungeons) makes dungeon secrets easier to click: **Levers**, **Chests**, **Wither
+Essence** and **Redstone Key** skulls get a full block hitbox, and **Buttons** fill the face they sit on but keep
+their depth, so they do not reach further out. Only aiming and clicking change; you walk into the blocks exactly as
+before. The block outline (selection box) shows the enlarged hitbox, so you see what a click hits. Only inside dungeons. A skull is matched by its profile id, or by
+the profile id inside its texture when Hypixel sends the head without one.
+
+**Map Auto Split** (Dungeons) needs **Dungeon Map**. It dims the rooms other classes do, so the map shows your job in a
+run without duplicate classes. Mage, Archer and Healer rush blood together; Mage also takes the first room outside
+blood. Archer and Healer then clear the rooms closer to blood, Berserk and Tank the rooms closer to the entrance.
+Each pair splits its side into two connected parts with about the same number of secrets. The split uses only the
+map, so every player sees the same one, and two players of one class see the same rooms. Rooms you share (blood for
+Mage, Archer and Healer) get a border in each class colour (**Shared Room Borders**). **Dim Other Rooms** sets how
+dark the other rooms get; a room darkens as one piece, the gaps between its cells included. **Hide Other Rooms** (off
+by default) leaves the other classes' rooms off the map entirely: no cells, doors or room text. Rooms not on your map yet are not in the split; until blood is on the map the known room
+farthest from the entrance stands in for it, so the split works on a partly loaded or legal map and moves toward blood
+as rooms appear. **Reveal Unopened Rooms** gives the full split from the start. Your class comes from the party data
+or, solo, from the tab list.
+
+**Hunting Methods** (Hunting) has its own screen, opened with the shard button in the Click GUI top bar (right of
+Cosmetics), `/ga hunt`, `/ga hunt <fortune>` (sets Hunting Fortune first) or **Open Hunting Methods**. Every huntable
+shard is a row with its item icon: coins per hour after bazaar tax, lost per hour against the best one, sell offer,
+insta-sell, 3-day and 7-day averages, kills per hour and shards per kill. Click a column header to sort (again to flip),
+type in the search box to filter by shard, mob or place, set **Hunting Fortune** (100 fortune doubles the shards) and
+pick **Sell Offer** or **Insta-Sell** at the top. Click a **Kills/h** or **Shards/kill** cell to type your rate; Enter
+or a click elsewhere saves it to `config/geileraddons/hunting-methods.json`, Esc cancels. The list starts empty:
+**+ Add shard** opens a picker with a search box over every hunting shard (from the NEU attribute list); a click adds
+it with no rate yet. Right click a row to remove it. Shards you get the same way (for example the three Tiki shards) can be grouped: click
+their names to select them, then **Group (n)** at the top. The group gets a header row with the combined coins per hour,
+and it is ranked (and compared in Lost/h) as one unit; its members are listed under it. Click the header's **Kills/h**
+to type the group's total kills per hour: members without their own rate split what is left after the members that
+have one, evenly (shown as `~n`). A member's own rate always wins. Right click a group header to ungroup; removing
+members down to one dissolves the group. Groups are saved in `hunting-methods.json` (`groups`, and `group` per shard).
+A file from before this change (every Critter Safari shard) is
+emptied once on load. Shards can still be added in the file by bazaar id (`SHARD_...`), then **Reload file**. Prices come from Hypixel's order book; while that is not loaded, the Bazaar data Price Display uses fills in
+(the status then says `bazaar data`). Icons are the shard heads from the Item List. Shards without a rate or a price
+show `—` and sort last. Hover a shard name for its mob and place. Hypixel gives
+no price history, so the averages use the prices this client saw on each day while the module was on
+(`shard-price-history.json`, 8 days).
+
+**Animations** pull-out (group **Pull-Out**): **Pull-Out Style** Vanilla, Rise (comes up from below), Spin (turns in),
+Pop (grows in) or Swing In (swings in from the side), and **Pull-Out Speed**. It plays on the main hand when you
+switch hotbar slots. A style other than Vanilla replaces vanilla's lower-and-raise.
+
+### Mod-ideas batch 3 (Profile Viewer, Custom Party Finder, Fancy Auction House)
+
+All three are off by default and have not been checked in a live client yet.
+
+**Profile Viewer** (Miscellaneous): `/pv [player]` (or `/ga pv [player]`, which works even with the module off) opens a
+player's SkyBlock profiles. While the module is off, `/pv` is sent to the server as a plain command packet. Tabs along the top:
+**Basic Info** (the player's 3D model, drag to turn it; profile and game mode, SkyBlock level in Hypixel's colour for
+its band of 40, skill average, purse, bank, networth, fairy souls and every skill including Hunting with a progress
+bar; hover a skill for total XP and XP to the next level, hover networth for the total, the value without soulbound
+items and that value in euro at the live Booster Cookie price: 325 gems per cookie, 675 gems for 4.99 EUR),
+**Dungeons** (Catacombs, hover for Catacombs XP and the XP of all classes; secrets and secrets per run, each class,
+and completions and fastest S+ per floor F0 to F7 for normal and Master Mode; each class shows its progress to the
+next level in percent and the XP still needed, hover for XP into the level), **Inventories** (inventory, armor and
+equipment, the accessory bag in pages of five rows with arrows, personal vault, potion and fishing bag, quiver, sack
+of sacks, and the **Ender Chest** and **Backpacks** as titled cards like the Storage Overlay, centred, with a filter
+box that greys out other items), **Wardrobe and Loadouts** (every wardrobe armor set and
+equipment set as a column, and each named loadout with its armor, equipment, pet and power stone; from the profile's
+`loadout` data, older `wardrobe_contents` still read), **Collections** (one tab per collection category with
+co-op totals, the tier and amount; hover for each co-op member's share and the next tier), **Pets** (filter box, scroll
+bar; every scroll bar in the viewer can be clicked and dragged), **Mining** (Heart of the Mountain tier 1 to 10 and progress, Core of the Mountain, free and total tokens, pickaxe
+ability, mithril, gemstone and glacite powder, nucleus runs and crystals two per line, fossils, fossil dust,
+mineshafts and corpses, and the perk tree drawn as Hypixel draws it: Core a redstone block, the selected ability an
+emerald block, other abilities coal blocks, maxed perks diamonds, started perks emeralds with their level, locked
+perks coal), **Foraging** (Heart of the Forest tier 1 to 8 with the same details and tree, Forest and Desert
+Whispers now and ever, Hina chapter of 7, fish family of 38, fig and mangrove tree gifts), **Hunting and Attributes**
+(Hunting level, shards owned, each attribute with its shard's own item, level and maximum, in a scrolling list with a
+scroll bar; hover for syphoned and owned shards; the filter box searches attribute and shard names, locked ones
+included), **Farming** (level with the profile's own cap, Jacob's
+contests, cap and Double Drops perks, medals, personal bests as short numbers coloured by the best medal won for that
+crop, hover for the exact count, and the Garden next to it; any line cut to fit shows in full on hover), **Fishing**
+(items fished, treasures, sea creature kills, and every trophy fish and the 12 trophy frogs with a tick per tier
+caught, each with its item; hover a trophy fish for its count per tier), **Crimson Isle** (faction, both
+reputations, Matriarch pearls, Kuudra runs per tier, each Dojo test with its grade, total points and belt), **Rift**
+(motes, lifetime motes, visits, Enigma souls, Montezuma cats, timecharms, Wither eyes, Grubber stacks), **Slayers**,
+**Bestiary** (milestone, tiers and maxed mobs per island, hover for every mob), **Minions** (highest crafted tier of
+every minion and unique crafts, co-op members included), **Missing Accessories** (the next upgrade of accessories you
+own and the accessories you have none of, cheapest lowest BIN first), the Garden part of **Farming** (level,
+plots, visitors served and unique visitors, composter upgrades, every crop's milestone, upgrade and amount collected),
+**Museum** (value, appraisal,
+donations per category with a bar, hover for the missing items cheapest first, special items) and **Misc** (essence,
+kills and deaths, Chocolate Factory).
+
+Garden and Museum come from the SkyBlockPV backend, because the profile proxy does not serve them. It signs in the way
+a server checks you when you join: your game tells Mojang's session server that you joined a random server id (your
+access token goes only to Mojang, as on every server join), then the backend receives only your player name and that
+id and asks Mojang. The backend token it returns stays in memory for the session. Nothing is sent before you open the
+Garden or Museum tab (or Basic Info, which loads the museum for the networth); the backend sees your name, your IP address and the profiles you look up. Turn off **Garden and
+Museum** in the module settings to never contact it. Bingo is not available: neither service serves it. Farming and taming levels stop at the profile's own cap (50 plus the Jacob's perk or the pets sacrificed).
+Bestiary, minion, accessory, attribute and perk tree data come from the NotEnoughUpdates repository, downloaded once a
+day to `config/geileraddons/neu-constants/`; Missing Accessories also needs the Item List data. Under the panel:
+the profile picker, a name box with **View** to look up someone else, and a button that opens the player's page on
+sky.shiiyu.moe (after a confirm). Hover an item for its full tooltip. Networth adds purse, profile bank, personal bank, the estimated value of every item (inventory, armor, wardrobe,
+equipment, Ender Chest, backpacks, accessories, vault and bags), every pet (priced from the level 1, 100 and 200 prices
+of its type and rarity, with skin, held item and candy), sacks, essence and, with **Garden and Museum** on, the museum
+donations (borrowed items are counted once, where they are now). It needs Price Display's price data; it shows `needs
+Price Display` otherwise. Hover it for the total, the value without soulbound items, each category and the euro value. Players who turned
+their inventory API off show no items and no networth. Items the converter cannot read fall back to the Item List
+icon with the item's own name and lore. Data comes from the same profile proxy as Party Finder Stats. A lookup is
+kept for 30 seconds, so reopening `/pv` is instant; your own lookup skips the Mojang name step, and every item
+container is read in the background as soon as a profile is chosen. The frame and tabs show at once while the data
+loads. Collection categories come from Hypixel's public collections resource and co-op member names from Mojang's
+session server. Trophy frog tiers come from the profile's SkyBlock level tasks (`TROPHY_<FROG>_<TIER>`).
+
+**Custom Party Finder** (Dungeons): replaces the Party Finder menu with a list of parties: leader, dungeon and floor,
+note, requirements, the five member slots with class and level (colored like Party Finder Listings) and the classes
+still open. Floors show as codes (`F7`, `M7`, `E`), also on the Catacombs Gate and floor
+picker cards. Long names, notes and the red reason a party cannot be joined are cut to fit instead of overlapping, and
+the header's floor and page give way to the buttons. Your own party is pinned on top. Click a party to join; parties you cannot join show the reason in red
+and do nothing. The search box filters by leader, member, note or floor; the mouse wheel scrolls. Top buttons:
+**Settings** (search settings), **Create** (or **De-list** while your party is listed), refresh, page arrows and
+**Vanilla**, which shows the normal menu until it closes. **Member Stats** (on by default) loads each member's
+Catacombs level and secrets when you hover their party. The header shows the floor being searched and the page; click
+it to open Search Settings and pick another floor. Scrolling eases smoothly with a scroll bar, and scrolling past the
+last party (or above the first) turns to the next (or previous) page. The menus around it (Catacombs Gate, Search
+Settings, Select Floor and Type, Create Party, Dungeon Classes, Catacombs Profile, Dungeon Rules and Tips, and any
+page whose Go Back leads to the Catacombs Gate or Party Finder) get a themed card view of the menu's own grid, with
+**Vanilla** too. Kuudra's Party Finder is left alone.
+
+**Fancy Auction House** (Visual): restyles the **Auctions Browser** (category rail, 6 by 4 listing cards with price and
+time left as one decimal such as `5.9h`, search, reset, back, and the sort, rarity and BIN filter buttons showing only
+the chosen option; page arrows; the mouse wheel and the up and down keys turn pages; a scroll bar beside the listings
+shows where the page sits) and the **auction page** (big item, price lines, a Buy, Bid, Cancel or Collect button that is greyed
+out when you cannot use it, and **Edit Bid** on bid auctions). **Highlight Cheap BIN** outlines BIN listings priced
+under the 3-day average in green (needs Price Display's data). **Bazaar** (on by default) restyles the Bazaar's
+category and product pages in the same style: category rail, product cards with their buy and sell price, and the
+bottom-row buttons. Every other AH and Bazaar page (the Auction House main menu, Manage Auctions and Bids, Bazaar
+orders and product groups, and the amount and confirm pages right after one) gets a themed card view of the menu's own
+grid; item names under the cards wrap onto two small lines instead of being cut. The Bazaar amount and price signs and
+the AH bid and search signs get a themed dialog in place of the sign (the vanilla sign is not drawn): you still
+type into the sign and **Done** sends it; the AH search lists matching items from the Item List, and a click fills
+in the name. Items in these screens, Party Finder, Hunting Methods, Profile Viewer, Chest Roll, Collection Tracker and
+the item picker show the **Item Rarity Backgrounds** square when that module is on. Every control clicks the real menu slot (right
+click works where Hypixel uses it), hovering shows the real tooltip, and **Vanilla** shows the normal menu until it
+closes.
 
 ## Macros workspace
 

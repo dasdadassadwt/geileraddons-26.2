@@ -12,6 +12,7 @@ import geiler.addons.client.module.Module
 import geiler.addons.client.module.ModuleAction
 import geiler.addons.client.module.ModuleSettingsSpec
 import geiler.addons.client.module.SettingGroup
+import net.minecraft.ChatFormatting
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
@@ -92,6 +93,16 @@ class ChestRollModule private constructor(private val s: Settings) : Module(
 
     /** Chests that already rolled, so reopening one (or viewing it in Croesus) does not roll again for three hours. */
     private val rolled = ChestRollRules.RolledChests(32, 3L * 60L * 60L * 1000L)
+    /** Item names of rolled chests by tier, so the Croesus preview can tell which of its chests were already rolled. */
+    private val rolledContents = ArrayDeque<Triple<ChestRollRules.Tier, List<String>, Long>>()
+
+    /** Chest screen whose current content is known to be rolled already, and the menu state it was judged at. */
+    private var knownScreen: AbstractContainerScreen<*>? = null
+    private var knownStateId = -1
+    /** Chest screen covered before its roll starts, and when the cover began. */
+    private var coverScreen: AbstractContainerScreen<*>? = null
+    private var coverStartMs = 0L
+    private var coverDrawn = false
     private val diagnostics = ModuleDiagnostics(Category.F7, { name() }, 8, 100L, 320)
 
     init {
@@ -111,6 +122,9 @@ class ChestRollModule private constructor(private val s: Settings) : Module(
         watchedScreen = null
         pendingScreen = null
         rolled.clear()
+        rolledContents.clear()
+        knownScreen = null
+        coverScreen = null
         diagnostics.event("DISABLE")
         diagnostics.disable()
     }
@@ -217,6 +231,10 @@ class ChestRollModule private constructor(private val s: Settings) : Module(
 
     private fun finish(r: Roll) {
         roll = null
+        r.screen?.let {
+            knownScreen = it
+            knownStateId = it.menu.stateId
+        }
         diagnostics.event("${if (r.skipped) "SKIPPED" else "DONE"} tier=${r.tier.label} main=${r.main.name} elapsed=${r.elapsed()}ms")
     }
 
@@ -239,6 +257,13 @@ class ChestRollModule private constructor(private val s: Settings) : Module(
         val key = signature?.let { "${tier.label}|$it" }
         val now = System.currentTimeMillis()
         val known = key != null && rolled.contains(key, now)
+        if (known) {
+            knownScreen = screen
+            knownStateId = screen.menu.stateId
+        } else if (knownScreen === screen && key != null) {
+            knownScreen = null
+            restartCover(screen)
+        }
         // Until the roll starts the loot is already on screen for a tick or two; the result overlays wait for it.
         pendingScreen = if (tierEnabled(tier) && key != null && !known) screen else null
         if (!watch.update(signature)) return
@@ -250,6 +275,8 @@ class ChestRollModule private constructor(private val s: Settings) : Module(
             return
         }
         rolled.mark(key ?: return, now)
+        rolledContents.addLast(Triple(tier, items.map { it.name }, now))
+        while (rolledContents.size > MAX_ROLLED_CONTENTS) rolledContents.removeFirst()
         startRoll(screen, tier, items, resolveFloor())
     }
 
@@ -259,7 +286,47 @@ class ChestRollModule private constructor(private val s: Settings) : Module(
 
     /** True while a roll runs on [screen] (or is about to), so profit lines and other overlays must not show the loot yet. */
     fun hidesResult(screen: AbstractContainerScreen<*>?): Boolean =
-        isEnabled() && screen != null && (roll?.screen === screen || pendingScreen === screen)
+        isEnabled() && screen != null && (roll?.screen === screen || pendingScreen === screen || coverScreen === screen && coverDrawn)
+
+    /**
+     * Whether a Croesus preview chest (head name [chestName], loot lines [lootLines]) may show its value: always when Chest
+     * Roll is off or its tier is not rolled, else only once that chest was rolled. Unknown chests stay hidden.
+     */
+    fun revealedInPreview(chestName: String?, lootLines: List<String>): Boolean {
+        if (!isEnabled()) return true
+        val tier = ChestRollRules.tierOf(chestName?.trim()) ?: return true
+        if (!tierEnabled(tier)) return true
+        val now = System.currentTimeMillis()
+        rolledContents.removeAll { now - it.third > ROLLED_TTL_MS }
+        return rolledContents.any { it.first == tier && ChestRollRules.previewMatches(lootLines, it.second) }
+    }
+
+    /**
+     * Croesus preview tooltip: an unrolled chest's loot lines become obfuscated text of the same length, so hovering it does
+     * not spoil the roll. The name, cost and key lines stay readable.
+     */
+    fun onTooltip(stack: ItemStack, lines: MutableList<Component>) {
+        if (!isEnabled() || stack.item != Items.PLAYER_HEAD) return
+        val screen = Minecraft.getInstance().gui.screen() as? AbstractContainerScreen<*> ?: return
+        if (!CroesusRules.isChestPreview(screen.title.string)) return
+        val plain = lines.map { it.string }
+        val range = ChestRollRules.lootLineRange(plain) ?: return
+        if (revealedInPreview(stack.hoverName.string, plain.slice(range))) return
+        for (i in range) {
+            lines[i] = Component.literal(plain[i]).withStyle(ChatFormatting.GRAY, ChatFormatting.OBFUSCATED)
+        }
+        if (scrambledLogged.add(stack.hoverName.string)) notePreviewHidden(0, range.count())
+        if (scrambledLogged.size > MAX_ROLLED_CONTENTS) scrambledLogged.clear()
+    }
+
+    /** Chest names already logged as scrambled, so hovering does not log every frame. */
+    private val scrambledLogged = HashSet<String>()
+
+    /** Diagnostics for what the Croesus preview hid, bounded by the module's event limits. */
+    fun notePreviewHidden(hidden: Int, scrambledLines: Int) {
+        if (hidden > 0) diagnostics.event("PREVIEW_HIDDEN chests=$hidden")
+        if (scrambledLines > 0) diagnostics.event("TOOLTIP_SCRAMBLED lines=$scrambledLines")
+    }
 
     private fun startRoll(screen: AbstractContainerScreen<*>?, tier: ChestRollRules.Tier, items: List<Item>, floorKey: String?) {
         val mainIndex = ChestRollRules.mainIndex(items.map { it.name }, items.map { it.price })
@@ -306,7 +373,8 @@ class ChestRollModule private constructor(private val s: Settings) : Module(
     // ---- hooks called by the container-screen mixin ----
 
     /** True while a roll runs on this screen, so the chest cannot be clicked underneath it. */
-    fun swallowsClick(screen: AbstractContainerScreen<*>): Boolean = isEnabled() && roll?.screen === screen
+    fun swallowsClick(screen: AbstractContainerScreen<*>): Boolean =
+        isEnabled() && (roll?.screen === screen || roll == null && coverScreen === screen && coverDrawn)
 
     /** Any key skips; Esc and inventory keys do not close the chest while a roll runs. */
     fun handleKey(screen: AbstractContainerScreen<*>, event: KeyEvent): Boolean {
@@ -332,6 +400,11 @@ class ChestRollModule private constructor(private val s: Settings) : Module(
     }
 
     fun onScreenClosed(screen: AbstractContainerScreen<*>) {
+        if (coverScreen === screen) {
+            endCover("closed")
+            coverScreen = null
+        }
+        if (knownScreen === screen) knownScreen = null
         val r = roll ?: return
         if (r.screen !== screen) return
         diagnostics.event("ABORT screen closed tier=${r.tier.label}")
@@ -434,9 +507,51 @@ class ChestRollModule private constructor(private val s: Settings) : Module(
 
     /** Draws the roll over the whole screen. True means the vanilla screen is not drawn, so the loot stays hidden. */
     fun renderRoll(screen: AbstractContainerScreen<*>, graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int): Boolean {
-        val r = roll ?: return false
-        if (!isEnabled() || r.screen !== screen) return false
+        if (!isEnabled()) return false
+        val r = roll ?: return renderCover(screen, graphics)
+        if (r.screen !== screen) return false
+        if (coverScreen === screen) endCover("roll")
         draw(r, graphics)
+        return true
+    }
+
+    private fun restartCover(screen: AbstractContainerScreen<*>) {
+        coverScreen = screen
+        coverStartMs = System.currentTimeMillis()
+        coverDrawn = false
+    }
+
+    private fun endCover(reason: String) {
+        if (coverDrawn) diagnostics.event("COVER end=$reason ms=${System.currentTimeMillis() - coverStartMs}")
+        coverDrawn = false
+    }
+
+    /**
+     * Until the tick starts a roll, a chest of an enabled tier is drawn as the roll's dark backdrop instead of its slots, so
+     * the loot never shows for a frame. Content changed since it was judged known (a reroll) counts as unknown again.
+     */
+    private fun renderCover(screen: AbstractContainerScreen<*>, graphics: GuiGraphicsExtractor): Boolean {
+        val tier = ChestRollRules.tierOf(screen.title.string) ?: return false
+        if (coverScreen !== screen) restartCover(screen)
+        if (knownScreen === screen && screen.menu.stateId != knownStateId) {
+            knownScreen = null
+            restartCover(screen)
+        }
+        val elapsed = System.currentTimeMillis() - coverStartMs
+        if (!ChestRollRules.covers(tierEnabled(tier), knownScreen === screen, elapsed)) {
+            if (coverDrawn) endCover(if (elapsed >= ChestRollRules.COVER_MAX_MS) "timeout" else "known")
+            return false
+        }
+        if (!coverDrawn) diagnostics.event("COVER start tier=${tier.label}")
+        coverDrawn = true
+        val blurred = s.blur.value() && try {
+            graphics.blurBeforeThisStratum()
+            graphics.nextStratum()
+            true
+        } catch (_: IllegalStateException) {
+            false
+        }
+        graphics.fill(0, 0, graphics.guiWidth(), graphics.guiHeight(), if (blurred) 0x70000000 else 0xB0000000.toInt())
         return true
     }
 
@@ -500,7 +615,7 @@ class ChestRollModule private constructor(private val s: Settings) : Module(
             graphics.pose().pushMatrix()
             graphics.pose().translate((x + (CARD - 32) / 2).toFloat(), (cardTop + (CARD - 32) / 2 - 1).toFloat())
             graphics.pose().scale(2f, 2f)
-            graphics.item(face.stack, 0, 0)
+            graphics.rarityItem(face.stack, 0, 0)
             graphics.pose().popMatrix()
             if (i == r.winnerIndex && phase != ChestRollRules.Phase.SPIN) outline(graphics, x, cardTop, CARD, CARD, 0xFFFFD24A.toInt())
         }
@@ -544,7 +659,7 @@ class ChestRollModule private constructor(private val s: Settings) : Module(
         graphics.pose().translate(cx.toFloat(), cy.toFloat())
         graphics.pose().scale(scale * flip, scale)
         graphics.pose().translate(-8f, -8f)
-        graphics.item(stack, 0, 0)
+        graphics.rarityItem(stack, 0, 0)
         graphics.pose().popMatrix()
 
         val text = ChestRollRules.revealText(fraction)
@@ -611,6 +726,8 @@ class ChestRollModule private constructor(private val s: Settings) : Module(
 
     companion object {
         private const val CARD = 44
+        private const val MAX_ROLLED_CONTENTS = 32
+        private const val ROLLED_TTL_MS = 3L * 60L * 60L * 1000L
         private const val PITCH = 48.0
         private const val BAND_HEIGHT = 64
         private const val WINNER_BASE = 38
